@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowNodeAddTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_node_add';
 
     protected string $description = <<<'DESC'
@@ -70,25 +73,25 @@ DESC;
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+
         $validated = $request->validate([
             'workflow_id' => 'required|string',
             'type' => 'required|string|in:agent,conditional,human_task,switch,dynamic_fork,do_while,llm,http_request,parameter_extractor,variable_aggregator,template_transform,knowledge_retrieval,annotation,iteration,workflow_ref',
             'label' => 'required|string|max:255',
-            'agent_id' => 'nullable|uuid|exists:agents,id',
-            'skill_id' => 'nullable|uuid|exists:skills,id',
-            'crew_id' => 'nullable|uuid|exists:crews,id',
+            'agent_id' => "nullable|uuid|exists:agents,id,team_id,{$teamId}",
+            'skill_id' => "nullable|uuid|exists:skills,id,team_id,{$teamId}",
+            'crew_id' => "nullable|uuid|exists:crews,id,team_id,{$teamId}",
             'config' => 'nullable|array',
             'expression' => 'nullable|string|max:500',
             'position_x' => 'nullable|integer',
             'position_y' => 'nullable|integer',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-
         $workflow = Workflow::where('team_id', $teamId)->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         $maxOrder = $workflow->nodes()->max('order') ?? -1;

@@ -35,12 +35,12 @@ class MarketplaceController extends Controller
             MarketplaceListing::where('status', MarketplaceStatus::Published)
                 ->where('visibility', ListingVisibility::Public),
         )
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('type'),
                 AllowedFilter::exact('category'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'install_count', 'avg_rating', 'name'])
+            )
+            ->allowedSorts('created_at', 'install_count', 'avg_rating', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

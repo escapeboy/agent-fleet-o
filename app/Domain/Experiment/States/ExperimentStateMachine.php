@@ -4,12 +4,17 @@ namespace App\Domain\Experiment\States;
 
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\DeadlineContext;
 use InvalidArgumentException;
 
 class ExperimentStateMachine
 {
     public function validate(Experiment $experiment, ExperimentStatus $toState): void
     {
+        // Honor MCP-propagated deadline on synchronous transition paths
+        // (e.g. experiment_kill / experiment_pause called via MCP tools).
+        app(DeadlineContext::class)->assertNotExpired();
+
         $fromState = $experiment->status;
 
         if (! ExperimentTransitionMap::canTransition($fromState, $toState)) {
@@ -66,7 +71,12 @@ class ExperimentStateMachine
     {
         $maxIterations = $experiment->max_iterations ?? 10;
 
-        if ($experiment->current_iteration >= $maxIterations) {
+        // RunEvaluationStage::handleIterate increments current_iteration BEFORE
+        // calling transition->execute(toState: Iterating). So when current=N
+        // here, the experiment has just bumped to its N-th iteration cycle and
+        // is starting it — N == max_iterations is the LAST allowed cycle, not
+        // a violation. Throw only when we're truly past max (N > max).
+        if ($experiment->current_iteration > $maxIterations) {
             throw new InvalidArgumentException(
                 "Max iterations ({$maxIterations}) exceeded for experiment [{$experiment->id}].",
             );

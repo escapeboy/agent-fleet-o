@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Models;
 
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\Artifact;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -32,6 +33,7 @@ class CrewExecution extends Model
         'delegation_depth',
         'started_at',
         'completed_at',
+        'quality_dimensions',
     ];
 
     protected function casts(): array
@@ -42,6 +44,7 @@ class CrewExecution extends Model
             'final_output' => 'array',
             'config_snapshot' => 'array',
             'quality_score' => 'float',
+            'quality_dimensions' => 'array',
             'coordinator_iterations' => 'integer',
             'total_cost_credits' => 'integer',
             'duration_ms' => 'integer',
@@ -61,6 +64,7 @@ class CrewExecution extends Model
         return $this->belongsTo(Experiment::class);
     }
 
+    /** @return HasMany<CrewTaskExecution, $this> */
     public function taskExecutions(): HasMany
     {
         return $this->hasMany(CrewTaskExecution::class)->orderBy('sort_order');
@@ -96,5 +100,28 @@ class CrewExecution extends Model
     public function totalCost(): int
     {
         return $this->total_cost_credits;
+    }
+
+    /**
+     * Derive the originating user for this run. Required by AiRequestDTO::userId
+     * so claude-code-vps gateways can find the user via User::find(). Prefers
+     * the linked experiment's owner; falls back to the team's owner for
+     * standalone crew runs.
+     */
+    public function resolveUserId(): ?string
+    {
+        if ($this->experiment_id) {
+            $userId = Experiment::withoutGlobalScopes()
+                ->where('id', $this->experiment_id)
+                ->value('user_id');
+
+            if ($userId) {
+                return $userId;
+            }
+        }
+
+        return Team::withoutGlobalScopes()
+            ->where('id', $this->team_id)
+            ->value('owner_id');
     }
 }

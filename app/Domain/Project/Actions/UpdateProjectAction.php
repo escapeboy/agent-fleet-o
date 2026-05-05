@@ -42,6 +42,18 @@ class UpdateProjectAction
                 $updatePayload['allowed_credential_ids'] = $data['allowed_credential_ids'];
             }
 
+            // Settings: deep-merge into existing settings JSONB so callers can patch
+            // individual keys (done_gate_enabled, etc.) without wiping unrelated keys.
+            if (array_key_exists('settings', $data) && is_array($data['settings'])) {
+                $existing = is_array($project->settings) ? $project->settings : [];
+                $updatePayload['settings'] = array_replace($existing, $data['settings']);
+            }
+
+            // email_template_id can be null (clear) or string
+            if (array_key_exists('email_template_id', $data)) {
+                $updatePayload['email_template_id'] = $data['email_template_id'] ?: null;
+            }
+
             $project->update($updatePayload);
 
             // Update schedule if provided

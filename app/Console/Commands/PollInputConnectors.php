@@ -20,6 +20,8 @@ use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
+use App\Domain\Signal\Connectors\UrlWatchConnector;
+use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Contracts\InputConnectorInterface;
 use App\Models\Connector;
 use Illuminate\Console\Command;
@@ -27,7 +29,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki, screenpipe). Polls all if omitted.}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki, screenpipe, webclaw_scrape, url_watch). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
@@ -51,6 +53,8 @@ class PollInputConnectors extends Command
         'confluence' => ConfluenceConnector::class,
         'github_wiki' => GitHubWikiConnector::class,
         'screenpipe' => ScreenpipeConnector::class,
+        'webclaw_scrape' => WebScrapingConnector::class,
+        'url_watch' => UrlWatchConnector::class,
     ];
 
     public function handle(): int
@@ -87,6 +91,7 @@ class PollInputConnectors extends Command
                 try {
                     $config = $connector->config ?? [];
                     $config['_team_id'] = $connector->team_id;
+                    $config['connector_id'] = $connector->id;
                     $signals = $connectorInstance->poll($config);
 
                     $count = count($signals);

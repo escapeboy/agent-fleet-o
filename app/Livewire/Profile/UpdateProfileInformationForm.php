@@ -4,6 +4,7 @@ namespace App\Livewire\Profile;
 
 use App\Actions\Fortify\UpdateUserProfileInformation;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class UpdateProfileInformationForm extends Component
@@ -23,6 +24,8 @@ class UpdateProfileInformationForm extends Component
 
     public function save(UpdateUserProfileInformation $updater): void
     {
+        Gate::authorize('update-self');
+
         $user = auth()->user();
         $oldEmail = $user->email;
 

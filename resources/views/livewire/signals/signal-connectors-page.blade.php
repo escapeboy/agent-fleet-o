@@ -88,9 +88,7 @@
                         <div class="mt-3">
                             <a href="{{ route('signals.subscriptions') }}"
                                 class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-100">
-                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                                </svg>
+                                <i class="fa-solid fa-link text-xs"></i>
                                 {{ $card['subscription_count'] }} {{ Str::plural('subscription', $card['subscription_count']) }}
                             </a>
                         </div>

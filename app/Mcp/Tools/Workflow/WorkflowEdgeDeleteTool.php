@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\WorkflowEdge;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowEdgeDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_edge_delete';
 
     protected string $description = 'Delete an edge (connection) between two workflow nodes. The nodes themselves remain intact.';
@@ -35,7 +38,7 @@ class WorkflowEdgeDeleteTool extends Tool
             ->find($validated['edge_id']);
 
         if (! $edge) {
-            return Response::error('Edge not found.');
+            return $this->notFoundError('edge');
         }
 
         $workflowId = $edge->workflow_id;

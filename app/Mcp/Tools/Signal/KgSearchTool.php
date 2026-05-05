@@ -4,12 +4,12 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\SearchKgFactsAction;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for semantic search over temporal knowledge graph facts.
@@ -86,7 +86,7 @@ class KgSearchTool extends Tool
                 'query' => $validated['query'],
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

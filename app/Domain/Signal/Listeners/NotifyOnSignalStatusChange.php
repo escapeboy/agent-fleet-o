@@ -2,9 +2,9 @@
 
 namespace App\Domain\Signal\Listeners;
 
+use App\Domain\Shared\Services\NotificationService;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Events\SignalStatusChanged;
-use App\Domain\Shared\Services\NotificationService;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -26,7 +26,7 @@ class NotifyOnSignalStatusChange
 
         try {
             $owners = User::whereHas('teams', fn ($q) => $q->where('teams.id', $signal->team_id)
-                ->whereIn('team_user.role', ['owner', 'admin'])
+                ->whereIn('team_user.role', ['owner', 'admin']),
             )->get();
 
             foreach ($owners as $owner) {

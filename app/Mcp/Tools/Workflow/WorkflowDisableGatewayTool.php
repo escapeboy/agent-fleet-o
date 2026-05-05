@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowDisableGatewayTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_disable_gateway';
 
     protected string $description = 'Remove a workflow from the MCP gateway. The tool will no longer be listed or callable after the next MCP server start.';
@@ -31,7 +34,7 @@ class WorkflowDisableGatewayTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $workflow = Workflow::withoutGlobalScopes()
@@ -39,7 +42,7 @@ class WorkflowDisableGatewayTool extends Tool
             ->find($validated['workflow_id']);
 
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         if (! $workflow->mcp_exposed) {

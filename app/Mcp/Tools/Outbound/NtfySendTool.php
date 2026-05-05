@@ -3,13 +3,14 @@
 namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for sending ad-hoc ntfy push notifications.
@@ -21,6 +22,8 @@ use App\Mcp\Attributes\AssistantTool;
 #[AssistantTool('write')]
 class NtfySendTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'ntfy_send';
 
     protected string $description = 'Send a push notification via ntfy. Posts a message to a ntfy topic (https://ntfy.sh or a self-hosted server). Supports titles, priorities (min/low/default/high/max), emoji tags, and bearer-token auth for private topics.';
@@ -60,7 +63,7 @@ class NtfySendTool extends Tool
         $token = $request->get('token');
 
         if (! $baseUrl || ! $topic || ! $message) {
-            return Response::error('base_url, topic and message are required.');
+            return $this->invalidArgumentError('base_url, topic and message are required.');
         }
 
         $url = $baseUrl.'/'.$topic;
@@ -69,7 +72,7 @@ class NtfySendTool extends Tool
         try {
             app(SsrfGuard::class)->assertPublicUrl($url);
         } catch (\Throwable $e) {
-            return Response::error('SSRF check failed: '.$e->getMessage());
+            throw $e;
         }
 
         $headers = ['Priority' => $priority];
@@ -101,9 +104,9 @@ class NtfySendTool extends Tool
                 ]));
             }
 
-            return Response::error('Ntfy returned '.$response->status().': '.substr($response->body(), 0, 200));
+            throw new \RuntimeException('Ntfy returned '.$response->status().': '.substr($response->body(), 0, 200));
         } catch (\Throwable $e) {
-            return Response::error('Request failed: '.substr(preg_replace('/https?:\/\/\S+/i', '[url]', $e->getMessage()), 0, 200));
+            throw $e;
         }
     }
 }

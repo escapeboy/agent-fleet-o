@@ -4,12 +4,13 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for invalidating (soft-deleting) a knowledge graph fact by UUID.
@@ -21,6 +22,8 @@ use App\Mcp\Attributes\AssistantTool;
 #[AssistantTool('read')]
 class KgInvalidateFactTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'kg_invalidate_fact';
 
     protected string $description = 'Invalidate (soft-delete) a knowledge graph fact by its UUID. Sets invalid_at = now(). The fact is retained for history but excluded from future searches.';
@@ -39,7 +42,7 @@ class KgInvalidateFactTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if ($teamId === null) {
-            return Response::error('Authentication required.');
+            return $this->permissionDeniedError('Authentication required.');
         }
 
         $validated = $request->validate(['fact_id' => 'required|string']);
@@ -50,7 +53,7 @@ class KgInvalidateFactTool extends Tool
             ->first();
 
         if (! $edge) {
-            return Response::error('KG fact not found.');
+            return $this->notFoundError('KG fact');
         }
 
         if ($edge->invalid_at !== null) {

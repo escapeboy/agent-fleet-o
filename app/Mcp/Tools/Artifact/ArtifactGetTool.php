@@ -3,8 +3,9 @@
 namespace App\Mcp\Tools\Artifact;
 
 use App\Domain\Experiment\Services\ArtifactContentResolver;
-use App\Models\Artifact;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\Artifact;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ArtifactGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'artifact_get';
 
     protected string $description = 'Get a specific artifact with its content. Returns the latest version content by default, or a specific version if requested.';
@@ -50,7 +53,7 @@ class ArtifactGetTool extends Tool
             ->find($validated['artifact_id']);
 
         if (! $artifact) {
-            return Response::error('Artifact not found.');
+            return $this->notFoundError('artifact');
         }
 
         $version = ! empty($validated['version'])
@@ -58,7 +61,7 @@ class ArtifactGetTool extends Tool
             : $artifact->versions()->orderByDesc('version')->first();
 
         if (! $version) {
-            return Response::error('Artifact version not found.');
+            return $this->notFoundError('artifact version');
         }
 
         $includeContent = $validated['include_content'] ?? true;
@@ -79,6 +82,8 @@ class ArtifactGetTool extends Tool
             'id' => $artifact->id,
             'name' => $artifact->name,
             'type' => $artifact->type,
+            'deliverable_type' => $artifact->deliverable_type?->value,
+            'deliverable_label' => $artifact->deliverable_type?->label(),
             'category' => ArtifactContentResolver::category($artifact->type, $content),
             'current_version' => $artifact->current_version,
             'versions_count' => $artifact->versions_count,

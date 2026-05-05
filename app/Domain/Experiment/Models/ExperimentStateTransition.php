@@ -22,6 +22,7 @@ class ExperimentStateTransition extends Model
         'reason',
         'actor_id',
         'metadata',
+        'judge_verdict',
         'created_at',
     ];
 
@@ -29,6 +30,7 @@ class ExperimentStateTransition extends Model
     {
         return [
             'metadata' => 'array',
+            'judge_verdict' => 'array',
             'created_at' => 'datetime',
         ];
     }

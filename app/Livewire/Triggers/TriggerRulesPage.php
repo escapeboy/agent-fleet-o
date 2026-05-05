@@ -8,6 +8,7 @@ use App\Domain\Trigger\Actions\DeleteTriggerRuleAction;
 use App\Domain\Trigger\Actions\ExecuteTriggerRuleAction;
 use App\Domain\Trigger\Actions\UpdateTriggerRuleAction;
 use App\Domain\Trigger\Models\TriggerRule;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -59,10 +60,14 @@ class TriggerRulesPage extends Component
 
     public function saveEdit(): void
     {
+        Gate::authorize('edit-content');
+
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'editName' => 'required|string|max:255',
             'editSourceType' => 'required|string',
-            'editProjectId' => 'nullable|uuid|exists:projects,id',
+            'editProjectId' => "nullable|uuid|exists:projects,id,team_id,{$teamId}",
             'editCooldownSeconds' => 'integer|min:0|max:86400',
             'editMaxConcurrent' => 'integer|min:-1|max:10',
         ]);
@@ -83,6 +88,8 @@ class TriggerRulesPage extends Component
 
     public function testTrigger(string $ruleId): void
     {
+        Gate::authorize('edit-content');
+
         $rule = TriggerRule::findOrFail($ruleId);
 
         // Find the most recent matching signal, or create a test one
@@ -112,6 +119,8 @@ class TriggerRulesPage extends Component
 
     public function toggleStatus(string $ruleId): void
     {
+        Gate::authorize('edit-content');
+
         $rule = TriggerRule::findOrFail($ruleId);
 
         $newStatus = $rule->status->isActive() ? 'paused' : 'active';
@@ -122,6 +131,8 @@ class TriggerRulesPage extends Component
 
     public function delete(string $ruleId): void
     {
+        Gate::authorize('edit-content');
+
         $rule = TriggerRule::findOrFail($ruleId);
         app(DeleteTriggerRuleAction::class)->execute($rule);
 

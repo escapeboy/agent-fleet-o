@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Actions;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 
 class StructureSignalWithAiAction
@@ -109,8 +110,8 @@ PROMPT;
 
     private function resolveLlm(): array
     {
-        $provider = config('llm_providers.default_provider', 'anthropic');
-        $model = config('llm_providers.default_model', 'claude-haiku-4-5-20251001');
+        $provider = LlmDefaults::provider();
+        $model = LlmDefaults::model();
 
         $providerKeyMap = [
             'anthropic' => config('prism.providers.anthropic.api_key'),

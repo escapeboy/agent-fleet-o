@@ -15,6 +15,7 @@ use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Credential\Models\CredentialVersion;
 use App\Domain\Project\Models\Project;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CredentialDetailPage extends Component
@@ -66,6 +67,8 @@ class CredentialDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        Gate::authorize('edit-content');
+
         $newStatus = $this->credential->status === CredentialStatus::Active
             ? CredentialStatus::Disabled
             : CredentialStatus::Active;
@@ -76,6 +79,8 @@ class CredentialDetailPage extends Component
 
     public function approveCredential(): void
     {
+        Gate::authorize('edit-content');
+
         $approvalRequest = ApprovalRequest::withoutGlobalScopes()
             ->where('credential_id', $this->credential->id)
             ->where('status', ApprovalStatus::Pending)
@@ -94,6 +99,8 @@ class CredentialDetailPage extends Component
 
     public function rejectCredential(string $reason = 'Rejected by reviewer'): void
     {
+        Gate::authorize('edit-content');
+
         $approvalRequest = ApprovalRequest::withoutGlobalScopes()
             ->where('credential_id', $this->credential->id)
             ->where('status', ApprovalStatus::Pending)
@@ -125,6 +132,8 @@ class CredentialDetailPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editDescription' => 'max:1000',
@@ -168,6 +177,8 @@ class CredentialDetailPage extends Component
 
     public function rotateSecret(): void
     {
+        Gate::authorize('edit-content');
+
         $type = $this->credential->credential_type;
 
         // Validate rotation based on type

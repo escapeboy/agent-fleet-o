@@ -6,6 +6,7 @@ use App\Domain\Chatbot\Enums\KnowledgeSourceStatus;
 use App\Domain\Chatbot\Enums\KnowledgeSourceType;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
+use App\Domain\Integration\Services\WebclawResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,9 @@ class IndexKnowledgeSourceJob implements ShouldQueue
         try {
             $chunks = match ($source->type) {
                 KnowledgeSourceType::Document => $this->indexDocument($source),
-                KnowledgeSourceType::Url => $this->indexUrl($source->source_url),
-                KnowledgeSourceType::Sitemap => $this->indexSitemap($source->source_url),
+                KnowledgeSourceType::Url => $this->indexUrl($source->source_url, $source->team_id),
+                KnowledgeSourceType::Sitemap => $this->indexSitemap($source->source_url, $source->team_id),
+                KnowledgeSourceType::Website => $this->indexWebsite($source->source_url, $source->source_data['max_pages'] ?? 30, $source->team_id),
             };
 
             // Delete existing chunks for this source (re-indexing case)
@@ -84,12 +86,25 @@ class IndexKnowledgeSourceJob implements ShouldQueue
         return $this->chunkText($content);
     }
 
-    private function indexUrl(string $url): array
+    private function indexUrl(string $url, ?string $teamId = null): array
     {
+        $cfg = WebclawResolver::forTeam($teamId);
+
+        try {
+            $scrapeResponse = $cfg['http']->post($cfg['url'].'/v1/scrape', [
+                'url' => $url,
+                'format' => 'markdown',
+            ]);
+
+            if ($scrapeResponse->successful() && $scrapeResponse->json('content')) {
+                return $this->chunkText($scrapeResponse->json('content'), ['url' => $url]);
+            }
+        } catch (\Throwable) {
+            // Fall through to basic scrape
+        }
+
         $response = Http::timeout(30)->get($url);
         $html = $response->body();
-
-        // Strip HTML tags to plain text
         $text = strip_tags($html);
         $text = preg_replace('/\s+/', ' ', $text);
         $text = trim($text);
@@ -97,7 +112,37 @@ class IndexKnowledgeSourceJob implements ShouldQueue
         return $this->chunkText($text, ['url' => $url]);
     }
 
-    private function indexSitemap(string $sitemapUrl): array
+    private function indexWebsite(string $url, int $maxPages, ?string $teamId = null): array
+    {
+        $cfg = WebclawResolver::forTeam($teamId);
+
+        try {
+            $response = $cfg['http']->timeout(120)->post($cfg['url'].'/v1/crawl', [
+                'url' => $url,
+                'max_pages' => $maxPages,
+                'format' => 'markdown',
+            ]);
+
+            if ($response->successful()) {
+                $allChunks = [];
+                foreach ($response->json('pages', []) as $page) {
+                    $chunks = $this->chunkText($page['content'], [
+                        'url' => $page['url'],
+                        'title' => $page['metadata']['title'] ?? '',
+                    ]);
+                    $allChunks = array_merge($allChunks, $chunks);
+                }
+
+                return $allChunks;
+            }
+        } catch (\Throwable) {
+            // Fall through to sitemap fallback
+        }
+
+        return $this->indexSitemap($url.'/sitemap.xml', $teamId);
+    }
+
+    private function indexSitemap(string $sitemapUrl, ?string $teamId = null): array
     {
         $response = Http::timeout(30)->get($sitemapUrl);
         $xml = simplexml_load_string($response->body());
@@ -124,7 +169,7 @@ class IndexKnowledgeSourceJob implements ShouldQueue
 
         foreach (array_slice($urls, 0, 50) as $url) { // cap at 50 URLs per sitemap
             try {
-                $chunks = $this->indexUrl($url);
+                $chunks = $this->indexUrl($url, $teamId);
                 $allChunks = array_merge($allChunks, $chunks);
             } catch (\Throwable) {
                 // Skip individual URL failures

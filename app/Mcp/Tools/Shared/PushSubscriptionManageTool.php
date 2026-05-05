@@ -2,8 +2,9 @@
 
 namespace App\Mcp\Tools\Shared;
 
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use NotificationChannels\WebPush\PushSubscription;
 #[AssistantTool('write')]
 class PushSubscriptionManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'push_subscription_manage';
 
     protected string $description = 'List or delete PWA push subscriptions for the current user.';
@@ -40,7 +43,7 @@ class PushSubscriptionManageTool extends Tool
 
         $user = auth()->user();
         if (! $user) {
-            return Response::error('No authenticated user.');
+            return $this->permissionDeniedError('No authenticated user.');
         }
 
         return match ($validated['action']) {
@@ -70,7 +73,7 @@ class PushSubscriptionManageTool extends Tool
     private function delete(User $user, ?string $endpoint): Response
     {
         if (! $endpoint) {
-            return Response::error('endpoint is required for delete action.');
+            return $this->invalidArgumentError('endpoint is required for delete action.');
         }
 
         $deleted = PushSubscription::where('subscribable_type', $user->getMorphClass())

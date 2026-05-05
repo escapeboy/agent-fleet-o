@@ -7,6 +7,7 @@ use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\WorktreeExecution;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class CodeExecutionTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'code_execution_manage';
 
     protected string $description = 'Manage code execution skills and worktree executions. List executions, inspect diffs and stdout/stderr, get configuration schema, and list pending approval requests for code changes.';
@@ -51,7 +54,7 @@ class CodeExecutionTool extends Tool
             'get_execution' => $this->getExecution($validated['worktree_execution_id'] ?? null),
             'get_diff' => $this->getDiff($validated['worktree_execution_id'] ?? null),
             'get_config_schema' => $this->getConfigSchema(),
-            default => Response::error('Unknown action.'),
+            default => $this->invalidArgumentError('Unknown action.'),
         };
     }
 
@@ -111,13 +114,13 @@ class CodeExecutionTool extends Tool
     private function getExecution(?string $worktreeExecutionId): Response
     {
         if (! $worktreeExecutionId) {
-            return Response::error('worktree_execution_id is required.');
+            return $this->invalidArgumentError('worktree_execution_id is required.');
         }
 
         $execution = WorktreeExecution::find($worktreeExecutionId);
 
         if (! $execution) {
-            return Response::error('WorktreeExecution not found.');
+            return $this->notFoundError('worktree execution');
         }
 
         $approvalStatus = null;
@@ -151,13 +154,13 @@ class CodeExecutionTool extends Tool
     private function getDiff(?string $worktreeExecutionId): Response
     {
         if (! $worktreeExecutionId) {
-            return Response::error('worktree_execution_id is required.');
+            return $this->invalidArgumentError('worktree_execution_id is required.');
         }
 
         $execution = WorktreeExecution::find($worktreeExecutionId);
 
         if (! $execution) {
-            return Response::error('WorktreeExecution not found.');
+            return $this->notFoundError('worktree execution');
         }
 
         return Response::text(json_encode([

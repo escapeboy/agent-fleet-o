@@ -4,12 +4,13 @@ namespace App\Mcp\Tools\Credential;
 
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Credential\Models\CredentialVersion;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * List the version history of a credential.
@@ -20,6 +21,8 @@ use App\Mcp\Attributes\AssistantTool;
 #[AssistantTool('read')]
 class CredentialListVersionsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_list_versions';
 
     protected string $description = 'List version history for a credential. Returns metadata only — secret values are never included. Versions are created automatically on each rotation.';
@@ -41,7 +44,7 @@ class CredentialListVersionsTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $credential = Credential::withoutGlobalScopes()
@@ -49,7 +52,7 @@ class CredentialListVersionsTool extends Tool
             ->find($validated['credential_id']);
 
         if (! $credential) {
-            return Response::error('Credential not found.');
+            return $this->notFoundError('credential');
         }
 
         $versions = CredentialVersion::withoutGlobalScopes()

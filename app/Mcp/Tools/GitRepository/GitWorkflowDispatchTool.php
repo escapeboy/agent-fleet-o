@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitWorkflowDispatchTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_workflow_dispatch';
 
     protected string $description = 'Trigger a GitHub Actions workflow (or GitLab CI pipeline) by workflow file name or ID. Useful for kicking off deployment pipelines after a merge.';
@@ -37,12 +40,12 @@ class GitWorkflowDispatchTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         try {
@@ -63,7 +66,7 @@ class GitWorkflowDispatchTool extends Tool
                 'ref' => $ref,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

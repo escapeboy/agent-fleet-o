@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\SendAgentMessageAction;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewSendMessageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_send_message';
 
     protected string $description = 'Send a message from one crew agent to another within a crew execution. Use message_type "finding" to publish results, "query" to ask a question, "broadcast" to send to all.';
@@ -58,12 +61,12 @@ class CrewSendMessageTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $execution = CrewExecution::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_execution_id']);
 
         if (! $execution) {
-            return Response::error('Crew execution not found.');
+            return $this->notFoundError('crew execution');
         }
 
         $sender = isset($validated['sender_agent_id'])
@@ -92,7 +95,7 @@ class CrewSendMessageTool extends Tool
                 'round' => $message->round,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

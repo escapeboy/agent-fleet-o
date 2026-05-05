@@ -30,11 +30,11 @@ class WebsiteController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $websites = QueryBuilder::for(Website::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name'])
+            )
+            ->allowedSorts('created_at', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

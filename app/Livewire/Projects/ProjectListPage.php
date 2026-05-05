@@ -8,13 +8,20 @@ use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
+use App\Livewire\Concerns\HasAssistantSelection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class ProjectListPage extends Component
 {
+    use HasAssistantSelection;
     use WithPagination;
+
+    public function mount(): void
+    {
+        $this->selectionKind = 'project';
+    }
 
     #[Url]
     public string $search = '';

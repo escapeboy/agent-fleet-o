@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProjectRunListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_run_list';
 
     protected string $description = 'List all runs for a project with optional status filter. Returns run history with status, timing, and experiment/crew execution IDs for drill-down.';
@@ -47,7 +50,7 @@ class ProjectRunListTool extends Tool
         $project = Project::where('team_id', $teamId)->find($validated['project_id']);
 
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         $query = ProjectRun::where('project_id', $project->id)

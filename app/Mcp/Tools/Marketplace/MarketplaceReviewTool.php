@@ -6,6 +6,7 @@ use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Marketplace\Models\MarketplaceReview;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class MarketplaceReviewTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_review';
 
     protected string $description = 'Submit a review for a published marketplace listing. Rating must be 1–5 stars.';
@@ -45,11 +48,11 @@ class MarketplaceReviewTool extends Tool
         $listing = MarketplaceListing::where('slug', $validated['listing_slug'])->first();
 
         if (! $listing) {
-            return Response::error('Marketplace listing not found.');
+            return $this->notFoundError('marketplace listing');
         }
 
         if ($listing->status !== MarketplaceStatus::Published) {
-            return Response::error('Listing is not published.');
+            return $this->failedPreconditionError('Listing is not published.');
         }
 
         try {
@@ -78,7 +81,7 @@ class MarketplaceReviewTool extends Tool
                 'created_at' => $review->created_at->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

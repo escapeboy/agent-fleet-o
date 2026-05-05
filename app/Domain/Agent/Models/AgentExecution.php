@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Models;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Skill\Models\Skill;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,6 +50,8 @@ class AgentExecution extends Model
         'evaluation_method',
         'judge_model',
         'error_message',
+        'extracted_skill_id',
+        'workspace_contract',
     ];
 
     protected function casts(): array
@@ -64,6 +67,7 @@ class AgentExecution extends Model
             'cost_credits' => 'integer',
             'quality_score' => 'float',
             'quality_details' => 'array',
+            'workspace_contract' => 'array',
         ];
     }
 
@@ -75,5 +79,10 @@ class AgentExecution extends Model
     public function experiment(): BelongsTo
     {
         return $this->belongsTo(Experiment::class);
+    }
+
+    public function extractedSkill(): BelongsTo
+    {
+        return $this->belongsTo(Skill::class, 'extracted_skill_id');
     }
 }

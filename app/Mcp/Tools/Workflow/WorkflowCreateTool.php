@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_create';
 
     protected string $description = 'Create a new workflow with default start/end nodes. Use the workflow builder to add nodes and edges later.';
@@ -42,7 +45,7 @@ class WorkflowCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -69,7 +72,7 @@ class WorkflowCreateTool extends Tool
                 'status' => $workflow->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

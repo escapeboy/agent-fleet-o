@@ -4,6 +4,7 @@ namespace App\Livewire\Triggers;
 
 use App\Domain\Project\Models\Project;
 use App\Domain\Trigger\Actions\CreateTriggerRuleAction;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateTriggerRuleForm extends Component
@@ -57,10 +58,14 @@ class CreateTriggerRuleForm extends Component
 
     public function save(CreateTriggerRuleAction $action): void
     {
+        Gate::authorize('edit-content');
+
+        $teamId = auth()->user()->current_team_id;
+
         $this->validate([
             'name' => 'required|string|max:255',
             'source_type' => 'required|string',
-            'project_id' => 'nullable|uuid|exists:projects,id',
+            'project_id' => "nullable|uuid|exists:projects,id,team_id,{$teamId}",
             'cooldown_seconds' => 'integer|min:0|max:86400',
             'max_concurrent' => 'integer|min:-1|max:10',
             'conditionRows.*.field' => 'required_with:conditionRows.*.operator|string|regex:/^[a-zA-Z0-9_.]+$/',

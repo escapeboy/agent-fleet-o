@@ -134,6 +134,32 @@
                 @endif
             </div>
 
+            {{-- Test Ratchet Mode --}}
+            <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div class="border-b border-gray-200 px-5 py-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Test Ratchet Guard</h3>
+                    <p class="mt-1 text-xs text-gray-500">Detects test deletions and assertion removals on every commit through this repo's GatedGitClient.</p>
+                </div>
+                <div class="p-5 space-y-3">
+                    <x-form-select wire:model="testRatchetMode" label="Mode">
+                        @foreach($testRatchetModes as $mode)
+                            <option value="{{ $mode->value }}">{{ $mode->label() }}</option>
+                        @endforeach
+                    </x-form-select>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-xs text-gray-500">
+                            <strong>Off</strong>: never inspect. <strong>Soft</strong>: log a warning. <strong>Hard</strong>: refuse the commit and raise an ActionProposal.
+                        </p>
+                        <button wire:click="saveTestRatchetMode" class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                            Save
+                        </button>
+                    </div>
+                    @if($testRatchetSavedMessage)
+                        <p class="text-xs text-emerald-600">{{ $testRatchetSavedMessage }}</p>
+                    @endif
+                </div>
+            </div>
+
             {{-- Open pull requests --}}
             <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
                 <div class="border-b border-gray-200 px-5 py-3">

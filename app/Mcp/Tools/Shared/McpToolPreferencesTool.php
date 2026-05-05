@@ -3,8 +3,9 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\Team;
-use Generator;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use Generator;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class McpToolPreferencesTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'mcp_tool_preferences';
 
     protected string $description = 'Set MCP tool preferences for the current team. Choose a profile (essential, standard, full) or provide a custom list of enabled tools.';
@@ -40,7 +43,7 @@ class McpToolPreferencesTool extends Tool
         $team = Team::find($teamId);
 
         if (! $team) {
-            yield Response::error('Team not found.');
+            yield $this->notFoundError('team');
 
             return;
         }
@@ -49,13 +52,13 @@ class McpToolPreferencesTool extends Tool
         $enabled = $request->get('enabled');
 
         if ($profile && $enabled) {
-            yield Response::error('Provide either profile or enabled, not both.');
+            yield $this->invalidArgumentError('Provide either profile or enabled, not both.');
 
             return;
         }
 
         if (! $profile && ! $enabled) {
-            yield Response::error('Provide either profile (essential, standard, full) or enabled (array of tool names).');
+            yield $this->invalidArgumentError('Provide either profile (essential, standard, full) or enabled (array of tool names).');
 
             return;
         }
@@ -66,7 +69,7 @@ class McpToolPreferencesTool extends Tool
             $validProfiles = array_keys(config('mcp_profiles', []));
 
             if (! in_array($profile, $validProfiles)) {
-                yield Response::error("Invalid profile '{$profile}'. Valid: ".implode(', ', $validProfiles));
+                yield $this->invalidArgumentError("Invalid profile '{$profile}'. Valid: ".implode(', ', $validProfiles));
 
                 return;
             }
@@ -78,7 +81,7 @@ class McpToolPreferencesTool extends Tool
             $invalid = array_diff($enabled, $catalogTools);
 
             if (! empty($invalid)) {
-                yield Response::error('Unknown tool names: '.implode(', ', $invalid).'. Use mcp_tool_catalog action to see available tools.');
+                yield $this->invalidArgumentError('Unknown tool names: '.implode(', ', $invalid).'. Use mcp_tool_catalog action to see available tools.');
 
                 return;
             }

@@ -2,12 +2,12 @@
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[AssistantTool('read')]
@@ -39,7 +39,7 @@ class SupabaseConnectorTool extends Tool
                 'get_setup_instructions' => $this->getSetupInstructions(),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

@@ -3,17 +3,20 @@
 namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]
 class ConnectorConfigSaveTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_config_save';
 
     protected string $description = 'Create or update an outbound connector config. Upserts by channel. Core channels: email, webhook, notification. Legacy channels (telegram, slack, etc.) are supported for backward compatibility but should be handled by agents via tools instead.';
@@ -39,12 +42,12 @@ class ConnectorConfigSaveTool extends Tool
         $validChannels = ['email', 'webhook', 'notification', 'telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp', 'ntfy'];
 
         if (! in_array($channel, $validChannels)) {
-            return Response::error('Invalid channel. Must be one of: '.implode(', ', $validChannels));
+            return $this->invalidArgumentError('Invalid channel. Must be one of: '.implode(', ', $validChannels));
         }
 
         $credentials = $request->get('credentials');
         if (! is_array($credentials) || empty(array_filter($credentials, fn ($v) => $v !== null && $v !== ''))) {
-            return Response::error('Credentials must be a non-empty object with at least one value');
+            return $this->invalidArgumentError('Credentials must be a non-empty object with at least one value');
         }
 
         $teamId = app('mcp.team_id') ?? null;

@@ -6,9 +6,12 @@ use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Domain\Integration\Actions\DisconnectIntegrationAction;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Actions\PingIntegrationAction;
+use App\Domain\Integration\Exceptions\IntegrationActionProposedException;
+use App\Domain\Integration\Exceptions\IntegrationActionRefusedException;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -31,6 +34,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class IntegrationManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_manage';
 
     protected string $description = 'Manage external service integrations (GitHub, Slack, Stripe, Notion, Airtable, Linear, webhooks). Actions: list, connect, disconnect, ping, execute, list_triggers, list_actions.';
@@ -72,7 +77,7 @@ class IntegrationManageTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context. Ensure MCP authentication is configured.');
+            return $this->permissionDeniedError('No team context. Ensure MCP authentication is configured.');
         }
 
         return match ($action) {
@@ -83,7 +88,7 @@ class IntegrationManageTool extends Tool
             'execute' => $this->execute($request, $teamId),
             'list_triggers' => $this->listTriggers($request),
             'list_actions' => $this->listActions($request),
-            default => Response::error("Unknown action: {$action}. Valid: list, connect, disconnect, ping, execute, list_triggers, list_actions"),
+            default => $this->invalidArgumentError("Unknown action: {$action}. Valid: list, connect, disconnect, ping, execute, list_triggers, list_actions"),
         };
     }
 
@@ -120,7 +125,7 @@ class IntegrationManageTool extends Tool
         $name = $request->get('name');
 
         if (! $driver || ! $name) {
-            return Response::error('driver and name are required for connect.');
+            return $this->invalidArgumentError('driver and name are required for connect.');
         }
 
         $credentialsRaw = $request->get('credentials', []);
@@ -145,7 +150,7 @@ class IntegrationManageTool extends Tool
                 'status' => $integration->getAttribute('status'),
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Connection failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -154,7 +159,7 @@ class IntegrationManageTool extends Tool
         $integration = $this->findIntegration($request, $teamId);
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         $this->disconnectAction->execute($integration);
@@ -167,7 +172,7 @@ class IntegrationManageTool extends Tool
         $integration = $this->findIntegration($request, $teamId);
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         $result = $this->pingAction->execute($integration);
@@ -185,7 +190,7 @@ class IntegrationManageTool extends Tool
         $integration = $this->findIntegration($request, $teamId);
 
         if (! $integration) {
-            return Response::error('Integration not found.');
+            return $this->notFoundError('integration');
         }
 
         $integrationAction = $request->get('integration_action');
@@ -193,7 +198,7 @@ class IntegrationManageTool extends Tool
         $params = is_array($paramsRaw) ? $paramsRaw : [];
 
         if (! $integrationAction) {
-            return Response::error('integration_action is required for execute.');
+            return $this->invalidArgumentError('integration_action is required for execute.');
         }
 
         try {
@@ -204,8 +209,23 @@ class IntegrationManageTool extends Tool
             );
 
             return Response::text(json_encode(['success' => true, 'result' => $result]));
+        } catch (IntegrationActionProposedException $e) {
+            return Response::text(json_encode([
+                'success' => false,
+                'status' => 'proposed',
+                'proposal_id' => $e->proposalId,
+                'risk_level' => $e->riskLevel,
+                'message' => "⏸ Action proposed for human review (proposal_id={$e->proposalId}). Approve in the Approval Inbox before this runs.",
+            ]));
+        } catch (IntegrationActionRefusedException $e) {
+            return Response::text(json_encode([
+                'success' => false,
+                'status' => 'refused',
+                'risk_level' => $e->riskLevel,
+                'message' => "⛔ {$e->getMessage()}",
+            ]));
         } catch (\Throwable $e) {
-            return Response::error('Execute failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -214,7 +234,7 @@ class IntegrationManageTool extends Tool
         $driver = $request->get('driver');
 
         if (! $driver) {
-            return Response::error('driver is required for list_triggers.');
+            return $this->invalidArgumentError('driver is required for list_triggers.');
         }
 
         $driverInstance = $this->manager->driver($driver);
@@ -233,7 +253,7 @@ class IntegrationManageTool extends Tool
         $driver = $request->get('driver');
 
         if (! $driver) {
-            return Response::error('driver is required for list_actions.');
+            return $this->invalidArgumentError('driver is required for list_actions.');
         }
 
         $driverInstance = $this->manager->driver($driver);

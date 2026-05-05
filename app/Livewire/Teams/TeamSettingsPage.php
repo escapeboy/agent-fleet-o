@@ -12,8 +12,12 @@ use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
+use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
+use App\Infrastructure\Telemetry\TenantTracerTester;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -60,6 +64,11 @@ class TeamSettingsPage extends Component
 
     // Approval settings
     public int $approvalTimeoutHours = 48;
+
+    // Billing & limits
+    public string $maxCreditsPerCall = '';
+
+    public string $creditMarginMultiplier = '';
 
     // Bridge routing
     public string $bridgeRoutingMode = 'auto';
@@ -111,6 +120,28 @@ class TeamSettingsPage extends Component
 
     public array $mcpToolsEnabled = [];
 
+    // Observability (per-team OTLP export)
+    public bool $observabilityEnabled = false;
+
+    public string $observabilityEndpoint = '';
+
+    public string $observabilityToken = '';
+
+    public bool $observabilityTokenIsSet = false;
+
+    public float $observabilitySampleRate = 1.0;
+
+    public string $observabilityServiceName = '';
+
+    // Sprint 18 — last probe outcome surfaced as a badge
+    public ?string $lastProbeAt = null;
+
+    public ?string $lastProbeStatus = null;
+
+    public ?bool $lastProbeOk = null;
+
+    public ?string $lastProbeMessage = null;
+
     // API token form
     public string $tokenName = '';
 
@@ -137,6 +168,18 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+
+        // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
+        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+            $this->maxCreditsPerCall = $team->max_credits_per_call !== null
+                ? (string) $team->max_credits_per_call
+                : '';
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+            $this->creditMarginMultiplier = $team->credit_margin_multiplier !== null
+                ? (string) $team->credit_margin_multiplier
+                : '';
+        }
 
         // AI Features
         $this->autoSkillProposeEnabled = (bool) ($settings['auto_skill_propose_enabled'] ?? config('skills.auto_propose.enabled', true));
@@ -176,6 +219,19 @@ class TeamSettingsPage extends Component
             $profileTools = config("mcp_profiles.{$this->mcpToolProfile}");
             $this->mcpToolsEnabled = $profileTools ?? array_keys($this->getAllCatalogToolNames());
         }
+
+        // Observability (per-team OTLP export)
+        $observability = $settings['observability'] ?? [];
+        $this->observabilityEnabled = (bool) ($observability['enabled'] ?? false);
+        $this->observabilityEndpoint = (string) ($observability['endpoint'] ?? '');
+        $this->observabilitySampleRate = (float) ($observability['sample_rate'] ?? 1.0);
+        $this->observabilityServiceName = (string) ($observability['service_name'] ?? '');
+        $this->observabilityTokenIsSet = ! empty($observability['otlp_token_encrypted']);
+        $this->observabilityToken = '';
+        $this->lastProbeAt = $observability['last_probe_at'] ?? null;
+        $this->lastProbeStatus = $observability['last_probe_status'] ?? null;
+        $this->lastProbeOk = isset($observability['last_probe_ok']) ? (bool) $observability['last_probe_ok'] : null;
+        $this->lastProbeMessage = $observability['last_probe_message'] ?? null;
     }
 
     public function saveTeamSettings(): void
@@ -207,6 +263,114 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Default LLM provider saved.');
+    }
+
+    public function saveObservability(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $this->validate([
+            'observabilityEnabled' => 'boolean',
+            'observabilityEndpoint' => 'nullable|string|url:http,https|max:512',
+            'observabilityToken' => 'nullable|string|max:2048',
+            'observabilitySampleRate' => 'numeric|min:0|max:1',
+            'observabilityServiceName' => 'nullable|string|max:64|regex:/^[a-z0-9_\-\.]*$/i',
+        ]);
+
+        $endpoint = trim($this->observabilityEndpoint);
+        if ($this->observabilityEnabled && $endpoint !== '') {
+            try {
+                app(SsrfGuard::class)->assertPublicUrl($endpoint);
+            } catch (\InvalidArgumentException $e) {
+                $this->addError('observabilityEndpoint', 'Endpoint rejected: '.$e->getMessage());
+
+                return;
+            }
+        }
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $current = $settings['observability'] ?? [];
+
+        $next = [
+            'enabled' => $this->observabilityEnabled,
+            'endpoint' => $endpoint,
+            'sample_rate' => $this->observabilitySampleRate,
+            'service_name' => trim($this->observabilityServiceName),
+            // Keep existing encrypted token unless user supplied a new one.
+            'otlp_token_encrypted' => $current['otlp_token_encrypted'] ?? '',
+        ];
+
+        if ($this->observabilityToken !== '') {
+            $next['otlp_token_encrypted'] = Crypt::encryptString($this->observabilityToken);
+        }
+
+        $settings['observability'] = $next;
+        $team->update(['settings' => $settings]);
+
+        // Drop the in-process tracer cache so the next request picks up the
+        // new endpoint/token without a process restart.
+        app(TenantTracerProviderFactory::class)->forget($team->id);
+
+        $this->observabilityTokenIsSet = $next['otlp_token_encrypted'] !== '';
+        $this->observabilityToken = '';
+
+        session()->flash('message', 'Observability settings saved.');
+    }
+
+    /**
+     * "Test connection" button handler. Uses either the already-saved config
+     * OR the currently-typed form values (if a new token is in the input),
+     * so users can verify a token BEFORE saving it.
+     */
+    public function testObservability(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $saved = $team->settings['observability'] ?? [];
+
+        $candidate = [
+            'endpoint' => trim($this->observabilityEndpoint) ?: ($saved['endpoint'] ?? ''),
+            'otlp_token_encrypted' => $this->observabilityToken !== ''
+                ? Crypt::encryptString($this->observabilityToken)
+                : ($saved['otlp_token_encrypted'] ?? ''),
+        ];
+
+        $result = app(TenantTracerTester::class)->test($candidate);
+
+        // Sprint 18: persist probe result so the UI can show a stable
+        // "Last tested N min ago" badge between sessions.
+        $settings = $team->settings ?? [];
+        $settings['observability'] = array_merge($settings['observability'] ?? [], [
+            'last_probe_at' => now()->toIso8601String(),
+            'last_probe_status' => $result['status'],
+            'last_probe_ok' => (bool) $result['ok'],
+            'last_probe_message' => $result['message'],
+            'last_probe_latency_ms' => $result['latency_ms'],
+        ]);
+        $team->update(['settings' => $settings]);
+
+        $key = $result['ok'] ? 'message' : 'error';
+        session()->flash($key, 'Observability test: '.$result['message']);
+    }
+
+    public function clearObservabilityToken(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        if (isset($settings['observability'])) {
+            $settings['observability']['otlp_token_encrypted'] = '';
+            $team->update(['settings' => $settings]);
+            app(TenantTracerProviderFactory::class)->forget($team->id);
+        }
+
+        $this->observabilityTokenIsSet = false;
+        $this->observabilityToken = '';
+
+        session()->flash('message', 'Observability token cleared.');
     }
 
     public function saveAssistantLlm(): void
@@ -310,6 +474,69 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Session TTL saved.');
+    }
+
+    public function saveCreditsLimits(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+            session()->flash('error', 'Per-call credit limits are not available in this build.');
+
+            return;
+        }
+
+        $this->validate([
+            'maxCreditsPerCall' => 'nullable|string',
+        ]);
+
+        $value = trim($this->maxCreditsPerCall);
+        $intValue = $value === '' ? null : (int) $value;
+
+        if ($intValue !== null && ($intValue < 1 || $intValue > 100_000)) {
+            $this->addError('maxCreditsPerCall', 'Must be between 1 and 100,000 (or empty for unlimited).');
+
+            return;
+        }
+
+        auth()->user()->currentTeam->update([
+            'max_credits_per_call' => $intValue,
+        ]);
+
+        session()->flash('message', 'Per-call credit limit saved.');
+    }
+
+    public function saveCreditMargin(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! ($user->is_super_admin ?? false)) {
+            abort(403, 'Super-admin role required to change margin multiplier.');
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+            session()->flash('error', 'Margin override is not available in this build.');
+
+            return;
+        }
+
+        $this->validate([
+            'creditMarginMultiplier' => 'nullable|string',
+        ]);
+
+        $value = trim($this->creditMarginMultiplier);
+        $floatValue = $value === '' ? null : (float) $value;
+
+        if ($floatValue !== null && ($floatValue < 0.5 || $floatValue > 3.0)) {
+            $this->addError('creditMarginMultiplier', 'Must be between 0.5 and 3.0 (or empty for default).');
+
+            return;
+        }
+
+        $user->currentTeam->update([
+            'credit_margin_multiplier' => $floatValue,
+        ]);
+
+        session()->flash('message', 'Credit margin multiplier saved.');
     }
 
     public function saveApprovalSettings(): void
@@ -890,7 +1117,7 @@ class TeamSettingsPage extends Component
         $this->authorize('manage-team');
 
         auth()->user()->currentTeam->update([
-            'widget_public_key' => 'wk_'.\Illuminate\Support\Str::random(40),
+            'widget_public_key' => 'wk_'.Str::random(40),
         ]);
 
         session()->flash('message', 'Widget public key rotated.');

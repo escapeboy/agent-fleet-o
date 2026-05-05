@@ -2,8 +2,9 @@
 
 namespace App\Mcp\Tools\System;
 
-use App\Models\Blacklist;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\Blacklist;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class BlacklistManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'blacklist_manage';
 
     protected string $description = 'Manage the outbound targeting blacklist. Blocked entries (emails, domains, companies, keywords) prevent outbound messages from being delivered. Operations: list, add, remove.';
@@ -53,7 +56,7 @@ class BlacklistManageTool extends Tool
                 'remove' => $this->removeEntry($validated),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 
@@ -76,10 +79,10 @@ class BlacklistManageTool extends Tool
     private function addEntry(array $data): Response
     {
         if (empty($data['type'])) {
-            return Response::error('type is required for add operation.');
+            return $this->invalidArgumentError('type is required for add operation.');
         }
         if (empty($data['value'])) {
-            return Response::error('value is required for add operation.');
+            return $this->invalidArgumentError('value is required for add operation.');
         }
 
         $entry = Blacklist::create([
@@ -100,13 +103,13 @@ class BlacklistManageTool extends Tool
     private function removeEntry(array $data): Response
     {
         if (empty($data['value'])) {
-            return Response::error('value (entry UUID) is required for remove operation.');
+            return $this->invalidArgumentError('value (entry UUID) is required for remove operation.');
         }
 
         $entry = Blacklist::find($data['value']);
 
         if (! $entry) {
-            return Response::error('Blacklist entry not found.');
+            return $this->notFoundError('blacklist entry');
         }
 
         $entry->delete();

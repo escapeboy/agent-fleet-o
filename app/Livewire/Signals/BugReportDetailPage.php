@@ -6,19 +6,31 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Signal\Actions\AddSignalCommentAction;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
+use App\Domain\Signal\Enums\CommentAuthorType;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Exceptions\InvalidSignalTransitionException;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Domain\Signal\Services\SignalStatusTransitionMap;
+use Illuminate\View\View;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class BugReportDetailPage extends Component
 {
+    use WithFileUploads;
+
     public Signal $signal;
 
     public string $commentText = '';
 
+    public bool $commentVisibleToReporter = true;
+
     public string $delegateAgentId = '';
+
+    /** @var array<int, TemporaryUploadedFile> */
+    public array $commentImages = [];
 
     public function mount(Signal $signal): void
     {
@@ -43,17 +55,63 @@ class BugReportDetailPage extends Component
 
     public function addComment(): void
     {
-        $this->validate(['commentText' => ['required', 'string', 'min:1', 'max:5000']]);
+        $maxAttachments = (int) config('signals.bug_report.widget_comment_max_attachments', 4);
+        $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
 
-        app(AddSignalCommentAction::class)->execute(
+        $this->validate([
+            'commentText' => ['nullable', 'string', 'max:5000'],
+            'commentImages' => ['nullable', 'array', 'max:'.$maxAttachments],
+            'commentImages.*' => [
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp,gif',
+                'max:'.($maxMb * 1024),
+            ],
+        ]);
+
+        $body = trim($this->commentText);
+
+        if ($body === '' && $this->commentImages === []) {
+            $this->addError('commentText', 'Add a comment or attach at least one image.');
+
+            return;
+        }
+
+        // "Visible to reporter" → support (shown in widget); unchecked → human (internal note).
+        $authorType = $this->commentVisibleToReporter
+            ? CommentAuthorType::Support
+            : CommentAuthorType::Human;
+
+        $comment = app(AddSignalCommentAction::class)->execute(
             signal: $this->signal,
-            body: $this->commentText,
-            authorType: 'human',
+            body: $body,
+            authorType: $authorType,
             userId: auth()->id(),
         );
 
+        if ($this->commentImages !== []) {
+            $ingester = app(CommentAttachmentIngester::class);
+            foreach ($this->commentImages as $upload) {
+                $ingester->attachReencodedImage(
+                    $comment,
+                    $upload->getRealPath(),
+                    $upload->getClientOriginalName(),
+                );
+            }
+        }
+
         $this->commentText = '';
-        $this->signal->load('comments.user');
+        $this->commentImages = [];
+        $this->signal->load('comments.user', 'comments.media');
+    }
+
+    public function removeCommentImage(int $index): void
+    {
+        if (! array_key_exists($index, $this->commentImages)) {
+            return;
+        }
+
+        array_splice($this->commentImages, $index, 1);
     }
 
     public function delegateToAgent(): void
@@ -73,21 +131,21 @@ class BugReportDetailPage extends Component
         $this->delegateAgentId = '';
     }
 
-    public function render(): \Illuminate\View\View
+    public function render(): View
     {
         $transitionMap = app(SignalStatusTransitionMap::class);
         $allowedTransitions = $transitionMap->allowedTransitionsFrom(
-            $this->signal->status ?? SignalStatus::Received
+            $this->signal->status ?? SignalStatus::Received,
         );
 
         $agents = Agent::query()->orderBy('name')->get(['id', 'name']);
 
-        $this->signal->load('comments.user');
+        $this->signal->load('comments.user', 'comments.media');
 
         return view('livewire.signals.bug-report-detail', [
             'allowedTransitions' => $allowedTransitions,
             'agents' => $agents,
-            'screenshotUrl' => $this->signal->getFirstMediaUrl('bug_report_files'),
+            'mediaFiles' => $this->signal->getMedia('bug_report_files'),
         ]);
     }
 }

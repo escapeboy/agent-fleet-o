@@ -233,9 +233,7 @@
         class="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         title="Open Assistant (Cmd+K)"
     >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
-        </svg>
+        <i class="fa-regular fa-comment-dots text-xl"></i>
     </button>
 
     {{-- Slide-out Panel --}}
@@ -260,18 +258,14 @@
         {{-- Panel Header --}}
         <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
             <div class="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-indigo-600">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
-                </svg>
+                <i class="fa-solid fa-wand-magic-sparkles text-lg text-indigo-600"></i>
                 <h2 class="text-sm font-semibold text-gray-900">Assistant</h2>
                 @if(!empty($compressionStats['total_compressions']))
                     <span
                         class="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-600"
                         title="Memory compressed {{ $compressionStats['total_compressions'] }}x ({{ $compressionStats['total_messages_compressed'] ?? 0 }} messages)"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                        </svg>
+                        <i class="fa-solid fa-database text-xs"></i>
                         {{ $compressionStats['total_compressions'] }}x
                     </span>
                 @endif
@@ -307,9 +301,7 @@
                         class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
                         title="Review Conversation Quality"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" :class="reviewing ? 'animate-spin' : ''">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                        </svg>
+                        <i class="fa-solid fa-star text-base" :class="reviewing ? 'fa-spin' : ''"></i>
                     </button>
                 @endif
                 {{-- History Toggle --}}
@@ -318,9 +310,7 @@
                     class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     title="Conversation History"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
+                    <i class="fa-regular fa-clock text-base"></i>
                 </button>
                 {{-- New Conversation --}}
                 <button
@@ -329,9 +319,7 @@
                     class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     title="New Conversation"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
+                    <i class="fa-solid fa-plus text-base"></i>
                 </button>
                 {{-- Close --}}
                 <button
@@ -339,9 +327,7 @@
                     class="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     title="Close (Esc)"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
+                    <i class="fa-solid fa-xmark text-base"></i>
                 </button>
             </div>
         </div>
@@ -363,6 +349,28 @@
                         <p class="py-2 text-center text-xs text-gray-400">No conversations yet</p>
                     @endforelse
                 </div>
+            </div>
+        @endif
+
+        @if($contextType === 'selection' && $contextId !== '')
+            @php
+                $selection = json_decode($contextId, true) ?: [];
+                $selectionKind = $selection['kind'] ?? 'item';
+                $selectionCount = count($selection['ids'] ?? []);
+            @endphp
+            <div class="flex items-center justify-between border-b border-indigo-100 bg-indigo-50 px-4 py-2 text-xs">
+                <div class="flex items-center gap-2 text-indigo-700">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span class="font-medium">Selection:</span>
+                    <span>{{ $selectionCount }} {{ $selectionKind }}{{ $selectionCount === 1 ? '' : 's' }} — assistant will act on these</span>
+                </div>
+                <button
+                    wire:click="applySelection('', [])"
+                    class="text-indigo-500 transition-colors hover:text-indigo-700"
+                    title="Clear selection"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
         @endif
 
@@ -434,7 +442,7 @@
                                 <div class="mb-2 flex flex-wrap items-center gap-1.5">
                                     @foreach($msg['tool_calls_in_progress'] as $toolName)
                                         <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-600">
-                                            <svg class="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                            <i class="fa-solid fa-spinner fa-spin text-xs"></i>
                                             {{ $toolName }}
                                         </span>
                                     @endforeach
@@ -494,13 +502,72 @@
                                         @endforeach
                                     </div>
                                 @endif
+                                @if(!empty($msg['citations']))
+                                    <div class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                        <span class="font-medium text-gray-500">Sources:</span>
+                                        @foreach($msg['citations'] as $c)
+                                            <a href="{{ $c['url'] }}"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                                               title="{{ ucfirst($c['kind']) }} · {{ $c['id'] }}">
+                                                <span class="text-[10px] text-indigo-500">[{{ $c['n'] }}]</span>
+                                                <span class="max-w-[200px] truncate">{{ $c['title'] }}</span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
                                 @if(!empty($msg['tool_calls_count']))
                                     <div class="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-3 w-3">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
-                                        </svg>
+                                        <i class="fa-solid fa-screwdriver-wrench text-xs"></i>
                                         {{ $msg['tool_calls_count'] }} tool call{{ $msg['tool_calls_count'] > 1 ? 's' : '' }}
                                     </div>
+                                @endif
+                                @if(!empty($msg['mcp_app_uris']))
+                                    @foreach($msg['mcp_app_uris'] as $mcpToolName => $mcpUri)
+                                        @php $mcpHtml = \App\Mcp\Services\McpAppRegistry::htmlForUri($mcpUri); @endphp
+                                        @if($mcpHtml)
+                                            <div wire:ignore class="mt-3"
+                                                 x-data="{
+                                                    init() {
+                                                        const encoded = this.$el.dataset.apphtml;
+                                                        if (encoded) this.$refs.frame.srcdoc = atob(encoded);
+                                                        const self = this;
+                                                        self._msgHandler = function(e) {
+                                                            if (!self.$refs.frame || e.source !== self.$refs.frame.contentWindow) return;
+                                                            const msg = e.data;
+                                                            if (!msg || msg.jsonrpc !== '2.0') return;
+                                                            if (msg.method === 'ui/initialize' && msg.id !== undefined) {
+                                                                e.source.postMessage({ jsonrpc: '2.0', id: msg.id, result: { protocolVersion: '2026-01-26', serverInfo: { name: 'fleetq-assistant', version: '1.0.0' }, capabilities: {} } }, '*');
+                                                                return;
+                                                            }
+                                                            if (msg.method === 'ui/notifications/initialized') return;
+                                                            if (msg.method === 'ui/update-model-context') return;
+                                                            if (msg.method === 'tools/call' && msg.id !== undefined) {
+                                                                const toolName = msg.params && msg.params.name;
+                                                                const args = (msg.params && msg.params.arguments) || {};
+                                                                if (!toolName) return;
+                                                                self.$wire.mcpAppCallTool(toolName, args)
+                                                                    .then(function(result) {
+                                                                        if (self.$refs.frame) self.$refs.frame.contentWindow.postMessage({ jsonrpc: '2.0', id: msg.id, result: result }, '*');
+                                                                    })
+                                                                    .catch(function(err) {
+                                                                        if (self.$refs.frame) self.$refs.frame.contentWindow.postMessage({ jsonrpc: '2.0', id: msg.id, error: { code: -32000, message: err.message || 'Error' } }, '*');
+                                                                    });
+                                                            }
+                                                        };
+                                                        window.addEventListener('message', self._msgHandler);
+                                                        this.$cleanup(function() { window.removeEventListener('message', self._msgHandler); });
+                                                    }
+                                                 }"
+                                                 data-apphtml="{{ base64_encode($mcpHtml) }}">
+                                                <iframe x-ref="frame"
+                                                    sandbox="allow-scripts"
+                                                    style="width:100%;height:420px;border:0;border-radius:8px;background:#0f0f0f;display:block"
+                                                    title="{{ $mcpToolName }} app"></iframe>
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 @endif
                             @else
                                 <p class="text-sm whitespace-pre-wrap">{{ $msg['content'] }}</p>
@@ -602,9 +669,7 @@
                         :class="isListening ? 'bg-red-100 text-red-600 ring-2 ring-red-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
                         class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                        </svg>
+                        <i class="fa-solid fa-microphone text-lg"></i>
                     </button>
                     <div class="relative flex-shrink-0">
                         <button
@@ -614,14 +679,9 @@
                             class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{-- Spinner when job is active --}}
-                            <svg x-show="sending || $wire.pendingMessageId !== ''" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-5 w-5 animate-spin">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
+                            <i x-show="sending || $wire.pendingMessageId !== ''" class="fa-solid fa-spinner fa-spin text-lg"></i>
                             {{-- Send arrow when idle --}}
-                            <svg x-show="!sending && $wire.pendingMessageId === ''" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                            </svg>
+                            <i x-show="!sending && $wire.pendingMessageId === ''" class="fa-solid fa-paper-plane text-lg"></i>
                         </button>
                         {{-- Queue count badge --}}
                         <span

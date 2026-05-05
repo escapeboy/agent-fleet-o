@@ -3,19 +3,22 @@
 namespace App\Mcp\Tools\Credential;
 
 use App\Domain\Credential\Models\Credential;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class CredentialGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_get';
 
     protected string $description = 'Get detailed information about a specific credential. Never includes secret data for security.';
@@ -40,7 +43,7 @@ class CredentialGetTool extends Tool
             ->find($validated['credential_id']);
 
         if (! $credential) {
-            return Response::error('Credential not found.');
+            return $this->notFoundError('credential');
         }
 
         return Response::text(json_encode([

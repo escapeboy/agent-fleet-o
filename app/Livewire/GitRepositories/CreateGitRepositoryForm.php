@@ -6,6 +6,7 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\GitRepository\Actions\CreateGitRepositoryAction;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -79,6 +80,8 @@ class CreateGitRepositoryForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|min:2|max:255',
             'url' => 'required|max:2048',

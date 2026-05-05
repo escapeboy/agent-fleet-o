@@ -29,13 +29,13 @@ final class CrewMutationTools
     public static function createCrew(): PrismToolObject
     {
         return PrismTool::as('create_crew')
-            ->for('Create a new crew (multi-agent team). Requires a coordinator agent and a QA agent.')
+            ->for('Create a new crew (multi-agent team). Requires a coordinator agent. The QA agent is optional — when omitted the coordinator reviews their own work (solo-mode crew).')
             ->withStringParameter('name', 'Crew name', required: true)
             ->withStringParameter('coordinator_agent_id', 'UUID of the coordinator agent', required: true)
-            ->withStringParameter('qa_agent_id', 'UUID of the QA agent (must be different from coordinator)', required: true)
+            ->withStringParameter('qa_agent_id', 'UUID of the QA agent (must differ from coordinator). Optional — omit for a solo-mode crew.')
             ->withStringParameter('description', 'Crew description')
             ->withStringParameter('process_type', 'Process type: sequential, parallel, hierarchical (default: hierarchical)')
-            ->using(function (string $name, string $coordinator_agent_id, string $qa_agent_id, ?string $description = null, ?string $process_type = null) {
+            ->using(function (string $name, string $coordinator_agent_id, ?string $qa_agent_id = null, ?string $description = null, ?string $process_type = null) {
                 try {
                     $processType = CrewProcessType::tryFrom($process_type ?? '') ?? CrewProcessType::Hierarchical;
 

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Profile;
 
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProfileConnectedAccountsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'profile_connected_accounts';
 
     protected string $description = 'List social providers connected to the current user\'s account (Google, GitHub, LinkedIn, X, Apple).';
@@ -27,7 +30,7 @@ class ProfileConnectedAccountsTool extends Tool
         $user = auth()->user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         $supportedProviders = ['google', 'github', 'linkedin-openid', 'x', 'apple'];

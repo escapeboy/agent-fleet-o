@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Budget;
 use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class BudgetAddCreditsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'budget_add_credits';
 
     protected string $description = 'Add credits to the team budget (admin only).';
@@ -31,12 +34,12 @@ class BudgetAddCreditsTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $amount = (float) $request->get('amount');
         if ($amount <= 0) {
-            return Response::error('Amount must be greater than zero.');
+            return $this->invalidArgumentError('Amount must be greater than zero.');
         }
 
         $entry = CreditLedger::create([

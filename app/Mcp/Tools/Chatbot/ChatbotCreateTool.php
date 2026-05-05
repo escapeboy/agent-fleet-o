@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Actions\CreateChatbotAction;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ChatbotCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_create';
 
     protected string $description = 'Create a new chatbot. Automatically creates a backing Agent with the given LLM settings. Returns the chatbot id and a one-time plaintext API token.';
@@ -56,7 +59,7 @@ class ChatbotCreateTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $validated = $request->validate([
@@ -74,7 +77,7 @@ class ChatbotCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -98,7 +101,7 @@ class ChatbotCreateTool extends Tool
                 'note' => 'Save the plaintext_token — it will not be shown again.',
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

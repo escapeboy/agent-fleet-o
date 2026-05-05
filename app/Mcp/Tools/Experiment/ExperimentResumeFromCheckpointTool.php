@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ExperimentResumeFromCheckpointTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_resume_from_checkpoint';
 
     protected string $description = 'Resume an experiment from its most recent checkpoint without resetting progress. Unlike retry-from-step, this preserves all checkpoint data and re-triggers execution from where the agent left off.';
@@ -34,7 +37,7 @@ class ExperimentResumeFromCheckpointTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()
@@ -42,7 +45,7 @@ class ExperimentResumeFromCheckpointTool extends Tool
             ->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         $result = app(ResumeFromCheckpointAction::class)->execute($experiment);

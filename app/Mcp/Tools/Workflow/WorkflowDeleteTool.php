@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Workflow;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class WorkflowDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_delete';
 
     protected string $description = 'Delete a workflow. Only draft workflows can be deleted.';
@@ -30,16 +33,16 @@ class WorkflowDeleteTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $workflow = Workflow::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('workflow_id'));
         if (! $workflow) {
-            return Response::error('Workflow not found.');
+            return $this->notFoundError('workflow');
         }
 
         if ($workflow->status !== WorkflowStatus::Draft) {
-            return Response::error('Only draft workflows can be deleted. Current status: '.$workflow->status->value);
+            return $this->failedPreconditionError('Only draft workflows can be deleted. Current status: '.$workflow->status->value);
         }
 
         $workflow->delete();

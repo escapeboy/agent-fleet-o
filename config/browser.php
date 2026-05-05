@@ -24,4 +24,16 @@ return [
      * Screenshots and scrapes are usually fast; PDF generation may take longer.
      */
     'timeout' => env('BROWSERLESS_TIMEOUT', 30),
+
+    /*
+     * Browser Harness (build #4 of Trendshift sprint, activated in close-all-out-of-scope).
+     *
+     * When true, BrowserHarnessHandler will exec `chromium-browser --headless ...`
+     * inside the sandbox via DockerSandboxExecutor. Requires the sandbox image
+     * to include the chromium package (added in this sprint to docker/sandbox/Dockerfile).
+     *
+     * Disabled by default — turning on without rebuilding the sandbox image
+     * will return a "browser harness is disabled" error from the handler.
+     */
+    'harness_enabled' => env('BROWSER_HARNESS_ENABLED', false),
 ];

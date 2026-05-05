@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ExperimentKillTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_kill';
 
     protected string $description = 'Kill/terminate an experiment permanently. This action cannot be undone.';
@@ -37,12 +40,12 @@ class ExperimentKillTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         try {
@@ -58,7 +61,7 @@ class ExperimentKillTool extends Tool
                 'status' => $result->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

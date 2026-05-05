@@ -11,8 +11,13 @@ RUN apk add --no-cache \
 # Install system dependencies for exif
 RUN apk add --no-cache libexif-dev
 
+# Install system dependencies for GD (png/jpeg/freetype) — needed by
+# UploadedFile::fake()->image() used in bug-report + widget tests.
+RUN apk add --no-cache libpng-dev libjpeg-turbo-dev freetype-dev
+
 # Install PHP extensions
-RUN docker-php-ext-install \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
     pdo_pgsql \
     pgsql \
     zip \
@@ -20,7 +25,8 @@ RUN docker-php-ext-install \
     pcntl \
     opcache \
     bcmath \
-    exif
+    exif \
+    gd
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis

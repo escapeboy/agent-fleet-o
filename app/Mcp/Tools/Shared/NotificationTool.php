@@ -5,8 +5,9 @@ namespace App\Mcp\Tools\Shared;
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Shared\Services\NotificationPreferencesService;
 use App\Domain\Shared\Services\NotificationService;
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class NotificationTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'notification_manage';
 
     protected string $description = 'List unread notifications, send in-app/push notifications, mark as read, or manage notification preferences.';
@@ -62,7 +65,7 @@ class NotificationTool extends Tool
         $team = $user?->currentTeam;
 
         if (! $user || ! $team) {
-            return Response::error('No authenticated user or team context.');
+            return $this->permissionDeniedError('No authenticated user or team context.');
         }
 
         $service = app(NotificationService::class);
@@ -102,7 +105,7 @@ class NotificationTool extends Tool
     private function send(array $data, string $teamId, string $currentUserId, NotificationService $service): Response
     {
         if (empty($data['title']) || empty($data['body'])) {
-            return Response::error('title and body are required for send action.');
+            return $this->invalidArgumentError('title and body are required for send action.');
         }
 
         if (! empty($data['user_id'])) {
@@ -138,12 +141,12 @@ class NotificationTool extends Tool
     private function markRead(?string $notificationId, string $userId): Response
     {
         if (! $notificationId) {
-            return Response::error('notification_id is required for mark_read action.');
+            return $this->invalidArgumentError('notification_id is required for mark_read action.');
         }
 
         $notification = UserNotification::find($notificationId);
         if (! $notification || $notification->user_id !== $userId) {
-            return Response::error('Notification not found.');
+            return $this->notFoundError('notification');
         }
 
         $notification->markAsRead();
@@ -171,7 +174,7 @@ class NotificationTool extends Tool
     private function updatePreferences(array $data, User $user): Response
     {
         if (empty($data['preferences'])) {
-            return Response::error('preferences object is required for update_preferences action.');
+            return $this->invalidArgumentError('preferences object is required for update_preferences action.');
         }
 
         app(NotificationPreferencesService::class)->updateForUser($user, (array) $data['preferences']);

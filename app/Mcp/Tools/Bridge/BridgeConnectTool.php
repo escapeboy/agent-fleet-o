@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Bridge;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Models\BridgeConnectionStatus;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class BridgeConnectTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'bridge_connect';
 
     protected string $description = <<<'DESC'
@@ -67,7 +70,7 @@ DESC;
                 ->get($endpointUrl.'/discover');
 
             if (! $discoverResponse->successful()) {
-                return Response::error(
+                return $this->unavailableError(
                     "Bridge server responded with HTTP {$discoverResponse->status()}. "
                     .'Ensure your local bridge server is running and the tunnel is active.',
                 );
@@ -75,7 +78,7 @@ DESC;
 
             $discovered = $discoverResponse->json();
         } catch (\Throwable $e) {
-            return Response::error('Could not reach the bridge server at the provided URL: '.$e->getMessage());
+            throw $e;
         }
 
         $endpoints = [

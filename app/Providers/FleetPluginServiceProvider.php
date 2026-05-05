@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Contracts\FleetPlugin;
 use App\Contracts\PanelExtension;
 use App\Domain\Integration\Services\IntegrationManager;
 use App\Domain\Outbound\Managers\OutboundConnectorManager;
@@ -11,6 +10,7 @@ use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
 use App\Domain\Workflow\Contracts\WorkflowNodeHandlerInterface;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
+use FleetQ\PluginSdk\Contracts\FleetPlugin;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -153,6 +153,14 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
         $plugin = $this->createPlugin();
 
+        // Accumulate MCP tool classes into the shared binding so AgentFleetServer can append them.
+        // This runs in boot() (not register()) because AppServiceProvider::register() — which
+        // initializes fleet.mcp.tool_classes — runs after auto-discovered package providers.
+        if (! empty($this->mcpTools) && $this->app->bound('fleet.mcp.tool_classes')) {
+            $existing = $this->app->make('fleet.mcp.tool_classes');
+            $this->app->instance('fleet.mcp.tool_classes', array_merge($existing, $this->mcpTools));
+        }
+
         // Boot declarative registrations
         $this->bootListeners();
         $this->bootLivewireComponents();
@@ -199,9 +207,9 @@ abstract class FleetPluginServiceProvider extends ServiceProvider
 
         if (! empty($this->mcpTools)) {
             $this->app->tag($this->mcpTools, 'fleet.mcp.tools');
-            // Accumulate class names so AgentFleetServer::boot() can append them
-            $existing = $this->app->make('fleet.mcp.tool_classes');
-            $this->app->instance('fleet.mcp.tool_classes', array_merge($existing, $this->mcpTools));
+            // Accumulation into fleet.mcp.tool_classes happens in boot() because
+            // AppServiceProvider::register() (which initializes the binding) runs
+            // AFTER auto-discovered package providers' register() methods.
         }
 
         if (! empty($this->aiMiddleware)) {

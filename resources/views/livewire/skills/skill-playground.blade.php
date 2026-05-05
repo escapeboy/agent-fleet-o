@@ -71,16 +71,10 @@
                 class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 @if($isRunning)
-                    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
+                    <i class="fa-solid fa-spinner fa-spin text-base"></i>
                     Running…
                 @else
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fa-solid fa-play text-base"></i>
                     Run Comparison
                 @endif
             </button>
@@ -101,9 +95,7 @@
                         wire:target="generateImprovement"
                         class="inline-flex items-center gap-2 rounded-lg border border-primary-300 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
+                        <i class="fa-solid fa-bolt text-sm"></i>
                         <span wire:loading.remove wire:target="generateImprovement">Generate Improved Version</span>
                         <span wire:loading wire:target="generateImprovement">Generating…</span>
                     </button>
@@ -133,10 +125,7 @@
                     <div class="min-h-32 p-4">
                         @if(!$result || !$result['done'])
                             <div class="flex items-center gap-2 text-sm text-gray-400">
-                                <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg>
+                                <i class="fa-solid fa-spinner fa-spin text-base"></i>
                                 Waiting…
                             </div>
                         @elseif($result['error'] !== null)
@@ -154,18 +143,14 @@
                                 title="Mark as good"
                                 class="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600"
                             >
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
-                                </svg>
+                                <i class="fa-solid fa-thumbs-up text-lg"></i>
                             </button>
                             <button
                                 wire:click="annotate('{{ $modelId }}', 'bad')"
                                 title="Mark as bad"
                                 class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
                             >
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/>
-                                </svg>
+                                <i class="fa-solid fa-thumbs-down text-lg"></i>
                             </button>
                             <span class="text-xs text-gray-400">Rate this output</span>
                         </div>
@@ -175,9 +160,7 @@
         </div>
     @elseif(!$isRunning)
         <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-            <svg class="mx-auto mb-3 h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
-            </svg>
+            <i class="fa-solid fa-table-columns mx-auto mb-3 text-3xl text-gray-300"></i>
             <p class="text-sm text-gray-500">Enter a test input and click <strong>Run Comparison</strong> to compare model outputs.</p>
         </div>
     @endif

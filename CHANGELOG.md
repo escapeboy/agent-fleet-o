@@ -2,6 +2,207 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.24.0] - 2026-05-03
+
+Five borrowable patterns from the Trendshift research sweep ([`claudedocs/research_trendshift_borrowable_2026-05-03.md`](https://github.com/escapeboy/agent-fleet/blob/master/claudedocs/research_trendshift_borrowable_2026-05-03.md) in the parent repo) — each one shipped as a small, opt-in addition rather than a sweeping refactor.
+
+### Added — A-RAG hierarchical retrieval
+
+Inspired by the [A-RAG paper (arXiv 2602.03442)](https://arxiv.org/abs/2602.03442). Two new MCP tools complement the existing semantic `memory_search`:
+
+- **`memory_keyword_search`** — exact-term retrieval via the existing PostgreSQL full-text `content_tsv` column (with `ts_rank` ordering and SQLite `ilike` fallback for tests). Use when the agent needs passages mentioning specific terms verbatim.
+- **`memory_chunk_read`** — fetch a memory by id with optional ±N adjacent chunks within the same `topic`+`agent` partition. Pairs naturally with the search tools so the agent can pivot between granularities mid-trace.
+
+### Added — Aider-inspired commit discipline
+
+- **`GitRepository.commit_discipline = atomic`** activates a new `AtomicCommittingGitClient` decorator that rewrites every mutation's commit message via a weak LLM (haiku) into Conventional Commits format (capped 72 chars, type-prefixed). Falls back to the caller's message when the LLM is unavailable. Off by default; enable per repository.
+
+### Added — Activepieces-inspired auto-MCP for connectors
+
+- **`AutoRegistersAsMcpTool` contract** — connectors / drivers / sources can opt in once and be auto-exposed as MCP tools. The platform's `ConnectorMcpRegistrar` discovers tagged services at boot and synthesizes a per-connector `Tool` subclass under `bootstrap/cache/synthetic-mcp-tools/` (PSR-4 autoloaded). Hand-written tools always win on name collision; existing 485+ tools keep working unchanged.
+- **3 opt-in proofs** this release: `signal.rss.poll`, `signal.webhook.ingest`, `signal.webclaw.scrape`.
+- **`php artisan mcp:cache-connector-tools` / `--clear`** — manage the cache.
+
+### Added — Self-healing browser harness
+
+Inspired by [browser-use/browser-harness](https://github.com/browser-use/browser-harness). New built-in tool kind:
+
+- **`BuiltInToolKind::BrowserHarness`** + `BrowserHarnessHandler` — runs a CDP-driven Chrome inside the existing `DockerSandboxExecutor`. The agent provides a task and (optionally) a Python helpers diff appended to a `helpers.py` for that run.
+- **`browser_harness_run` MCP tool** — single entry point for agents.
+- **Persisted helpers gate** — with `persist_helpers: true`, the diff is staged on a linked Toolset (`browser_helpers_pending_review = true`) for human review before becoming approved. Pairs with the trajectory→skill extractor shipped in 1.23.
+
+### Added — Kestra-inspired Workflow YAML Git Sync
+
+- **One-way `Workflow` → `GitRepository`** sync via the new `WorkflowGitSync` model. Save a workflow → `WorkflowSaved` event → debounced 60s → `PushWorkflowYamlJob` writes `workflows/{slug}.yaml` to the configured branch via the existing `GitClientInterface`. Failures surface as `UserNotification` after 3 retries.
+- **`workflow_export_yaml` / `workflow_import_yaml` MCP tools** — round-trip a portable v2 envelope (with checksum + fuzzy reference hints) over the existing `ExportWorkflowAction` / `ImportWorkflowAction`.
+- Reverse direction (PR-merge → import) is documented as P2.
+
+### Migrations (3)
+
+- `2026_05_03_110000_add_commit_discipline_to_git_repositories`
+- `2026_05_03_120000_add_browser_helpers_to_toolsets`
+- `2026_05_03_130000_create_workflow_git_syncs_table`
+
+### MCP — 8 new tools
+
+`memory_keyword_search`, `memory_chunk_read`, `signal.rss.poll`, `signal.webhook.ingest`, `signal.webclaw.scrape`, `browser_harness_run`, `workflow_export_yaml`, `workflow_import_yaml`. Total tool count: **493+**.
+
+### Infrastructure
+
+- **`base/packages/fleetq-boruna-audit/`** — vendored locally so standalone base CI can install (was previously a `../../packages/...` path repo that only resolved inside the parent monorepo). Parent monorepo continues to use its own copy.
+- **PHPStan baseline** — third baseline file `phpstan-baseline-trendshift.neon` adds 16 patterns for pre-existing errors that surfaced when the composer.lock was refreshed (Hermes-sprint code; not behavioral).
+
+### Tests
+
+46 new tests, 117 assertions: `MemoryHierarchicalRetrievalTest`, `AtomicCommitTest`, `AutoConnectorMcpTest`, `BrowserHarnessHandlerTest`, `WorkflowYamlGitSyncTest`.
+
+## [1.23.0] - 2026-04-27
+
+Three research-driven sprint arcs and a four-sprint governance build landed in this release.
+
+### Added — Real-World Action governance (Offsite-inspired arc)
+
+- **ActionProposal foundation** — polymorphic `action_proposals` table backs a generalized proposal flow. Assistant tool calls, integration writes, and git operations now route through the same approve/reject pipeline. `target_type` discriminator covers `tool_call`, `integration_action`, and `git_push` in v1; the schema is open for additional types.
+- **Auto-execute on approval** — approving an `ActionProposal` dispatches `ExecuteActionProposalJob` (queued, idempotent). The executor re-runs the gated operation with a container-binding bypass so re-execution doesn't loop back into another proposal. Failure path captures `execution_error` and transitions to `ExecutionFailed`.
+- **Per-tier risk policy** — every team has `team.settings.action_proposal_policy = {low, medium, high}` mapping each tier to `auto`/`ask`/`reject`. Tier→risk mapping: read=low, write=medium, destructive=high. Legacy `slow_mode_enabled=true` is preserved as `{high: 'ask'}`. Each proposal record stores the actual computed `risk_level` for audit.
+- **`IntegrationActionGate`** — single chokepoint inside `ExecuteIntegrationActionAction::execute()` covers all 50+ integration drivers. Heuristic verb classifier (22 high-risk verbs, 21 medium, rest low). Three callers (`IntegrationController::execute`, `IntegrationExecuteTool`, `IntegrationManageTool`) catch the new exceptions and surface coherent "proposed" / "refused" responses.
+- **`GitOperationGate`** — `GitOperationRouter::resolve()` wraps every `GitClientInterface` (GitHubApi, GitLabApi, Sandbox, Bridge) in a `GatedGitClient` decorator. All 27 MCP `GitRepository/*` tools inherit the gate transparently. Explicit per-method risk map (read=low, branch/commit/push/writeFile=medium, PR-lifecycle/dispatch/release=high; unknown methods default to **high** as a safe default).
+- **Unified Real-World Actions inbox** — the `/approvals` page now shows pending `ActionProposals` and outbound `ApprovalRequests` in one time-sorted list when `activeView=actions`. Read-side union — no shadow rows, no migration. Tab badges sum both sources.
+- **Conversation result append** — when a proposal originates from an assistant conversation, the execution outcome is appended to that conversation as an `assistant`-role message, closing the visibility loop for the user who asked.
+
+### Added — Public discovery endpoint
+
+- **`GET /.well-known/fleetq`** — public, unauthenticated capability manifest. Lets external AI tools (Cursor, Codex, Claude Code, OpenCode) one-shot discover the MCP HTTP/stdio endpoints, REST API base, OpenAPI URL, auth scheme, and tool count. Each block is gated by a `discovery.expose_*` config flag so operators can scrub the public surface.
+- **`system_discovery_get` MCP tool** — same payload as the HTTP endpoint, callable from inside an MCP session.
+- Throttled to 60 req/min per IP, no auth required, no CSRF (read-only).
+
+### Added — Live team graph
+
+- **`/team-graph` page** — Cytoscape.js force-directed visualization of agents, humans, and crews. Real-time updates via Reverb WebSockets (Echo with `wire:poll.5s` fallback). Shape semantics: agents=rect, humans=ellipse-with-initials, crews=hexagon.
+- **`TeamActivityBroadcast` event** — emitted from `BroadcastAgentExecuted` and `BroadcastExperimentTransitioned` listeners.
+- **`team_graph_get` MCP tool** — programmatic access to the same graph data.
+- **Reverb infrastructure** — new `reverb` Docker service, `laravel-echo` + `pusher-js` wired into both parent and base `package.json` (dual rule).
+
+### Added — Lightfield-inspired arc
+
+- **Citations on assistant responses** — when the assistant calls a `*_get` MCP tool, the tool result is captured and the assistant's reply renders inline citations linking back to the source entity.
+- **CSV migration agent** — drop a CSV onto a project; the agent infers schema, suggests a destination, and migrates row-by-row with progress and rollback.
+- **World-model digest** — daily summary of what the platform knows: signal counts by intent, top contacts by engagement, agent activity, budget burn-down.
+- **Signal intent classification** — every inbound signal gets a Haiku-classified `intent` tag (Question / Bug / FeatureRequest / Spam / Other). Searchable, filterable, surfaced in `signal_list`.
+- **Selection context for assistants** — Livewire pages can mark items "selected"; the assistant receives the selection as part of context. Implemented via `HasAssistantSelection` trait — bulk-select pattern for any list page.
+
+### Added — Pydantic-inspired arc (14 sub-sprints)
+
+- **Per-team OTLP observability** — teams can BYO OpenTelemetry collector endpoint. Cloud UI, queue tracer, test-connection probe, last-probe badge.
+- **Eval pipeline** — curate test cases from real runs, replay them against alternative configurations, compare outputs side-by-side. Cycle: real run → curate → replay → diff → promote.
+- **Output schema enforcement on Agent + Skill** — define a JSON schema; runs that don't match get retried with a corrective system prompt (configurable retry budget). UI editor for the schema. Schema fingerprint propagates through `LlmRequestLog` for analytics.
+- **World-model visibility page** — `/world-model` shows what the platform "knows" about the team's workspace (entities, relationships, KG facts).
+- **Bulk-select pattern** — `HasAssistantSelection` trait + UI checkbox column on list pages, bridge to assistant context.
+
+### Added — Boruna integration
+
+- **3-sprint integration build** delivering bidirectional contact sync, structured intake forms, and shared signal taxonomy with the Boruna platform.
+
+### Added — Self-service troubleshooting
+
+- **6 sprints** of UI affordances: live diagnostic panels for agents, skills, tools, projects, integrations, and tokens. Each "why isn't this working?" question now has an in-product answer.
+
+### Added — Polish
+
+- **Vendor badges** on agents (`<x-agent-vendor-badge>` Blade component) — 9 vendors, monogram or FA icon, surfaced on the agent detail and list pages.
+- **`InjectTeamContext` middleware** — runs between memory and KG retrieval in the agent execution pipeline, so every agent run sees a fresh "what's currently going on in this team" preamble.
+
+### Fixed
+
+- **CRITICAL — `LocalAgentDiscovery::vpsBinaryPath()` silently fell through to `which claude`** when `local_agents.vps.binary_path` was set but non-executable. On dev/CI machines with `claude` installed system-wide, the explicit-but-broken config was masked and the missing-binary throw never fired. Fix: early-return null when `binary_path` is configured but unusable; `which` only runs when no path is configured at all.
+- **Experiment iteration off-by-one** — `RunEvaluationStage::handleIterate` increments `current_iteration` BEFORE the Iterating transition, so `enforceIterationLimit` must use `>` not `>=`. With `>=`, experiments could never run their last legitimate iteration. Surfaced after the `AiRequestDTO::userId` sweep removed the cover.
+- **`AiRequestDTO` `userId` was sometimes null** — `LocalAgentGateway::executeVps` does `User::find($request->userId)`, so null silently denied super-admins access. Full sweep on 2026-04-26: every action that resolves a provider via the hierarchy (skill → agent → team → platform) now passes a usable `userId`. Pattern: `$userId ?? Team::ownerIdFor($teamId)` (new static helper).
+- **BYOK embeddings via `EmbeddingService::embedForTeam`** — calling `Prism::embeddings()->using('openai', ...)` directly does NOT honor team `TeamProviderCredential`. New helper applies team BYOK key like `PrismAiGateway::applyTeamCredentials` does for chat. Migrated `CloudRetrieveRelevantMemoriesAction` + `StoreMemoryAction`.
+
+### Security
+
+- **Audit trail for integration actions** — `IntegrationActionExecuted` event fires after every driver call, mapped through `OcsfMapper::integration.*`.
+- **Identity card auto-ping** — integration detail page caches `meta.account` from extended `HealthResult::ok($latency, $message, $identity)`. Surfaces account name/handle so operators see *which* account they connected, not just whether the credential is valid.
+- **URL XSS hardening** — driver-supplied profile URLs (Twitter, Discord, Google, PagerDuty, Klaviyo, GitHub, Slack, Linear, GitLab) gated through `^https?://` allowlist before render.
+- **Latent `ArgumentCountError`** in 5 drivers (Twitter/Discord/Google/PagerDuty/Klaviyo) fixed as side-effect of the identity overhaul.
+
+### Infrastructure
+
+- `GitOperationRouter` resolves a `GitClientInterface`, then wraps it in `GatedGitClient` unconditionally. The wrapper is a no-op when `app('git_gate.bypass')` is bound truthy.
+- `IntegrationActionGate` and `GitOperationGate` share the same per-tier policy resolver shape (`team.settings.action_proposal_policy` with legacy `slow_mode_enabled` fallback).
+- `ActionProposalExecutor` gains `executeIntegrationAction()` and `executeGitPush()` branches with try/finally bypass-clear discipline.
+- `AssistantToolRegistry` slow-mode wrap (`wrapToolsWithSlowModeGate`) hooks both call sites in `SendAssistantMessageAction` after `getTools($user)` resolution.
+- `package.json` now declares `laravel-echo` and `pusher-js` (dual rule with parent).
+
+### Stats
+
+- 2869 tests pass (zero failures, 11 213 assertions)
+- 485 MCP tools registered on `AgentFleetServer`
+
+## [1.22.0] - 2026-04-22
+
+### Added
+
+- **Structured MCP error codes** — every MCP tool now returns gRPC-canonical error codes (`UNAVAILABLE`, `PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, `DEADLINE_EXCEEDED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `NOT_FOUND`, `INTERNAL`) with `retryable` hint and optional `retry_after_ms`. Agents (Claude, Codex, Cursor) now know exactly when to retry vs. fail fast, eliminating blind retry loops that burn budget.
+  - New `App\Mcp\ErrorCode` enum with `isRetryable()` + `httpStatus()` helpers
+  - New `App\Mcp\ErrorClassifier` service maps 15+ exception classes to canonical codes; includes `classNameHint()` substring fallback for cloud-only exceptions without a hard dependency
+  - New `App\Mcp\Concerns\HasStructuredErrors` trait with 8 typed helpers (`notFoundError`, `permissionDeniedError`, `invalidArgumentError`, `failedPreconditionError`, `resourceExhaustedError`, `unavailableError`, `deadlineExceededError`, `errorResponse`)
+  - **321 of 464 non-Compact MCP tool files retrofitted** across 32 domains (Agent, Experiment, Project, Workflow, Crew, Shared, Skill, Tool, Email, Chatbot, Signal, Admin, Approval, Artifact, Assistant, Auth, Boruna, Bridge, Budget, Compute, Credential, Evaluation, Evolution, FounderMode, GitRepository, Integration, Marketplace, Memory, Outbound, Profile, RunPod, System, Telegram, Testing, Trigger, Webhook, Website). Remaining 143 files had no `Response::error()` calls to retrofit.
+  - Central wrapper in `CompactTool::handle()` catches any unhandled exception and classifies via `ErrorClassifier` — so even non-retrofitted tools get structured responses.
+- **MCP tool deadlines** — every MCP tool schema gains an optional `deadline_ms` parameter. Agents can bound wall-clock time per call. Enforcement checkpoints in `WorkflowGraphExecutor`, `CrewOrchestrator`, `ExperimentStateMachine`, and `LocalToolLoopExecutor`. New `App\Mcp\DeadlineContext` singleton (request-scoped, nested calls inherit). Minimum 100ms clamp, maximum 10-minute cap (security hardening from review).
+- **OpenTelemetry distributed tracing** — opt-in via `OTEL_ENABLED=true`. OTLP HTTP exporter, zero overhead when disabled (NoOp tracer). Three span layers: `mcp.tool.{name}` (server) → `ai.gateway.{complete,stream}` (client) → `llm.provider.{name}` (client) with token/latency/fallback attributes. Graceful fallback when exporter unreachable.
+  - New `observability` Docker Compose profile — `docker compose --profile observability up -d` starts Jaeger all-in-one (UI on :16686, OTLP HTTP on :4318)
+  - New `config/telemetry.php` with `redacted_attributes` list + `AttributeRedactor` service for future span-attribute sanitization
+  - Packages: `open-telemetry/sdk` ^1.14, `open-telemetry/exporter-otlp` ^1.4
+- **SSE client-disconnect handling** — `ChatController::sendMessageStream` and `OpenAiCompatibleController` streaming paths now throw `App\Exceptions\ClientDisconnectedException` when `connection_aborted()` detects a closed socket. Gateway `stream()` unwinds cleanly — no more wasted LLM tokens after a user closes their tab.
+
+### Fixed
+
+- **SECURITY — SSRF validation misclassified as retryable INTERNAL.** `SsrfGuard`, `LocalLlmUrlValidator`, and cron validators throw plain `\InvalidArgumentException`, which was falling through to `ErrorCode::Internal` with `retryable=true`. Agents would retry with malicious URLs, silently hiding SSRF attack signals from auditing. Fix: added `\InvalidArgumentException` to `ErrorClassifier::EXCEPTION_MAP` → `ErrorCode::InvalidArgument` (retryable=false). Removed 5 no-op `catch (\InvalidArgumentException $e) { throw $e; }` blocks (central wrapper now classifies directly).
+- **ConnectionException + ModelNotFoundException message scrubbing.** Previously `$e->getMessage()` leaked internal topology (host:port, DNS names, FQN + primary-key shape) in error responses. Now both exception types return generic safe strings while preserving the canonical error code for retry logic.
+
+### Infrastructure
+
+- `AppServiceProvider` now registers `ErrorClassifier`, `DeadlineContext`, `TracerProvider`, and `AttributeRedactor` as singletons. Terminating callback clears `DeadlineContext` so Horizon workers don't inherit stale deadlines from exception paths.
+- `docker-compose.yml` gains `observability` profile with Jaeger all-in-one (opt-in).
+
+### Phase 3 work documented for continuity
+
+Queue-job deadline propagation, expanded OTel spans (DB/cache/outbound/semantic-cache + W3C traceparent through Redis), and SSE explicit buffer caps are deferred to a future release. See `docs/mcp-observability-phase3-todo.md` (canonical), `CLAUDE.md` banner, and Serena memory `mcp/phase3-deferred-work`.
+
+### Stats
+
+- 175 MCP tests (Unit + Feature) pass — zero regressions introduced
+- Full suite: 2001 passed across 4 refactor phases (Phase 1/2/2b/2c)
+- Security review: 1 blocker + 3 NEEDS_WORK items identified and fixed before merge
+
+## [1.21.0] - 2026-04-18
+
+### Added
+
+- **Founder Mode pack** — platform-owned marketplace bundle of 6 persona agents (Strategist, Product Lead, Growth Hacker, Finance Advisor, Ops Manager, Risk Officer), 20 framework skills covering product/growth/finance/ops/testing methodologies (RICE, SPIN, BANT, MEDDIC, OKRs, Bullseye, Lean Startup, Shape Up, Unit Economics, Kano, TAM-SAM-SOM, K-Factor, Cash Flow, NPV-IRR, RACI, Lean Ops, A/B Testing, 3-Day MVP, OWASP, Bessemer), and 5 pre-built workflows. New `Framework` enum (20 cases) + `FrameworkCategory` (6) on `skills.framework`. `DeliverableType` enum (8 cases: ExecutiveReport/ActionPlan/ResearchBrief/Forecast/Pitch/ContentPiece/TechnicalSpec/Template) on `artifacts.deliverable_type` with typed Blade partials. `/frameworks` Livewire browser. 3 MCP tools (`framework_list`, `founder_mode_status`, `founder_mode_install`).
+- **Bidirectional widget comments for bug reports** — reporters and agents can now exchange comments through the public JS widget. New public endpoints: `GET /api/public/widget/bug-reports` (list with optional `?project=` filter), `GET /api/public/widget/bug-reports/{signal}/comments`, `POST /api/public/widget/bug-reports/{signal}/comments`. New `CommentAuthorType` enum (`human/agent/reporter/support`) with `isWidgetVisible()` helper. `signal_comments.widget_visible` column + partial index. Admin reply defaults to `support` type (visible to reporter) with opt-in downgrade to `human` (internal only). Reporter name shown in admin UI from `signal.payload.reporter_name`. `unread_comments_count` exposed via `withCount`. `SignalCommentAdded` event.
+- **Structured intake for widget bug reports (opt-in)** — `bug_report_project_configs` table allows per-project configuration of required fields and intake workflow. MCP tools: `bug_report_project_config_get`, `bug_report_project_config_update`.
+- **AI risk scanning for Marketplace listings** — automatic risk assessment before publish, exposed in `marketplace_browse` MCP results.
+- **MCP coverage audit gap fixes** — `signal_get` now exposes `metadata`; `bug_report_detail` exposes `ai_extracted`; `marketplace_browse` exposes `risk_level`; `agent_list`/`agent_get` expose `scope` and `owner_user_id`; `agent_list` adds `scope` filter; new `bug_report_delete` tool; new `bug_report_project_config` get + update tools.
+- **Configurable `VERIFIED_EMAIL_PROVIDERS`** — comma-separated env var (default: `gmail.com,outlook.com,yahoo.com,...`). Controls which OAuth email domains qualify for auto-link.
+- **Bug report list** — delete button added to admin list page.
+
+### Fixed
+
+- **Bug report detail** — only the first attachment was rendered; now renders all attachments in the media collection.
+- **Widget bug-report list** — `unread_comments_count` was always 0 (missing `withCount`); now returns real counts.
+- **InsightsPage** — team scoping via `whereHas`, correct stage column names, correct deduction type for spend calculations.
+- **AiControlCenterPage** — `circuit_breaker_states` query was broken; fixed column reference.
+- **StageType enum** — cast to `->value` in Insights Blade template to prevent `Object of class StageType could not be converted to string`.
+- **Sidebar** — light-bulb icon now registered in `sidebar-link.blade.php` for the Insights nav item.
+
+### Security
+
+- **CRITICAL — OAuth account takeover via unverified email auto-link.** `SocialAccountService::handleCallback()` step 4 auto-linked any OAuth account whose email matched an existing user without verifying the provider was trustworthy. Attacker could use a provider that hands out unverified emails (e.g. a custom OAuth provider) to hijack any account. Guard added: auto-link only runs when the OAuth provider is on the `verified_email_providers` list. Configurable via `VERIFIED_EMAIL_PROVIDERS` env.
+- **Prompt injection guard in chatbot memory context.** User-controlled content (agent name, memory tags) was interpolated unsanitized into the LLM context string. Strip to printable ASCII + truncate applied before interpolation.
+- **IDOR fix in chatbot memory context provider.** Memory lookup was missing team-scope check; fixed with explicit `where('team_id', ...)`.
+
 ## [1.20.0] - 2026-04-14
 
 ### Added

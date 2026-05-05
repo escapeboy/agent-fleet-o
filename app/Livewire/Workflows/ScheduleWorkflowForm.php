@@ -10,6 +10,7 @@ use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Services\NaturalLanguageScheduleParser;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ScheduleWorkflowForm extends Component
@@ -91,9 +92,11 @@ class ScheduleWorkflowForm extends Component
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         $rules = [
             'title' => 'required|min:2|max:255',
-            'workflowId' => 'required|exists:workflows,id',
+            'workflowId' => "required|exists:workflows,id,team_id,{$teamId}",
             'frequency' => 'required|in:'.implode(',', array_column(ScheduleFrequency::cases(), 'value')),
             'timezone' => 'required|timezone',
             'overlapPolicy' => 'required|in:'.implode(',', array_column(OverlapPolicy::cases(), 'value')),
@@ -129,6 +132,8 @@ class ScheduleWorkflowForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->useNlpSchedule && $this->nlpScheduleInput) {
             $this->parseNlpSchedule();
         }

@@ -43,10 +43,7 @@
                         <td class="px-6 py-3 text-sm text-gray-500">{{ $session->last_activity_at?->diffForHumans() ?? '—' }}</td>
                         <td class="px-6 py-3 text-sm font-mono text-gray-500 text-xs">{{ $session->ip_address ?? '—' }}</td>
                         <td class="px-6 py-3 text-right">
-                            <svg class="inline h-4 w-4 text-gray-400 {{ $openSessionId === $session->id ? 'rotate-90' : '' }} transition-transform"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
+                            <i class="fa-solid fa-chevron-right inline text-base text-gray-400 {{ $openSessionId === $session->id ? 'rotate-90' : '' }} transition-transform"></i>
                         </td>
                     </tr>
 

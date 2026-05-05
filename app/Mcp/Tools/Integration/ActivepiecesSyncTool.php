@@ -6,6 +6,7 @@ use App\Domain\Integration\Actions\SyncActivepiecesToolsAction;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -22,6 +23,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ActivepiecesSyncTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'activepieces_sync';
 
     protected string $description = 'Sync Activepieces pieces as MCP-HTTP tools. Fetches the latest piece catalogue from the connected Activepieces integration and upserts each piece as an agent tool.';
@@ -59,7 +62,7 @@ class ActivepiecesSyncTool extends Tool
         $integration = $query->first();
 
         if (! $integration) {
-            return Response::error('No active Activepieces integration found.');
+            return $this->failedPreconditionError('No active Activepieces integration found.');
         }
 
         try {
@@ -71,7 +74,7 @@ class ActivepiecesSyncTool extends Tool
                 'message' => $result->message,
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Sync failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

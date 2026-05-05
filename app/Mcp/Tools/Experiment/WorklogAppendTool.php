@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\WorklogEntry;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorklogAppendTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'worklog_append';
 
     protected string $description = 'Append a typed worklog entry during agent execution. Use to record structured reasoning: references consulted, findings discovered, decisions made, uncertainties encountered, or outputs produced.';
@@ -47,19 +50,19 @@ class WorklogAppendTool extends Tool
         ]);
 
         if (! in_array($validated['type'], WorklogEntry::validTypes())) {
-            return Response::error('Invalid type. Must be one of: '.implode(', ', WorklogEntry::validTypes()));
+            return $this->invalidArgumentError('Invalid type. Must be one of: '.implode(', ', WorklogEntry::validTypes()));
         }
 
         $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $metadata = null;
         if (! empty($validated['metadata_json'])) {
             $metadata = json_decode($validated['metadata_json'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                return Response::error('Invalid JSON in metadata_json: '.json_last_error_msg());
+                return $this->invalidArgumentError('Invalid JSON in metadata_json: '.json_last_error_msg());
             }
         }
 
@@ -89,7 +92,7 @@ class WorklogAppendTool extends Tool
             };
 
             if (! $owned) {
-                return Response::error('Parent entity not found or access denied.');
+                return $this->notFoundError('parent entity');
             }
         }
 

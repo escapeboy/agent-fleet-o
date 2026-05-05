@@ -8,7 +8,10 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\BugReportProjectConfig;
 use App\Domain\Signal\Models\Signal;
+use App\Domain\Signal\Models\SignalComment;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class DelegateBugReportToAgentAction
 {
@@ -77,8 +80,13 @@ class DelegateBugReportToAgentAction
         if (! empty($signal->metadata['ai_tags'])) {
             $structuredBlock[] = '**Tags:** '.implode(', ', array_map(
                 fn ($t) => $this->sanitize((string) $t, 30),
-                $signal->metadata['ai_tags']
+                $signal->metadata['ai_tags'],
             ));
+        }
+
+        $commentBlock = $this->buildCommentBlock($signal);
+        if ($commentBlock !== null) {
+            $structuredBlock[] = $commentBlock;
         }
 
         $thesis = implode("\n\n", array_filter([
@@ -192,7 +200,93 @@ class DelegateBugReportToAgentAction
 
     private function sanitize(string $text, int $maxLen): string
     {
-        return preg_replace('/[^\x20-\x7E]/', '', mb_substr($text, 0, $maxLen)) ?? '';
+        return preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($text, 0, $maxLen)) ?? '';
+    }
+
+    /**
+     * Render reporter/agent/support comments (and widget-visible human notes)
+     * into a thesis section so the delegated agent can see rejected fix
+     * attempts, updated repro steps, and team context.
+     *
+     * Why: without this the agent starts each delegation from scratch and
+     * can re-attempt fixes the reporter has already explicitly rejected.
+     */
+    private function buildCommentBlock(Signal $signal): ?string
+    {
+        $cap = 20;
+        $perCommentCap = 500;
+
+        $query = $signal->comments()
+            ->where(function (Builder $q) {
+                $q->whereIn('author_type', ['reporter', 'agent', 'support'])
+                    ->orWhere(function (Builder $q2) {
+                        $q2->where('author_type', 'human')
+                            ->where('widget_visible', true);
+                    });
+            });
+
+        $total = (clone $query)->count();
+        if ($total === 0) {
+            return null;
+        }
+
+        /** @var Collection<int, SignalComment> $comments */
+        $comments = $query->orderBy('created_at')->limit($cap)->get();
+
+        $lines = [];
+        foreach ($comments as $c) {
+            $body = $this->stripInvisibleChars($this->sanitize((string) $c->body, $perCommentCap));
+            $body = $this->escapeMarkdownHeaders($body);
+            if ($body === '') {
+                continue;
+            }
+
+            $date = optional($c->created_at)->format('Y-m-d') ?? '????-??-??';
+            $author = $this->sanitize((string) $c->author_type, 20);
+            $lines[] = "[{$date} {$author}] {$body}";
+        }
+
+        if ($lines === []) {
+            return null;
+        }
+
+        $block = "**Reporter Feedback & Team Notes ({$total}):**\n".implode("\n\n", $lines);
+
+        $overflow = $total - count($lines);
+        if ($overflow > 0) {
+            $block .= "\n\n... and {$overflow} older comments omitted";
+        }
+
+        return $block;
+    }
+
+    /**
+     * Strip invisible Unicode that external reporters can use to smuggle
+     * prompt-injection payloads past a visual review:
+     *   - U+200B–U+200F (zero-width & directional marks)
+     *   - U+202A–U+202E (bidi overrides)
+     *   - U+2060–U+206F (word joiners & directional isolates)
+     *   - U+FEFF         (byte-order mark / zero-width no-break space)
+     *   - U+E0000–U+E007F (tag characters)
+     */
+    private function stripInvisibleChars(string $text): string
+    {
+        return preg_replace(
+            '/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{206F}\x{FEFF}]|[\x{E0000}-\x{E007F}]/u',
+            '',
+            $text,
+        ) ?? '';
+    }
+
+    /**
+     * Neutralize line-starting `**Header**` patterns inside untrusted comment
+     * bodies so a reporter cannot impersonate a top-level thesis section
+     * (e.g. a fake `**Agent Instructions:**` header telling the agent to
+     * ignore the real thesis).
+     */
+    private function escapeMarkdownHeaders(string $text): string
+    {
+        return preg_replace('/^(\s*)(\*\*[A-Za-z])/m', '$1\\\\$2', $text) ?? '';
     }
 
     private function fileToTestPath(string $path): ?string

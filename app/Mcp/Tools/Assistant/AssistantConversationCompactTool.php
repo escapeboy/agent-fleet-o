@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Assistant;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Services\ConversationCompactor;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class AssistantConversationCompactTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_conversation_compact';
 
     protected string $description = 'Manually trigger context compaction for a long assistant conversation. Creates a pinned summary snapshot and archives older messages. Useful before starting a new topic in a long-running conversation.';
@@ -36,7 +39,7 @@ class AssistantConversationCompactTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $conversation = AssistantConversation::withoutGlobalScopes()
@@ -45,7 +48,7 @@ class AssistantConversationCompactTool extends Tool
             ->first();
 
         if (! $conversation) {
-            return Response::error('Conversation not found.');
+            return $this->notFoundError('conversation');
         }
 
         try {
@@ -63,7 +66,7 @@ class AssistantConversationCompactTool extends Tool
                 'error' => $e->getMessage(),
             ]);
 
-            return Response::error('Compaction failed. Please try again.');
+            return $this->errorResponse(AppMcpErrorCode::Internal, 'Compaction failed. Please try again.');
         }
     }
 }

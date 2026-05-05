@@ -16,7 +16,7 @@ class SkillListTool extends Tool
 {
     protected string $name = 'skill_list';
 
-    protected string $description = 'List skills with optional type filter. Returns id, name, type, and status.';
+    protected string $description = 'List skills with optional type / framework filter. Returns id, name, type, framework, and status.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -24,6 +24,8 @@ class SkillListTool extends Tool
             'type' => $schema->string()
                 ->description('Filter by type: llm, connector, rule, hybrid')
                 ->enum(['llm', 'connector', 'rule', 'hybrid']),
+            'framework' => $schema->string()
+                ->description('Filter by framework key (e.g. rice, spin, bant, okrs, unit_economics). See framework_list for full enum.'),
             'limit' => $schema->integer()
                 ->description('Max results to return (default 10, max 100)')
                 ->default(10),
@@ -38,6 +40,10 @@ class SkillListTool extends Tool
             $query->where('type', $type);
         }
 
+        if ($framework = $request->get('framework')) {
+            $query->where('framework', $framework);
+        }
+
         $limit = min((int) ($request->get('limit', 10)), 100);
 
         $skills = $query->limit($limit)->get();
@@ -48,6 +54,7 @@ class SkillListTool extends Tool
                 'id' => $s->id,
                 'name' => $s->name,
                 'type' => $s->type->value,
+                'framework' => $s->framework?->value,
                 'status' => $s->status->value,
             ])->toArray(),
         ]));

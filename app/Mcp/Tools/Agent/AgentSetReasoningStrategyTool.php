@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentSetReasoningStrategyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_set_reasoning_strategy';
 
     protected string $description = 'Set the reasoning strategy for an agent. Strategies shape how the agent thinks before acting. Options: function_calling (default), react (Reason+Act), chain_of_thought, plan_and_execute, tree_of_thought.';
@@ -40,14 +43,14 @@ class AgentSetReasoningStrategyTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $strategy = AgentReasoningStrategy::tryFrom($validated['strategy']);
         if (! $strategy) {
             $valid = implode(', ', array_column(AgentReasoningStrategy::cases(), 'value'));
 
-            return Response::error("Invalid strategy '{$validated['strategy']}'. Valid: {$valid}");
+            return $this->invalidArgumentError("Invalid strategy '{$validated['strategy']}'. Valid: {$valid}");
         }
 
         $agent = Agent::withoutGlobalScopes()
@@ -55,7 +58,7 @@ class AgentSetReasoningStrategyTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $agent->update(['reasoning_strategy' => $strategy]);

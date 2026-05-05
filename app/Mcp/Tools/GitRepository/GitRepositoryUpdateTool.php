@@ -6,6 +6,7 @@ use App\Domain\GitRepository\Actions\UpdateGitRepositoryAction;
 use App\Domain\GitRepository\Enums\GitProvider;
 use App\Domain\GitRepository\Enums\GitRepoMode;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitRepositoryUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_repository_update';
 
     protected string $description = 'Update a git repository settings (name, URL, mode, credential, config).';
@@ -48,12 +51,12 @@ class GitRepositoryUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         try {
@@ -75,7 +78,7 @@ class GitRepositoryUpdateTool extends Tool
                 'mode' => $updated->mode->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Admin;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\DeploymentMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class AdminTeamBillingDetailTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'admin_team_billing_detail';
 
     protected string $description = 'Get billing details for a specific team: Stripe customer, subscription status, plan, payment method, and recent invoices. Super admin only.';
@@ -31,7 +34,7 @@ class AdminTeamBillingDetailTool extends Tool
     public function handle(Request $request): Response
     {
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $team = Team::withoutGlobalScopes()->findOrFail($request->get('team_id'));

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\UncertaintySignal;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class UncertaintyResolveTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'resolve_uncertainty';
 
     protected string $description = 'Resolve a pending uncertainty signal, marking it as resolved with an optional note.';
@@ -36,7 +39,7 @@ class UncertaintyResolveTool extends Tool
 
         $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $signal = UncertaintySignal::withoutGlobalScopes()
@@ -44,11 +47,11 @@ class UncertaintyResolveTool extends Tool
             ->find($validated['signal_id']);
 
         if (! $signal) {
-            return Response::error('Uncertainty signal not found.');
+            return $this->notFoundError('uncertainty signal');
         }
 
         if ($signal->status !== 'pending') {
-            return Response::error("Cannot resolve signal with status '{$signal->status}'.");
+            return $this->failedPreconditionError("Cannot resolve signal with status '{$signal->status}'.");
         }
 
         $signal->update([

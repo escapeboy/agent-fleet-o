@@ -8,9 +8,11 @@ use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Mcp\Services\McpAppRegistry;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class AssistantPanel extends Component
@@ -339,6 +341,8 @@ class AssistantPanel extends Component
                     'tool_calls_count' => count($msg->tool_calls ?? []),
                     'cost_credits' => $msg->token_usage['cost_credits'] ?? 0,
                     'a2ui_surfaces' => $metadata['a2ui_surfaces'] ?? [],
+                    'citations' => $metadata['citations'] ?? [],
+                    'mcp_app_uris' => $this->extractMcpAppUris($msg->tool_calls),
                 ];
             }
 
@@ -380,6 +384,8 @@ class AssistantPanel extends Component
                 'tool_calls_count' => $m->tool_calls ? count($m->tool_calls) : 0,
                 'cost_credits' => $m->token_usage['cost_credits'] ?? 0,
                 'a2ui_surfaces' => $m->metadata['a2ui_surfaces'] ?? [],
+                'citations' => $m->metadata['citations'] ?? [],
+                'mcp_app_uris' => $this->extractMcpAppUris($m->tool_calls),
             ])
             ->toArray();
 
@@ -392,6 +398,34 @@ class AssistantPanel extends Component
     {
         $this->contextType = $type;
         $this->contextId = $id;
+    }
+
+    /**
+     * Listener for `assistant-set-selection` — any index page can dispatch
+     *
+     *     $this->dispatch('assistant-set-selection', kind: 'experiment', ids: [...]);
+     *
+     * to bundle a multi-select into the assistant's conversation context. The
+     * chat auto-opens so the user can immediately type "pause all of these" or
+     * "summarise them" and the model will call the right MCP tools per ID.
+     *
+     * @param  list<string>  $ids
+     */
+    #[On('assistant-set-selection')]
+    public function applySelection(string $kind = '', array $ids = []): void
+    {
+        $kind = trim($kind);
+        $ids = array_values(array_filter(array_map('strval', $ids), fn ($v) => $v !== ''));
+        if ($kind === '' || $ids === []) {
+            $this->contextType = '';
+            $this->contextId = '';
+
+            return;
+        }
+
+        $this->contextType = 'selection';
+        $this->contextId = json_encode(['kind' => $kind, 'ids' => array_slice($ids, 0, 50)]);
+        $this->dispatch('assistant-open');
     }
 
     public function toggleHistory(): void
@@ -456,6 +490,31 @@ class AssistantPanel extends Component
                 'Create a Slack outbound connector for sales alerts',
             ],
         ];
+    }
+
+    /**
+     * Called by the AssistantPanel postMessage bridge when an MCP App iframe
+     * invokes a tools/call request. Rate-limited to 30 calls/min per user.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array{content?: list<array{type: string, text: string}>, error?: string}
+     */
+    public function mcpAppCallTool(string $toolName, array $params = []): array
+    {
+        return McpAppRegistry::callTool($toolName, $params);
+    }
+
+    /**
+     * @param  array<int, array{toolName: string}>|null  $toolCalls
+     * @return array<string, string> Map of toolName => uri://
+     */
+    private function extractMcpAppUris(?array $toolCalls): array
+    {
+        if (! $toolCalls) {
+            return [];
+        }
+
+        return McpAppRegistry::extractUris($toolCalls);
     }
 
     public function render()

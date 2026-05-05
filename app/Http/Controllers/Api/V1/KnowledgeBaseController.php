@@ -23,12 +23,12 @@ class KnowledgeBaseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $kbs = QueryBuilder::for(KnowledgeBase::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('agent_id'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Services;
 
 use App\Domain\Assistant\Models\AssistantConversation;
+use App\Domain\Assistant\Tools\BorunaTools;
 use App\Domain\Assistant\Tools\DelegationTools;
 use App\Domain\Assistant\Tools\GetEntityTools;
 use App\Domain\Assistant\Tools\ListEntitiesTools;
@@ -45,6 +46,7 @@ class AssistantToolRegistry
             $tools = array_merge($tools, SecurityTools::tools());
             $tools = array_merge($tools, MutationTools::writeTools());
             $tools = array_merge($tools, SchedulingTools::tools($user->currentTeam->id, $user->id));
+            $tools = array_merge($tools, BorunaTools::tools());
             $tools = array_merge($tools, $this->bridgedMcpTools('write'));
 
             // Delegation tools (fire-and-forget async project runs)

@@ -10,12 +10,6 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class SocialAccountService
 {
-    // All supported OAuth providers verify the user's email before returning it —
-    // safe to auto-link to existing accounts. The only exception is GitHub when
-    // the user has "Keep email private" enabled: getEmail() returns null and the
-    // collect-email flow handles that case separately.
-    private const VERIFIED_EMAIL_PROVIDERS = ['google', 'github', 'linkedin-openid', 'x', 'apple'];
-
     /**
      * Handle the OAuth callback and return the authenticated user,
      * or null if additional user interaction is required (email collection / merge confirm).
@@ -59,20 +53,32 @@ class SocialAccountService
             return ['user' => null, 'redirect' => route('auth.social.collect-email')];
         }
 
-        // 4. Existing user with matching email — all providers are verified, auto-link.
+        // 4. Existing user with matching email — only auto-link if the provider verifies emails.
+        //    If the provider is not on the trusted list, the email claim is attacker-controlled
+        //    (any user can register at the IdP with an arbitrary email). Linking in that case
+        //    would let an attacker take over an existing account by claiming the victim's email.
+        //    Refuse and direct them to log in via their existing method, then link from Settings —
+        //    same protection as completePendingRegistration's user-supplied-email path.
         $existingUser = User::where('email', $email)->first();
 
         if ($existingUser) {
-            $this->attachSocialAccount($existingUser, $provider, $socialUser);
+            if ($this->isVerifiedProvider($provider)) {
+                $this->attachSocialAccount($existingUser, $provider, $socialUser);
 
-            return ['user' => $existingUser, 'redirect' => null];
+                return ['user' => $existingUser, 'redirect' => null];
+            }
+
+            $redirect = redirect()->route('login')
+                ->withErrors(['social' => 'An account with this email already exists. Please log in with your existing method and connect this provider from Settings.']);
+
+            return ['user' => null, 'redirect' => $redirect->getTargetUrl()];
         }
 
         // 5. Brand new user
         $user = User::create([
             'name' => $socialUser->getName() ?? 'User',
             'email' => $email,
-            'email_verified_at' => in_array($provider, self::VERIFIED_EMAIL_PROVIDERS, true) ? now() : null,
+            'email_verified_at' => $this->isVerifiedProvider($provider) ? now() : null,
             'password' => null,
         ]);
 
@@ -132,6 +138,17 @@ class SocialAccountService
         $user->socialAccounts()->where('provider', $provider)->delete();
 
         return true;
+    }
+
+    /**
+     * Whether the given Socialite driver is trusted to return a pre-verified email.
+     *
+     * Extended via `config/social.php` or the `SOCIAL_VERIFIED_EMAIL_PROVIDERS` env var —
+     * plugins registering corporate IdPs (OIDC, etc.) append their driver name here.
+     */
+    private function isVerifiedProvider(string $provider): bool
+    {
+        return in_array($provider, config('social.verified_email_providers', []), true);
     }
 
     private function attachSocialAccount(User $user, string $provider, SocialiteUser $socialUser): UserSocialAccount

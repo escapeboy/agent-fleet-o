@@ -69,10 +69,19 @@ class RecoverStuckTasks extends Command
      */
     private function recoverStuckTasks(\DateTimeInterface $cutoff): int
     {
+        // Website-build tasks get a longer timeout (30 min) due to sequential LLM page generation
+        $websiteCutoff = now()->subMinutes(30);
+
         // Running tasks that started before the cutoff
         $stuckRunning = ExperimentTask::withoutGlobalScopes()
             ->where('status', ExperimentTaskStatus::Running)
-            ->where('started_at', '<', $cutoff)
+            ->where(function ($q) use ($cutoff, $websiteCutoff) {
+                $q->where(function ($q2) use ($cutoff) {
+                    $q2->where('type', '!=', 'website_page')->where('started_at', '<', $cutoff);
+                })->orWhere(function ($q2) use ($websiteCutoff) {
+                    $q2->where('type', 'website_page')->where('started_at', '<', $websiteCutoff);
+                });
+            })
             ->get();
 
         foreach ($stuckRunning as $task) {

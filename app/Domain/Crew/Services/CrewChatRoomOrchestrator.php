@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Services;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\AgentChatProtocol\Actions\DispatchChatMessageAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Models\CrewChatMessage;
 use App\Domain\Crew\Models\CrewExecution;
@@ -88,6 +89,12 @@ class CrewChatRoomOrchestrator
     private function executeRound(CrewExecution $execution, Collection $members, int $round): void
     {
         foreach ($members as $member) {
+            if ($member->isExternal()) {
+                $this->executeExternalMemberRound($execution, $member, $round);
+
+                continue;
+            }
+
             $agent = $member->agent;
             if (! $agent || $agent->status->value !== 'active') {
                 continue;
@@ -140,6 +147,83 @@ class CrewChatRoomOrchestrator
                 ]);
             }
         }
+    }
+
+    /**
+     * Invite an external peer agent to contribute to this round via the Agent Chat Protocol.
+     * The external agent receives the shared message history and returns a reply; we persist it
+     * as a CrewChatMessage just like internal agent contributions.
+     */
+    private function executeExternalMemberRound(CrewExecution $execution, CrewMember $member, int $round): void
+    {
+        $externalAgent = $member->externalAgent;
+        if ($externalAgent === null || ! $externalAgent->status->isCallable()) {
+            return;
+        }
+
+        $history = $this->buildHistoryForExternal($execution);
+
+        try {
+            $result = app(DispatchChatMessageAction::class)->execute(
+                externalAgent: $externalAgent,
+                content: "You are participating in round {$round} of a group discussion.\n\n"
+                    ."Previous messages:\n{$history}\n\n"
+                    .'Contribute your perspective. Be specific and build on what others said. '
+                    .'If you agree with the emerging consensus, say so explicitly.',
+                sessionToken: 'crew-chatroom:'.$execution->id,
+                from: 'fleetq:crew:'.$execution->id,
+            );
+
+            $content = (string) (
+                $result['remote_response']['content']
+                ?? $result['remote_response']['output']
+                ?? '[External agent acknowledged but returned no content.]'
+            );
+
+            CrewChatMessage::create([
+                'crew_execution_id' => $execution->id,
+                'agent_id' => null,
+                'agent_name' => $externalAgent->name,
+                'role' => 'assistant',
+                'content' => $content,
+                'round' => $round,
+                'metadata' => [
+                    'external_agent_id' => $externalAgent->id,
+                    'session_id' => $result['session_id'] ?? null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('CrewChatRoom: external member failed', [
+                'external_agent_id' => $externalAgent->id,
+                'round' => $round,
+                'error' => $e->getMessage(),
+            ]);
+
+            CrewChatMessage::create([
+                'crew_execution_id' => $execution->id,
+                'agent_id' => null,
+                'agent_name' => $externalAgent->name,
+                'role' => 'assistant',
+                'content' => '[External agent encountered an error and could not contribute this round.]',
+                'round' => $round,
+                'metadata' => ['external_agent_id' => $externalAgent->id, 'error' => $e->getMessage()],
+            ]);
+        }
+    }
+
+    private function buildHistoryForExternal(CrewExecution $execution): string
+    {
+        $messages = CrewChatMessage::where('crew_execution_id', $execution->id)
+            ->orderBy('round')
+            ->orderBy('created_at')
+            ->get();
+
+        $lines = [];
+        foreach ($messages as $msg) {
+            $lines[] = '['.$msg->agent_name.']: '.$msg->content;
+        }
+
+        return implode("\n", $lines);
     }
 
     private function buildHistoryForAgent(CrewExecution $execution, Agent $agent): string

@@ -25,7 +25,7 @@ class AssistantController extends Controller
     {
         $conversations = QueryBuilder::for(AssistantConversation::class)
             ->where('user_id', $request->user()->id)
-            ->allowedSorts(['created_at', 'last_message_at'])
+            ->allowedSorts('created_at', 'last_message_at')
             ->defaultSort('-last_message_at')
             ->cursorPaginate(min((int) $request->input('per_page', 20), 100));
 
@@ -224,7 +224,7 @@ class AssistantController extends Controller
                 'token_usage' => $reply->token_usage,
                 'created_at' => $reply->created_at,
             ] : null,
-            'total_tokens' => $response->usage->totalTokens ?? null,
+            'total_tokens' => $response->usage?->totalTokens(),
         ]);
     }
 }

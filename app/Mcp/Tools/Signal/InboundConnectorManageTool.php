@@ -3,18 +3,21 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\Connector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('read')]
 class InboundConnectorManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'inbound_connector_manage';
 
     protected string $description = 'Manage inbound signal connectors. List all connector types with status, get setup instructions, and manage HTTP monitors and RSS feeds.';
@@ -51,10 +54,10 @@ class InboundConnectorManageTool extends Tool
                 'remove_monitor' => $this->removeMonitor($request->get('connector_id')),
                 'add_rss_feed' => $this->addRssFeed($request),
                 'remove_rss_feed' => $this->removeRssFeed($request->get('connector_id')),
-                default => Response::error('Unknown action'),
+                default => $this->invalidArgumentError('Unknown action'),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 
@@ -103,7 +106,7 @@ class InboundConnectorManageTool extends Tool
     private function getSetupInstructions(?string $driver): Response
     {
         if (! $driver) {
-            return Response::error('driver parameter required');
+            return $this->invalidArgumentError('driver parameter required');
         }
 
         $envVars = [
@@ -139,7 +142,7 @@ class InboundConnectorManageTool extends Tool
 
         $knownDrivers = array_keys($envVars) + ['datadog', 'whatsapp'];
         if (! in_array($driver, $knownDrivers, true)) {
-            return Response::error("Unknown driver: {$driver}");
+            return $this->invalidArgumentError("Unknown driver: {$driver}");
         }
 
         return Response::text(json_encode([
@@ -155,7 +158,7 @@ class InboundConnectorManageTool extends Tool
     private function connectorStatus(?string $driver): Response
     {
         if (! $driver) {
-            return Response::error('driver parameter required');
+            return $this->invalidArgumentError('driver parameter required');
         }
 
         $recentCount = Signal::where('source_type', $driver)
@@ -181,10 +184,10 @@ class InboundConnectorManageTool extends Tool
     {
         $url = $request->get('url');
         if (! $url || ! filter_var($url, FILTER_VALIDATE_URL)) {
-            return Response::error('Valid url is required');
+            return $this->invalidArgumentError('Valid url is required');
         }
         if (! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'])) {
-            return Response::error('URL must use http or https scheme');
+            return $this->invalidArgumentError('URL must use http or https scheme');
         }
 
         $connector = Connector::create([
@@ -212,12 +215,12 @@ class InboundConnectorManageTool extends Tool
     private function removeMonitor(?string $id): Response
     {
         if (! $id) {
-            return Response::error('connector_id required');
+            return $this->invalidArgumentError('connector_id required');
         }
 
         $connector = Connector::where('id', $id)->where('driver', 'http_monitor')->first();
         if (! $connector) {
-            return Response::error("HTTP monitor {$id} not found");
+            return $this->notFoundError('HTTP monitor', $id);
         }
 
         $url = $connector->config['url'] ?? 'unknown';
@@ -233,7 +236,7 @@ class InboundConnectorManageTool extends Tool
     {
         $url = $request->get('url');
         if (! $url || ! filter_var($url, FILTER_VALIDATE_URL)) {
-            return Response::error('Valid url is required');
+            return $this->invalidArgumentError('Valid url is required');
         }
 
         $connector = Connector::create([
@@ -257,12 +260,12 @@ class InboundConnectorManageTool extends Tool
     private function removeRssFeed(?string $id): Response
     {
         if (! $id) {
-            return Response::error('connector_id required');
+            return $this->invalidArgumentError('connector_id required');
         }
 
         $connector = Connector::where('id', $id)->where('driver', 'rss')->first();
         if (! $connector) {
-            return Response::error("RSS feed {$id} not found");
+            return $this->notFoundError('RSS feed', $id);
         }
 
         $connector->delete();

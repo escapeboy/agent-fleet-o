@@ -4,17 +4,20 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\ExportTrajectoryAction;
 use App\Domain\Experiment\Actions\KillExperimentAction;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\ResumeExperimentAction;
 use App\Domain\Experiment\Actions\ResumeFromCheckpointAction;
 use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\RetryFromStepAction;
+use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Experiment\Models\WorkflowSnapshot;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreExperimentRequest;
 use App\Http\Requests\Api\V1\TransitionExperimentRequest;
@@ -25,21 +28,24 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @tags Experiments
  */
 class ExperimentController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $experiments = QueryBuilder::for(Experiment::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('track'),
                 AllowedFilter::partial('title'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'title', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'title', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
@@ -84,7 +90,7 @@ class ExperimentController extends Controller
             actorId: $request->user()->id,
         );
 
-        return new ExperimentResource($experiment);
+        return (new ExperimentResource($experiment))->invalidates('experiments');
     }
 
     public function pause(Request $request, Experiment $experiment, PauseExperimentAction $action): ExperimentResource
@@ -103,6 +109,21 @@ class ExperimentController extends Controller
         $experiment = $action->execute(
             experiment: $experiment,
             actorId: $request->user()->id,
+        );
+
+        return new ExperimentResource($experiment);
+    }
+
+    public function steer(Request $request, Experiment $experiment, SteerExperimentAction $action): ExperimentResource
+    {
+        $request->validate([
+            'message' => 'required|string|min:1|max:2000',
+        ]);
+
+        $experiment = $action->execute(
+            experiment: $experiment,
+            message: $request->input('message'),
+            userId: $request->user()?->id,
         );
 
         return new ExperimentResource($experiment);
@@ -269,5 +290,28 @@ class ExperimentController extends Controller
             'by_stage' => $byStage,
             'by_model' => $byModel,
         ]);
+    }
+
+    /**
+     * Export an experiment's execution trajectory as CSV or JSONL.
+     *
+     * @response 200 scenario="csv" {"description":"CSV file download"}
+     */
+    public function trajectory(Request $request, Experiment $experiment): StreamedResponse
+    {
+        $request->validate(['format' => 'nullable|string|in:csv,jsonl']);
+
+        if ($experiment->team_id !== $request->user()->current_team_id) {
+            abort(403);
+        }
+
+        $format = $request->input('format', 'csv');
+        $result = (new ExportTrajectoryAction)->execute($experiment, $format);
+
+        return response()->streamDownload(
+            fn () => print ($result['content']),
+            $result['filename'],
+            ['Content-Type' => $result['mime']],
+        );
     }
 }

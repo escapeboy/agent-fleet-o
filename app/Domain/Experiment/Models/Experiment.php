@@ -48,6 +48,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $parent_experiment_id
  * @property int $nesting_depth
  * @property array|null $orchestration_config
+ * @property array|null $meta
  */
 class Experiment extends Model
 {
@@ -176,6 +177,7 @@ class Experiment extends Model
         return $this->hasMany(ExperimentStateTransition::class);
     }
 
+    /** @return HasMany<PlaybookStep, $this> */
     public function playbookSteps(): HasMany
     {
         return $this->hasMany(PlaybookStep::class)->orderBy('order');

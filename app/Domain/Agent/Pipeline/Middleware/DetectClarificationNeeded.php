@@ -104,6 +104,7 @@ class DetectClarificationNeeded
                 PROMPT,
                 userPrompt: json_encode($ctx->input),
                 maxTokens: 512,
+                userId: $ctx->userId,
                 teamId: $ctx->teamId,
                 agentId: $ctx->agent->id,
                 experimentId: $ctx->experimentId,

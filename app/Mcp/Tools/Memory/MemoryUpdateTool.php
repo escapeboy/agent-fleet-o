@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class MemoryUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'memory_update';
 
     protected string $description = 'Update the content and/or tags of an existing memory entry.';
@@ -31,12 +34,12 @@ class MemoryUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $memory = Memory::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('memory_id'));
         if (! $memory) {
-            return Response::error('Memory entry not found.');
+            return $this->notFoundError('memory entry');
         }
 
         $updates = [];

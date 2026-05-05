@@ -4,8 +4,9 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Models\AssistantConversation;
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AssistantSendMessageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_send_message';
 
     protected string $description = 'Send a message to the AI assistant and receive a reply. Creates a new conversation if no conversation_id is provided.';
@@ -42,13 +45,13 @@ class AssistantSendMessageTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $message = $request->get('message');
 
         if (! $message) {
-            return Response::error('message is required.');
+            return $this->invalidArgumentError('message is required.');
         }
 
         // Resolve or create a conversation.
@@ -61,7 +64,7 @@ class AssistantSendMessageTool extends Tool
                 ->first();
 
             if (! $conversation) {
-                return Response::error('Conversation not found.');
+                return $this->notFoundError('conversation');
             }
         } else {
             $conversation = AssistantConversation::withoutGlobalScopes()->create([
@@ -79,7 +82,7 @@ class AssistantSendMessageTool extends Tool
         )->first();
 
         if (! $user) {
-            return Response::error('Could not resolve team owner for assistant context.');
+            return $this->permissionDeniedError('Could not resolve team owner for assistant context.');
         }
 
         try {
@@ -99,10 +102,10 @@ class AssistantSendMessageTool extends Tool
             return Response::text(json_encode([
                 'conversation_id' => $conversation->id,
                 'reply' => $reply?->content,
-                'total_tokens' => $aiResponse->usage->totalTokens ?? null,
+                'total_tokens' => $aiResponse->usage?->totalTokens(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Assistant error: '.$e->getMessage());
+            throw $e;
         }
     }
 }

@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('read')]
 class LocalLlmTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'local_llm_manage';
 
     protected string $description = 'Manage local LLM HTTP endpoints (Ollama, OpenAI-compatible). '
@@ -51,7 +54,7 @@ class LocalLlmTool extends Tool
             'discover_models' => $this->handleDiscoverModels($request),
             'remove' => $this->handleRemove($request),
             'rescan_agents' => $this->handleRescanAgents(),
-            default => Response::error("Unknown action '{$action}'. Valid: status, configure_ollama, configure_openai_compatible, discover_models, remove, rescan_agents"),
+            default => $this->invalidArgumentError("Unknown action '{$action}'. Valid: status, configure_ollama, configure_openai_compatible, discover_models, remove, rescan_agents"),
         };
     }
 
@@ -93,14 +96,10 @@ class LocalLlmTool extends Tool
     {
         $baseUrl = $request->get('base_url');
         if (! $baseUrl) {
-            return Response::error('base_url is required for configure_ollama');
+            return $this->invalidArgumentError('base_url is required for configure_ollama');
         }
 
-        try {
-            app(LocalLlmUrlValidator::class)->validate($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
-        }
+        app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
@@ -119,14 +118,10 @@ class LocalLlmTool extends Tool
     {
         $baseUrl = $request->get('base_url');
         if (! $baseUrl) {
-            return Response::error('base_url is required for configure_openai_compatible');
+            return $this->invalidArgumentError('base_url is required for configure_openai_compatible');
         }
 
-        try {
-            app(LocalLlmUrlValidator::class)->validate($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
-        }
+        app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
         $models = array_filter(array_map('trim', explode(',', $request->get('models', ''))));
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -147,7 +142,7 @@ class LocalLlmTool extends Tool
     {
         $provider = $request->get('provider');
         if (! in_array($provider, ['ollama', 'openai_compatible'], true)) {
-            return Response::error("provider must be 'ollama' or 'openai_compatible'");
+            return $this->invalidArgumentError("provider must be 'ollama' or 'openai_compatible'");
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -157,12 +152,12 @@ class LocalLlmTool extends Tool
             ->first();
 
         if (! $credential) {
-            return Response::error("No {$provider} endpoint configured. Run configure_{$provider} first.");
+            return $this->failedPreconditionError("No {$provider} endpoint configured. Run configure_{$provider} first.");
         }
 
         $baseUrl = $credential->credentials['base_url'] ?? null;
         if (! $baseUrl) {
-            return Response::error("No base_url in {$provider} credentials.");
+            return $this->failedPreconditionError("No base_url in {$provider} credentials.");
         }
 
         $apiKey = $credential->credentials['api_key'] ?? '';
@@ -180,7 +175,7 @@ class LocalLlmTool extends Tool
             $response = $httpRequest->get($endpoint);
 
             if (! $response->ok()) {
-                return Response::error("Could not reach {$provider} at {$baseUrl}: HTTP {$response->status()}");
+                return $this->unavailableError("Could not reach {$provider} at {$baseUrl}: HTTP {$response->status()}");
             }
 
             $data = $response->json();
@@ -196,7 +191,7 @@ class LocalLlmTool extends Tool
                 'count' => count($models),
             ]));
         } catch (ConnectionException $e) {
-            return Response::error("Connection failed to {$baseUrl}: {$e->getMessage()}");
+            return $this->unavailableError("Connection failed to {$baseUrl}: {$e->getMessage()}");
         }
     }
 
@@ -226,7 +221,7 @@ class LocalLlmTool extends Tool
     {
         $provider = $request->get('provider');
         if (! in_array($provider, ['ollama', 'openai_compatible'], true)) {
-            return Response::error("provider must be 'ollama' or 'openai_compatible'");
+            return $this->invalidArgumentError("provider must be 'ollama' or 'openai_compatible'");
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;

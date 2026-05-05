@@ -3,6 +3,7 @@
 namespace App\Domain\Workflow\Actions;
 
 use App\Domain\Workflow\Enums\WorkflowStatus;
+use App\Domain\Workflow\Events\WorkflowSaved;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -26,7 +27,7 @@ class CreateWorkflowAction
         array $settings = [],
         ?int $budgetCapCredits = null,
     ): Workflow {
-        return DB::transaction(function () use ($userId, $name, $description, $nodes, $edges, $maxLoopIterations, $teamId, $settings, $budgetCapCredits) {
+        $workflow = DB::transaction(function () use ($userId, $name, $description, $nodes, $edges, $maxLoopIterations, $teamId, $settings, $budgetCapCredits) {
             $workflow = Workflow::create([
                 'team_id' => $teamId,
                 'user_id' => $userId,
@@ -91,5 +92,10 @@ class CreateWorkflowAction
 
             return $workflow;
         });
+
+        // Trendshift top-5 build #5: notify Git-sync listener (one-way YAML push).
+        WorkflowSaved::dispatch($workflow);
+
+        return $workflow;
     }
 }

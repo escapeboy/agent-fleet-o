@@ -127,7 +127,7 @@ class SendWeeklyDigest extends Command
             ->where('updated_at', '>=', now()->subWeek())
             ->limit(5)
             ->pluck('title')
-            ->map(fn (string $t) => preg_replace('/[^\x20-\x7E]/', '', mb_substr($t, 0, 60)))
+            ->map(fn (string $t) => preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($t, 0, 60)))
             ->filter()
             ->implode(' | ');
 

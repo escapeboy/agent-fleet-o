@@ -5,13 +5,20 @@ namespace App\Livewire\Experiments;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
+use App\Livewire\Concerns\HasAssistantSelection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class ExperimentListPage extends Component
 {
+    use HasAssistantSelection;
     use WithPagination;
+
+    public function mount(): void
+    {
+        $this->selectionKind = 'experiment';
+    }
 
     #[Url]
     public string $search = '';

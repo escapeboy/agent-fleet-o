@@ -6,7 +6,17 @@ use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
+use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
+use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
+use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
+use App\Domain\AgentSession\Listeners\MirrorExperimentTransition;
+use App\Domain\Approval\Events\ActionProposalApproved;
+use App\Domain\Approval\Events\ActionProposalExecuted;
+use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
+use App\Domain\Approval\Listeners\DispatchActionProposalExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
+use App\Domain\Audit\Listeners\LogIntegrationExecution;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
@@ -23,6 +33,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
@@ -38,11 +49,14 @@ use App\Domain\Project\Listeners\NotifyAssistantOnProjectComplete;
 use App\Domain\Project\Listeners\NotifyDependentsOnRunComplete;
 use App\Domain\Project\Listeners\SyncProjectStatusOnRunComplete;
 use App\Domain\Shared\Events\TeamMemberRemoved;
+use App\Domain\Shared\Listeners\BroadcastAgentExecuted;
+use App\Domain\Shared\Listeners\BroadcastExperimentTransitioned;
 use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
 use App\Domain\Signal\Connectors\ApiPollingConnector;
+use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
 use App\Domain\Signal\Connectors\ClearCueConnector;
 use App\Domain\Signal\Connectors\ConfluenceConnector;
@@ -51,6 +65,7 @@ use App\Domain\Signal\Connectors\DiscordWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
 use App\Domain\Signal\Connectors\GitHubWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubWikiConnector;
+use App\Domain\Signal\Connectors\GoogleDriveConnector;
 use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
@@ -64,16 +79,21 @@ use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SearxngConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SignalProtocolConnector;
+use App\Domain\Signal\Connectors\SlackChannelKnowledgeConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\SupabaseWebhookConnector;
 use App\Domain\Signal\Connectors\TelegramSignalConnector;
-use App\Domain\Signal\Connectors\BugReportConnector;
+use App\Domain\Signal\Connectors\UrlWatchConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
+use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
+use App\Domain\Signal\Events\SignalAssigned;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\SendSignalAssignedNotification;
 use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
 use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
@@ -87,6 +107,8 @@ use App\Domain\Website\Drivers\WebsiteDeploymentDriverRegistry;
 use App\Domain\Website\Drivers\ZipDeploymentDriver;
 use App\Domain\Website\Models\WebsitePage;
 use App\Domain\Website\Observers\WebsitePageObserver;
+use App\Domain\Workflow\Events\WorkflowSaved;
+use App\Domain\Workflow\Listeners\QueueWorkflowYamlPush;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
@@ -99,11 +121,18 @@ use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
 use App\Infrastructure\Mail\TeamAwareMailChannel;
+use App\Infrastructure\Telemetry\AttributeRedactor;
+use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use App\Livewire\Hooks\PluginDispatchHook;
+use App\Mcp\DeadlineContext;
+use App\Mcp\ErrorClassifier;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
+use App\Mcp\Services\ConnectorMcpRegistrar;
 use App\Models\User;
 use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
+use Composer\Autoload\ClassLoader;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -141,10 +170,45 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Pre-bind 'mcp.team_id' as null so any caller doing
+        // `app('mcp.team_id') ?? auth()->user()?->current_team_id` works
+        // without first checking $app->bound(). MCP request handlers
+        // overwrite this with the resolved team ID via app()->instance(...).
+        // Without this default, calling app('mcp.team_id') on an unbound
+        // container (e.g. in test setup that has called forgetInstance)
+        // throws BindingResolutionException because Laravel tries to
+        // autoresolve the dotted string as a class name.
+        if (! $this->app->bound('mcp.team_id')) {
+            $this->app->instance('mcp.team_id', null);
+        }
+
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
 
         // Lazy MCP stdio handle registry — one instance per request/job lifecycle
         $this->app->singleton(McpHandleRegistry::class);
+
+        // MCP structured error classifier (singleton so plugins can register custom mappings)
+        $this->app->singleton(ErrorClassifier::class);
+
+        // MCP deadline context — request-scoped; nested tool calls inherit the same instance
+        $this->app->singleton(DeadlineContext::class);
+
+        // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
+        $this->app->singleton(FleetTracerProvider::class);
+        // Per-team tracer factory — in-process cache of tenant-scoped providers so
+        // changes to team.settings.observability take effect via forget() without a worker restart.
+        $this->app->singleton(TenantTracerProviderFactory::class);
+        $this->app->singleton(AttributeRedactor::class);
+        $this->app->terminating(function () {
+            if (app()->resolved(FleetTracerProvider::class)) {
+                app(FleetTracerProvider::class)->shutdown();
+            }
+            // Clear request-scoped MCP deadline so Horizon workers don't inherit
+            // a stale deadline from a prior job's exception path.
+            if (app()->resolved(DeadlineContext::class)) {
+                app(DeadlineContext::class)->clear();
+            }
+        });
 
         // Plugin extension points
         $this->app->singleton(PluginRegistry::class, fn () => new PluginRegistry);
@@ -162,6 +226,18 @@ class AppServiceProvider extends ServiceProvider
 
         // Accumulator for plugin-contributed MCP tool class names
         $this->app->instance('fleet.mcp.tool_classes', []);
+
+        // Trendshift top-5 sprint, build #3: PSR-4 prefix for synthesized connector MCP tool classes.
+        // ConnectorMcpRegistrar generates one .php file per opt-in connector under bootstrap/cache.
+        if (file_exists(base_path('vendor/autoload.php'))) {
+            $loader = require base_path('vendor/autoload.php');
+            if ($loader instanceof ClassLoader) {
+                $loader->setPsr4(ConnectorMcpRegistrar::NAMESPACE.'\\', [
+                    base_path(ConnectorMcpRegistrar::CACHE_DIR),
+                ]);
+            }
+        }
+        $this->app->singleton(ConnectorMcpRegistrar::class);
 
         // Tag all built-in signal connectors so plugins and the registry can discover them
         $this->app->tag([
@@ -193,6 +269,10 @@ class AppServiceProvider extends ServiceProvider
             ConfluenceConnector::class,
             GitHubWikiConnector::class,
             BugReportConnector::class,
+            GoogleDriveConnector::class,
+            SlackChannelKnowledgeConnector::class,
+            WebScrapingConnector::class,
+            UrlWatchConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors
@@ -305,6 +385,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('edit-content', fn ($user) => true);
         Gate::define('delete-team', fn ($user) => true);
 
+        // Per-user gate — used by Profile/Notification forms that write only to
+        // auth()->user(). Always true in community edition. Cloud may override
+        // (e.g. to lock down impersonated sessions) without breaking the
+        // assumption that an authenticated user can edit their own profile.
+        Gate::define('update-self', fn ($user) => true);
+
         // Deployment mode feature gates
         $mode = app(DeploymentMode::class);
         Gate::define('feature.local_agents', fn ($user) => $mode->isSelfHosted());
@@ -342,6 +428,35 @@ class AppServiceProvider extends ServiceProvider
         // MCP Apps: record per-session capability flag on initialize handshake
         Event::listen(SessionInitialized::class, McpAppsCapabilityListener::class);
 
+        // Integration audit trail: log every executed driver action
+        Event::listen(
+            IntegrationActionExecuted::class,
+            LogIntegrationExecution::class,
+        );
+
+        // /team-graph live activity firehose — broadcast normalized TeamActivity events
+        Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
+        Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
+
+        // AgentSession event log — funnel existing experiment transitions into the session log
+        Event::listen(
+            ExperimentTransitioned::class,
+            MirrorExperimentTransition::class,
+        );
+
+        // ActionProposal auto-execute on approval — dispatches a queued job
+        Event::listen(ActionProposalApproved::class, DispatchActionProposalExecution::class);
+
+        // After execution, append the outcome to the originating assistant conversation
+        Event::listen(ActionProposalExecuted::class, AppendExecutionResultToConversation::class);
+
+        // Trendshift top-5 sprint, build #5 (Kestra YAML Git Sync):
+        // queue a YAML push whenever a Workflow saves with a linked git sync.
+        Event::listen(
+            WorkflowSaved::class,
+            QueueWorkflowYamlPush::class,
+        );
+
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);
@@ -367,6 +482,20 @@ class AppServiceProvider extends ServiceProvider
 
         // Sub-experiment orchestration: check parent when child reaches terminal state
         Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);
+
+        // Agent Chat Protocol: execute agent on inbound chat + log protocol transactions
+        Event::listen(
+            ChatMessageReceived::class,
+            ExecuteAgentOnChatMessage::class,
+        );
+        Event::listen(
+            ChatMessageReceived::class,
+            [LogProtocolTransaction::class, 'handleReceived'],
+        );
+        Event::listen(
+            ChatMessageDispatched::class,
+            [LogProtocolTransaction::class, 'handleDispatched'],
+        );
 
         // Sub-workflow node: resume parent workflow step when sub-workflow experiment completes
         Event::listen(ExperimentTransitioned::class, ResumeParentOnSubWorkflowComplete::class);
@@ -403,7 +532,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Bug report signals: notify on critical severity + on status transitions
         Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
+        Event::listen(SignalIngested::class, InferIncomingSignalIntent::class);
         Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
+        Event::listen(SignalAssigned::class, SendSignalAssignedNotification::class);
 
         // Bug report delegation: advance signal to review when agent experiment completes
         Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);

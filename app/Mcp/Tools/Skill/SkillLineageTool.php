@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillVersion;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -19,6 +20,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class SkillLineageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_lineage';
 
     protected string $description = 'Get the version lineage and evolution history for a skill.';
@@ -38,11 +41,11 @@ class SkillLineageTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['skill_id']);
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $versions = SkillVersion::query()

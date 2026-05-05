@@ -1,13 +1,20 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AgentChatController;
+use App\Http\Controllers\Api\V1\AgentChatSessionController;
 use App\Http\Controllers\Api\V1\AgentController;
+use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AssistantController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\BridgeController;
+use App\Http\Controllers\Api\V1\BroadcastingConfigController;
 use App\Http\Controllers\Api\V1\BudgetController;
+use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
+use App\Http\Controllers\Api\V1\BugReportSignalController;
 use App\Http\Controllers\Api\V1\ChatbotInstanceController;
 use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
@@ -17,6 +24,7 @@ use App\Http\Controllers\Api\V1\EmailThemeController;
 use App\Http\Controllers\Api\V1\EvolutionController;
 use App\Http\Controllers\Api\V1\ExperimentController;
 use App\Http\Controllers\Api\V1\ExportWebsiteController;
+use App\Http\Controllers\Api\V1\ExternalAgentController;
 use App\Http\Controllers\Api\V1\FlowEvaluationController;
 use App\Http\Controllers\Api\V1\GitRepositoryController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -30,17 +38,16 @@ use App\Http\Controllers\Api\V1\MetricsController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
-use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
-use App\Http\Controllers\Api\V1\BugReportSignalController;
 use App\Http\Controllers\Api\V1\RouteMapController;
 use App\Http\Controllers\Api\V1\SignalController;
-use App\Http\Controllers\Api\V1\SourceMapController;
 use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
+use App\Http\Controllers\Api\V1\SourceMapController;
 use App\Http\Controllers\Api\V1\SshFingerprintController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\ToolController;
 use App\Http\Controllers\Api\V1\ToolFederationGroupController;
+use App\Http\Controllers\Api\V1\ToolsetController;
 use App\Http\Controllers\Api\V1\ToolTemplateController;
 use App\Http\Controllers\Api\V1\TriggerController;
 use App\Http\Controllers\Api\V1\VoiceSessionController;
@@ -77,6 +84,19 @@ Route::prefix('marketplace')
         Route::get('/categories', [MarketplaceController::class, 'categories']);
     });
 
+// Agent Chat Protocol — inbound endpoints (auth handled inside controller:
+// Sanctum for private/team visibility, JWT HS256 for marketplace/public visibility)
+Route::prefix('agents')
+    ->middleware('throttle:60,1')
+    ->group(function () {
+        Route::post('/{agent}/chat', [AgentChatController::class, 'chat'])
+            ->name('agent-chat.inbound.chat');
+        Route::post('/{agent}/structured', [AgentChatController::class, 'structured'])
+            ->name('agent-chat.inbound.structured');
+        Route::post('/{agent}/ack', [AgentChatController::class, 'ack'])
+            ->name('agent-chat.inbound.ack');
+    });
+
 // Authenticated routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
@@ -89,6 +109,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Current user
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'updateMe']);
+    Route::get('/me/bootstrap', BootstrapController::class)->name('api.v1.me.bootstrap');
     Route::get('/me/social-accounts', [AuthController::class, 'socialAccounts']);
     Route::delete('/me/social-accounts/{provider}', [AuthController::class, 'unlinkSocialAccount']);
 
@@ -99,6 +120,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/experiments/{experiment}/transition', [ExperimentController::class, 'transition']);
     Route::post('/experiments/{experiment}/pause', [ExperimentController::class, 'pause']);
     Route::post('/experiments/{experiment}/resume', [ExperimentController::class, 'resume']);
+    Route::post('/experiments/{experiment}/steer', [ExperimentController::class, 'steer']);
     Route::post('/experiments/{experiment}/retry', [ExperimentController::class, 'retry']);
     Route::post('/experiments/{experiment}/kill', [ExperimentController::class, 'kill']);
     Route::post('/experiments/{experiment}/retry-from-step', [ExperimentController::class, 'retryFromStep']);
@@ -106,9 +128,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/experiments/{experiment}/steps', [ExperimentController::class, 'steps']);
     Route::get('/experiments/{experiment}/snapshots', [ExperimentController::class, 'snapshots']);
     Route::get('/experiments/{experiment}/cost', [ExperimentController::class, 'cost']);
+    Route::get('/experiments/{experiment}/trajectory', [ExperimentController::class, 'trajectory']);
 
     // Agents
     Route::apiResource('agents', AgentController::class);
+    Route::get('/agents/{agent}/a2a', [AgentManifestController::class, 'a2a']);
     Route::patch('/agents/{agent}/status', [AgentController::class, 'toggleStatus']);
     Route::get('/agents/{agent}/config-history', [AgentController::class, 'configHistory']);
     Route::post('/agents/{agent}/rollback', [AgentController::class, 'rollback']);
@@ -117,6 +141,18 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/agents/{agent}/feedback', [AgentController::class, 'submitFeedback']);
     Route::get('/agents/{agent}/feedback', [AgentController::class, 'listFeedback']);
     Route::get('/agents/{agent}/feedback/stats', [AgentController::class, 'feedbackStats']);
+
+    // External Agents CRUD + dispatch (Sanctum-authenticated)
+    Route::apiResource('external-agents', ExternalAgentController::class)->parameters(['external-agents' => 'externalAgent']);
+    Route::post('/external-agents/{externalAgent}/refresh', [ExternalAgentController::class, 'refresh']);
+    Route::post('/external-agents/{externalAgent}/ping', [ExternalAgentController::class, 'ping']);
+    Route::post('/external-agents/{externalAgent}/chat', [ExternalAgentController::class, 'sendChat']);
+    Route::post('/external-agents/{externalAgent}/structured', [ExternalAgentController::class, 'sendStructured']);
+
+    // Chat sessions (Sanctum-authenticated read endpoints)
+    Route::get('/agent-chat/sessions', [AgentChatSessionController::class, 'index']);
+    Route::get('/agent-chat/sessions/{session}', [AgentChatSessionController::class, 'show']);
+    Route::get('/agent-chat/sessions/{session}/messages', [AgentChatSessionController::class, 'messages']);
 
     // Skills
     Route::apiResource('skills', SkillController::class);
@@ -128,6 +164,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Tools
     Route::apiResource('tools', ToolController::class);
+    Route::apiResource('toolsets', ToolsetController::class);
     Route::apiResource('tool-federation-groups', ToolFederationGroupController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/ssh-fingerprints', [SshFingerprintController::class, 'index']);
 
@@ -259,6 +296,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Integrations
     Route::get('/integrations', [IntegrationController::class, 'index']);
     Route::get('/integrations/{integration}', [IntegrationController::class, 'show']);
+    Route::put('/integrations/{integration}', [IntegrationController::class, 'update']);
+    Route::patch('/integrations/{integration}', [IntegrationController::class, 'update']);
     Route::post('/integrations/connect', [IntegrationController::class, 'connect']);
     Route::post('/integrations/{integration}/disconnect', [IntegrationController::class, 'disconnect']);
     Route::post('/integrations/{integration}/ping', [IntegrationController::class, 'ping']);
@@ -347,6 +386,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Reverb WebSocket channel authentication — used by the bridge daemon to authenticate
     // its private channel subscription (POST with socket_id + channel_name, returns auth token)
     Route::post('/broadcasting/auth', [BridgeController::class, 'broadcastingAuth']);
+
+    // Public-facing Reverb connection parameters — consumed by clients that
+    // connect over WSS without going through bridge/register (the desktop app).
+    Route::get('/broadcasting/config', BroadcastingConfigController::class);
 
     // Websites
     Route::apiResource('websites', WebsiteController::class);

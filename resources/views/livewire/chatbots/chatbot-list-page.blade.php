@@ -3,7 +3,7 @@
     @if(session('chatbot_api_key'))
         <div class="mb-6 rounded-xl border border-green-200 bg-green-50 p-4">
             <div class="flex items-start gap-3">
-                <svg class="mt-0.5 h-5 w-5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                <i class="fa-solid fa-key mt-0.5 text-lg shrink-0 text-green-600"></i>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-green-800">Your API key (shown once)</p>
                     <code class="mt-1 block break-all rounded bg-green-100 px-2 py-1 text-xs font-mono text-green-900">{{ session('chatbot_api_key') }}</code>
@@ -22,7 +22,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search chatbots..." class="pl-10" toolparamdescription="Free-text search across chatbot names and descriptions">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>

@@ -9,6 +9,7 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CrewExecutionResource;
 use App\Http\Resources\Api\V1\CrewResource;
@@ -25,15 +26,17 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class CrewController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $crews = QueryBuilder::for(Crew::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('process_type'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->with(['coordinator', 'qaAgent'])
             ->withCount('executions')
@@ -58,7 +61,7 @@ class CrewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'coordinator_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
-            'qa_agent_id' => ['required', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
+            'qa_agent_id' => ['nullable', 'uuid', Rule::exists('agents', 'id')->where('team_id', $teamId)],
             'process_type' => ['sometimes', new Enum(CrewProcessType::class)],
             'max_task_iterations' => ['sometimes', 'integer', 'min:1', 'max:20'],
             'quality_threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
@@ -85,7 +88,7 @@ class CrewController extends Controller
             userId: $request->user()->id,
             name: $request->name,
             coordinatorAgentId: $request->coordinator_agent_id,
-            qaAgentId: $request->qa_agent_id,
+            qaAgentId: $request->input('qa_agent_id'),
             description: $request->description,
             processType: $request->process_type
                 ? CrewProcessType::from($request->process_type)
@@ -183,6 +186,7 @@ class CrewController extends Controller
         );
 
         return (new CrewExecutionResource($execution))
+            ->invalidates('crews')
             ->response()
             ->setStatusCode(201);
     }
@@ -192,10 +196,10 @@ class CrewController extends Controller
         $executions = QueryBuilder::for(
             CrewExecution::query()->where('crew_id', $crew->id),
         )
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
-            ])
-            ->allowedSorts(['created_at', 'status', 'total_cost_credits', 'duration_ms'])
+            )
+            ->allowedSorts('created_at', 'status', 'total_cost_credits', 'duration_ms')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

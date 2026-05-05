@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Bridge;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Bridge\Models\BridgeConnectionStatus;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class BridgePingTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'bridge_ping';
 
     protected string $description = 'Ping an HTTP-mode bridge connection to verify it is reachable. Updates connection status to connected or disconnected based on the result. Only available for HTTP-mode connections (not WebSocket relay connections).';
@@ -43,11 +46,11 @@ class BridgePingTool extends Tool
             ->find($validated['connection_id']);
 
         if (! $connection) {
-            return Response::error('Bridge connection not found.');
+            return $this->notFoundError('bridge connection');
         }
 
         if (! $connection->isHttpMode()) {
-            return Response::error('Ping is only available for HTTP-mode connections.');
+            return $this->failedPreconditionError('Ping is only available for HTTP-mode connections.');
         }
 
         $headers = [];

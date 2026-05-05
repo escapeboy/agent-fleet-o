@@ -4,12 +4,13 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\CompanyIntentScore;
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for querying composite buyer intent scores.
@@ -24,6 +25,8 @@ use App\Mcp\Attributes\AssistantTool;
 #[AssistantTool('read')]
 class IntentScoreTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'intent_score_query';
 
     protected string $description = 'Query the composite buyer intent score for a company or person. Returns FIRE model dimensions (Fit, Intent, Engagement, Relationship), signal history, and threshold classification (hot/warm/lukewarm/cold). Use this to prioritise outreach and decide when to trigger experiments.';
@@ -65,7 +68,7 @@ class IntentScoreTool extends Tool
                 'get_signal_history' => $this->getSignalHistory($validated),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 
@@ -73,7 +76,7 @@ class IntentScoreTool extends Tool
     {
         $entityKey = $params['entity_key'] ?? null;
         if (! $entityKey) {
-            return Response::error('entity_key is required for get_score');
+            return $this->invalidArgumentError('entity_key is required for get_score');
         }
 
         $score = CompanyIntentScore::where('entity_key', $entityKey)->first();
@@ -144,7 +147,7 @@ class IntentScoreTool extends Tool
     {
         $entityKey = $params['entity_key'] ?? null;
         if (! $entityKey) {
-            return Response::error('entity_key is required for get_signal_history');
+            return $this->invalidArgumentError('entity_key is required for get_signal_history');
         }
 
         $signals = Signal::where('source_identifier', $entityKey)

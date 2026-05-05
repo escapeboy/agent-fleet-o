@@ -73,7 +73,26 @@ class SlackIntegrationDriver implements IntegrationDriverInterface
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             if ($response->successful() && $response->json('ok')) {
-                return HealthResult::ok($latency);
+                $user = $response->json('user');
+                $team = $response->json('team');
+
+                return HealthResult::ok(
+                    latencyMs: $latency,
+                    message: $user && $team ? "Connected as {$user} on {$team}" : null,
+                    identity: $user || $team ? [
+                        'label' => $user && $team ? "{$user} · {$team}" : ($user ?: $team),
+                        'identifier' => $response->json('team_id'),
+                        'url' => $response->json('url'),
+                        'metadata' => array_filter([
+                            'user' => $user,
+                            'user_id' => $response->json('user_id'),
+                            'team' => $team,
+                            'team_id' => $response->json('team_id'),
+                            'bot_id' => $response->json('bot_id'),
+                            'enterprise_id' => $response->json('enterprise_id'),
+                        ]),
+                    ] : null,
+                );
             }
 
             return HealthResult::fail($response->json('error') ?? 'Unknown error');

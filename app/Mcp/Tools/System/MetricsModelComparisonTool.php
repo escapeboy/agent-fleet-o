@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\System;
 
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class MetricsModelComparisonTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'system_metrics_model_comparison';
 
     protected string $description = 'Compare LLM provider/model usage: request counts, cost, latency, token usage. Optionally filter by date range.';
@@ -33,18 +36,18 @@ class MetricsModelComparisonTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if ($teamId === null) {
-            return Response::error('Authentication required.');
+            return $this->permissionDeniedError('Authentication required.');
         }
 
         $from = $request->input('from');
         $to = $request->input('to');
 
         if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
-            return Response::error('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
+            return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
         }
 
         if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
-            return Response::error('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
+            return $this->invalidArgumentError('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
         }
 
         $query = LlmRequestLog::withoutGlobalScopes()

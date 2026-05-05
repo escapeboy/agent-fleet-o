@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Feature\Api\V1\ApiTestCase;
 
 class BugReportWidgetTest extends ApiTestCase
@@ -108,7 +109,7 @@ class BugReportWidgetTest extends ApiTestCase
         $oldKey = $this->team->widget_public_key;
 
         $this->team->update([
-            'widget_public_key' => 'wk_'.\Illuminate\Support\Str::random(40),
+            'widget_public_key' => 'wk_'.Str::random(40),
         ]);
 
         $this->team->refresh();
@@ -174,8 +175,11 @@ class BugReportWidgetTest extends ApiTestCase
             ->first();
 
         $this->assertNotNull($signal);
-        // breadcrumbs should be stored and override action_log
-        $this->assertEquals($breadcrumbs, $signal->payload['breadcrumbs']);
+        // BugReportConnector decodes JSON-encoded breadcrumbs into a structured
+        // array so downstream consumers don't have to parse JSON themselves,
+        // and also overrides action_log with the decoded list.
+        $this->assertEquals(json_decode($breadcrumbs, true), $signal->payload['breadcrumbs']);
+        $this->assertEquals(json_decode($breadcrumbs, true), $signal->payload['action_log']);
     }
 
     public function test_widget_backward_compat_without_new_fields(): void

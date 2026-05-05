@@ -4,18 +4,21 @@ namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Services\ContactResolver;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('read')]
 class ContactManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'contact_manage';
 
     protected string $description = 'Manage cross-channel contact identities. List, show details, merge two contacts, or link/unlink channels.';
@@ -46,7 +49,7 @@ class ContactManageTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action', 'list');
@@ -93,7 +96,7 @@ class ContactManageTool extends Tool
         if ($action === 'get') {
             $contactId = $request->get('contact_id');
             if (! $contactId) {
-                return Response::error('contact_id is required for get action.');
+                return $this->invalidArgumentError('contact_id is required for get action.');
             }
 
             $contact = ContactIdentity::where('team_id', $teamId)->with('channels')->findOrFail($contactId);
@@ -121,11 +124,11 @@ class ContactManageTool extends Tool
             $sourceId = $request->get('source_contact_id');
 
             if (! $contactId || ! $sourceId) {
-                return Response::error('contact_id and source_contact_id are both required for merge action.');
+                return $this->invalidArgumentError('contact_id and source_contact_id are both required for merge action.');
             }
 
             if ($contactId === $sourceId) {
-                return Response::error('Cannot merge a contact with itself.');
+                return $this->invalidArgumentError('Cannot merge a contact with itself.');
             }
 
             $target = ContactIdentity::where('team_id', $teamId)->findOrFail($contactId);
@@ -141,7 +144,7 @@ class ContactManageTool extends Tool
             $channelId = $request->get('channel_id');
 
             if (! $contactId || ! $channelId) {
-                return Response::error('contact_id and channel_id are both required for unlink_channel action.');
+                return $this->invalidArgumentError('contact_id and channel_id are both required for unlink_channel action.');
             }
 
             $contact = ContactIdentity::where('team_id', $teamId)->findOrFail($contactId);
@@ -151,6 +154,6 @@ class ContactManageTool extends Tool
             return Response::text("Channel {$channelId} unlinked from contact {$contactId}.");
         }
 
-        return Response::error("Unknown action: {$action}");
+        return $this->invalidArgumentError("Unknown action: {$action}");
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Connectors\BugReportConnector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;

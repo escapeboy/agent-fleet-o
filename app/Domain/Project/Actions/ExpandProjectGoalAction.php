@@ -19,7 +19,7 @@ class ExpandProjectGoalAction
      *
      * @return array{features: array, cost_estimate: float}
      */
-    public function execute(string $goal, string $teamId, ?string $context = null): array
+    public function execute(string $goal, string $teamId, ?string $context = null, ?string $userId = null): array
     {
         $team = Team::find($teamId);
         $resolved = $this->providerResolver->resolve(team: $team);
@@ -51,6 +51,7 @@ PROMPT;
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 4096,
+            userId: $userId ?? Team::ownerIdFor($teamId),
             teamId: $teamId,
             purpose: 'project.expand_goal',
             temperature: 0.4,

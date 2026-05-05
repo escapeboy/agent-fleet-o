@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Evolution\Actions\ProposeCrewRestructuringAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewProposeRestructuringTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_propose_restructuring';
 
     protected string $description = 'Analyse a crew\'s execution history and propose structural changes. Creates an approval request for human review.';
@@ -36,7 +39,7 @@ class CrewProposeRestructuringTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $crew = Crew::withoutGlobalScopes()
@@ -44,7 +47,7 @@ class CrewProposeRestructuringTool extends Tool
             ->find($validated['crew_id']);
 
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         $userId = auth()->id() ?? '';
@@ -66,7 +69,7 @@ class CrewProposeRestructuringTool extends Tool
                 'proposed_changes_count' => count($approval->context['proposed_changes'] ?? []),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Actions\CreateProjectAction;
 use App\Domain\Project\Enums\ProjectExecutionMode;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProjectCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_create';
 
     protected string $description = 'Create a new project. One-shot projects auto-start immediately. Continuous projects require a schedule config to run on a recurring basis — without it, they will never execute.';
@@ -75,18 +78,23 @@ class ProjectCreateTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return $this->permissionDeniedError('No current team.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'nullable|string|in:one_shot,continuous',
             'goal' => 'nullable|string',
             'execution_mode' => 'nullable|string|in:autonomous,watcher',
-            'workflow_id' => 'nullable|uuid|exists:workflows,id',
-            'crew_id' => 'nullable|uuid|exists:crews,id',
+            'workflow_id' => "nullable|uuid|exists:workflows,id,team_id,{$teamId}",
+            'crew_id' => "nullable|uuid|exists:crews,id,team_id,{$teamId}",
             'allowed_tool_ids' => 'nullable|array',
-            'allowed_tool_ids.*' => 'uuid|exists:tools,id',
+            'allowed_tool_ids.*' => "uuid|exists:tools,id,team_id,{$teamId}",
             'allowed_credential_ids' => 'nullable|array',
-            'allowed_credential_ids.*' => 'uuid|exists:credentials,id',
+            'allowed_credential_ids.*' => "uuid|exists:credentials,id,team_id,{$teamId}",
             'schedule' => 'nullable|array',
             'schedule.frequency' => 'nullable|string|in:every_5_minutes,every_10_minutes,every_15_minutes,every_30_minutes,hourly,daily,weekly,monthly,cron,once',
             'schedule.cron_expression' => 'nullable|string',
@@ -96,10 +104,6 @@ class ProjectCreateTool extends Tool
             'schedule.catchup_missed' => 'nullable|boolean',
             'schedule.run_immediately' => 'nullable|boolean',
         ]);
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return Response::error('No current team.');
-        }
 
         try {
             $project = app(CreateProjectAction::class)->execute(
@@ -150,7 +154,7 @@ class ProjectCreateTool extends Tool
 
             return Response::text(json_encode($response));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

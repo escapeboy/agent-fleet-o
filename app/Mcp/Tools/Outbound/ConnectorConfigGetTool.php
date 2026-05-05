@@ -4,6 +4,8 @@ namespace App\Mcp\Tools\Outbound;
 
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
@@ -11,13 +13,14 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class ConnectorConfigGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'connector_config_get';
 
     protected string $description = 'Get a specific outbound connector config by ID or channel name.';
@@ -36,19 +39,19 @@ class ConnectorConfigGetTool extends Tool
         $channel = $request->get('channel');
 
         if (! $id && ! $channel) {
-            return Response::error('Provide either id or channel');
+            return $this->invalidArgumentError('Provide either id or channel');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $config = $id
             ? OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->find($id)
             : OutboundConnectorConfig::withoutGlobalScopes()->where('team_id', $teamId)->where('channel', $channel)->first();
 
         if (! $config) {
-            return Response::error('Connector config not found');
+            return $this->notFoundError('connector config');
         }
 
         $resolver = app(OutboundCredentialResolver::class);

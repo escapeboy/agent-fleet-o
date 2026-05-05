@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Actions;
 
+use App\Domain\Agent\DTOs\WorkspaceContractSnapshot;
 use App\Domain\Agent\Enums\AgentHookPosition;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentStatus;
@@ -18,6 +19,8 @@ use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
 use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
+use App\Domain\Agent\Pipeline\Middleware\InjectTeamContext;
+use App\Domain\Agent\Pipeline\Middleware\InjectWorldModel;
 use App\Domain\Agent\Pipeline\Middleware\PreExecutionScout;
 use App\Domain\Agent\Pipeline\Middleware\SummarizeContext;
 use App\Domain\Agent\Services\AgentHookExecutor;
@@ -25,6 +28,7 @@ use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
 use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
+use App\Domain\Agent\Services\WorkspaceContractWriter;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
@@ -37,11 +41,13 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Services\SchemaValidator;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +66,9 @@ class ExecuteAgentAction
         private readonly ProviderResolver $providerResolver,
         private readonly PreExecutionScout $preExecutionScout,
         private readonly InjectMemoryContext $injectMemoryContext,
+        private readonly InjectTeamContext $injectTeamContext,
         private readonly InjectKnowledgeGraphContext $injectKgContext,
+        private readonly InjectWorldModel $injectWorldModel,
         private readonly InjectRepoMapContext $injectRepoMapContext,
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
@@ -69,7 +77,86 @@ class ExecuteAgentAction
         private readonly AgentHookExecutor $hookExecutor,
         private readonly AgentPromptCompiler $promptCompiler,
         private readonly ToolRecoveryOrchestrator $toolRecovery,
+        private readonly SchemaValidator $schemaValidator,
+        private readonly WorkspaceContractWriter $workspaceContractWriter,
     ) {}
+
+    /**
+     * Workspace contract built once per execute() call and reused by every
+     * AgentExecution::create() callsite plus the post-success progress append.
+     * Reset to null after execute() returns.
+     */
+    private ?WorkspaceContractSnapshot $currentWorkspaceContract = null;
+
+    /**
+     * Validate an agent's final output against its `output_schema` JSONB, if
+     * one is defined. Returns null when no schema is present so the caller can
+     * cheaply skip persistence.
+     *
+     * Best-effort: tries JSON-decode of the content first, falls back to
+     * validating a `{ "result": string }` shape so free-form replies still
+     * get a deterministic pass/fail.
+     *
+     * @return array{valid: bool, errors: list<string>}|null
+     */
+    private function validateAgentOutput(Agent $agent, ?string $content): ?array
+    {
+        $schema = $agent->output_schema ?? null;
+        if (! is_array($schema) || $schema === []) {
+            return null;
+        }
+
+        $decoded = is_string($content) ? json_decode($content, true) : null;
+        $payload = is_array($decoded) ? $decoded : ['result' => (string) $content];
+
+        return $this->schemaValidator->validate($payload, $schema);
+    }
+
+    /**
+     * Build the retry user prompt that teaches the model what was wrong and
+     * how to fix it. Kept deliberately terse — one paragraph of feedback,
+     * followed by the JSON Schema the model must conform to.
+     *
+     * @param  array{valid: bool, errors: list<string>}  $eval
+     */
+    private function buildSchemaRetryPrompt(string $previousOutput, array $eval, array $schema): string
+    {
+        $errors = implode("\n- ", $eval['errors']);
+        $schemaJson = json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        return <<<PROMPT
+        Your previous response failed output-schema validation.
+
+        Previous response (first 500 chars):
+        {$previousOutput}
+
+        Schema errors:
+        - {$errors}
+
+        Return a JSON object that matches this schema exactly. No prose, no
+        code fences — just the JSON:
+
+        ```json
+        {$schemaJson}
+        ```
+        PROMPT;
+    }
+
+    /**
+     * Resolve the max-retries count for this agent. Nullable column → fall
+     * back to `config('agent.output_schema.max_retries_default', 2)`. 0 is a
+     * legitimate opt-out that preserves Sprint 8's validate-but-don't-retry
+     * behavior.
+     */
+    private function resolveMaxRetries(Agent $agent): int
+    {
+        $value = $agent->output_schema_max_retries;
+        if ($value === null) {
+            $value = (int) config('agent.output_schema.max_retries_default', 2);
+        }
+
+        return max(0, min(5, (int) $value));
+    }
 
     /**
      * Execute an agent by running its assigned tools (agentic loop)
@@ -148,19 +235,28 @@ class ExecuteAgentAction
             ->through([
                 $this->preExecutionScout,
                 $this->injectMemoryContext,
+                $this->injectTeamContext,
                 $this->injectKgContext,
+                $this->injectWorldModel,
                 $this->injectRepoMapContext,
                 $this->summarizeContext,
                 $this->detectClarification,
             ])
             ->thenReturn();
 
+        // Use the (potentially summarized) input going forward
+        $input = $ctx->input;
+
+        // Build workspace contract once for this execute() call. Stored on the
+        // instance so every AgentExecution::create() callsite below — including
+        // requestClarification — can attach it without threading a parameter
+        // through method signatures.
+        $this->currentWorkspaceContract = $this->workspaceContractWriter
+            ->buildSnapshotForExecution($agent, $experimentId, $project, $input);
+
         if ($ctx->requiresClarification) {
             return $this->requestClarification($ctx, $stepId);
         }
-
-        // Use the (potentially summarized) input going forward
-        $input = $ctx->input;
 
         // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
         // execute directly with LLM instead of skill chain
@@ -187,6 +283,26 @@ class ExecuteAgentAction
             );
 
             $tools = $this->resolveTools->execute($agent, $project, $sandboxId, $sidecarSessionId, $currentDepth, $userId, $semanticQuery, $allowedToolIds);
+
+            // Materialize the workspace contract files into the sandbox before the
+            // LLM tool-loop starts so the agent can read AGENTS.md / feature-list.json /
+            // progress.md / init.sh from disk via filesystem tools. Best-effort —
+            // failure is logged, never raised. currentWorkspaceContract is always
+            // populated by this point (set right after pipeline middleware above).
+            if ($agent->team_id) {
+                try {
+                    $this->workspaceContractWriter->materializeSnapshot(
+                        new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id),
+                        $this->currentWorkspaceContract,
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('WorkspaceContract materialize failed', [
+                        'sandbox_id' => $sandboxId,
+                        'agent_id' => $agent->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             if (! empty($tools)) {
                 try {
@@ -218,6 +334,25 @@ class ExecuteAgentAction
 
         // Plugin hook: notify plugins of execution result
         event(new AgentExecuted($agent, $result['execution'], $result['output'] !== null));
+
+        // Best-effort: log a single progress line summarising the run. Never
+        // raised — progress is observability, not a hard dependency.
+        if ($result['execution'] instanceof AgentExecution) {
+            try {
+                $status = $result['execution']->status;
+                $note = "Run {$result['execution']->id} ".(
+                    $result['output'] !== null ? "completed (status={$status})" : "ended without output (status={$status})"
+                );
+                $this->workspaceContractWriter->appendProgress($result['execution'], $note);
+            } catch (\Throwable $e) {
+                Log::warning('WorkspaceContract appendProgress failed', [
+                    'execution_id' => $result['execution']->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->currentWorkspaceContract = null;
 
         return $result;
     }
@@ -266,6 +401,7 @@ class ExecuteAgentAction
                 systemPrompt: $systemPrompt,
                 userPrompt: json_encode($input),
                 maxTokens: $tierConfig['max_tokens'],
+                userId: $userId,
                 teamId: $teamId,
                 agentId: $agent->id,
                 experimentId: $experimentId,
@@ -274,6 +410,7 @@ class ExecuteAgentAction
                 tools: $tools,
                 maxSteps: $effectiveMaxSteps,
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                effort: ReasoningEffort::tryFrom($tierConfig['reasoning_effort'] ?? ''),
                 workingDirectory: $agent->config['working_directory'] ?? null,
                 enablePromptCaching: true,
             );
@@ -358,6 +495,7 @@ class ExecuteAgentAction
                     'tier' => $tierConfig['tier']->value,
                     'semantic_loop_max_repeat' => $semanticMaxRepeat >= $semanticWarn ? $semanticMaxRepeat : null,
                 ]),
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);
@@ -402,6 +540,7 @@ class ExecuteAgentAction
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
                 'quality_details' => ['result_as_answer' => true],
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             return [
@@ -466,12 +605,14 @@ class ExecuteAgentAction
                 systemPrompt: $systemPrompt,
                 userPrompt: implode("\n\n", $userPromptParts),
                 maxTokens: $tierConfig['max_tokens'],
+                userId: $userId,
                 teamId: $teamId,
                 agentId: $agent->id,
                 experimentId: $experimentId,
                 purpose: 'agent.workflow_step',
                 temperature: $tierConfig['temperature'],
                 thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                effort: ReasoningEffort::tryFrom($tierConfig['reasoning_effort'] ?? ''),
                 workingDirectory: $agent->config['working_directory'] ?? null,
             );
 
@@ -488,10 +629,75 @@ class ExecuteAgentAction
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $costCredits = $response->usage->costCredits;
 
+            // Optional typed output — validate + auto-retry on failure.
+            $schemaEval = $this->validateAgentOutput($agent, $response->content);
+            $retryAttempts = 0;
+            $retryTrail = [];
+
+            if ($schemaEval !== null && ! $schemaEval['valid']) {
+                $maxRetries = $this->resolveMaxRetries($agent);
+
+                while (! $schemaEval['valid'] && $retryAttempts < $maxRetries) {
+                    $retryAttempts++;
+                    $retryTrail[] = [
+                        'attempt' => $retryAttempts,
+                        'errors' => array_slice($schemaEval['errors'], 0, 5),
+                    ];
+
+                    $retryPrompt = $this->buildSchemaRetryPrompt(
+                        previousOutput: mb_strimwidth((string) $response->content, 0, 500, '…'),
+                        eval: $schemaEval,
+                        schema: $agent->output_schema ?? [],
+                    );
+
+                    $retryRequest = new AiRequestDTO(
+                        provider: $resolved['provider'],
+                        model: $model,
+                        systemPrompt: $systemPrompt,
+                        userPrompt: implode("\n\n", $userPromptParts)."\n\n".$retryPrompt,
+                        maxTokens: $tierConfig['max_tokens'],
+                        userId: $userId,
+                        teamId: $teamId,
+                        agentId: $agent->id,
+                        experimentId: $experimentId,
+                        purpose: 'agent.workflow_step.schema_retry',
+                        temperature: 0.1, // lower temp on retry for determinism
+                        thinkingBudget: $tierConfig['thinking_budget'] ?? null,
+                        workingDirectory: $agent->config['working_directory'] ?? null,
+                    );
+
+                    try {
+                        $retryResponse = $this->gateway->complete($retryRequest);
+                    } catch (\Throwable $e) {
+                        Log::warning('ExecuteAgentAction: schema retry failed', [
+                            'agent_id' => $agent->id,
+                            'attempt' => $retryAttempts,
+                            'error' => $e->getMessage(),
+                        ]);
+                        break;
+                    }
+
+                    $response = $retryResponse;
+                    $costCredits += $retryResponse->usage->costCredits;
+                    $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+                    $schemaEval = $this->validateAgentOutput($agent, $response->content);
+                }
+            }
+
             DB::transaction(function () use ($agent, $costCredits) {
                 $locked = Agent::withoutGlobalScopes()->lockForUpdate()->where('id', $agent->id)->first();
                 $locked->increment('budget_spent_credits', $costCredits);
             });
+
+            $qualityDetails = ['tier' => $tierConfig['tier']->value];
+            if ($schemaEval !== null) {
+                $qualityDetails['output_schema_valid'] = $schemaEval['valid'];
+                $qualityDetails['output_schema_errors'] = array_slice($schemaEval['errors'], 0, 10);
+                if ($retryAttempts > 0) {
+                    $qualityDetails['output_schema_retries'] = $retryAttempts;
+                    $qualityDetails['output_schema_retry_trail'] = $retryTrail;
+                }
+            }
 
             $execution = AgentExecution::create([
                 'agent_id' => $agent->id,
@@ -502,7 +708,8 @@ class ExecuteAgentAction
                 'output' => ['result' => $response->content],
                 'duration_ms' => $durationMs,
                 'cost_credits' => $costCredits,
-                'quality_details' => ['tier' => $tierConfig['tier']->value],
+                'quality_details' => $qualityDetails,
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             $this->runtimeStateService->recordExecution($agent, $response->usage);
@@ -811,6 +1018,7 @@ class ExecuteAgentAction
                 'skills_executed' => $skillResults,
                 'duration_ms' => $durationMs,
                 'cost_credits' => $totalCost,
+                'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
 
             ExtractMemoryJob::dispatch($agent->id, $teamId, $execution->id)
@@ -905,6 +1113,7 @@ class ExecuteAgentAction
             'output' => ['awaiting_clarification' => true, 'question' => $question],
             'duration_ms' => 0,
             'cost_credits' => 0,
+            'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
         ]);
 
         return [
@@ -938,6 +1147,7 @@ class ExecuteAgentAction
             'duration_ms' => $durationMs,
             'cost_credits' => $costCredits,
             'error_message' => $errorMessage,
+            'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
         ]);
 
         return [

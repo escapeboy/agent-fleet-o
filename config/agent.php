@@ -179,4 +179,20 @@ return [
     'scout_phase' => [
         'enabled' => (bool) env('AGENT_SCOUT_PHASE_ENABLED', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Output Schema Retry
+    |--------------------------------------------------------------------------
+    | When an agent has `output_schema` set and the LLM response fails
+    | validation, the gateway is re-called with an error-feedback hint so
+    | the model can self-correct. Each retry is a full LLM call — keep
+    | max_retries_default conservative to bound worst-case cost.
+    |
+    | Per-agent override: agents.output_schema_max_retries (nullable).
+    | 0 = validation only, no retry (Sprint 8 behavior).
+    */
+    'output_schema' => [
+        'max_retries_default' => (int) env('AGENT_OUTPUT_SCHEMA_MAX_RETRIES', 2),
+    ],
 ];

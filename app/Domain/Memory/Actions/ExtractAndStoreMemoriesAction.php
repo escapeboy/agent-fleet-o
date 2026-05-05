@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
@@ -65,7 +66,7 @@ PROMPT;
         private readonly StoreMemoryAction $storeMemory,
     ) {}
 
-    public function execute(string $agentId, string $teamId, string $executionId): void
+    public function execute(string $agentId, string $teamId, string $executionId, ?string $userId = null): void
     {
         if (! config('memory.enabled', true)) {
             return;
@@ -86,6 +87,15 @@ PROMPT;
             return;
         }
 
+        // Derive userId from the execution's experiment if not passed explicitly.
+        // Required for VPS-routed agents — LocalAgentGateway::executeVps loads the
+        // user via User::find($request->userId) and the gate denies if it's null.
+        if ($userId === null && $execution->experiment_id) {
+            $userId = Experiment::withoutGlobalScopes()
+                ->where('id', $execution->experiment_id)
+                ->value('user_id');
+        }
+
         try {
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
@@ -98,6 +108,7 @@ PROMPT;
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $prompt,
                 maxTokens: 512,
+                userId: $userId,
                 teamId: $teamId,
                 agentId: $agentId,
                 experimentId: $execution->experiment_id,
@@ -105,7 +116,16 @@ PROMPT;
                 temperature: 0.1,
             ));
 
-            $result = json_decode($response->content, true);
+            // Some models wrap JSON in markdown fences (```json … ```) despite the
+            // system prompt asking for raw JSON. Strip them before decode so we
+            // don't lose the extracted facts on a cosmetic formatting choice.
+            $content = trim($response->content);
+            if (str_starts_with($content, '```')) {
+                $content = preg_replace('/^```(?:json)?\s*\n?/', '', $content);
+                $content = preg_replace('/\n?```\s*$/', '', $content);
+            }
+
+            $result = json_decode((string) $content, true);
 
             if (! is_array($result) || ! isset($result['facts']) || ! is_array($result['facts'])) {
                 Log::warning('ExtractAndStoreMemoriesAction: invalid response format', [

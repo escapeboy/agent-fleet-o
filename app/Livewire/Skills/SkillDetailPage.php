@@ -15,6 +15,7 @@ use App\Domain\Skill\Models\SkillBenchmark;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Models\SkillVersion;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -69,6 +70,8 @@ class SkillDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        Gate::authorize('edit-content');
+
         $newStatus = $this->skill->status === SkillStatus::Active
             ? SkillStatus::Disabled
             : SkillStatus::Active;
@@ -100,6 +103,8 @@ class SkillDetailPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editDescription' => 'max:1000',
@@ -136,6 +141,8 @@ class SkillDetailPage extends Component
 
     public function deleteSkill(): void
     {
+        Gate::authorize('edit-content');
+
         $this->skill->delete();
 
         session()->flash('message', 'Skill deleted.');
@@ -144,6 +151,8 @@ class SkillDetailPage extends Component
 
     public function startBenchmark(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'benchMetricName' => 'required|string|max:100',
             'benchMetricDirection' => 'required|in:maximize,minimize',

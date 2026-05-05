@@ -66,7 +66,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search marketplace..." class="pl-10" toolparamdescription="Free-text search across marketplace listing names and descriptions">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -147,7 +147,7 @@
                         </a>
                         @if($listing->is_official)
                             <span class="ml-2 inline-flex items-center gap-0.5 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
-                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                <i class="fa-solid fa-circle-check text-xs"></i>
                                 Official
                             </span>
                         @endif
@@ -170,7 +170,29 @@
                             <span class="ml-1 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Free</span>
                         @endif
                     </div>
-                    <span class="text-xs text-gray-400">v{{ $listing->version }}</span>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-xs text-gray-400">v{{ $listing->version }}</span>
+                        @php $riskLevel = $listing->risk_scan['level'] ?? null; @endphp
+                        @if($riskLevel && $riskLevel !== 'none')
+                            <span class="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium
+                                {{ match($riskLevel) {
+                                    'low'      => 'bg-yellow-50 text-yellow-700',
+                                    'medium'   => 'bg-orange-100 text-orange-700',
+                                    'high'     => 'bg-red-100 text-red-700',
+                                    'critical' => 'bg-red-200 text-red-900',
+                                    default    => 'bg-gray-100 text-gray-500',
+                                } }}"
+                                title="{{ count($listing->risk_scan['findings'] ?? []) }} finding(s) — click listing for details">
+                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ ucfirst($riskLevel) }} risk
+                            </span>
+                        @elseif($riskLevel === 'none')
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700" title="No security concerns found">
+                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                Safe
+                            </span>
+                        @endif
+                    </div>
                 </div>
 
                 {{-- Compatibility badge for skills with requirements --}}
@@ -181,12 +203,12 @@
                 @endphp
                 @if(!empty($reqProviders) && !$compatible)
                     <div class="mb-2 flex items-center gap-1 text-xs text-amber-600">
-                        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        <i class="fa-solid fa-triangle-exclamation text-sm"></i>
                         Requires {{ implode(', ', $reqProviders) }}
                     </div>
                 @elseif(!empty($reqProviders))
                     <div class="mb-2 flex items-center gap-1 text-xs text-green-600">
-                        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        <i class="fa-solid fa-check text-sm"></i>
                         Compatible with your providers
                     </div>
                 @endif
@@ -207,18 +229,18 @@
                 <div class="flex items-center justify-between border-t border-gray-100 pt-3">
                     <div class="flex items-center gap-4 text-sm text-gray-500">
                         <span class="flex items-center gap-1" title="{{ number_format($listing->install_count) }} installs">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <i class="fa-solid fa-download text-base"></i>
                             {{ number_format($listing->install_count) }}
                         </span>
                         @if($listing->run_count > 0)
                             <span class="flex items-center gap-1" title="{{ number_format($listing->run_count) }} runs">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <i class="fa-solid fa-play text-base"></i>
                                 {{ number_format($listing->run_count) }}
                             </span>
                         @endif
                         @if($listing->review_count > 0)
                             <span class="flex items-center gap-1">
-                                <svg class="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <i class="fa-solid fa-star text-base text-yellow-400"></i>
                                 {{ number_format($listing->avg_rating, 1) }} ({{ $listing->review_count }})
                             </span>
                         @endif
@@ -245,7 +267,7 @@
             </div>
         @empty
             <div class="col-span-full py-16 text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <i class="fa-solid fa-inbox mx-auto text-4xl text-gray-300"></i>
                 <p class="mt-4 text-sm text-gray-500">No listings found. Be the first to publish!</p>
             </div>
         @endforelse

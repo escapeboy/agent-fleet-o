@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Profile;
 
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class ProfileTwoFactorStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'profile_2fa_status';
 
     protected string $description = 'Get the current user\'s two-factor authentication status. Returns: disabled, enabling (set up but not confirmed), or enabled.';
@@ -27,7 +30,7 @@ class ProfileTwoFactorStatusTool extends Tool
         $user = auth()->user();
 
         if (! $user) {
-            return Response::error('Not authenticated.');
+            return $this->permissionDeniedError('Not authenticated.');
         }
 
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {

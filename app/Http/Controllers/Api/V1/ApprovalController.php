@@ -23,11 +23,11 @@ class ApprovalController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $approvals = QueryBuilder::for(ApprovalRequest::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('experiment_id'),
-            ])
-            ->allowedSorts(['created_at', 'expires_at', 'status'])
+            )
+            ->allowedSorts('created_at', 'expires_at', 'status')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
@@ -51,7 +51,7 @@ class ApprovalController extends Controller
             notes: $request->notes,
         );
 
-        return new ApprovalResource($approval->fresh());
+        return (new ApprovalResource($approval->fresh()))->invalidates('approvals');
     }
 
     public function reject(Request $request, ApprovalRequest $approval, RejectAction $action): ApprovalResource
@@ -68,7 +68,7 @@ class ApprovalController extends Controller
             notes: $request->notes,
         );
 
-        return new ApprovalResource($approval->fresh());
+        return (new ApprovalResource($approval->fresh()))->invalidates('approvals');
     }
 
     public function completeHumanTask(Request $request, ApprovalRequest $approval, CompleteHumanTaskAction $action): JsonResponse

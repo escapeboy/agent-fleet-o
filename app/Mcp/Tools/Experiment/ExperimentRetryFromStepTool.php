@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Experiment;
 use App\Domain\Experiment\Actions\RetryFromStepAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ExperimentRetryFromStepTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_retry_from_step';
 
     protected string $description = 'Retry a workflow experiment from a specific step. Resets the target step and all downstream steps, then re-dispatches execution from that point.';
@@ -39,12 +42,12 @@ class ExperimentRetryFromStepTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['experiment_id']);
 
         if (! $experiment) {
-            return Response::error('Experiment not found.');
+            return $this->notFoundError('experiment');
         }
 
         $step = PlaybookStep::where('experiment_id', $experiment->id)
@@ -52,7 +55,7 @@ class ExperimentRetryFromStepTool extends Tool
             ->first();
 
         if (! $step) {
-            return Response::error('Step not found in this experiment.');
+            return $this->notFoundError('step');
         }
 
         try {
@@ -65,7 +68,7 @@ class ExperimentRetryFromStepTool extends Tool
                 'step_id' => $step->id,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

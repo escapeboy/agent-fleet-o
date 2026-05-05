@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow DAG</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: var(--color-background-primary, #0f0f0f);
+    --bg2: var(--color-background-secondary, #1a1a1a);
+    --bg3: var(--color-background-tertiary, #242424);
+    --text: var(--color-text-primary, #f5f5f5);
+    --text2: var(--color-text-secondary, #a0a0a0);
+    --border: var(--color-border-primary, #2e2e2e);
+    --accent: var(--color-accent-primary, #6366f1);
+    --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+    --font: var(--font-sans, system-ui, -apple-system, sans-serif);
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.5; padding: 12px; min-height: 100vh; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+  .title { font-size: 15px; font-weight: 600; flex: 1; }
+  .badge { border-radius: 99px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-active   { background: #065f46; color: #6ee7b7; }
+  .badge-inactive { background: var(--bg3); color: var(--text2); }
+  .badge-draft    { background: var(--bg3); color: var(--text2); }
+  .badge-default  { background: var(--bg3); color: var(--text2); }
+  .desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 6px; }
+  .meta-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; font-size: 11px; color: var(--text2); }
+  .chip strong { color: var(--text); }
+
+  /* DAG canvas */
+  .dag-wrap { width: 100%; overflow: auto; margin-bottom: 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
+  .dag-svg { display: block; }
+
+  /* Node legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  /* Node type colours */
+  .node-start         { fill: #065f46; stroke: #10b981; }
+  .node-end           { fill: #1e3a5f; stroke: #3b82f6; }
+  .node-agent         { fill: #312e81; stroke: #6366f1; }
+  .node-conditional   { fill: #78350f; stroke: #f59e0b; }
+  .node-human_task    { fill: #1f2937; stroke: #6b7280; }
+  .node-switch        { fill: #4c1d95; stroke: #8b5cf6; }
+  .node-dynamic_fork  { fill: #1a3a4a; stroke: #22d3ee; }
+  .node-do_while      { fill: #3b1f1f; stroke: #f87171; }
+  .node-default       { fill: var(--bg3); stroke: var(--border); }
+  .node-text          { fill: var(--text); font-size: 10px; font-family: system-ui; }
+  .node-text-sub      { fill: var(--text2); font-size: 8px; font-family: system-ui; }
+  .edge-line          { stroke: var(--border); stroke-width: 1.5; fill: none; }
+  .edge-arrow         { fill: var(--border); }
+
+  /* Node list fallback */
+  .node-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .node-item { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; }
+  .node-type-badge { border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+  .node-label { font-size: 12px; flex: 1; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: opacity 0.15s, filter 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger  { background: var(--danger); color: #fff; }
+  .btn-neutral { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .result-msg { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 6px; }
+  .result-msg.success { background: #064e3b; color: #6ee7b7; }
+  .result-msg.error   { background: #450a0a; color: #fca5a5; }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 4px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading { text-align: center; color: var(--text2); padding: 48px 0; }
+  .empty-msg { color: var(--text2); font-size: 12px; padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  'use strict';
+
+  var _id = 1, _pending = {}, _handlers = {};
+  function mcpSend(method, params) { window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params || {} }, '*'); }
+  function mcpRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = _id++;
+      _pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params || {} }, '*');
+      setTimeout(function () { if (_pending[id]) { delete _pending[id]; reject(new Error('Timeout')); } }, 30000);
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var msg = e.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.id && _pending[msg.id]) { var cb = _pending[msg.id]; delete _pending[msg.id]; if (msg.error) cb.reject(new Error(msg.error.message || 'MCP error')); else cb.resolve(msg.result); return; }
+    if (msg.method && _handlers[msg.method]) _handlers[msg.method](msg.params);
+  });
+  function callTool(name, args) { return mcpRequest('tools/call', { name: name, arguments: args || {} }); }
+
+  var root = document.getElementById('root');
+  var currentData = null;
+  var initialDataReceived = false;
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function clearEl(c) { while (c.firstChild) c.removeChild(c.firstChild); }
+  function showLoading(msg) { clearEl(root); var d = el('div', 'loading'); d.appendChild(el('span', 'spinner')); d.appendChild(document.createTextNode(' ' + (msg || 'Loading…'))); root.appendChild(d); }
+  function showEmpty(msg) { clearEl(root); root.appendChild(el('div', 'empty-msg', msg)); }
+
+  // ── Node type styling ─────────────────────────────────────────────────────
+  var NODE_COLORS = {
+    start: { bg: '#065f46', stroke: '#10b981', text: '#fff' },
+    end: { bg: '#1e3a5f', stroke: '#3b82f6', text: '#fff' },
+    agent: { bg: '#312e81', stroke: '#6366f1', text: '#fff' },
+    conditional: { bg: '#78350f', stroke: '#f59e0b', text: '#fff' },
+    human_task: { bg: '#1f2937', stroke: '#6b7280', text: '#d1d5db' },
+    switch: { bg: '#4c1d95', stroke: '#8b5cf6', text: '#fff' },
+    dynamic_fork: { bg: '#1a3a4a', stroke: '#22d3ee', text: '#fff' },
+    do_while: { bg: '#3b1f1f', stroke: '#f87171', text: '#fff' },
+  };
+
+  function nodeColor(type) {
+    return NODE_COLORS[type] || { bg: '#1a1a1a', stroke: '#3d3d3d', text: '#a0a0a0' };
+  }
+
+  function statusBadgeCls(status) {
+    var s = (status || '').toLowerCase();
+    if (s === 'active') return 'badge badge-active';
+    if (s === 'draft') return 'badge badge-draft';
+    return 'badge badge-default';
+  }
+
+  // ── Topological DAG layout ────────────────────────────────────────────────
+  function computeLayout(nodes, edges) {
+    // Build adjacency
+    var inDeg = {}, outEdges = {};
+    nodes.forEach(function (n) { inDeg[n.id] = 0; outEdges[n.id] = []; });
+    edges.forEach(function (e) {
+      if (outEdges[e.source_node_id]) outEdges[e.source_node_id].push(e.target_node_id);
+      if (inDeg[e.target_node_id] !== undefined) inDeg[e.target_node_id]++;
+    });
+
+    // Kahn's algo — assign columns (x-level)
+    var queue = [], col = {}, processed = {};
+    nodes.forEach(function (n) { if (inDeg[n.id] === 0) { queue.push(n.id); col[n.id] = 0; } });
+    var maxCol = 0;
+    while (queue.length > 0) {
+      var cur = queue.shift();
+      processed[cur] = true;
+      var c = col[cur] || 0;
+      (outEdges[cur] || []).forEach(function (t) {
+        col[t] = Math.max(col[t] || 0, c + 1);
+        maxCol = Math.max(maxCol, col[t]);
+        inDeg[t]--;
+        if (inDeg[t] <= 0 && !processed[t]) queue.push(t);
+      });
+    }
+
+    // Assign rows within each column
+    var rowCount = {};
+    var positions = {};
+    nodes.forEach(function (n) {
+      var c = col[n.id] || 0;
+      var r = rowCount[c] || 0;
+      rowCount[c] = r + 1;
+      // Use stored positions if available (from workflow builder)
+      if (n.position_x !== null && n.position_x !== undefined && n.position_y !== null && n.position_y !== undefined) {
+        positions[n.id] = { x: Number(n.position_x), y: Number(n.position_y), col: c, row: r };
+      } else {
+        positions[n.id] = { x: c * 160 + 20, y: r * 80 + 20, col: c, row: r };
+      }
+    });
+
+    return { positions: positions, maxCol: maxCol };
+  }
+
+  // ── Build SVG DAG ─────────────────────────────────────────────────────────
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var NW = 120, NH = 44, PADDING = 16;
+
+  function svgEl(tag, attrs) {
+    var e = document.createElementNS(SVG_NS, tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    return e;
+  }
+  function svgText(txt, x, y, cls) {
+    var t = svgEl('text', { x: x, y: y, 'class': cls, 'text-anchor': 'middle' });
+    t.textContent = txt;
+    return t;
+  }
+
+  function buildDag(nodes, edges) {
+    if (nodes.length === 0) return null;
+
+    // Compute layout from stored positions or topology
+    var hasPositions = nodes.some(function (n) { return n.position_x !== null && n.position_x !== undefined; });
+    var positions = {};
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    if (hasPositions) {
+      nodes.forEach(function (n) {
+        var px = Number(n.position_x) || 0;
+        var py = Number(n.position_y) || 0;
+        positions[n.id] = { x: px, y: py };
+        minX = Math.min(minX, px); minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px + NW); maxY = Math.max(maxY, py + NH);
+      });
+    } else {
+      var layout = computeLayout(nodes, edges);
+      nodes.forEach(function (n) {
+        var pos = layout.positions[n.id] || { x: 0, y: 0 };
+        positions[n.id] = pos;
+        minX = Math.min(minX, pos.x); minY = Math.min(minY, pos.y);
+        maxX = Math.max(maxX, pos.x + NW); maxY = Math.max(maxY, pos.y + NH);
+      });
+    }
+
+    var W = maxX - minX + PADDING * 2;
+    var H = maxY - minY + PADDING * 2;
+
+    var svg = svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H });
+    svg.setAttribute('class', 'dag-svg');
+
+    // Draw edges
+    edges.forEach(function (edge) {
+      var src = positions[edge.source_node_id];
+      var tgt = positions[edge.target_node_id];
+      if (!src || !tgt) return;
+
+      var x1 = src.x - minX + PADDING + NW;
+      var y1 = src.y - minY + PADDING + NH / 2;
+      var x2 = tgt.x - minX + PADDING;
+      var y2 = tgt.y - minY + PADDING + NH / 2;
+      var cx = (x1 + x2) / 2;
+
+      var path = svgEl('path', {
+        d: 'M ' + x1 + ' ' + y1 + ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2,
+        'class': 'edge-line'
+      });
+      svg.appendChild(path);
+
+      // Arrowhead
+      var arrow = svgEl('polygon', {
+        points: (x2) + ',' + y2 + ' ' + (x2 - 6) + ',' + (y2 - 3) + ' ' + (x2 - 6) + ',' + (y2 + 3),
+        'class': 'edge-arrow'
+      });
+      svg.appendChild(arrow);
+
+      // Edge label
+      if (edge.label || edge.condition || edge.case_value) {
+        var lbl = edge.label || edge.case_value || '';
+        var lt = svgText(lbl.slice(0, 12), cx, (y1 + y2) / 2 - 4, 'node-text-sub');
+        svg.appendChild(lt);
+      }
+    });
+
+    // Draw nodes
+    nodes.forEach(function (n) {
+      var pos = positions[n.id];
+      if (!pos) return;
+      var x = pos.x - minX + PADDING;
+      var y = pos.y - minY + PADDING;
+      var col = nodeColor(n.type);
+
+      var g = svgEl('g');
+
+      var rect = svgEl('rect', {
+        x: x, y: y, width: NW, height: NH,
+        rx: 6, ry: 6,
+        fill: col.bg, stroke: col.stroke, 'stroke-width': 1.5
+      });
+      g.appendChild(rect);
+
+      // Type label (small, top)
+      var typeTxt = svgText((n.type || '').replace(/_/g, ' '), x + NW / 2, y + 14, 'node-text-sub');
+      typeTxt.setAttribute('fill', col.text); typeTxt.style.opacity = '0.7';
+      g.appendChild(typeTxt);
+
+      // Main label
+      var label = (n.label || n.type || '').slice(0, 16);
+      var labelTxt = svgText(label, x + NW / 2, y + 30, 'node-text');
+      labelTxt.setAttribute('fill', col.text); labelTxt.setAttribute('font-weight', '600');
+      g.appendChild(labelTxt);
+
+      svg.appendChild(g);
+    });
+
+    return svg;
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function render(d) {
+    currentData = d;
+    clearEl(root);
+
+    // Header
+    var header = el('div', 'header');
+    header.appendChild(el('div', 'title', d.name || 'Workflow'));
+    header.appendChild(el('span', statusBadgeCls(d.status), (d.status || 'unknown').replace(/_/g, ' ')));
+    root.appendChild(header);
+
+    if (d.description) root.appendChild(el('div', 'desc', d.description));
+
+    // Meta chips
+    var chips = el('div', 'meta-chips');
+    function chip(label, val) { var c = el('div', 'chip'); var strong = el('strong', null, val); c.appendChild(document.createTextNode(label + ': ')); c.appendChild(strong); return c; }
+    chips.appendChild(chip('Nodes', String((d.nodes || []).length)));
+    chips.appendChild(chip('Edges', String((d.edges || []).length)));
+    chips.appendChild(chip('v', String(d.version || 1)));
+    root.appendChild(chips);
+
+    // DAG visualization
+    root.appendChild(el('div', 'section-label', 'Graph'));
+    var dagWrap = el('div', 'dag-wrap');
+    var svg = buildDag(d.nodes || [], d.edges || []);
+    if (svg) { dagWrap.appendChild(svg); } else { dagWrap.appendChild(el('div', 'empty-msg', 'No nodes defined.')); }
+    root.appendChild(dagWrap);
+
+    // Node list
+    root.appendChild(el('div', 'section-label', 'Nodes'));
+    var nodeList = el('div', 'node-list');
+    (d.nodes || []).forEach(function (n) {
+      var col = nodeColor(n.type);
+      var item = el('div', 'node-item');
+      var badge = el('span', 'node-type-badge', (n.type || '').replace(/_/g, ' '));
+      badge.style.background = col.bg; badge.style.color = col.text; badge.style.border = '1px solid ' + col.stroke;
+      item.appendChild(badge);
+      item.appendChild(el('span', 'node-label', n.label || n.id.slice(0, 8)));
+      nodeList.appendChild(item);
+    });
+    root.appendChild(nodeList);
+
+    // Actions
+    root.appendChild(el('div', 'section-label', 'Actions'));
+    var actionsWrap = el('div', 'actions');
+    actionsWrap.id = 'wf-actions';
+
+    var isActive = (d.status || '').toLowerCase() === 'active';
+    if (isActive) {
+      var btnDeact = el('button', 'btn btn-danger', 'Deactivate');
+      btnDeact.addEventListener('click', function () { doAction('deactivate', 'workflow_deactivate', { workflow_id: d.id }); });
+      actionsWrap.appendChild(btnDeact);
+    } else {
+      var btnAct = el('button', 'btn btn-primary', 'Activate');
+      btnAct.addEventListener('click', function () { doAction('activate', 'workflow_activate', { workflow_id: d.id }); });
+      actionsWrap.appendChild(btnAct);
+    }
+
+    var btnDup = el('button', 'btn btn-neutral', 'Duplicate');
+    btnDup.addEventListener('click', function () { doAction('duplicate', 'workflow_duplicate', { workflow_id: d.id }); });
+    actionsWrap.appendChild(btnDup);
+
+    root.appendChild(actionsWrap);
+    var msgEl = el('div'); msgEl.id = 'wf-result'; root.appendChild(msgEl);
+  }
+
+  function doAction(label, toolName, args) {
+    var actEl = document.getElementById('wf-actions');
+    var msgEl = document.getElementById('wf-result');
+    if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = true; });
+    if (msgEl) { msgEl.textContent = ''; msgEl.className = ''; }
+    callTool(toolName, args)
+      .then(function () {
+        if (msgEl) { msgEl.textContent = '✓ ' + label.charAt(0).toUpperCase() + label.slice(1) + ' done.'; msgEl.className = 'result-msg success'; }
+        mcpSend('ui/update-model-context', { content: [{ type: 'text', text: 'Workflow ' + ((currentData && currentData.id) ? currentData.id.slice(0, 8) : '') + ': ' + label + '.' }] });
+        setTimeout(function () { if (currentData && currentData.id) loadWorkflow(currentData.id); }, 1200);
+      })
+      .catch(function (err) {
+        if (msgEl) { msgEl.textContent = '✗ ' + err.message; msgEl.className = 'result-msg error'; }
+        if (actEl) Array.from(actEl.querySelectorAll('.btn')).forEach(function (b) { b.disabled = false; });
+      });
+  }
+
+  function loadWorkflow(id) {
+    if (!id) { showEmpty('No workflow ID. Call workflow_get to load one.'); return; }
+    showLoading('Loading workflow…');
+    callTool('workflow_get', { workflow_id: id })
+      .then(function (result) {
+        var text = result && result.content && result.content[0] && result.content[0].text;
+        if (!text) throw new Error('Empty response');
+        render(JSON.parse(text));
+      })
+      .catch(function (err) { showEmpty('Failed to load: ' + err.message); });
+  }
+
+  _handlers['ui/notifications/tool-result'] = function (params) {
+    var text = params && params.content && params.content[0] && params.content[0].text;
+    if (!text) return;
+    try { var d = JSON.parse(text); if (d.id && d.nodes !== undefined) { initialDataReceived = true; render(d); } } catch (_) {}
+  };
+
+  showLoading('Connecting…');
+  mcpRequest('ui/initialize', { protocolVersion: '2026-01-26', clientInfo: { name: 'fleetq-workflow-dag', version: '1.0.0' }, appCapabilities: {} })
+    .then(function () { mcpSend('ui/notifications/initialized', {}); })
+    .catch(function () {})
+    .finally(function () {
+      setTimeout(function () { if (!initialDataReceived) showEmpty('No workflow data received. Call workflow_get first.'); }, 600);
+    });
+
+})();
+</script>
+</body>
+</html>

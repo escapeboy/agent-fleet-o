@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Marketplace;
 use App\Domain\Marketplace\Enums\MarketplaceStatus;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class MarketplaceUnpublishTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_unpublish';
 
     protected string $description = 'Unpublish a marketplace listing by setting its status to Suspended.';
@@ -30,7 +33,7 @@ class MarketplaceUnpublishTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $listing = MarketplaceListing::withoutGlobalScopes()
@@ -38,7 +41,7 @@ class MarketplaceUnpublishTool extends Tool
             ->find($request->get('listing_id'));
 
         if (! $listing) {
-            return Response::error('Marketplace listing not found.');
+            return $this->notFoundError('marketplace listing');
         }
 
         $listing->status = MarketplaceStatus::Suspended;

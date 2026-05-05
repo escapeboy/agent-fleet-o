@@ -1,0 +1,7 @@
+livekit-agents>=0.8
+livekit-plugins-deepgram>=0.6
+livekit-plugins-openai>=0.6
+livekit-plugins-elevenlabs>=0.6
+livekit-plugins-silero>=0.6
+redis>=5.0
+httpx>=0.27

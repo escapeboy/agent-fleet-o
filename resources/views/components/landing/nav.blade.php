@@ -37,12 +37,8 @@
 
         {{-- Mobile hamburger --}}
         <button @click="open = !open" class="rounded-md p-2.5 lg:hidden" :aria-expanded="open" aria-label="Toggle menu">
-            <svg x-show="!open" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-            <svg x-show="open" x-cloak class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+            <i x-show="!open" class="fa-solid fa-bars text-xl text-gray-700" aria-hidden="true"></i>
+            <i x-show="open" x-cloak class="fa-solid fa-xmark text-xl text-gray-700" aria-hidden="true"></i>
         </button>
     </div>
 

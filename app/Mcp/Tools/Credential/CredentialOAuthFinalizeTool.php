@@ -2,18 +2,21 @@
 
 namespace App\Mcp\Tools\Credential;
 
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]
 class CredentialOAuthFinalizeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_oauth_finalize';
 
     protected string $description = 'Checks the status of an OAuth flow initiated with credential_oauth_initiate. If the user has completed authorization and tokens are available, stores them as a pending_review credential. Returns the credential ID on success.';
@@ -34,13 +37,13 @@ class CredentialOAuthFinalizeTool extends Tool
         $session = Cache::get("oauth_session:{$validated['correlation_id']}");
 
         if (! $session) {
-            return Response::error('OAuth session not found or expired. Sessions expire after 10 minutes.');
+            return $this->notFoundError('OAuth session');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if ($session['team_id'] !== $teamId) {
-            return Response::error('OAuth session belongs to a different team.');
+            return $this->permissionDeniedError('OAuth session belongs to a different team.');
         }
 
         $status = $session['status'] ?? 'pending';

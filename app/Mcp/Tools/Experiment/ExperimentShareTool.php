@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ExperimentShareTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'experiment_share';
 
     protected string $description = 'Manage public share links for an experiment. Actions: generate (create/reset token), revoke (disable sharing), get (read current config), update (modify share_config options like show_costs, expires_at).';
@@ -44,14 +47,14 @@ class ExperimentShareTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $experimentId = $request->get('experiment_id');
         $action = $request->get('action');
 
         if (! $experimentId) {
-            return Response::error('experiment_id is required.');
+            return $this->invalidArgumentError('experiment_id is required.');
         }
 
         $experiment = Experiment::withoutGlobalScopes()
@@ -59,7 +62,7 @@ class ExperimentShareTool extends Tool
             ->find($experimentId);
 
         if (! $experiment) {
-            return Response::error("Experiment {$experimentId} not found.");
+            return $this->notFoundError('experiment', $experimentId);
         }
 
         return match ($action) {
@@ -67,7 +70,7 @@ class ExperimentShareTool extends Tool
             'revoke' => $this->revoke($experiment),
             'get' => $this->get($experiment),
             'update' => $this->update($experiment, $request),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 

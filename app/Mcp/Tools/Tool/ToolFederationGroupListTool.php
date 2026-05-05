@@ -3,19 +3,22 @@
 namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\ToolFederationGroup;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class ToolFederationGroupListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_federation_group_list';
 
     protected string $description = 'List all tool federation groups for the current team.';
@@ -30,7 +33,7 @@ class ToolFederationGroupListTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $groups = ToolFederationGroup::withoutGlobalScopes()

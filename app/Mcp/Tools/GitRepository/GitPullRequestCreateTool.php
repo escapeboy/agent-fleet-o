@@ -6,6 +6,7 @@ use App\Domain\Approval\Actions\CreateApprovalRequestAction;
 use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class GitPullRequestCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'git_pr_create';
 
     protected string $description = 'Create a pull request in a git repository. If the repository has require_approval enabled, creates an ApprovalRequest for human review before merge.';
@@ -42,12 +45,12 @@ class GitPullRequestCreateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $repo = GitRepository::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         try {
@@ -107,7 +110,7 @@ class GitPullRequestCreateTool extends Tool
                 'requires_approval' => $approvalRequestId !== null,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

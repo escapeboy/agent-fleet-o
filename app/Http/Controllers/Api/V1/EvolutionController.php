@@ -21,11 +21,11 @@ class EvolutionController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $proposals = QueryBuilder::for(EvolutionProposal::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('agent_id'),
-            ])
-            ->allowedSorts(['created_at', 'confidence_score'])
+            )
+            ->allowedSorts('created_at', 'confidence_score')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

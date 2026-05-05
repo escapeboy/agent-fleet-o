@@ -8,9 +8,7 @@
         @if($bots->isEmpty() || !$showForm)
             <button wire:click="openForm"
                 class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+                <i class="fa-solid fa-plus text-base"></i>
                 Register Bot
             </button>
         @endif
@@ -146,10 +144,7 @@
     @empty
         @if(!$showForm)
             <div class="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
-                <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                </svg>
+                <i class="fa-solid fa-comment mx-auto text-3xl text-gray-300"></i>
                 <p class="mt-3 text-sm text-gray-500">No Telegram bots configured yet.</p>
                 <p class="mt-1 text-xs text-gray-400">Register a bot to route Telegram messages to the assistant, projects, or triggers.</p>
                 <button wire:click="openForm"

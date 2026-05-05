@@ -115,13 +115,18 @@
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-gray-500">v{{ $skill->current_version }}</span>
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Skill">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    <i class="fa-solid fa-pen text-base"></i>
                 </button>
                 <button wire:click="toggleStatus"
                     class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $skill->status === \App\Domain\Skill\Enums\SkillStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
                     {{ $skill->status === \App\Domain\Skill\Enums\SkillStatus::Active ? 'Disable' : 'Enable' }}
                 </button>
             </div>
+        </div>
+
+        {{-- Fix-with-assistant card (renders when the skill has had a failed execution in the last 7d) --}}
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="skill" :entity-id="$skill->id" />
         </div>
 
         {{-- Stats --}}

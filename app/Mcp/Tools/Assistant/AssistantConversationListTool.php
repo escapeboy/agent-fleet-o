@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AssistantConversationListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_conversation_list';
 
     protected string $description = 'List assistant conversations for the current team.';
@@ -34,7 +37,7 @@ class AssistantConversationListTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $limit = min((int) ($request->get('limit') ?? 20), 50);

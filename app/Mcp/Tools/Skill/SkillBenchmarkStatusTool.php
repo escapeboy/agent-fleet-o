@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Enums\IterationOutcome;
 use App\Domain\Skill\Models\SkillBenchmark;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class SkillBenchmarkStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_benchmark_status';
 
     protected string $description = 'Get current status, iteration progress, and best metric value for a running or completed skill benchmark.';
@@ -34,7 +37,7 @@ class SkillBenchmarkStatusTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $benchmark = SkillBenchmark::withoutGlobalScopes()
@@ -43,7 +46,7 @@ class SkillBenchmarkStatusTool extends Tool
             ->find($validated['benchmark_id']);
 
         if (! $benchmark) {
-            return Response::error('Benchmark not found.');
+            return $this->notFoundError('benchmark');
         }
 
         $logs = $benchmark->iterationLogs;

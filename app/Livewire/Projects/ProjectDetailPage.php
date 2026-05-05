@@ -15,6 +15,7 @@ use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
@@ -31,6 +32,8 @@ class ProjectDetailPage extends Component
 
     public function pause(): void
     {
+        Gate::authorize('edit-content');
+
         app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
         $this->project->refresh();
         session()->flash('message', 'Project paused.');
@@ -38,6 +41,8 @@ class ProjectDetailPage extends Component
 
     public function resume(): void
     {
+        Gate::authorize('edit-content');
+
         app(ResumeProjectAction::class)->execute($this->project);
         $this->project->refresh();
         session()->flash('message', 'Project resumed.');
@@ -45,6 +50,8 @@ class ProjectDetailPage extends Component
 
     public function archive(): void
     {
+        Gate::authorize('edit-content');
+
         app(ArchiveProjectAction::class)->execute($this->project);
         $this->project->refresh();
         session()->flash('message', 'Project archived.');
@@ -52,6 +59,8 @@ class ProjectDetailPage extends Component
 
     public function activate(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->project->status !== ProjectStatus::Draft) {
             return;
         }
@@ -75,6 +84,8 @@ class ProjectDetailPage extends Component
 
     public function restart(): void
     {
+        Gate::authorize('edit-content');
+
         app(RestartProjectAction::class)->execute($this->project);
         $this->project->refresh();
         session()->flash('message', 'Project restarted from scratch. New run triggered.');
@@ -82,6 +93,8 @@ class ProjectDetailPage extends Component
 
     public function triggerRun(): void
     {
+        Gate::authorize('edit-content');
+
         $key = 'trigger-run:'.$this->project->id;
 
         if (RateLimiter::tooManyAttempts($key, 3)) {

@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Domain\Signal\Jobs;
+
+use App\Domain\Signal\Actions\ClassifySignalIntentAction;
+use App\Domain\Signal\Models\Signal;
+use App\Jobs\Middleware\ApplyTenantTracer;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+class ClassifySignalIntentJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries = 1;
+
+    public int $timeout = 60;
+
+    public function __construct(public readonly string $signalId) {}
+
+    public function middleware(): array
+    {
+        return [new ApplyTenantTracer];
+    }
+
+    /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
+    public function teamId(): ?string
+    {
+        return Signal::withoutGlobalScopes()->where('id', $this->signalId)->value('team_id');
+    }
+
+    public function handle(ClassifySignalIntentAction $action): void
+    {
+        $signal = Signal::withoutGlobalScopes()->find($this->signalId);
+        if ($signal === null) {
+            return;
+        }
+
+        // Skip if already classified this turn to avoid double-spend.
+        $meta = $signal->metadata ?? [];
+        if (isset($meta['inferred_intent'])) {
+            return;
+        }
+
+        $action->execute($signal);
+    }
+}

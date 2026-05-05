@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectSchedule;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[IsDestructive]
 class ProjectScheduleManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_schedule_manage';
 
     protected string $description = 'Get, update, enable, or disable a project\'s schedule. Returns current schedule state including next_run_at, last_run_at, and the next 5 upcoming run times.';
@@ -61,22 +64,22 @@ class ProjectScheduleManageTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['project_id']);
 
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         if (! $project->isContinuous()) {
-            return Response::error('Only continuous projects have a schedule.');
+            return $this->failedPreconditionError('Only continuous projects have a schedule.');
         }
 
         $schedule = $project->schedule;
 
         if (! $schedule) {
-            return Response::error('This project has no schedule configured. Use project_update with a schedule object to create one.');
+            return $this->failedPreconditionError('This project has no schedule configured. Use project_update with a schedule object to create one.');
         }
 
         try {
@@ -87,7 +90,7 @@ class ProjectScheduleManageTool extends Tool
                 'disable' => $this->setEnabled($schedule, false),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 
@@ -117,7 +120,7 @@ class ProjectScheduleManageTool extends Tool
         array $data,
     ): Response {
         if (empty($data)) {
-            return Response::error('No schedule fields provided to update.');
+            return $this->invalidArgumentError('No schedule fields provided to update.');
         }
 
         $updateData = array_filter([

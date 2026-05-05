@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Actions;
 
 use App\Domain\KnowledgeGraph\Actions\SearchKgFactsAction;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -25,11 +26,11 @@ class PlanWithKnowledgeAction
      *
      * @return array{memory_hits: array, kg_hits: array, first_principles: array, enriched_context: string}
      */
-    public function execute(string $goal, string $teamId): array
+    public function execute(string $goal, string $teamId, ?string $userId = null): array
     {
         $memoryHits = $this->searchMemory($goal, $teamId);
         $kgHits = $this->searchKnowledgeGraph($goal, $teamId);
-        $firstPrinciples = $this->runFirstPrinciplesReasoning($goal, $teamId, $memoryHits, $kgHits);
+        $firstPrinciples = $this->runFirstPrinciplesReasoning($goal, $teamId, $memoryHits, $kgHits, $userId);
 
         return [
             'memory_hits' => $memoryHits,
@@ -108,6 +109,7 @@ class PlanWithKnowledgeAction
         string $teamId,
         array $memoryHits,
         array $kgHits,
+        ?string $userId = null,
     ): array {
         try {
             $memoryContext = empty($memoryHits)
@@ -142,6 +144,7 @@ TEXT;
                 systemPrompt: 'You are a strategic planning assistant. Analyze goals using first-principles thinking. Always output valid JSON.',
                 userPrompt: $userPrompt,
                 maxTokens: 1024,
+                userId: $userId ?? Team::ownerIdFor($teamId),
                 teamId: $teamId,
                 purpose: 'planning.knowledge_enrichment',
                 temperature: 0.5,

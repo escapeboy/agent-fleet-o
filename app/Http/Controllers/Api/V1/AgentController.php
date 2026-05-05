@@ -13,6 +13,7 @@ use App\Domain\Agent\Models\AgentConfigRevision;
 use App\Domain\Agent\Models\AgentFeedback;
 use App\Domain\Agent\Models\AgentRuntimeState;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
+use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreAgentRequest;
 use App\Http\Requests\Api\V1\UpdateAgentRequest;
@@ -29,15 +30,17 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class AgentController extends Controller
 {
+    use DocumentsResponses;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $agents = QueryBuilder::for(Agent::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::partial('name'),
                 AllowedFilter::exact('provider'),
-            ])
-            ->allowedSorts(['created_at', 'updated_at', 'name', 'status'])
+            )
+            ->allowedSorts('created_at', 'updated_at', 'name', 'status')
             ->defaultSort('-created_at')
             ->with('skills')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
@@ -69,6 +72,7 @@ class AgentController extends Controller
 
         $extraFields = array_filter([
             'tool_profile' => $request->input('tool_profile'),
+            'environment' => $request->input('environment'),
             'knowledge_base_id' => $request->input('knowledge_base_id'),
             'evaluation_enabled' => $request->input('evaluation_enabled'),
             'evaluation_sample_rate' => $request->input('evaluation_sample_rate'),

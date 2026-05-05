@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
 use App\Domain\Agent\Enums\FeedbackRating;
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentFeedbackSubmitTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_feedback_submit';
 
     protected string $description = 'Submit feedback (thumbs up/down) for an agent execution. Negative feedback with a correction trains the agent via the evolution pipeline.';
@@ -55,16 +58,16 @@ class AgentFeedbackSubmitTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $execution = $agent->executions()->find($validated['execution_id']);
         if (! $execution) {
-            return Response::error('Execution not found for this agent.');
+            return $this->notFoundError('execution');
         }
 
         $rating = FeedbackRating::from((int) $validated['score']);

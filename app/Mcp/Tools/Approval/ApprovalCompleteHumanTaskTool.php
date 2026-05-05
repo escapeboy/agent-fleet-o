@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Approval;
 use App\Domain\Approval\Actions\CompleteHumanTaskAction;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ApprovalCompleteHumanTaskTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'approval_complete_human_task';
 
     protected string $description = 'Complete a pending human task by submitting form data. The task must be a human_task type approval request with a form_schema. Resumes the workflow after completion.';
@@ -43,16 +46,16 @@ class ApprovalCompleteHumanTaskTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $approval = ApprovalRequest::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['approval_id']);
 
         if (! $approval) {
-            return Response::error('Approval request not found.');
+            return $this->notFoundError('approval request');
         }
 
         if (! $approval->isHumanTask()) {
-            return Response::error('This approval request is not a human task.');
+            return $this->failedPreconditionError('This approval request is not a human task.');
         }
 
         try {
@@ -69,7 +72,7 @@ class ApprovalCompleteHumanTaskTool extends Tool
                 'status' => 'completed',
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

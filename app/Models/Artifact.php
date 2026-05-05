@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Experiment\Enums\DeliverableType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -22,6 +23,7 @@ class Artifact extends Model
         'crew_execution_id',
         'project_run_id',
         'type',
+        'deliverable_type',
         'name',
         'current_version',
         'metadata',
@@ -32,6 +34,7 @@ class Artifact extends Model
         return [
             'current_version' => 'integer',
             'metadata' => 'array',
+            'deliverable_type' => DeliverableType::class,
         ];
     }
 

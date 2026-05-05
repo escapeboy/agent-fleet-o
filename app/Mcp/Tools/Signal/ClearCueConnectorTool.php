@@ -3,12 +3,12 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * MCP tool for managing the ClearCue GTM signal connector.
@@ -47,7 +47,7 @@ class ClearCueConnectorTool extends Tool
                 'list_recent_signals' => $this->listRecentSignals(),
             };
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 

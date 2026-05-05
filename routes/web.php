@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentCardController;
+use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
@@ -11,11 +12,15 @@ use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
 use App\Http\Controllers\WebsitePagePreviewController;
+use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Admin\AiControlCenterPage;
+use App\Livewire\AgentChat\AgentverseBrowsePage;
+use App\Livewire\AgentChat\ExternalAgentDetailPage;
+use App\Livewire\AgentChat\ExternalAgentListPage;
 use App\Livewire\Agents\AgentDetailPage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
@@ -24,6 +29,9 @@ use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Livewire\Audit\AuditLogPage;
+use App\Livewire\AuditConsole\AuditConsoleDetailPage;
+use App\Livewire\AuditConsole\AuditConsoleListPage;
+use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Auth\AcceptTermsPage;
 use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Chatbots\ChatbotAnalyticsPage;
@@ -44,15 +52,18 @@ use App\Livewire\Email\EmailTemplateBuilderPage;
 use App\Livewire\Email\EmailTemplateListPage;
 use App\Livewire\Email\EmailThemeDetailPage;
 use App\Livewire\Email\EmailThemeListPage;
+use App\Livewire\Evaluation\EvaluationCompareRunsPage;
 use App\Livewire\Evaluation\EvaluationPage;
 use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
 use App\Livewire\Experiments\ExperimentListPage;
+use App\Livewire\Frameworks\FrameworksBrowsePage;
 use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
 use App\Livewire\Insights\InsightsPage;
+use App\Livewire\Integrations\EditIntegrationForm;
 use App\Livewire\Integrations\IntegrationDetailPage;
 use App\Livewire\Integrations\IntegrationListPage;
 use App\Livewire\KnowledgeGraph\KnowledgeGraphBrowserPage;
@@ -63,6 +74,7 @@ use App\Livewire\Memory\KnowledgeSourcesPage;
 use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Metrics\AiRoutingPage;
 use App\Livewire\Metrics\ModelComparisonPage;
+use App\Livewire\Metrics\TimeHorizonPage;
 use App\Livewire\OutboundConnectors\NotificationOutboundPage;
 use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
 use App\Livewire\OutboundConnectors\WebhookOutboundPage;
@@ -91,6 +103,7 @@ use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
+use App\Livewire\TeamGraph\TeamGraphPage;
 use App\Livewire\Teams\TeamSettingsPage;
 use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
@@ -98,7 +111,11 @@ use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\McpMarketplacePage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
+use App\Livewire\Tools\ToolSearchHistoryPage;
 use App\Livewire\Tools\ToolTemplateCatalogPage;
+use App\Livewire\Toolsets\CreateToolsetForm;
+use App\Livewire\Toolsets\ToolsetDetailPage;
+use App\Livewire\Toolsets\ToolsetListPage;
 use App\Livewire\Triggers\CreateTriggerRuleForm;
 use App\Livewire\Triggers\TriggerRulesPage;
 use App\Livewire\Websites\CreateWebsiteForm;
@@ -110,6 +127,7 @@ use App\Livewire\Workflows\ScheduleWorkflowForm;
 use App\Livewire\Workflows\WorkflowBuilderPage;
 use App\Livewire\Workflows\WorkflowDetailPage;
 use App\Livewire\Workflows\WorkflowListPage;
+use App\Livewire\WorldModel\WorldModelPage;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -119,6 +137,24 @@ Route::get('/.well-known/agent.json', AgentCardController::class)
     ->name('a2a.agent-card')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
+
+// FleetQ discovery — public, unauthenticated. Returns auth + endpoints so MCP-compatible
+// clients (OpenCode, Claude Code, Codex) can self-configure with a single URL.
+Route::get('/.well-known/fleetq', WellKnownFleetQController::class)
+    ->name('well-known.fleetq')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// Agent Chat Protocol — public manifest discovery (no auth)
+Route::get('/.well-known/agents', [AgentManifestController::class, 'index'])
+    ->name('agent-chat.manifest.list')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/.well-known/agents/{slug}', [AgentManifestController::class, 'show'])
+    ->name('agent-chat.manifest.show')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:120,1');
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
@@ -235,12 +271,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/skills/create', CreateSkillForm::class)->name('skills.create');
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
 
+    Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
+
+    Route::get('/team-graph', TeamGraphPage::class)->name('team-graph');
+
     Route::get('/agents', AgentListPage::class)->name('agents.index');
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/quick', QuickAgentForm::class)->name('agents.quick');
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
+
+    Route::get('/external-agents', ExternalAgentListPage::class)->name('external-agents.index');
+    Route::get('/external-agents/agentverse', AgentverseBrowsePage::class)->name('external-agents.agentverse');
+    Route::get('/external-agents/{externalAgent}', ExternalAgentDetailPage::class)->name('external-agents.show');
 
     Route::get('/chatbots', ChatbotListPage::class)->name('chatbots.index');
     Route::get('/chatbots/create', CreateChatbotForm::class)->name('chatbots.create');
@@ -249,11 +293,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chatbots/{chatbot}/knowledge', ChatbotKnowledgeBasePage::class)->name('chatbots.knowledge');
     Route::get('/chatbots/{chatbot}', ChatbotDetailPage::class)->name('chatbots.show');
 
+    Route::get('/toolsets', ToolsetListPage::class)->name('toolsets.index');
+    Route::get('/toolsets/create', CreateToolsetForm::class)->name('toolsets.create');
+    Route::get('/toolsets/{toolset}', ToolsetDetailPage::class)->name('toolsets.show');
+
     Route::get('/tools', ToolListPage::class)->name('tools.index');
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
     Route::get('/tools/templates', ToolTemplateCatalogPage::class)->name('tools.templates');
     Route::get('/tools/marketplace', McpMarketplacePage::class)->name('tools.marketplace');
     Route::get('/tools/federation-groups', FederationGroupsPage::class)->name('tools.federation-groups');
+    Route::get('/tools/search-history', ToolSearchHistoryPage::class)->name('tools.search-history');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
 
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');
@@ -263,6 +312,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
     Route::get('/integrations/oauth/{driver}', [IntegrationOAuthController::class, 'redirect'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.redirect');
     Route::get('/integrations/oauth/{driver}/callback', [IntegrationOAuthController::class, 'callback'])->where('driver', '[a-z0-9_-]+')->name('integrations.oauth.callback');
+    Route::get('/integrations/{integration}/edit', EditIntegrationForm::class)->name('integrations.edit');
     Route::get('/integrations/{integration}', IntegrationDetailPage::class)->name('integrations.show');
 
     Route::get('/crews', CrewListPage::class)->name('crews.index');
@@ -285,6 +335,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+    Route::get('/world-model', WorldModelPage::class)->name('world-model.index');
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
 
@@ -303,9 +354,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
     Route::get('/metrics/ai-routing', AiRoutingPage::class)->name('metrics.ai-routing');
+    Route::get('/metrics/time-horizon', TimeHorizonPage::class)->name('metrics.time-horizon');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
+    Route::get('/evaluation/compare', EvaluationCompareRunsPage::class)->name('evaluation.compare');
     Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
@@ -355,6 +408,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/websites/{website}/pages/{page}/preview', WebsitePagePreviewController::class)->name('websites.pages.preview');
     Route::get('/websites/deployments/{deployment}/download', WebsiteDeploymentDownloadController::class)
         ->name('websites.deployment.download');
+
+    // Audit Console (Boruna cryptographic audit trail)
+    Route::get('/audit-console', AuditConsoleListPage::class)->name('audit-console.index');
+    Route::get('/audit-console/{decision}', AuditConsoleDetailPage::class)->name('audit-console.show');
+    Route::get('/settings/audit-console', AuditConsoleSettingsPage::class)->name('audit-console.settings');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

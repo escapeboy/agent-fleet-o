@@ -4,17 +4,20 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Actions\DeactivatePlatformToolAction;
 use App\Domain\Tool\Models\Tool as ToolModel;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]
 class ToolDeactivateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_deactivate';
 
     protected string $description = 'Deactivate a platform tool for the current team. The tool will no longer be available to agents on this team.';
@@ -35,16 +38,16 @@ class ToolDeactivateTool extends Tool
         $tool = ToolModel::withoutGlobalScopes()->find($validated['tool_id']);
 
         if (! $tool) {
-            return Response::error('Tool not found.');
+            return $this->notFoundError('tool');
         }
 
         if (! $tool->isPlatformTool()) {
-            return Response::error('Only platform tools can be deactivated this way.');
+            return $this->failedPreconditionError('Only platform tools can be deactivated this way.');
         }
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No active team context.');
+            return $this->permissionDeniedError('No active team context.');
         }
 
         app(DeactivatePlatformToolAction::class)->execute($tool, $teamId);

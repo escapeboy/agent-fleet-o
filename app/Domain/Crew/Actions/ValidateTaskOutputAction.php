@@ -5,6 +5,7 @@ namespace App\Domain\Crew\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -31,7 +32,10 @@ class ValidateTaskOutputAction
             throw new \RuntimeException('QA agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $qaAgent);
+        $qaMember = CrewMember::forAgentInCrew($qaAgent->id, $execution->crew_id);
+        $resolved = $qaMember
+            ? $this->providerResolver->forCrewRole($qaMember)
+            : $this->providerResolver->resolve(agent: $qaAgent);
 
         $rubric = $this->resolveRubric($taskExecution, $config);
         $qualityThreshold = $rubric['min_score'] ?? $config['quality_threshold'] ?? 0.70;
@@ -56,6 +60,7 @@ class ValidateTaskOutputAction
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 2048,
+            userId: $execution->resolveUserId(),
             teamId: $execution->team_id,
             agentId: $qaAgent->id,
             purpose: 'crew.validate_task',
@@ -73,6 +78,20 @@ class ValidateTaskOutputAction
             'qa_feedback' => $validation,
             'qa_score' => $validation['score'],
             'status' => $passed ? CrewTaskStatus::Validated : CrewTaskStatus::NeedsRevision,
+        ]);
+
+        $qaScore = $validation['score'];
+        $stance = round(($qaScore - 0.5) * 2, 4);
+        $confidence = round($qaScore, 4);
+        $attemptRatio = max(0, round(1 - (($taskExecution->attempt_number - 1) / max($taskExecution->max_attempts, 1)), 4));
+
+        $taskExecution->update([
+            'belief_state' => [
+                'stance' => $stance,
+                'confidence' => $confidence,
+                'attempt_ratio' => $attemptRatio,
+                'updated_at' => now()->toIso8601String(),
+            ],
         ]);
 
         // Track cost on execution

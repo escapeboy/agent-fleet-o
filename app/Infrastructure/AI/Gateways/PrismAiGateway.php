@@ -12,8 +12,11 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\Encryption\CredentialEncryption;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Closure;
 use Illuminate\Support\Collection;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Enums\ToolChoice;
 use Prism\Prism\Exceptions\PrismException;
@@ -22,6 +25,7 @@ use Prism\Prism\Streaming\Events\StreamEndEvent;
 use Prism\Prism\Streaming\Events\TextDeltaEvent;
 use Prism\Prism\ValueObjects\Messages\AssistantMessage;
 use Prism\Prism\ValueObjects\Messages\SystemMessage;
+use Prism\Prism\ValueObjects\Usage;
 use RuntimeException;
 
 class PrismAiGateway implements AiGatewayInterface
@@ -58,11 +62,37 @@ class PrismAiGateway implements AiGatewayInterface
             app()->instance('ai.current_agent_id', $request->agentId);
         }
 
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.llm');
+        $span = $tracer->spanBuilder('llm.provider.'.$request->provider)
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('llm.provider', $request->provider)
+            ->setAttribute('llm.model', $request->model)
+            ->setAttribute('llm.operation', 'complete')
+            ->setAttribute('llm.max_tokens', $request->maxTokens)
+            ->setAttribute('llm.has_tools', $request->hasTools())
+            ->startSpan();
+        $scope = $span->activate();
+
         $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeRequest($req));
 
         try {
-            return $pipeline($request);
+            $response = $pipeline($request);
+
+            $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
+            $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.latency_ms', $response->latencyMs);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $response;
+        } catch (\Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
         } finally {
+            $scope->detach();
+            $span->end();
+
             // Clear per-call context bindings so stale values don't leak across
             // Horizon jobs that share the same worker process/container instance.
             app()->forgetInstance('ai.current_experiment_id');
@@ -83,17 +113,43 @@ class PrismAiGateway implements AiGatewayInterface
             app()->instance('ai.current_team_id', $request->teamId);
         }
 
-        // Tool calling: run tool loop via complete(), then stream the final text.
-        // This gives progressive visibility into tool calls while streaming the answer.
-        if ($request->hasTools()) {
-            $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeToolThenStreamRequest($req, $onChunk));
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.llm');
+        $span = $tracer->spanBuilder('llm.provider.'.$request->provider)
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setAttribute('llm.provider', $request->provider)
+            ->setAttribute('llm.model', $request->model)
+            ->setAttribute('llm.operation', 'stream')
+            ->setAttribute('llm.max_tokens', $request->maxTokens)
+            ->setAttribute('llm.has_tools', $request->hasTools())
+            ->startSpan();
+        $scope = $span->activate();
 
-            return $pipeline($request);
+        try {
+            // Tool calling: run tool loop via complete(), then stream the final text.
+            // This gives progressive visibility into tool calls while streaming the answer.
+            if ($request->hasTools()) {
+                $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeToolThenStreamRequest($req, $onChunk));
+                $response = $pipeline($request);
+            } else {
+                $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
+                $response = $pipeline($request);
+            }
+
+            $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
+            $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.latency_ms', $response->latencyMs);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $response;
+        } catch (\Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
+        } finally {
+            $scope->detach();
+            $span->end();
         }
-
-        $pipeline = $this->buildPipeline(fn (AiRequestDTO $req) => $this->executeStreamRequest($req, $onChunk));
-
-        return $pipeline($request);
     }
 
     public function estimateCost(AiRequestDTO $request): int
@@ -145,6 +201,8 @@ class PrismAiGateway implements AiGatewayInterface
             $completionTokens = (int) ceil(strlen($accumulated) / 4);
         }
 
+        $cacheStrategy = $this->resolveCacheStrategy($request);
+
         return new AiResponseDTO(
             content: $accumulated,
             parsedOutput: null,
@@ -156,7 +214,11 @@ class PrismAiGateway implements AiGatewayInterface
                     model: $request->model,
                     inputTokens: $promptTokens,
                     outputTokens: $completionTokens,
+                    cachedInputTokens: 0,
+                    cacheStrategy: $cacheStrategy,
                 ),
+                cachedInputTokens: 0,
+                cacheStrategy: $cacheStrategy,
             ),
             provider: $request->provider,
             model: $request->model,
@@ -270,16 +332,7 @@ class PrismAiGateway implements AiGatewayInterface
         return new AiResponseDTO(
             content: $text,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $response->usage->promptTokens,
-                completionTokens: $response->usage->completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $response->usage->promptTokens,
-                    outputTokens: $response->usage->completionTokens,
-                ),
-            ),
+            usage: $this->buildUsageDTO($response->usage, $request),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -314,16 +367,7 @@ class PrismAiGateway implements AiGatewayInterface
             return new AiResponseDTO(
                 content: json_encode($response->structured),
                 parsedOutput: $response->structured,
-                usage: new AiUsageDTO(
-                    promptTokens: $response->usage->promptTokens,
-                    completionTokens: $response->usage->completionTokens,
-                    costCredits: $this->costCalculator->calculateCost(
-                        provider: $request->provider,
-                        model: $request->model,
-                        inputTokens: $response->usage->promptTokens,
-                        outputTokens: $response->usage->completionTokens,
-                    ),
-                ),
+                usage: $this->buildUsageDTO($response->usage, $request),
                 provider: $request->provider,
                 model: $request->model,
                 latencyMs: $latencyMs,
@@ -345,12 +389,20 @@ class PrismAiGateway implements AiGatewayInterface
             ->withClientOptions(['timeout' => 120])
             ->withClientRetry(2, 500);
 
-        // Extended thinking (Anthropic-only, budget > 0)
-        if ($request->thinkingBudget !== null && $request->thinkingBudget > 0 && $request->provider === 'anthropic') {
+        // Extended thinking (Anthropic-only): explicit budget takes precedence; otherwise derive from effort level.
+        // Cap at High effort maximum (32K) to prevent runaway costs from uncapped caller-supplied values.
+        $effectiveBudget = $request->thinkingBudget
+            ?? ($request->effort !== null ? $request->effort->toBudgetTokens() : null);
+
+        if ($effectiveBudget !== null) {
+            $effectiveBudget = min($effectiveBudget, 32_000);
+        }
+
+        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic') {
             $builder->withProviderOptions([
                 'thinking' => [
                     'enabled' => true,
-                    'budgetTokens' => $request->thinkingBudget,
+                    'budgetTokens' => $effectiveBudget,
                 ],
             ]);
         }
@@ -455,16 +507,7 @@ class PrismAiGateway implements AiGatewayInterface
         return new AiResponseDTO(
             content: $text,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $response->usage->promptTokens,
-                completionTokens: $response->usage->completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $response->usage->promptTokens,
-                    outputTokens: $response->usage->completionTokens,
-                ),
-            ),
+            usage: $this->buildUsageDTO($response->usage, $request),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -479,6 +522,54 @@ class PrismAiGateway implements AiGatewayInterface
     /**
      * Detect repeated identical tool call sequences across steps.
      *
+     * Build the usage DTO with cache info extracted from Prism's Usage value object.
+     *
+     * cacheReadInputTokens is exposed by Anthropic, OpenAI, Gemini, and OpenRouter
+     * provider handlers when prompt caching is engaged. cacheStrategy is derived
+     * from the request flag — Anthropic uses ephemeral_5m by default in our code path.
+     */
+    private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
+    {
+        $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
+        $cacheStrategy = $this->resolveCacheStrategy($request);
+
+        return new AiUsageDTO(
+            promptTokens: $usage->promptTokens,
+            completionTokens: $usage->completionTokens,
+            costCredits: $this->costCalculator->calculateCost(
+                provider: $request->provider,
+                model: $request->model,
+                inputTokens: $usage->promptTokens,
+                outputTokens: $usage->completionTokens,
+                cachedInputTokens: $cachedInputTokens,
+                cacheStrategy: $cacheStrategy,
+            ),
+            cachedInputTokens: $cachedInputTokens,
+            cacheStrategy: $cacheStrategy,
+        );
+    }
+
+    /**
+     * Map the request's prompt-caching flag + provider to a CostCalculator cache strategy.
+     * Returns null when caching is disabled or the provider doesn't engage write surcharges
+     * in our current code path (gateway only injects cache_control for Anthropic).
+     */
+    private function resolveCacheStrategy(AiRequestDTO $request): ?string
+    {
+        if (! $request->enablePromptCaching) {
+            return null;
+        }
+
+        // Today the gateway injects cacheType=ephemeral on Anthropic system prompts + last tool.
+        // Other providers consume the cached_tokens value but don't incur write surcharge here.
+        if ($request->provider === 'anthropic') {
+            return CostCalculator::CACHE_STRATEGY_5M;
+        }
+
+        return null;
+    }
+
+    /**
      * Each step's tool calls are serialised (sorted name+args) and hashed with MD5.
      * Returns the maximum repeat count for any single hash and the full distribution.
      *
@@ -656,6 +747,17 @@ class PrismAiGateway implements AiGatewayInterface
             ];
         }
 
+        // Anthropic Fast Mode — per-request beta header. Merged as the provider
+        // config 3rd arg to Prism::text()->using() → PrismManager forwards it to
+        // the Anthropic provider constructor which sets the anthropic-beta header.
+        // CRLF is stripped to prevent HTTP response splitting if the env value is
+        // ever misconfigured with stray line terminators.
+        if ($request->provider === 'anthropic' && $this->isEffectiveFastMode($request)) {
+            $betaId = preg_replace('/[\r\n]/', '', (string) config('ai_routing.fast_mode.beta_identifier'));
+
+            return ['anthropic_beta' => $betaId];
+        }
+
         // Local HTTP providers (ollama, openai_compatible, litellm_proxy)
         if (! in_array($request->provider, ['ollama', 'openai_compatible', 'litellm_proxy'], true)) {
             return [];
@@ -728,6 +830,14 @@ class PrismAiGateway implements AiGatewayInterface
             toolChoice: $request->toolChoice,
             providerName: $name,
             thinkingBudget: $request->thinkingBudget,
+            effort: $request->effort,
+            workingDirectory: $request->workingDirectory,
+            enablePromptCaching: $request->enablePromptCaching,
+            complexity: $request->complexity,
+            classifiedComplexity: $request->classifiedComplexity,
+            budgetPressureLevel: $request->budgetPressureLevel,
+            escalationAttempts: $request->escalationAttempts,
+            fastMode: $request->fastMode,
         );
     }
 
@@ -742,5 +852,34 @@ class PrismAiGateway implements AiGatewayInterface
             fn (Closure $next, AiMiddlewareInterface $middleware) => fn (AiRequestDTO $request) => $middleware->handle($request, $next),
             $handler,
         );
+    }
+
+    /**
+     * Resolve whether the request should run with Anthropic Fast Mode enabled.
+     * Requires the global kill-switch to be on; then triggers either on explicit
+     * DTO flag or when the request purpose matches a configured auto-enable prefix.
+     */
+    private function isEffectiveFastMode(AiRequestDTO $request): bool
+    {
+        if (! (bool) config('ai_routing.fast_mode.enabled', false)) {
+            return false;
+        }
+
+        if ($request->fastMode) {
+            return true;
+        }
+
+        $purpose = (string) ($request->purpose ?? '');
+        if ($purpose === '') {
+            return false;
+        }
+
+        foreach ((array) config('ai_routing.fast_mode.auto_enable_purpose_prefixes', []) as $prefix) {
+            if (is_string($prefix) && $prefix !== '' && str_starts_with($purpose, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

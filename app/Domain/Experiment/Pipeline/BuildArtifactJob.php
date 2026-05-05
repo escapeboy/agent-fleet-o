@@ -155,7 +155,7 @@ class BuildArtifactJob implements ShouldQueue
                 model: $llm['model'],
                 systemPrompt: $systemPrompt,
                 userPrompt: $userPrompt,
-                maxTokens: 4096,
+                maxTokens: 1500,
                 userId: $experiment->user_id,
                 teamId: $experiment->team_id,
                 experimentId: $experiment->id,
@@ -163,7 +163,7 @@ class BuildArtifactJob implements ShouldQueue
                 purpose: 'stage:building',
                 temperature: 0.7,
                 tools: $prismTools ?: null,
-                maxSteps: $prismTools ? 10 : 1,
+                maxSteps: $prismTools ? 3 : 1,
             );
 
             $response = $gateway->complete($request);

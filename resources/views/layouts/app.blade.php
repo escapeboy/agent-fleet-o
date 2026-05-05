@@ -45,6 +45,17 @@
             document.documentElement.setAttribute('data-theme', t);
         })();
     </script>
+
+    {{-- Runtime Reverb config (read by bootstrap.js). PHP-rendered so env
+         changes don't require a frontend rebuild. --}}
+    <script>
+        window.FLEETQ_REVERB_CONFIG = {!! json_encode([
+            'key' => config('reverb.apps.apps.0.key'),
+            'host' => env('VITE_REVERB_HOST', request()->getHost()),
+            'port' => (int) env('VITE_REVERB_PORT', request()->isSecure() ? 443 : 80),
+            'scheme' => env('VITE_REVERB_SCHEME', request()->isSecure() ? 'https' : 'http'),
+        ], JSON_THROW_ON_ERROR) !!};
+    </script>
 </head>
 <body class="bg-(--color-surface-alt) font-sans antialiased text-(--color-on-surface)">
     {{-- Offline banner — shown when device loses connectivity --}}
@@ -53,9 +64,7 @@
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="-translate-y-full"
          class="fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow"
          style="display: none;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 shrink-0">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
-        </svg>
+        <i class="fa-solid fa-triangle-exclamation text-base shrink-0"></i>
         You're offline — some features are unavailable. Changes will sync when you reconnect.
     </div>
     <div class="flex h-screen overflow-hidden" x-data="{ sidebarOpen: false, nav: null }" @keydown.escape.window="sidebarOpen = false; nav = null">
@@ -83,9 +92,7 @@
                     <button @click="sidebarOpen = !sidebarOpen"
                             class="lg:hidden -ml-1 shrink-0 rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                             aria-label="Toggle navigation">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
+                        <i class="fa-solid fa-bars text-lg"></i>
                     </button>
                     <h1 class="truncate text-base font-semibold text-(--color-on-surface) lg:text-lg">
                         {{ $header ?? '' }}
@@ -108,9 +115,7 @@
                                 <span class="hidden sm:block text-sm font-medium text-(--color-on-surface) max-w-28 truncate">
                                     {{ auth()->user()->name }}
                                 </span>
-                                <svg class="hidden sm:block h-3.5 w-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
+                                <i class="fa-solid fa-chevron-down hidden sm:block text-sm text-gray-400 shrink-0"></i>
                             </button>
 
                             <div x-show="open"
@@ -132,24 +137,18 @@
                                     @if(Route::has('profile'))
                                         <a href="{{ route('profile') }}"
                                            class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                            <svg class="h-4 w-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-user text-base text-gray-400 shrink-0"></i>
                                             Profile Settings
                                         </a>
                                     @endif
                                     <a href="{{ route('notifications.preferences') }}"
                                        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                        <svg class="h-4 w-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
-                                        </svg>
+                                        <i class="fa-solid fa-bell text-base text-gray-400 shrink-0"></i>
                                         Notifications
                                     </a>
                                     <a href="{{ route('team.settings') }}"
                                        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                        <svg class="h-4 w-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
-                                        </svg>
+                                        <i class="fa-solid fa-users text-base text-gray-400 shrink-0"></i>
                                         Team Settings
                                     </a>
                                 </div>
@@ -159,9 +158,7 @@
                                         @csrf
                                         <button type="submit"
                                                 class="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                            <svg class="h-4 w-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25"/>
-                                            </svg>
+                                            <i class="fa-solid fa-arrow-right-from-bracket text-base text-gray-400 shrink-0"></i>
                                             Sign Out
                                         </button>
                                     </form>
@@ -251,9 +248,19 @@
     <x-pwa-install-prompt />
     <x-pwa-update-toast />
 
-    {{-- WebMCP: polyfill for browser AI agent tool discovery --}}
-    @if(config('webmcp.enabled', true))
+    {{-- WebMCP: polyfill for browser AI agent tool discovery.
+         Suppressed on pages that set $suppressWebmcp (e.g. the GrapesJS builder) to
+         prevent its DOM-mutation observer from interfering with editor internals. --}}
+    @if(config('webmcp.enabled', true) && empty($suppressWebmcp))
         <script src="https://unpkg.com/@mcp-b/global@2.2.0/dist/index.iife.js" defer></script>
     @endif
+    <script>
+        window.addEventListener('fleetq:invalidate', function (event) {
+            var tag = event.detail.tag;
+            if (window.Livewire) {
+                window.Livewire.dispatch('fleetq:invalidate:' + tag);
+            }
+        });
+    </script>
 </body>
 </html>

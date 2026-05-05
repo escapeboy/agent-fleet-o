@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Workflow\Actions\ImportWorkflowAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class WorkflowImportTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_import';
 
     protected string $description = 'Import a workflow from JSON or YAML content. Returns the new workflow ID and any unresolved references.';
@@ -42,19 +45,15 @@ class WorkflowImportTool extends Tool
 
         $teamId = $validated['team_id'] ?? app('mcp.team_id') ?? $user?->current_team_id;
         if (! $teamId) {
-            return Response::error('No team context available.');
+            return $this->permissionDeniedError('No team context available.');
         }
 
-        try {
-            $action = app(ImportWorkflowAction::class);
-            $result = $action->execute(
-                data: $validated['content'],
-                teamId: $teamId,
-                userId: $user->id,
-            );
-        } catch (\InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
-        }
+        $action = app(ImportWorkflowAction::class);
+        $result = $action->execute(
+            data: $validated['content'],
+            teamId: $teamId,
+            userId: $user->id,
+        );
 
         $workflow = $result['workflow'];
 

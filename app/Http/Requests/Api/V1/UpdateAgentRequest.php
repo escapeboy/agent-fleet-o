@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Models\Agent;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,6 +35,10 @@ class UpdateAgentRequest extends FormRequest
             'skill_ids' => ['sometimes', 'array'],
             'skill_ids.*' => ['uuid', Rule::exists('skills', 'id')->where('team_id', $teamId)],
             'tool_profile' => ['nullable', 'string', Rule::in(array_keys(config('tool_profiles.profiles', [])))],
+            'environment' => ['sometimes', 'nullable', Rule::enum(AgentEnvironment::class)],
+            'config.reasoning_effort' => ['sometimes', 'nullable', Rule::enum(ReasoningEffort::class)],
+            'config.use_tool_search' => ['sometimes', 'nullable', 'boolean'],
+            'config.tool_search_top_k' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:20'],
             'knowledge_base_id' => ['nullable', 'uuid', Rule::exists('knowledge_bases', 'id')->where('team_id', $teamId)],
             'evaluation_enabled' => ['nullable', 'boolean'],
             'evaluation_sample_rate' => ['nullable', 'numeric', 'min:0', 'max:1'],

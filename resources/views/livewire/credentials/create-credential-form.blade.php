@@ -118,7 +118,7 @@
                                 @if(count($customPairs) > 1)
                                     <button wire:click="removeCustomPair({{ $i }})" type="button"
                                         class="mt-1 rounded p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        <i class="fa-solid fa-xmark text-base"></i>
                                     </button>
                                 @endif
                             </div>

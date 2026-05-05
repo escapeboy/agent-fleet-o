@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
@@ -39,6 +40,30 @@ class ProviderResolver
         $resolved = $this->enforceAllowedModels($resolved, $team);
 
         return $this->enforceDataClassification($resolved, $agent, $team);
+    }
+
+    /**
+     * Resolve provider and model for a crew member, honoring the per-role
+     * model_override (config['model_override']) before falling through to
+     * the agent/team/platform hierarchy. Override is still subjected to the
+     * same allowed-models and data-classification enforcement that resolve()
+     * runs, so a stale override that became disallowed will not slip through.
+     *
+     * @return array{provider: string, model: string}
+     */
+    public function forCrewRole(CrewMember $member, string $purpose = 'run'): array
+    {
+        $override = $member->model_override;
+        $agent = $member->agent;
+        $team = $agent?->team;
+
+        if ($override !== null) {
+            $resolved = $this->enforceAllowedModels($override, $team);
+
+            return $this->enforceDataClassification($resolved, $agent, $team);
+        }
+
+        return $this->resolve(skill: null, agent: $agent, team: $team, purpose: $purpose);
     }
 
     /**
@@ -306,10 +331,22 @@ class ProviderResolver
                 ->all()
             : [];
 
+        // Pre-load team's local LLM credentials — allows per-team override even when
+        // local_llm.enabled is globally false (e.g. cloud edition force-disables it).
+        $teamLocalLlmProviders = $team
+            ? TeamProviderCredential::where('team_id', $team->id)
+                ->where('is_active', true)
+                ->whereIn('provider', ['ollama', 'openai_compatible'])
+                ->pluck('provider')
+                ->flip()
+                ->all()
+            : [];
+
         foreach ($providers as $key => $provider) {
             // HTTP-based local LLM providers (Ollama, OpenAI-compatible)
             if (! empty($provider['http_local'])) {
-                if (! $localLlmEnabled) {
+                $teamHasCredential = isset($teamLocalLlmProviders[$key]);
+                if (! $localLlmEnabled && ! $teamHasCredential) {
                     unset($providers[$key]);
                 } else {
                     // Replace static model list with live models fetched from the endpoint.
@@ -345,7 +382,10 @@ class ProviderResolver
                     continue;
                 }
 
-                if (! $localAgentsEnabled) {
+                // Allow per-team override: super-admins can enable bridge CLI agents
+                // for specific teams even when the global kill-switch is off.
+                $teamLocalAgentsAllowed = $team && ($team->settings['local_agents_allowed'] ?? false);
+                if (! $localAgentsEnabled && ! $teamLocalAgentsAllowed) {
                     unset($providers[$key]);
 
                     continue;

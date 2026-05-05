@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Boruna;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -21,6 +22,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class BorunaEvidenceTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'boruna_evidence_get';
 
     protected string $description = 'Retrieve the cryptographic evidence bundle for a Boruna execution. The bundle contains script hash, input hash, output hash, capability trace, and a tamper-proof signature proving the execution occurred in the Boruna VM.';
@@ -48,11 +51,11 @@ class BorunaEvidenceTool extends McpTool
             ->first();
 
         if (! $execution) {
-            return Response::error('SkillExecution not found.');
+            return $this->notFoundError('skill execution');
         }
 
         if ($execution->skill?->type !== 'boruna_script') {
-            return Response::error('This execution is not from a boruna_script skill.');
+            return $this->failedPreconditionError('This execution is not from a boruna_script skill.');
         }
 
         // The evidence bundle is stored in the execution output under the 'evidence' key

@@ -3,17 +3,20 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Shared\Models\ContactIdentity;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[AssistantTool('read')]
 class GetContactRiskScoreTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'contact_risk_score_get';
 
     protected string $description = 'Get the current risk score and triggered rule flags for a contact identity.';
@@ -32,7 +35,7 @@ class GetContactRiskScoreTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $contact = ContactIdentity::withoutGlobalScopes()
@@ -40,7 +43,7 @@ class GetContactRiskScoreTool extends Tool
             ->find($request->get('contact_id'));
 
         if (! $contact) {
-            return Response::error('Contact not found.');
+            return $this->notFoundError('contact');
         }
 
         return Response::text(json_encode([

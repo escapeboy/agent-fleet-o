@@ -2,39 +2,83 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "agent-fleet/agent-fleet",
     "type": "project",
-    "description": "AI Agent Mission Control Platform — self-hosted, open-source.",
-    "keywords": ["ai", "agents", "experiments", "laravel"],
+    "description": "AI Agent Mission Control Platform \u2014 self-hosted, open-source.",
+    "keywords": [
+        "ai",
+        "agents",
+        "experiments",
+        "laravel"
+    ],
     "license": "AGPL-3.0-or-later",
+    "version": "1.24.0",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/fleetq-boruna-audit",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/plugin-sdk.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-core.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-blog.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-forms.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-chatbot.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/FleetQ/website-plugin-ecommerce.git"
+        }
+    ],
     "require": {
         "php": "^8.2",
         "asbiin/laravel-webauthn": "^5.4",
         "dedoc/scramble": "^0.13.12",
         "ezyang/htmlpurifier": "^4.19",
+        "fleetq/boruna-audit": "@dev",
+        "fleetq/plugin-sdk": "^1.0",
+        "intervention/image": "^4.0",
         "laravel-notification-channels/webpush": "*",
         "laravel/ai": "*",
         "laravel/fortify": "^1.34",
-        "laravel/framework": "^12.0",
+        "laravel/framework": "^13.0",
         "laravel/horizon": "^5.43",
-        "laravel/mcp": "^0.5.7",
+        "laravel/mcp": "^0.7.0",
         "laravel/passport": "^13.6",
         "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.3",
         "laravel/socialite": "^5.25",
-        "laravel/tinker": "^2.10.1",
+        "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.1",
         "neuron-core/neuron-ai": "^3.2",
         "nikic/php-parser": "^5.0",
+        "open-telemetry/exporter-otlp": "^1.4",
+        "open-telemetry/sdk": "^1.14",
         "phpseclib/phpseclib": "^3.0",
         "predis/predis": "^3.3",
-        "prism-php/prism": "^0.99.19",
+        "prism-php/prism": "^0.100.0",
         "propaganistas/laravel-disposable-email": "*",
         "sabre/vobject": "^4.5",
         "sentry/sentry-laravel": "^4.21",
         "socialiteproviders/apple": "^5.9",
         "socialiteproviders/manager": "^4.8",
-        "spatie/laravel-activitylog": "^4.11",
+        "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-medialibrary": "^11.19",
-        "spatie/laravel-query-builder": "^6.4",
+        "spatie/laravel-query-builder": "^7.0",
         "spatie/laravel-webhook-server": "^3.9",
         "tpetry/laravel-postgresql-enhanced": "^3.5",
         "webklex/php-imap": "^6.2"
@@ -109,6 +153,13 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
+    },
+    "suggest": {
+        "fleetq/website-plugin-core": "Core website builder plugin (block registry, sandboxed preview).",
+        "fleetq/website-plugin-blog": "Blog authoring plugin for the website builder.",
+        "fleetq/website-plugin-forms": "Form builder plugin for the website builder.",
+        "fleetq/website-plugin-chatbot": "Embeddable chatbot widget plugin for the website builder.",
+        "fleetq/website-plugin-ecommerce": "E-commerce storefront plugin for the website builder."
     },
     "extra": {
         "laravel": {

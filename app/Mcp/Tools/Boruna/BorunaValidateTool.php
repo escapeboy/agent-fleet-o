@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Boruna;
 
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class BorunaValidateTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'boruna_validate';
 
     protected string $description = 'Validate a Boruna .ax script for syntax and semantic errors without executing it. Returns parse errors, undefined variables, capability violations, and lint warnings.';
@@ -42,7 +45,7 @@ class BorunaValidateTool extends McpTool
         $tool = $this->resolveTool($teamId, $validated['boruna_tool_id'] ?? null);
 
         if (! $tool) {
-            return Response::error('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
+            return $this->failedPreconditionError('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
         }
 
         try {
@@ -55,7 +58,7 @@ class BorunaValidateTool extends McpTool
                 'output' => $output,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Boruna validate failed: {$e->getMessage()}");
+            throw $e;
         }
     }
 

@@ -19,10 +19,17 @@ RUN apk add --no-cache \
     nodejs \
     npm \
     python3 \
+    py3-pip \
     bash \
     curl \
+    chromium \
+    chromium-chromedriver \
     # Composer for PHP projects
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Browser harness: chromium binary is at /usr/bin/chromium-browser on Alpine.
+# Existing BrowserHarnessHandler invokes `chromium-browser --headless ...` directly.
+ENV CHROME_BIN=/usr/bin/chromium-browser
 
 WORKDIR /workspace
 

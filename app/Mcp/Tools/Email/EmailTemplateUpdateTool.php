@@ -6,6 +6,7 @@ use App\Domain\Email\Actions\UpdateEmailTemplateAction;
 use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Email\Services\MjmlRenderer;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class EmailTemplateUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_template_update';
 
     protected string $description = 'Update an existing email template. Provide html_body (raw HTML) or mjml_body (MJML markup — compiled server-side to HTML automatically). Only supply fields you want to change — omitted fields are preserved.';
@@ -45,12 +48,12 @@ class EmailTemplateUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $template = EmailTemplate::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $template) {
-            return Response::error('Email template not found.');
+            return $this->notFoundError('email template');
         }
 
         try {
@@ -88,7 +91,7 @@ class EmailTemplateUpdateTool extends Tool
                 'updated_at' => $template->updated_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

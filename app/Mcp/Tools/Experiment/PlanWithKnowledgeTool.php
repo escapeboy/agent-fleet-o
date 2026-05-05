@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Experiment;
 
 use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -21,6 +22,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class PlanWithKnowledgeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'plan_with_knowledge';
 
     protected string $description = 'Enrich a planning goal with context from Memory (past experiments), KnowledgeGraph (domain facts), and first-principles LLM analysis. Returns insights, risks, and key questions to inform agent planning.';
@@ -46,7 +49,7 @@ class PlanWithKnowledgeTool extends Tool
 
             $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
             if (! $teamId) {
-                return Response::error('No current team.');
+                return $this->permissionDeniedError('No current team.');
             }
 
             $result = $action->execute(
@@ -64,7 +67,7 @@ class PlanWithKnowledgeTool extends Tool
                 'kg_count' => count($result['kg_hits']),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

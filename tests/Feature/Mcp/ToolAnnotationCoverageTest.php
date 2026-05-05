@@ -41,7 +41,7 @@ class ToolAnnotationCoverageTest extends TestCase
             $missing,
             'Every MCP tool must declare #[IsReadOnly] or #[IsDestructive] '
             ."(Claude Connectors Directory submission requirement).\nMissing:\n"
-            .implode("\n", $missing)
+            .implode("\n", $missing),
         );
     }
 
@@ -59,7 +59,7 @@ class ToolAnnotationCoverageTest extends TestCase
             $relative = str_replace(
                 [app_path().'/', '/', '.php'],
                 ['', '\\', ''],
-                $file->getRealPath()
+                $file->getRealPath(),
             );
             $class = 'App\\'.$relative;
 

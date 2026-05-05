@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class ProjectActivateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_activate';
 
     protected string $description = 'Activate a draft or failed project, enabling it to run. The project must be in draft or failed status.';
@@ -32,16 +35,16 @@ class ProjectActivateTool extends Tool
         $projectId = $request->get('project_id');
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($projectId);
 
         if (! $project) {
-            return Response::error("Project {$projectId} not found. Use project_list to discover valid project IDs.");
+            return $this->notFoundError('project', $projectId);
         }
 
         if (! $project->status->canTransitionTo(ProjectStatus::Active)) {
-            return Response::error("Cannot activate project in '{$project->status->value}' status. Only draft or failed projects can be activated.");
+            return $this->failedPreconditionError("Cannot activate project in '{$project->status->value}' status. Only draft or failed projects can be activated.");
         }
 
         try {
@@ -64,7 +67,7 @@ class ProjectActivateTool extends Tool
                 'activated_at' => now()->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

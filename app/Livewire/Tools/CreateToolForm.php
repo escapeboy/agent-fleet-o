@@ -9,6 +9,7 @@ use App\Domain\Tool\Actions\CreateToolAction;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolType;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateToolForm extends Component
@@ -132,6 +133,8 @@ class CreateToolForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $team = auth()->user()->currentTeam;
         $type = ToolType::from($this->type);
 

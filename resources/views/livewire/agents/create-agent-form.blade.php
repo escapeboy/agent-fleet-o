@@ -72,6 +72,13 @@
                 <x-form-input wire:model.number="budgetCapCredits" label="Budget Cap (credits)" type="number" min="0" placeholder="Leave empty for unlimited" />
             </div>
 
+            @if($supportsMaxCreditsPerCall)
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-form-input wire:model.number="maxCreditsPerCall" label="Max credits per call (override)" type="number" min="1"
+                    hint="Per-agent cap that overrides the team default for a single LLM call. Leave empty to inherit team / platform setting." />
+            </div>
+            @endif
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <x-form-select wire:model="executionTier" label="Execution Tier">
                     @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)
@@ -91,6 +98,34 @@
                         <option value="{{ $key }}">{{ $profile['label'] }} — {{ $profile['description'] }}</option>
                     @endforeach
                 </x-form-select>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-form-select wire:model="reasoningEffort" label="Reasoning Effort" hint="Extended thinking budget for the model. Anthropic Claude only; ignored on OpenAI and Google.">
+                    @foreach(\App\Infrastructure\AI\Enums\ReasoningEffort::cases() as $effort)
+                        <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
+                    @endforeach
+                </x-form-select>
+
+                <x-form-select wire:model="environment" label="Environment" hint="Preset that auto-attaches a tool bundle">
+                    <option value="">No preset</option>
+                    @foreach(\App\Domain\Agent\Enums\AgentEnvironment::cases() as $env)
+                        <option value="{{ $env->value }}">{{ $env->label() }}</option>
+                    @endforeach
+                </x-form-select>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <input type="checkbox" wire:model.live="useToolSearch" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    Enable Tool Search
+                </label>
+                <p class="mt-1 text-xs text-gray-500">Auto-discover relevant tools from the team pool by matching the user prompt against tool descriptions.</p>
+                @if($useToolSearch)
+                    <div class="mt-3">
+                        <x-form-input wire:model="toolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools surfaced per agent invocation (1–20)." />
+                    </div>
+                @endif
             </div>
 
             @if(!empty($providers[$this->provider]['local']))
@@ -118,7 +153,7 @@
                             @endforeach
                         </select>
                         <button wire:click="removeFallback({{ $index }})" type="button" class="rounded p-1 text-red-500 hover:bg-red-50">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <i class="fa-solid fa-xmark text-base"></i>
                         </button>
                     </div>
                 @endforeach
@@ -164,7 +199,7 @@
                                     <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                         :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                         <template x-if="isSelected(skill.id)">
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            <i class="fa-solid fa-check text-xs"></i>
                                         </template>
                                     </div>
                                     <div>
@@ -200,6 +235,24 @@
                         </x-form-select>
                     </div>
                 @endif
+            </div>
+
+            {{-- Memory & Scout Phase --}}
+            <div class="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Use Memory</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Inject relevant memories from the team memory store into each execution</p>
+                    </div>
+                    <x-form-checkbox name="useMemory" wire:model.live="useMemory" />
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Enable Scout Phase</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Run a cheap pre-execution LLM call to generate targeted memory retrieval queries before the main execution</p>
+                    </div>
+                    <x-form-checkbox name="enableScoutPhase" wire:model.live="enableScoutPhase" />
+                </div>
             </div>
 
             {{-- Tool Assignment --}}
@@ -239,7 +292,7 @@
                                     <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                         :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                         <template x-if="isSelected(tool.id)">
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            <i class="fa-solid fa-check text-xs"></i>
                                         </template>
                                     </div>
                                     <div>
@@ -268,7 +321,7 @@
                                 {{ in_array($repo->id, $gitRepositoryIds) ? 'border-primary-300 bg-primary-50 text-primary-800' : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40' }}">
                             <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border {{ in_array($repo->id, $gitRepositoryIds) ? 'border-primary-500 bg-primary-500' : 'border-gray-300' }}">
                                 @if(in_array($repo->id, $gitRepositoryIds))
-                                    <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    <i class="fa-solid fa-check text-xs text-white"></i>
                                 @endif
                             </span>
                             <span class="min-w-0 truncate">{{ $repo->name }}</span>

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Skill;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class BrowserSkillTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'browser_skill_manage';
 
     protected string $description = 'Manage browser automation skills and inspect recent executions. List configured browser skills, get the configuration schema, or list recent screenshot/scrape/pdf executions. Note: browser skills require BROWSER_SKILL_ENABLED=true and the browserless Docker service.';
@@ -46,7 +49,7 @@ class BrowserSkillTool extends Tool
             'list_executions' => $this->listExecutions($validated['status'] ?? null, $validated['limit'] ?? 20),
             'get_config_schema' => $this->getConfigSchema(),
             'check_status' => $this->checkStatus(),
-            default => Response::error('Unknown action.'),
+            default => $this->invalidArgumentError('Unknown action.'),
         };
     }
 

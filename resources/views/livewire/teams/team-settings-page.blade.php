@@ -661,7 +661,7 @@
                                 @endif
                                 <button x-on:click="editing = true; $nextTick(() => $refs.nameInput.focus())"
                                     class="text-gray-400 hover:text-gray-600" title="Rename">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                    <i class="fa-solid fa-pen text-sm"></i>
                                 </button>
                             </div>
                             <div x-show="editing" x-cloak class="flex items-center gap-2">
@@ -788,7 +788,7 @@
             @if(!$showConnectForm)
                 <button wire:click="$set('showConnectForm', true)"
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+                    <i class="fa-solid fa-link text-base"></i>
                     Connect via URL
                 </button>
             @else
@@ -944,6 +944,102 @@
             <span class="text-xs text-gray-500">
                 {{ count($mcpToolsEnabled) }} / {{ collect($mcpToolCatalog)->sum(fn($g) => count($g['tools'])) }} tools enabled
             </span>
+        </div>
+    </div>
+
+    {{-- Observability (per-team OTLP export) --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="mb-1 text-lg font-semibold text-gray-900">Observability</h2>
+                <p class="mb-4 text-sm text-gray-500">
+                    Stream this team's OpenTelemetry traces (LLM calls, agent runs, MCP tools) to your own
+                    OTLP-compatible backend — Pydantic Logfire, Honeycomb, Grafana Tempo, SigNoz, etc.
+                    Leave disabled to keep spans on the platform default.
+                </p>
+            </div>
+            <a href="https://fleetq.net/docs/observability" target="_blank" rel="noopener"
+               class="shrink-0 text-xs font-medium text-primary-600 hover:text-primary-700">
+                Setup guide →
+            </a>
+        </div>
+
+        <div class="space-y-4">
+            <x-form-checkbox wire:model="observabilityEnabled" label="Enable OTLP export for this team" />
+
+            @if($observabilityEnabled)
+                <x-form-input
+                    wire:model="observabilityEndpoint"
+                    label="OTLP HTTP endpoint"
+                    placeholder="https://logfire-api.pydantic.dev"
+                    hint="Root URL. FleetQ automatically appends /v1/traces."
+                />
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Auth token / bearer</label>
+                    @if($observabilityTokenIsSet && $observabilityToken === '')
+                        <div class="mt-1 flex items-center gap-3">
+                            <span class="inline-flex items-center gap-1.5 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                                <i class="fa-solid fa-check"></i> Token stored (encrypted)
+                            </span>
+                            <button wire:click="clearObservabilityToken"
+                                    class="text-xs font-medium text-red-600 hover:text-red-700">
+                                Clear
+                            </button>
+                        </div>
+                        <x-form-input wire:model="observabilityToken"
+                                      type="password"
+                                      placeholder="Paste a new token to replace"
+                                      hint="Leave blank to keep the existing token."
+                                      class="mt-2" />
+                    @else
+                        <x-form-input wire:model="observabilityToken"
+                                      type="password"
+                                      placeholder="Bearer xxx or just the raw token"
+                                      hint="Stored encrypted. Sent as Authorization header on every export." />
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <x-form-input
+                        wire:model="observabilitySampleRate"
+                        type="number"
+                        label="Sample rate"
+                        hint="0.0–1.0 — 1.0 exports every span."
+                        compact
+                    />
+                    <x-form-input
+                        wire:model="observabilityServiceName"
+                        label="Service name (optional)"
+                        placeholder="fleetq-myteam"
+                        hint="Shown in traces — helps distinguish teams in shared dashboards."
+                        compact
+                    />
+                </div>
+            @endif
+        </div>
+
+        <div class="mt-4 flex items-center gap-2">
+            <button wire:click="saveObservability" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                Save Observability
+            </button>
+            @if($observabilityEnabled)
+                <button wire:click="testObservability"
+                        wire:loading.attr="disabled"
+                        wire:target="testObservability"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+                    <span wire:loading.remove wire:target="testObservability">Test connection</span>
+                    <span wire:loading wire:target="testObservability">Testing…</span>
+                </button>
+                @if($lastProbeAt)
+                    <span class="ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium
+                        {{ $lastProbeOk ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}"
+                          title="{{ $lastProbeMessage }}">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full {{ $lastProbeOk ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
+                        Last tested {{ \Carbon\Carbon::parse($lastProbeAt)->diffForHumans() }}
+                    </span>
+                @endif
+            @endif
         </div>
     </div>
 

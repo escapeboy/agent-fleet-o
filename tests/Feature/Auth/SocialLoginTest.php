@@ -113,6 +113,78 @@ class SocialLoginTest extends TestCase
         $this->assertNotNull($user->email_verified_at);
     }
 
+    // ── callback: plugin-registered verified provider ────────────────────────
+
+    public function test_callback_marks_email_verified_for_plugin_registered_verified_provider(): void
+    {
+        // Simulate a plugin extending both the allowed-provider list and the
+        // trusted-email-provider list (e.g. a corporate OIDC IdP like Lukanet).
+        config([
+            'social.providers' => array_merge(config('social.providers', []), ['lukanet']),
+            'social.verified_email_providers' => array_merge(config('social.verified_email_providers', []), ['lukanet']),
+        ]);
+
+        $socialUser = $this->mockSocialiteUser(id: 'lukanet-1', email: 'employee@lukanet.example');
+        $driver = $this->mockDriver($socialUser);
+        Socialite::shouldReceive('driver')->with('lukanet')->andReturn($driver);
+
+        $response = $this->get(route('auth.social.callback', 'lukanet'));
+
+        $response->assertRedirect(route('dashboard'));
+
+        $user = User::where('email', 'employee@lukanet.example')->first();
+        $this->assertNotNull($user);
+        $this->assertNotNull($user->email_verified_at);
+    }
+
+    public function test_callback_leaves_email_unverified_for_provider_absent_from_verified_list(): void
+    {
+        // Custom provider is allowed, but NOT on the trusted-email list.
+        config([
+            'social.providers' => array_merge(config('social.providers', []), ['unknown-idp']),
+            'social.verified_email_providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple'],
+        ]);
+
+        $socialUser = $this->mockSocialiteUser(id: 'unk-1', email: 'someone@unknown.example');
+        $driver = $this->mockDriver($socialUser);
+        Socialite::shouldReceive('driver')->with('unknown-idp')->andReturn($driver);
+
+        $this->get(route('auth.social.callback', 'unknown-idp'));
+
+        $user = User::where('email', 'someone@unknown.example')->first();
+        $this->assertNotNull($user);
+        $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_callback_refuses_to_link_unverified_provider_to_existing_email(): void
+    {
+        // An operator/plugin adds a driver to social.providers but NOT to
+        // social.verified_email_providers. Such a provider does not guarantee
+        // the email claim — allowing auto-link on email match would let an
+        // attacker take over an existing account by claiming the victim's email.
+        config([
+            'social.providers' => array_merge(config('social.providers', []), ['unknown-idp']),
+            'social.verified_email_providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple'],
+        ]);
+
+        $victim = User::factory()->create(['email' => 'victim@example.com', 'password' => bcrypt('secret')]);
+
+        $socialUser = $this->mockSocialiteUser(id: 'attacker-1', email: 'victim@example.com');
+        $driver = $this->mockDriver($socialUser);
+        Socialite::shouldReceive('driver')->with('unknown-idp')->andReturn($driver);
+
+        $response = $this->get(route('auth.social.callback', 'unknown-idp'));
+
+        // Must NOT log in as the victim, must NOT attach the attacker's social account.
+        $this->assertGuest();
+        $this->assertDatabaseMissing('user_social_accounts', [
+            'user_id' => $victim->id,
+            'provider' => 'unknown-idp',
+        ]);
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['social']);
+    }
+
     // ── callback: existing social account (returning user) ───────────────────
 
     public function test_callback_logs_in_existing_social_account_user(): void

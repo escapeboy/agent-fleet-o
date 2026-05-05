@@ -7,6 +7,7 @@ use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Signal\Jobs\EvaluateContactRiskJob;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ResolveSecurityReviewTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'approval_security_review_resolve';
 
     protected string $description = 'Approve or reject a security review request for a high-risk contact. Approving re-evaluates the contact risk score.';
@@ -42,7 +45,7 @@ class ResolveSecurityReviewTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $review = ApprovalRequest::withoutGlobalScopes()
@@ -51,11 +54,11 @@ class ResolveSecurityReviewTool extends Tool
             ->find($request->get('review_id'));
 
         if (! $review) {
-            return Response::error('Security review not found.');
+            return $this->notFoundError('security review');
         }
 
         if ($review->status !== ApprovalStatus::Pending) {
-            return Response::error('Security review is already resolved.');
+            return $this->failedPreconditionError('Security review is already resolved.');
         }
 
         $decision = $request->get('decision');

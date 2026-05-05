@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Email;
 use App\Domain\Email\Actions\GenerateEmailTemplateAction;
 use App\Domain\Email\Models\EmailTheme;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('write')]
 class EmailTemplateGenerateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_template_generate';
 
     protected string $description = 'Generate MJML email markup from a natural language description using AI. Returns mjml_source and html_preview without saving to the database. Use email_template_create or email_template_update to persist the result after review.';
@@ -45,7 +48,7 @@ class EmailTemplateGenerateTool extends Tool
             $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
             $theme = $teamId ? EmailTheme::withoutGlobalScopes()->where('team_id', $teamId)->find($themeId) : null;
             if (! $theme) {
-                return Response::error("Email theme '{$themeId}' not found.");
+                return $this->notFoundError('email theme', $themeId);
             }
         }
 
@@ -71,7 +74,7 @@ class EmailTemplateGenerateTool extends Tool
                 'next_steps' => 'Review the output, then call email_template_create with mjml_body to save it, or email_template_update to overwrite an existing template.',
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Email generation failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

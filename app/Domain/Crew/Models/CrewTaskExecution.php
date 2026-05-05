@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\AgentChatProtocol\Models\ExternalAgent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Experiment\Models\WorklogEntry;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -17,6 +18,7 @@ class CrewTaskExecution extends Model
     protected $fillable = [
         'crew_execution_id',
         'agent_id',
+        'external_agent_id',
         'title',
         'description',
         'status',
@@ -36,6 +38,7 @@ class CrewTaskExecution extends Model
         'started_at',
         'completed_at',
         'claimed_at',
+        'belief_state',
     ];
 
     protected function casts(): array
@@ -46,6 +49,7 @@ class CrewTaskExecution extends Model
             'output' => 'array',
             'qa_feedback' => 'array',
             'qa_score' => 'float',
+            'belief_state' => 'array',
             'depends_on' => 'array',
             'skip_condition' => 'array',
             'attempt_number' => 'integer',
@@ -67,6 +71,16 @@ class CrewTaskExecution extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function externalAgent(): BelongsTo
+    {
+        return $this->belongsTo(ExternalAgent::class);
+    }
+
+    public function isExternal(): bool
+    {
+        return $this->external_agent_id !== null;
     }
 
     public function isPending(): bool

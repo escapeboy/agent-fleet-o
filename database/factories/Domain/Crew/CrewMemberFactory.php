@@ -43,4 +43,9 @@ class CrewMemberFactory extends Factory
     {
         return $this->state(['role' => CrewMemberRole::OutputReviewer]);
     }
+
+    public function judge(): static
+    {
+        return $this->state(['role' => CrewMemberRole::Judge]);
+    }
 }

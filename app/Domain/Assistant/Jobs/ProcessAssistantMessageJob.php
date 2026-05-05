@@ -6,8 +6,10 @@ use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Agents\FleetQAssistant;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
+use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Budget\Services\CostCalculator;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\ToolCall;
+use Laravel\Ai\Streaming\Events\ToolResult;
 use Sentry\Severity;
 use Sentry\State\Scope;
 
@@ -41,6 +44,11 @@ class ProcessAssistantMessageJob implements ShouldQueue
         public readonly ?string $contextId = null,
     ) {
         $this->onQueue('ai-calls');
+    }
+
+    public function middleware(): array
+    {
+        return [new ApplyTenantTracer];
     }
 
     public function handle(SendAssistantMessageAction $action): void
@@ -187,6 +195,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
         $streamedContent = '';
         $toolCallNames = [];
+        $toolResultPayloads = [];
         $lastFlush = 0.0;
         $flushInterval = 0.3;
         $toolCallsCount = 0;
@@ -217,11 +226,28 @@ class ProcessAssistantMessageJob implements ShouldQueue
                     ]),
                 ]);
                 $lastFlush = microtime(true);
+            } elseif ($event instanceof ToolResult && $event->successful) {
+                $toolResultPayloads[] = [
+                    'toolName' => $event->toolResult->name ?? null,
+                    'result' => $event->toolResult->result ?? null,
+                ];
             }
         }
 
         // Final content from stream
         $finalContent = $streamResponse->text ?? $streamedContent;
+
+        // Grounded citations — validate inline [[kind:uuid]] markers against
+        // the tool results captured during streaming, strip hallucinated IDs,
+        // and attach the citation list to metadata. Mirrors the legacy path.
+        $metadata = ['status' => 'completed'];
+        if ($finalContent !== '' && $toolResultPayloads !== []) {
+            $cited = app(CitationExtractor::class)->extract($finalContent, $toolResultPayloads);
+            $finalContent = $cited['text'];
+            if ($cited['citations'] !== []) {
+                $metadata['citations'] = $cited['citations'];
+            }
+        }
 
         // Save completed message
         $placeholder->update([
@@ -237,7 +263,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
                     $streamResponse->usage->outputTokens ?? 0,
                 ),
             ]) : null,
-            'metadata' => json_encode(['status' => 'completed']),
+            'metadata' => json_encode($metadata),
         ]);
 
         // Save to conversation manager

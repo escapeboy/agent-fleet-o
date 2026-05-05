@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Exceptions\MaxDelegationDepthExceededException;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -45,7 +46,10 @@ class DecomposeGoalAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $this->providerResolver->forCrewRole($coordinatorMember)
+            : $this->providerResolver->resolve(agent: $coordinator);
 
         $workerDescriptions = collect($config['workers'] ?? [])
             ->map(fn ($w) => "- {$w['name']} ({$w['role']}): {$w['goal']}. Skills: ".implode(', ', $w['skills'] ?? []))
@@ -83,6 +87,7 @@ class DecomposeGoalAction
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 4096,
+            userId: $execution->resolveUserId(),
             teamId: $execution->team_id,
             agentId: $coordinator->id,
             purpose: 'crew.decompose_goal',

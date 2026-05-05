@@ -3,10 +3,13 @@
 namespace App\Livewire\Skills;
 
 use App\Domain\Skill\Actions\CreateSkillAction;
+use App\Domain\Skill\Actions\RegisterBorunaToolAction;
 use App\Domain\Skill\Enums\ExecutionType;
 use App\Domain\Skill\Enums\RiskLevel;
 use App\Domain\Skill\Enums\SkillType;
+use App\Domain\Skill\Services\BorunaPlatformService;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateSkillForm extends Component
@@ -101,6 +104,29 @@ class CreateSkillForm extends Component
 
     public string $consensusAggregation = 'majority';
 
+    /**
+     * Self-serve registration of the bundled Boruna mcp_stdio binary as a Tool
+     * for the current team. Invoked from the boruna_script panel banner when
+     * the platform reports `ready_to_enable` status.
+     */
+    public function enableBoruna(RegisterBorunaToolAction $action): void
+    {
+        if (! Gate::allows('manage-team', auth()->user()->currentTeam)) {
+            $this->addError('borunaScript', 'You do not have permission to enable Boruna for this team. Ask a team admin or owner.');
+
+            return;
+        }
+
+        try {
+            $result = $action->execute(teamId: (string) auth()->user()->current_team_id);
+
+            session()->flash('boruna_enable_message', $result['message']);
+            $this->dispatch('boruna-enabled');
+        } catch (\RuntimeException $e) {
+            $this->addError('borunaScript', $e->getMessage());
+        }
+    }
+
     public function nextStep(): void
     {
         if ($this->step === 1) {
@@ -160,6 +186,8 @@ class CreateSkillForm extends Component
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
         if (config('browser.enabled', false)) {
             $allowedTypes .= ',browser';
@@ -324,6 +352,9 @@ class CreateSkillForm extends Component
         }
         unset($providerData);
 
+        $borunaPlatform = app(BorunaPlatformService::class);
+        $borunaStatus = $borunaPlatform->statusForTeam((string) auth()->user()->current_team_id);
+
         return view('livewire.skills.create-skill-form', [
             'types' => SkillType::cases(),
             'riskLevels' => RiskLevel::cases(),
@@ -331,6 +362,8 @@ class CreateSkillForm extends Component
             'computeProviders' => config('compute_providers.providers', []),
             'canCreate' => true,
             'browserSkillEnabled' => config('browser.enabled', false),
+            'borunaStatus' => $borunaStatus,
+            'canManageTeam' => Gate::allows('manage-team', $team),
         ])->layout('layouts.app', ['header' => 'Create Skill']);
     }
 }

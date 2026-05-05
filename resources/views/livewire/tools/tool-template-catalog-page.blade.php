@@ -6,7 +6,7 @@
             <p class="mt-1 text-sm text-gray-500">Deploy pre-configured AI tools to GPU compute providers with 1-click.</p>
         </div>
         <a href="{{ route('tools.create') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <i class="fa-solid fa-plus text-base"></i>
             Create Custom Tool
         </a>
     </div>
@@ -14,16 +14,16 @@
     {{-- Provider Status Banner --}}
     <div class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
         <div class="flex items-start gap-3">
-            <svg class="mt-0.5 h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <i class="fa-solid fa-circle-info mt-0.5 text-lg text-blue-600"></i>
             <div class="flex-1">
                 <p class="text-sm font-medium text-blue-900">Compute Providers</p>
                 <div class="mt-2 flex flex-wrap gap-3">
                     @foreach($providerStatus as $slug => $info)
                         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $info['configured'] ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
                             @if($info['configured'])
-                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <i class="fa-solid fa-check text-xs"></i>
                             @else
-                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                <i class="fa-solid fa-xmark text-xs"></i>
                             @endif
                             {{ $info['label'] }}
                         </span>
@@ -81,7 +81,7 @@
 
                     <div class="mb-4 flex flex-wrap gap-2">
                         <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <i class="fa-solid fa-microchip text-xs"></i>
                             {{ $template->estimated_gpu ?? 'Any GPU' }}
                         </span>
                         <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
@@ -103,7 +103,7 @@
 
                         <button wire:click="openDeployModal('{{ $template->id }}')"
                             class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            <i class="fa-solid fa-bolt text-sm"></i>
                             Deploy
                         </button>
                     </div>
@@ -119,7 +119,7 @@
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Deploy {{ $selectedTemplate->name }}</h3>
                     <button wire:click="closeDeployModal" class="text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
 
@@ -164,7 +164,7 @@
                         Cancel
                     </button>
                     <button wire:click="deploy" class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <i class="fa-solid fa-bolt text-base"></i>
                         Deploy Tool
                     </button>
                 </div>

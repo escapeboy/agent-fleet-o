@@ -6,19 +6,22 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Domain\Tool\Models\ToolFederationGroup;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class ToolFederationStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_federation_status';
 
     protected string $description = 'Show the tool federation configuration for a specific agent — whether federation is enabled, the active group, and the pool size.';
@@ -36,7 +39,7 @@ class ToolFederationStatusTool extends Tool
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $agent = Agent::withoutGlobalScopes()
@@ -44,7 +47,7 @@ class ToolFederationStatusTool extends Tool
             ->find($request->get('agent_id'));
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $enabled = (bool) ($agent->config['use_tool_federation'] ?? false);

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Assistant;
 use App\Domain\Assistant\Actions\ReviewAssistantConversationAction;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AssistantReviewConversationTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_review_conversation';
 
     protected string $description = 'Review the quality of an assistant conversation. Evaluates question quality, goal alignment, ambiguity resolution, and sycophancy detection. Returns a scored rubric.';
@@ -33,7 +36,7 @@ class AssistantReviewConversationTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $conversation = AssistantConversation::withoutGlobalScopes()
@@ -42,7 +45,7 @@ class AssistantReviewConversationTool extends Tool
             ->first();
 
         if (! $conversation) {
-            return Response::error('Conversation not found.');
+            return $this->notFoundError('conversation');
         }
 
         $action = app(ReviewAssistantConversationAction::class);

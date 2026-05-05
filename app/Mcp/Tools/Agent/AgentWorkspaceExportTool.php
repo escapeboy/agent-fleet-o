@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Actions\ExportAgentWorkspaceAction;
 use App\Domain\Agent\Models\Agent;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class AgentWorkspaceExportTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_workspace_export';
 
     protected string $description = 'Export an agent\'s full workspace (identity, tools, memories, soul.md) as a zip or yaml file. Returns the file path for download.';
@@ -45,12 +48,12 @@ class AgentWorkspaceExportTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['agent_id']);
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         try {
@@ -69,7 +72,7 @@ class AgentWorkspaceExportTool extends Tool
                 'file_name' => basename($path),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

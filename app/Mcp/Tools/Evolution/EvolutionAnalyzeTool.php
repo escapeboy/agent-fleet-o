@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Evolution\Actions\AnalyzeExecutionForEvolutionAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class EvolutionAnalyzeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'evolution_analyze';
 
     protected string $description = 'Analyze an agent\'s performance and generate an evolution proposal with suggested improvements.';
@@ -33,7 +36,7 @@ class EvolutionAnalyzeTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('agent_id'));
         /** @var AgentExecution|null $latestExecution */

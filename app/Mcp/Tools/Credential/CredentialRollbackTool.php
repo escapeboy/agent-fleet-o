@@ -5,12 +5,13 @@ namespace App\Mcp\Tools\Credential;
 use App\Domain\Credential\Actions\RollbackCredentialVersionAction;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Credential\Models\CredentialVersion;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 /**
  * Rollback a credential to a previous version's secret_data.
@@ -22,6 +23,8 @@ use App\Mcp\Attributes\AssistantTool;
 #[AssistantTool('write')]
 class CredentialRollbackTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_rollback';
 
     protected string $description = 'Rollback a credential to a previous version. The current secret is snapshotted first, so history is preserved. Use credential_list_versions to find the version_id.';
@@ -47,7 +50,7 @@ class CredentialRollbackTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $credential = Credential::withoutGlobalScopes()
@@ -55,7 +58,7 @@ class CredentialRollbackTool extends Tool
             ->find($validated['credential_id']);
 
         if (! $credential) {
-            return Response::error('Credential not found.');
+            return $this->notFoundError('credential');
         }
 
         $version = CredentialVersion::withoutGlobalScopes()
@@ -63,7 +66,7 @@ class CredentialRollbackTool extends Tool
             ->find($validated['version_id']);
 
         if (! $version) {
-            return Response::error('Version not found or does not belong to this credential.');
+            return $this->notFoundError('version');
         }
 
         try {
@@ -80,7 +83,7 @@ class CredentialRollbackTool extends Tool
                 'last_rotated_at' => $credential->last_rotated_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

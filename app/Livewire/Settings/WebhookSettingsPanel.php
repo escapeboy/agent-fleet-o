@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Domain\Webhook\Models\WebhookEndpoint;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -60,6 +61,8 @@ class WebhookSettingsPanel extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate();
 
         /** @var User $user */
@@ -95,6 +98,8 @@ class WebhookSettingsPanel extends Component
 
     public function toggleActive(string $id): void
     {
+        Gate::authorize('manage-team');
+
         $endpoint = WebhookEndpoint::find($id);
         if ($endpoint) {
             $endpoint->update(['is_active' => ! $endpoint->is_active]);
@@ -103,6 +108,8 @@ class WebhookSettingsPanel extends Component
 
     public function delete(string $id): void
     {
+        Gate::authorize('manage-team');
+
         WebhookEndpoint::find($id)?->delete();
     }
 

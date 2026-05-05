@@ -35,6 +35,8 @@ class ChatbotKnowledgeBasePage extends Component
 
     public string $sourceBranch = 'main';
 
+    public int $maxPages = 30;
+
     // Chunk browser
     public ?string $viewingSourceId = null;
 
@@ -58,10 +60,11 @@ class ChatbotKnowledgeBasePage extends Component
     {
         $this->validate([
             'sourceName' => 'required|string|max:255',
-            'sourceType' => 'required|in:url,sitemap,document,git_repository',
-            'sourceUrl' => 'required_if:sourceType,url,sitemap,git_repository|nullable|url|max:2048',
+            'sourceType' => 'required|in:url,sitemap,document,git_repository,website',
+            'sourceUrl' => 'required_if:sourceType,url,sitemap,git_repository,website|nullable|url|max:2048',
             'sourceFile' => 'required_if:sourceType,document|nullable|file|max:10240|mimes:txt,md,pdf',
             'sourceBranch' => 'nullable|string|max:255',
+            'maxPages' => 'nullable|integer|min:1|max:100',
         ]);
 
         $data = [
@@ -80,13 +83,16 @@ class ChatbotKnowledgeBasePage extends Component
         } elseif ($this->sourceType === 'git_repository') {
             $data['source_url'] = $this->sourceUrl;
             $data['source_data'] = ['branch' => $this->sourceBranch ?: 'main'];
+        } elseif ($this->sourceType === 'website') {
+            $data['source_url'] = $this->sourceUrl;
+            $data['source_data'] = ['max_pages' => $this->maxPages];
         } else {
             $data['source_url'] = $this->sourceUrl;
         }
 
         app(CreateKnowledgeSourceAction::class)->execute($this->chatbot, $data);
 
-        $this->reset(['showAddForm', 'sourceName', 'sourceType', 'sourceUrl', 'sourceFile', 'sourceBranch']);
+        $this->reset(['showAddForm', 'sourceName', 'sourceType', 'sourceUrl', 'sourceFile', 'sourceBranch', 'maxPages']);
         session()->flash('message', 'Knowledge source added and queued for indexing.');
     }
 

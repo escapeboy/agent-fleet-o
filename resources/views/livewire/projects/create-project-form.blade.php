@@ -159,7 +159,7 @@
 
                             <button wire:click="removeDependency({{ $index }})" type="button"
                                 class="mt-6 rounded p-1 text-red-500 hover:bg-red-50">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <i class="fa-solid fa-xmark text-base"></i>
                             </button>
                         </div>
                     @endforeach
@@ -277,7 +277,7 @@
                         </select>
                         <button wire:click="removeMilestone({{ $index }})" type="button"
                             class="rounded p-1 text-red-500 hover:bg-red-50">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <i class="fa-solid fa-xmark text-base"></i>
                         </button>
                     </div>
                 @endforeach

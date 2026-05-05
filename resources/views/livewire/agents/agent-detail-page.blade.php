@@ -9,9 +9,7 @@
     {{-- Tool loop warning badge: shown when recent executions average >= warning threshold --}}
     @if($avgSteps >= config('agent.tool_loop.warning_threshold', 8))
         <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-            <svg class="h-5 w-5 shrink-0 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
+            <i class="fa-solid fa-triangle-exclamation text-lg shrink-0 text-yellow-600"></i>
             <div class="flex-1">
                 <p class="text-sm font-medium text-yellow-800">Tool Loop Warning</p>
                 <p class="text-xs text-yellow-700">
@@ -65,6 +63,13 @@
                         hint="Leave empty for unlimited" />
                 </div>
 
+                @if(\Illuminate\Support\Facades\Schema::hasColumn('agents', 'max_credits_per_call'))
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-form-input wire:model.number="editMaxCreditsPerCall" label="Max credits per call (override)" type="number" min="1"
+                        hint="Per-agent cap, overrides the team default for a single LLM call. Leave empty to inherit." />
+                </div>
+                @endif
+
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <x-form-select wire:model="editExecutionTier" label="Execution Tier">
                         @foreach(\App\Domain\Agent\Enums\ExecutionTier::cases() as $tier)
@@ -78,6 +83,34 @@
                             <option value="{{ $key }}">{{ $profile['label'] }} — {{ $profile['description'] }}</option>
                         @endforeach
                     </x-form-select>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <x-form-select wire:model="editReasoningEffort" label="Reasoning Effort" hint="Extended thinking budget for the model. Anthropic Claude only; ignored on OpenAI and Google.">
+                        @foreach(\App\Infrastructure\AI\Enums\ReasoningEffort::cases() as $effort)
+                            <option value="{{ $effort->value }}">{{ $effort->label() }}</option>
+                        @endforeach
+                    </x-form-select>
+
+                    <x-form-select wire:model="editEnvironment" label="Environment" hint="Preset that auto-attaches a tool bundle">
+                        <option value="">No preset</option>
+                        @foreach(\App\Domain\Agent\Enums\AgentEnvironment::cases() as $env)
+                            <option value="{{ $env->value }}">{{ $env->label() }}</option>
+                        @endforeach
+                    </x-form-select>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <input type="checkbox" wire:model.live="editUseToolSearch" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                        Enable Tool Search
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">Auto-discover relevant tools from the team pool by matching the user prompt against tool descriptions.</p>
+                    @if($editUseToolSearch)
+                        <div class="mt-3">
+                            <x-form-input wire:model="editToolSearchTopK" label="Top K" type="number" min="1" max="20" hint="Maximum tools surfaced per agent invocation (1–20)." />
+                        </div>
+                    @endif
                 </div>
 
                 @if(!empty($providers[$editProvider]['local']))
@@ -108,7 +141,7 @@
                             </select>
                             <button wire:click="removeFallback({{ $index }})" type="button"
                                 class="rounded p-1 text-red-500 hover:bg-red-50">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <i class="fa-solid fa-xmark text-base"></i>
                             </button>
                         </div>
                     @endforeach
@@ -155,7 +188,7 @@
                                         <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                             :class="isSelected(skill.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                             <template x-if="isSelected(skill.id)">
-                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                                <i class="fa-solid fa-check text-xs"></i>
                                             </template>
                                         </div>
                                         <div>
@@ -191,6 +224,24 @@
                             </x-form-select>
                         </div>
                     @endif
+                </div>
+
+                {{-- Memory & Scout Phase --}}
+                <div class="rounded-lg border border-gray-200 p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Use Memory</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Inject relevant memories from the team memory store into each execution</p>
+                        </div>
+                        <x-form-checkbox name="editUseMemory" wire:model.live="editUseMemory" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">Enable Scout Phase</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Run a cheap pre-execution LLM call to generate targeted memory retrieval queries before the main execution</p>
+                        </div>
+                        <x-form-checkbox name="editEnableScoutPhase" wire:model.live="editEnableScoutPhase" />
+                    </div>
                 </div>
 
                 {{-- Tool Assignment --}}
@@ -230,7 +281,7 @@
                                         <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
                                             :class="isSelected(tool.id) ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-300'">
                                             <template x-if="isSelected(tool.id)">
-                                                <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                                <i class="fa-solid fa-check text-xs"></i>
                                             </template>
                                         </div>
                                         <div>
@@ -299,7 +350,7 @@
                                     {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-300 bg-primary-50 text-primary-800' : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40' }}">
                                 <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded border {{ in_array($repo->id, $editGitRepositoryIds) ? 'border-primary-500 bg-primary-500' : 'border-gray-300' }}">
                                     @if(in_array($repo->id, $editGitRepositoryIds))
-                                        <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                        <i class="fa-solid fa-check text-xs text-white"></i>
                                     @endif
                                 </span>
                                 <span class="min-w-0 truncate">{{ $repo->name }}</span>
@@ -348,10 +399,11 @@
                     <p class="mt-0.5 text-sm text-gray-500">{{ $agent->goal }}</p>
                 @endif
                 <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600"
-                        title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}">
-                        {{ $resolvedProvider['provider'] }}/{{ $resolvedProvider['model'] }}
-                    </span>
+                    <x-agent-vendor-badge
+                        :provider="$resolvedProvider['provider']"
+                        :model="$resolvedProvider['model']"
+                        title="Resolved from: {{ match($resolvedProvider['source']) { 'agent' => 'Agent configuration', 'team' => 'Team default', 'platform' => 'Platform settings', 'config' => 'System default', default => $resolvedProvider['source'] } }}"
+                    />
                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ match($resolvedProvider['source']) {
                         'agent' => 'bg-blue-50 text-blue-700',
                         'team' => 'bg-purple-50 text-purple-700',
@@ -369,9 +421,7 @@
                     </span>
                     @foreach($agent->config['fallback_chain'] ?? [] as $fb)
                         <span class="text-xs text-gray-400">&rarr;</span>
-                        <span class="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-500">
-                            {{ $fb['provider'] }}/{{ $fb['model'] }}
-                        </span>
+                        <x-agent-vendor-badge :provider="$fb['provider']" :model="$fb['model']" />
                     @endforeach
                 </div>
             </div>
@@ -403,7 +453,7 @@
                     </div>
                 </div>
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    <i class="fa-solid fa-pen text-base"></i>
                 </button>
                 <button wire:click="toggleStatus"
                     class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
@@ -439,10 +489,20 @@
             </div>
         </div>
 
+        {{-- Fix-with-assistant card (renders when circuit breaker is open or agent is disabled) --}}
+        <div class="mb-4">
+            <x-fix-with-assistant entity-type="agent" :entity-id="$agent->id" />
+        </div>
+
+        {{-- SLA Panel — last 7 days success / latency / cost / health score --}}
+        <div class="mb-4">
+            <livewire:agents.agent-sla-panel :agent="$agent" :key="'sla-'.$agent->id" />
+        </div>
+
         {{-- Tabs --}}
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'identity' => 'System Prompt', 'memory' => 'Memory', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat'] as $tab => $label)
+                @foreach(['overview' => 'Overview', 'identity' => 'System Prompt', 'memory' => 'Memory', 'knowledge' => 'Knowledge', 'skills' => 'Skills', 'tools' => 'Tools', 'hooks' => 'Hooks', 'executions' => 'Executions', 'history' => 'Config History', 'risk' => 'Risk Profile', 'evolution' => 'Evolution', 'heartbeat' => 'Heartbeat', 'chat_protocol' => 'Chat Protocol'] as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -477,6 +537,111 @@
                         @else
                             <p class="text-xs italic text-gray-400">None defined</p>
                         @endif
+                    </div>
+                </div>
+
+                {{-- Execution settings summary (read-only, edit via startEdit) --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-700">Execution Settings</h3>
+                    <dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Reasoning Effort</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @php $effortEnum = \App\Infrastructure\AI\Enums\ReasoningEffort::tryFrom($agent->config['reasoning_effort'] ?? ''); @endphp
+                                @if($effortEnum)
+                                    <span class="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">{{ $effortEnum->label() }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not set</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Environment</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if($agent->environment)
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{{ $agent->environment->label() }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not set</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Tool Search</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if($agent->config['use_tool_search'] ?? false)
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                                        Enabled · top {{ $agent->config['tool_search_top_k'] ?? 5 }}
+                                    </span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not set</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-gray-500">Thinking Budget</dt>
+                            <dd class="mt-0.5 text-gray-900">
+                                @if(!empty($agent->config['thinking_budget']))
+                                    <span class="font-mono text-xs">{{ number_format($agent->config['thinking_budget']) }} tokens</span>
+                                @else
+                                    <span class="text-xs text-gray-400">Not set</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                {{-- Output schema (Sprint 16) --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3 flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Output Schema</h3>
+                            <p class="mt-0.5 text-xs text-gray-500">
+                                Optional JSON Schema the agent's final reply must match. Runtime validates + auto-retries
+                                on failure (up to max_retries). Leave empty to skip validation entirely.
+                            </p>
+                        </div>
+                    </div>
+
+                    @if($outputSchemaSaveMessage)
+                        <div class="mb-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                            {{ $outputSchemaSaveMessage }}
+                        </div>
+                    @endif
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">JSON Schema</label>
+                            <textarea wire:model.defer="editOutputSchemaJson"
+                                      rows="10"
+                                      spellcheck="false"
+                                      placeholder='{"type":"object","properties":{"summary":{"type":"string","required":true}}}'
+                                      class="mt-1 block w-full rounded-md border-gray-300 font-mono text-xs focus:border-primary-500 focus:ring-primary-500"></textarea>
+                            @error('editOutputSchemaJson')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Max retries on validation failure</label>
+                                <input wire:model.defer="editOutputSchemaMaxRetries"
+                                       type="number" min="0" max="5"
+                                       placeholder="Default: 2"
+                                       class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                @error('editOutputSchemaMaxRetries')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button wire:click="saveOutputSchema"
+                                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
+                                Save schema
+                            </button>
+                            @if(!empty($agent->output_schema))
+                                <button wire:click="clearOutputSchema"
+                                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    Clear
+                                </button>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -712,6 +877,29 @@
             </div>
 
         @elseif($activeTab === 'tools')
+            @if($recentToolSearches->isNotEmpty())
+                <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-indigo-900">Recent tool search events</h3>
+                        <a href="{{ route('tools.search-history') }}?agentFilter={{ $agent->id }}"
+                            class="text-xs text-indigo-700 hover:underline">View all →</a>
+                    </div>
+                    <ul class="space-y-1.5 text-xs text-indigo-800">
+                        @foreach($recentToolSearches as $evt)
+                            <li class="flex items-start gap-2">
+                                <span class="text-indigo-500">{{ $evt->created_at->diffForHumans() }}</span>
+                                <span class="font-mono flex-1 truncate" title="{{ $evt->query }}">{{ \Illuminate\Support\Str::limit($evt->query, 80) }}</span>
+                                <span class="text-indigo-700 whitespace-nowrap">
+                                    {{ $evt->matched_count }}/{{ $evt->pool_size }} matched
+                                    @if(!empty($evt->matched_slugs))
+                                        → {{ implode(', ', array_slice($evt->matched_slugs, 0, 3)) }}{{ count($evt->matched_slugs) > 3 ? '…' : '' }}
+                                    @endif
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -826,7 +1014,7 @@
                         </div>
                         <x-form-textarea wire:model="hookConfigJson" label="Config (JSON)" mono="true" hint="Hook-specific configuration" />
                         <div class="flex justify-end gap-2">
-                            <button wire:click="$call('resetHookForm')" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                            <button wire:click="resetHookForm" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
                             <button wire:click="saveHook" class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">Save</button>
                         </div>
                     </div>
@@ -863,16 +1051,16 @@
                                             <div class="flex items-center justify-end gap-1">
                                                 <button wire:click="toggleHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-gray-600" title="{{ $hook->enabled ? 'Disable' : 'Enable' }}">
                                                     @if($hook->enabled)
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-green-500"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                                        <i class="fa-solid fa-circle-check text-base text-green-500"></i>
                                                     @else
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                                        <i class="fa-solid fa-ban text-base"></i>
                                                     @endif
                                                 </button>
                                                 <button wire:click="editHook('{{ $hook->id }}')" class="rounded p-1 text-gray-400 hover:text-blue-600">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                                    <i class="fa-solid fa-pen text-base"></i>
                                                 </button>
                                                 <button wire:click="deleteHook('{{ $hook->id }}')" wire:confirm="Delete this hook?" class="rounded p-1 text-gray-400 hover:text-red-600">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                                    <i class="fa-solid fa-trash text-base"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -926,9 +1114,7 @@
                                                 class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === 1 ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50' }}"
                                                 title="Good output"
                                             >
-                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === 1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                                </svg>
+                                                <i class="{{ $existingFeedback && $existingFeedback->score === 1 ? 'fa-solid' : 'fa-regular' }} fa-thumbs-up text-base"></i>
                                             </button>
                                             {{-- Thumbs down (opens comment box) --}}
                                             <button
@@ -936,9 +1122,7 @@
                                                 class="rounded p-1 transition-colors {{ $existingFeedback && $existingFeedback->score === -1 ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-red-600 hover:bg-red-50' }}"
                                                 title="Bad output — add correction"
                                             >
-                                                <svg class="h-4 w-4" fill="{{ $existingFeedback && $existingFeedback->score === -1 ? 'currentColor' : 'none' }}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                                                </svg>
+                                                <i class="{{ $existingFeedback && $existingFeedback->score === -1 ? 'fa-solid' : 'fa-regular' }} fa-thumbs-down text-base"></i>
                                             </button>
                                         </div>
                                         {{-- Inline correction form --}}
@@ -1112,9 +1296,7 @@
                                     ];
                                 @endphp
                                 <li class="flex items-center gap-2 text-sm text-red-700">
-                                    <svg class="h-4 w-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
+                                    <i class="fa-solid fa-triangle-exclamation text-base flex-shrink-0 text-red-500"></i>
                                     {{ $factorLabels[$factor] ?? ucwords(str_replace('_', ' ', $factor)) }}
                                 </li>
                             @endforeach
@@ -1251,6 +1433,88 @@
                             <p class="mt-1 text-xs text-gray-400">Use the MCP tool <code class="font-mono">agent_heartbeat_update</code> to set a schedule.</p>
                         </div>
                     @endif
+                </div>
+            </div>
+
+        @elseif($activeTab === 'chat_protocol')
+            <div class="space-y-6">
+                <div class="rounded-lg bg-white p-6 shadow">
+                    <h3 class="text-lg font-semibold text-gray-900">Agent Chat Protocol</h3>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Expose this agent to external callers via the <span class="font-mono">ASI1 Agent Chat Protocol</span>. Other FleetQ instances, Agentverse agents, and any client speaking the same protocol can reach this agent as a conversational peer.
+                    </p>
+
+                    @if (session('chat_protocol_new_secret'))
+                        <div class="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+                            <p class="text-sm font-medium text-yellow-900">New secret generated — copy it now; it is only shown once.</p>
+                            <pre class="mt-2 overflow-x-auto rounded bg-white p-2 font-mono text-xs text-gray-800">{{ session('chat_protocol_new_secret') }}</pre>
+                        </div>
+                    @endif
+
+                    <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Status</p>
+                            <p class="mt-1 text-sm">
+                                @if ($agent->chat_protocol_enabled)
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Enabled</span>
+                                    <span class="ml-2 text-xs font-mono text-gray-500">
+                                        {{ is_object($agent->chat_protocol_visibility) ? $agent->chat_protocol_visibility->value : $agent->chat_protocol_visibility }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">Disabled</span>
+                                @endif
+                            </p>
+                        </div>
+
+                        @if ($agent->chat_protocol_enabled && $agent->chat_protocol_slug)
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Slug</p>
+                                <p class="mt-1 font-mono text-xs text-gray-600">{{ $agent->chat_protocol_slug }}</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    @if ($agent->chat_protocol_enabled
+                        && (($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility) === 'marketplace'
+                            || ($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility) === 'public'))
+                        <div class="mt-4">
+                            <p class="text-sm font-medium text-gray-700">Public manifest URL</p>
+                            <pre class="mt-1 overflow-x-auto rounded bg-gray-50 p-2 font-mono text-xs text-gray-700">{{ url('/.well-known/agents/' . $agent->chat_protocol_slug) }}</pre>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="rounded-lg bg-white p-6 shadow">
+                    <h4 class="text-sm font-semibold text-gray-900">Publish visibility</h4>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <strong>Private:</strong> Sanctum-authenticated callers within this team only.<br>
+                        <strong>Team:</strong> Same as private for MVP; reserved for future cross-team controls.<br>
+                        <strong>Marketplace / Public:</strong> Discoverable via <code class="font-mono">/.well-known/agents</code>. Requires HMAC-signed JWT for inbound calls.
+                    </p>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @foreach (['private', 'team', 'marketplace', 'public'] as $vis)
+                            <button wire:click="publishChatProtocol('{{ $vis }}')"
+                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                Publish as {{ $vis }}
+                            </button>
+                        @endforeach
+
+                        @if ($agent->chat_protocol_enabled)
+                            <button wire:click="revokeChatProtocol" wire:confirm="Disable the chat protocol? Active inbound calls will start returning 404."
+                                    class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100">
+                                Disable
+                            </button>
+                        @endif
+
+                        @if ($agent->chat_protocol_enabled
+                            && in_array(($agent->chat_protocol_visibility->value ?? $agent->chat_protocol_visibility), ['marketplace', 'public']))
+                            <button wire:click="rotateChatProtocolSecret"
+                                    class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 hover:bg-yellow-100">
+                                Rotate secret
+                            </button>
+                        @endif
+                    </div>
                 </div>
             </div>
         @endif

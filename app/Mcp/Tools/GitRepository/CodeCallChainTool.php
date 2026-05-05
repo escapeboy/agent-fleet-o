@@ -6,6 +6,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\CodeGraphTraversal;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -22,6 +23,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsIdempotent]
 class CodeCallChainTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'code_call_chain';
 
     protected string $description = 'Traverse the call/import/inheritance graph from a code element to find related code.';
@@ -52,7 +55,7 @@ class CodeCallChainTool extends Tool
         $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {
-            return Response::error('Repository not found.');
+            return $this->notFoundError('repository');
         }
 
         $hops = (int) ($request->get('hops') ?? 2);

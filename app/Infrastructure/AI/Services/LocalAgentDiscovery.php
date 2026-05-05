@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Bridge\Models\BridgeConnection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
@@ -169,8 +170,8 @@ class LocalAgentDiscovery
     public function vpsBinaryPath(): ?string
     {
         $configured = config('local_agents.vps.binary_path');
-        if (is_string($configured) && $configured !== '' && is_executable($configured)) {
-            return $configured;
+        if (is_string($configured) && $configured !== '') {
+            return is_executable($configured) ? $configured : null;
         }
 
         try {
@@ -264,15 +265,25 @@ class LocalAgentDiscovery
             }
         }
 
+        $cacheKey = 'local_agents.bridge_health';
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            return (bool) $cached;
+        }
+
         try {
             $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
                 ->get($this->bridgeUrl().'/health');
 
-            return $response->successful() && ($response->json('status') === 'ok');
+            $healthy = $response->successful() && ($response->json('status') === 'ok');
+            Cache::put($cacheKey, $healthy, 15);
+
+            return $healthy;
         } catch (\Throwable $e) {
             Log::debug('LocalAgentDiscovery: bridge health check failed', [
                 'error' => $e->getMessage(),
             ]);
+            Cache::put($cacheKey, false, 15);
 
             return false;
         }
@@ -380,24 +391,37 @@ class LocalAgentDiscovery
             return $this->bridgeCache;
         }
 
+        $cacheKey = 'local_agents.bridge_discover';
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            $this->bridgeCache = $cached;
+
+            return $cached;
+        }
+
         try {
             $response = Http::timeout(config('local_agents.bridge.connect_timeout', 5))
                 ->withToken($this->bridgeSecret())
                 ->get($this->bridgeUrl().'/discover');
 
             if ($response->successful()) {
-                $this->bridgeCache = $response->json('agents') ?? [];
+                $agents = $response->json('agents') ?? [];
+                Cache::put($cacheKey, $agents, 30);
+                $this->bridgeCache = $agents;
 
-                return $this->bridgeCache;
+                return $agents;
             }
 
             Log::warning('LocalAgentDiscovery: bridge discover failed', [
                 'status' => $response->status(),
             ]);
+            // Invalidate health cache so the next bridgeHealth() call re-checks
+            Cache::forget('local_agents.bridge_health');
         } catch (\Throwable $e) {
             Log::debug('LocalAgentDiscovery: bridge connection failed', [
                 'error' => $e->getMessage(),
             ]);
+            Cache::forget('local_agents.bridge_health');
         }
 
         $this->bridgeCache = [];

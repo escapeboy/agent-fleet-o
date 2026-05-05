@@ -7,6 +7,7 @@ use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_create';
 
     protected string $description = 'Create a new AI agent. Specify name, role, goal, backstory, and optionally provider/model.';
@@ -44,6 +47,16 @@ class AgentCreateTool extends Tool
                 ->enum(['public', 'internal', 'confidential', 'restricted']),
             'tool_profile' => $schema->string()
                 ->description('Tool profile restricting tool access. Options: researcher, executor, communicator, analyst, admin, minimal'),
+            'environment' => $schema->string()
+                ->description('Environment preset that auto-attaches a tool bundle. Options: minimal, coding, browsing, restricted.')
+                ->enum(['minimal', 'coding', 'browsing', 'restricted']),
+            'reasoning_effort' => $schema->string()
+                ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. "auto" lets the platform pick by task complexity.')
+                ->enum(['none', 'low', 'medium', 'high', 'auto']),
+            'use_tool_search' => $schema->boolean()
+                ->description('Enable semantic tool auto-discovery — at run time, up to tool_search_top_k matching tools from the team pool are auto-attached based on the user prompt.'),
+            'tool_search_top_k' => $schema->integer()
+                ->description('Maximum tools tool_search will surface per run (1–20, default 5). Only applies when use_tool_search=true.'),
             'sandbox_profile' => $schema->string()
                 ->description('JSON string defining Docker sandbox profile for per-execution process isolation (enterprise only). Example: {"image":"python:3.12-alpine","memory":"512m","cpus":"1.0","network":"none","timeout":300}'),
             'knowledge_base_id' => $schema->string()
@@ -69,6 +82,10 @@ class AgentCreateTool extends Tool
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
             'tool_profile' => 'nullable|string',
+            'environment' => 'nullable|string|in:minimal,coding,browsing,restricted',
+            'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
+            'use_tool_search' => 'nullable|boolean',
+            'tool_search_top_k' => 'nullable|integer|min:1|max:20',
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'sandbox_profile' => 'nullable|string',
             'knowledge_base_id' => 'nullable|uuid',
@@ -78,7 +95,7 @@ class AgentCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         // IDOR guard: verify knowledge_base_id belongs to the team
@@ -88,7 +105,7 @@ class AgentCreateTool extends Tool
                 ->where('team_id', $teamId)
                 ->exists();
             if (! $kbExists) {
-                return Response::error('Knowledge base not found or does not belong to this team.');
+                return $this->notFoundError('knowledge base');
             }
         }
 
@@ -97,7 +114,7 @@ class AgentCreateTool extends Tool
         if (! empty($validated['sandbox_profile'])) {
             $sandboxProfile = json_decode($validated['sandbox_profile'], true);
             if (! is_array($sandboxProfile)) {
-                return Response::error('sandbox_profile must be a valid JSON object.');
+                return $this->invalidArgumentError('sandbox_profile must be a valid JSON object.');
             }
         }
 
@@ -119,6 +136,23 @@ class AgentCreateTool extends Tool
 
             if (! empty($validated['tool_profile'])) {
                 $agent->update(['tool_profile' => $validated['tool_profile']]);
+            }
+
+            if (! empty($validated['environment'])) {
+                $agent->update(['environment' => $validated['environment']]);
+            }
+
+            if (! empty($validated['reasoning_effort']) && $validated['reasoning_effort'] !== 'none') {
+                $config = $agent->config ?? [];
+                $config['reasoning_effort'] = $validated['reasoning_effort'];
+                $agent->update(['config' => $config]);
+            }
+
+            if (! empty($validated['use_tool_search'])) {
+                $config = $agent->fresh()->config ?? [];
+                $config['use_tool_search'] = true;
+                $config['tool_search_top_k'] = max(1, min(20, (int) ($validated['tool_search_top_k'] ?? 5)));
+                $agent->update(['config' => $config]);
             }
 
             if ($sandboxProfile !== null) {
@@ -143,7 +177,7 @@ class AgentCreateTool extends Tool
                 'status' => $agent->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

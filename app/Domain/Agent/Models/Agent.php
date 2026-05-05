@@ -2,16 +2,20 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Enums\DataClassification;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Models\Toolset;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Models\User;
@@ -42,6 +46,7 @@ use Illuminate\Support\Carbon;
  * @property array|null $constraints
  * @property int|null $budget_cap_credits
  * @property int $budget_spent_credits
+ * @property int|null $max_credits_per_call
  * @property int $cost_per_1k_input
  * @property int $cost_per_1k_output
  * @property Carbon|null $last_health_check
@@ -67,12 +72,15 @@ class Agent extends Model
         'personality',
         'provider',
         'model',
+        'output_schema',
+        'output_schema_max_retries',
         'status',
         'config',
         'capabilities',
         'constraints',
         'budget_cap_credits',
         'budget_spent_credits',
+        'max_credits_per_call',
         'evaluation_enabled',
         'evaluation_sample_rate',
         'evaluation_model',
@@ -89,26 +97,39 @@ class Agent extends Model
         'data_classification',
         'sandbox_profile',
         'tool_profile',
+        'environment',
         'system_prompt_template',
         'reasoning_strategy',
         'scope',
         'owner_user_id',
+        'chat_protocol_enabled',
+        'chat_protocol_visibility',
+        'chat_protocol_slug',
+        'chat_protocol_config',
+        'chat_protocol_secret',
+        'tool_deny_list',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => AgentStatus::class,
+            'chat_protocol_enabled' => 'boolean',
+            'chat_protocol_visibility' => AgentChatVisibility::class,
+            'chat_protocol_config' => 'array',
             'reasoning_strategy' => AgentReasoningStrategy::class,
             'meta' => 'array',
             'personality' => 'array',
             'config' => 'array',
             'capabilities' => 'array',
             'constraints' => 'array',
+            'output_schema' => 'array',
+            'output_schema_max_retries' => 'integer',
             'cost_per_1k_input' => 'integer',
             'cost_per_1k_output' => 'integer',
             'budget_cap_credits' => 'integer',
             'budget_spent_credits' => 'integer',
+            'max_credits_per_call' => 'integer',
             'evaluation_enabled' => 'boolean',
             'evaluation_sample_rate' => 'float',
             'evaluation_criteria' => 'array',
@@ -121,6 +142,8 @@ class Agent extends Model
             'sandbox_profile' => 'array',
             'system_prompt_template' => 'array',
             'scope' => AgentScope::class,
+            'environment' => AgentEnvironment::class,
+            'tool_deny_list' => 'array',
         ];
     }
 
@@ -166,6 +189,13 @@ class Agent extends Model
             ->withPivot('priority', 'overrides', 'approval_mode', 'approval_timeout_minutes', 'approval_timeout_action')
             ->withTimestamps()
             ->orderByPivot('priority');
+    }
+
+    public function toolsets(): BelongsToMany
+    {
+        return $this->belongsToMany(Toolset::class, 'agent_toolset')
+            ->withPivot('priority', 'auto_select')
+            ->withTimestamps();
     }
 
     public function hooks(): HasMany
@@ -251,5 +281,25 @@ class Agent extends Model
         }
 
         return max(0, $this->budget_cap_credits - $this->budget_spent_credits);
+    }
+
+    /**
+     * Resolve the effective max-credits-per-call cap with precedence:
+     * agent.max_credits_per_call → team.effectiveMaxCreditsPerCall() → config.
+     * Returns null when uncapped.
+     */
+    public function effectiveMaxCreditsPerCall(?Team $team = null): ?int
+    {
+        if ($this->max_credits_per_call !== null) {
+            return (int) $this->max_credits_per_call;
+        }
+
+        if ($team !== null) {
+            return $team->effectiveMaxCreditsPerCall();
+        }
+
+        $configMax = config('llm_pricing.max_credits_per_call');
+
+        return $configMax !== null ? (int) $configMax : null;
     }
 }

@@ -15,6 +15,7 @@ class EvaluationRunResult extends Model
     protected $fillable = [
         'run_id',
         'row_id',
+        'case_id',
         'actual_output',
         'score',
         'judge_reasoning',
@@ -40,5 +41,10 @@ class EvaluationRunResult extends Model
     public function row(): BelongsTo
     {
         return $this->belongsTo(EvaluationDatasetRow::class, 'row_id');
+    }
+
+    public function case(): BelongsTo
+    {
+        return $this->belongsTo(EvaluationCase::class, 'case_id');
     }
 }

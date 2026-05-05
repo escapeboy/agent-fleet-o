@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Shared;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CustomEndpointManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'custom_endpoint_manage';
 
     protected string $description = 'Manage custom AI endpoints (OpenAI-compatible proxies, gateways, hosted models). List, add, update, toggle, or remove endpoints. Endpoints use zero-cost tracking — billing is handled by the external service.';
@@ -44,7 +47,7 @@ class CustomEndpointManageTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $action = $request->get('action');
@@ -55,7 +58,7 @@ class CustomEndpointManageTool extends Tool
             'update' => $this->updateEndpoint($teamId, $request),
             'toggle' => $this->toggleEndpoint($teamId, $request),
             'remove' => $this->removeEndpoint($teamId, $request),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 
@@ -86,18 +89,14 @@ class CustomEndpointManageTool extends Tool
         $models = $request->get('models');
 
         if (! $name || ! $baseUrl || ! $models) {
-            return Response::error('name, base_url, and models are required for add action.');
+            return $this->invalidArgumentError('name, base_url, and models are required for add action.');
         }
 
         if (! preg_match('/^[a-z0-9_-]+$/', $name)) {
-            return Response::error('Name must be lowercase letters, numbers, hyphens, and underscores only.');
+            return $this->invalidArgumentError('Name must be lowercase letters, numbers, hyphens, and underscores only.');
         }
 
-        try {
-            app(SsrfGuard::class)->assertPublicUrl($baseUrl);
-        } catch (\InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
-        }
+        app(SsrfGuard::class)->assertPublicUrl($baseUrl);
 
         $modelList = array_filter(array_map('trim', explode(',', $models)));
 
@@ -107,7 +106,7 @@ class CustomEndpointManageTool extends Tool
             ->exists();
 
         if ($existing) {
-            return Response::error("Endpoint '{$name}' already exists. Use 'update' action to modify it.");
+            return $this->failedPreconditionError("Endpoint '{$name}' already exists. Use 'update' action to modify it.");
         }
 
         TeamProviderCredential::create([
@@ -135,7 +134,7 @@ class CustomEndpointManageTool extends Tool
         $name = $request->get('name');
 
         if (! $name) {
-            return Response::error('name is required for update action.');
+            return $this->invalidArgumentError('name is required for update action.');
         }
 
         $endpoint = TeamProviderCredential::where('team_id', $teamId)
@@ -144,17 +143,13 @@ class CustomEndpointManageTool extends Tool
             ->first();
 
         if (! $endpoint) {
-            return Response::error("Endpoint '{$name}' not found.");
+            return $this->notFoundError('endpoint', $name);
         }
 
         $creds = $endpoint->credentials;
 
         if ($request->get('base_url')) {
-            try {
-                app(SsrfGuard::class)->assertPublicUrl($request->get('base_url'));
-            } catch (\InvalidArgumentException $e) {
-                return Response::error($e->getMessage());
-            }
+            app(SsrfGuard::class)->assertPublicUrl($request->get('base_url'));
             $creds['base_url'] = rtrim($request->get('base_url'), '/');
         }
 
@@ -180,7 +175,7 @@ class CustomEndpointManageTool extends Tool
         $name = $request->get('name');
 
         if (! $name) {
-            return Response::error('name is required for toggle action.');
+            return $this->invalidArgumentError('name is required for toggle action.');
         }
 
         $endpoint = TeamProviderCredential::where('team_id', $teamId)
@@ -189,7 +184,7 @@ class CustomEndpointManageTool extends Tool
             ->first();
 
         if (! $endpoint) {
-            return Response::error("Endpoint '{$name}' not found.");
+            return $this->notFoundError('endpoint', $name);
         }
 
         $endpoint->update(['is_active' => ! $endpoint->is_active]);
@@ -209,7 +204,7 @@ class CustomEndpointManageTool extends Tool
         $name = $request->get('name');
 
         if (! $name) {
-            return Response::error('name is required for remove action.');
+            return $this->invalidArgumentError('name is required for remove action.');
         }
 
         $deleted = TeamProviderCredential::where('team_id', $teamId)
@@ -218,7 +213,7 @@ class CustomEndpointManageTool extends Tool
             ->delete();
 
         if (! $deleted) {
-            return Response::error("Endpoint '{$name}' not found.");
+            return $this->notFoundError('endpoint', $name);
         }
 
         return Response::text(json_encode([

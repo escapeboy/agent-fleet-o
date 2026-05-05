@@ -21,12 +21,12 @@ class SignalController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $signals = QueryBuilder::for(Signal::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('source_type'),
                 AllowedFilter::exact('experiment_id'),
                 AllowedFilter::partial('source_identifier'),
-            ])
-            ->allowedSorts(['created_at', 'score', 'received_at'])
+            )
+            ->allowedSorts('created_at', 'score', 'received_at')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

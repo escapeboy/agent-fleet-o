@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewExecutionPauseTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_execution_pause';
 
     protected string $description = 'Pause an active crew execution (planning or executing). In-flight tasks will complete, but no new tasks will be dispatched. Use crew_execution_resume to continue.';
@@ -36,7 +39,7 @@ class CrewExecutionPauseTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $execution = CrewExecution::withoutGlobalScopes()
@@ -44,11 +47,11 @@ class CrewExecutionPauseTool extends Tool
             ->find($validated['execution_id']);
 
         if (! $execution) {
-            return Response::error('Crew execution not found.');
+            return $this->notFoundError('crew execution');
         }
 
         if (! $execution->status->isActive()) {
-            return Response::error("Cannot pause execution in status '{$execution->status->value}'. Only planning/executing executions can be paused.");
+            return $this->failedPreconditionError("Cannot pause execution in status '{$execution->status->value}'. Only planning/executing executions can be paused.");
         }
 
         $execution->update(['status' => CrewExecutionStatus::Paused]);

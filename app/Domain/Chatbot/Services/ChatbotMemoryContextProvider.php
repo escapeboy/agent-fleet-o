@@ -2,11 +2,11 @@
 
 namespace App\Domain\Chatbot\Services;
 
+use App\Domain\Chatbot\Contracts\MemoryContextProviderInterface;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Memory\Actions\ClassifyQueryTopicAction;
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Shared\Models\Team;
-use Barsy\Contracts\MemoryContextProviderInterface;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotMemoryContextProvider implements MemoryContextProviderInterface

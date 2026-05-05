@@ -6,18 +6,21 @@ use App\Domain\Tool\Actions\UpdateToolAction;
 use App\Domain\Tool\Enums\ToolRiskLevel;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]
 class ToolUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_update';
 
     protected string $description = 'Update an existing tool. Only provided fields will be changed.';
@@ -51,7 +54,7 @@ class ToolUpdateTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $validated = $request->validate([
@@ -69,7 +72,7 @@ class ToolUpdateTool extends Tool
         $tool = ToolModel::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['tool_id']);
 
         if (! $tool) {
-            return Response::error('Tool not found.');
+            return $this->notFoundError('tool');
         }
 
         // Parse optional network_policy JSON string
@@ -81,7 +84,7 @@ class ToolUpdateTool extends Tool
             } else {
                 $networkPolicy = json_decode($validated['network_policy'], true);
                 if (! is_array($networkPolicy)) {
-                    return Response::error('network_policy must be a valid JSON object or "null" to clear.');
+                    return $this->invalidArgumentError('network_policy must be a valid JSON object or "null" to clear.');
                 }
             }
         }
@@ -133,7 +136,7 @@ class ToolUpdateTool extends Tool
                 'updated_fields' => array_values(array_unique($updatedFields)),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

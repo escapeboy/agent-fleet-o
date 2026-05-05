@@ -7,6 +7,7 @@ use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -24,6 +25,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewMemberUpdatePolicyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_member_update_policy';
 
     protected string $description = 'Update the permission policy for a specific crew member. '
@@ -77,12 +80,12 @@ class CrewMemberUpdatePolicyTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $crew = Crew::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['crew_id']);
         if (! $crew) {
-            return Response::error('Crew not found.');
+            return $this->notFoundError('crew');
         }
 
         $member = CrewMember::where('crew_id', $crew->id)
@@ -90,7 +93,7 @@ class CrewMemberUpdatePolicyTool extends Tool
             ->first();
 
         if (! $member) {
-            return Response::error(
+            return $this->failedPreconditionError(
                 "Agent {$validated['agent_id']} is not a worker of crew {$validated['crew_id']}.",
             );
         }

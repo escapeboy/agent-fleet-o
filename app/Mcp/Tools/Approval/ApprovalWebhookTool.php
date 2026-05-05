@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Approval;
 
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ApprovalWebhookTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'approval_webhook_config';
 
     protected string $description = 'Configure or inspect webhook callback settings for an approval request. When callback_url is set, a signed POST is fired to that URL after approval/rejection.';
@@ -41,12 +44,12 @@ class ApprovalWebhookTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $approval = ApprovalRequest::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['approval_id']);
 
         if (! $approval) {
-            return Response::error('Approval request not found.');
+            return $this->notFoundError('approval request');
         }
 
         // If no update fields provided, return current config

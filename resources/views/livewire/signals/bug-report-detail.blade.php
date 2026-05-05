@@ -59,17 +59,31 @@
                 <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $payload['description'] ?? '—' }}</p>
             </div>
 
-            {{-- Screenshot --}}
-            @if($screenshotUrl)
+            {{-- Attachments --}}
+            @if($mediaFiles->isNotEmpty())
                 <div class="bg-white rounded-lg border border-gray-200 p-4">
-                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Screenshot</h2>
-                    <a href="{{ $screenshotUrl }}" target="_blank">
-                        <img
-                            src="{{ $screenshotUrl }}"
-                            alt="Bug screenshot"
-                            class="rounded border border-gray-200 max-w-full cursor-zoom-in hover:opacity-90 transition"
-                        />
-                    </a>
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Attachments ({{ $mediaFiles->count() }})</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($mediaFiles as $media)
+                            <a href="{{ $media->getUrl() }}" target="_blank" class="block">
+                                @if(Str::startsWith($media->mime_type, 'image/'))
+                                    <img
+                                        src="{{ $media->getUrl() }}"
+                                        alt="{{ $media->file_name }}"
+                                        class="rounded border border-gray-200 max-w-full cursor-zoom-in hover:opacity-90 transition"
+                                    />
+                                @else
+                                    <div class="flex items-center gap-2 p-3 rounded border border-gray-200 hover:bg-gray-50 transition">
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <span class="text-sm text-gray-700 truncate">{{ $media->file_name }}</span>
+                                        <span class="text-xs text-gray-400">({{ Number::fileSize($media->size) }})</span>
+                                    </div>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             @endif
 
@@ -295,42 +309,154 @@
                     <p class="text-sm text-gray-400 mb-4">No comments yet.</p>
                 @else
                     <div class="space-y-3 mb-4">
+                        @php
+                            $reporterName = $payload['reporter_name'] ?? 'Reporter';
+                            $authorMeta = function ($comment) use ($reporterName) {
+                                return match ($comment->author_type) {
+                                    'agent'    => ['label' => 'Agent',          'avatar' => 'AI', 'class' => 'bg-purple-100 text-purple-700'],
+                                    'reporter' => ['label' => $reporterName,    'avatar' => mb_substr($reporterName, 0, 1), 'class' => 'bg-blue-100 text-blue-700'],
+                                    'support'  => ['label' => $comment->user?->name ?? 'Support', 'avatar' => mb_substr($comment->user?->name ?? 'S', 0, 1), 'class' => 'bg-green-100 text-green-700'],
+                                    default    => ['label' => $comment->user?->name ?? 'Unknown', 'avatar' => mb_substr($comment->user?->name ?? 'U', 0, 1), 'class' => 'bg-gray-200 text-gray-600'],
+                                };
+                            };
+                        @endphp
                         @foreach($signal->comments as $comment)
+                            @php $meta = $authorMeta($comment); @endphp
                             <div class="flex items-start gap-3">
-                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold
-                                    {{ $comment->author_type === 'agent' ? 'bg-purple-100 text-purple-700' : 'bg-gray-200 text-gray-600' }}">
-                                    {{ $comment->author_type === 'agent' ? 'AI' : substr($comment->user?->name ?? 'U', 0, 1) }}
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold {{ $meta['class'] }}">
+                                    {{ $meta['avatar'] }}
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-0.5">
-                                        <span class="text-xs font-medium text-gray-800">
-                                            {{ $comment->author_type === 'agent' ? 'Agent' : ($comment->user?->name ?? 'Unknown') }}
-                                        </span>
+                                        <span class="text-xs font-medium text-gray-800">{{ $meta['label'] }}</span>
+                                        @if(! $comment->widget_visible)
+                                            <span class="text-[10px] uppercase tracking-wide bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">internal</span>
+                                        @endif
                                         <span class="text-xs text-gray-400">{{ $comment->created_at?->diffForHumans() }}</span>
                                     </div>
-                                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                    @if($comment->body !== '')
+                                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                    @endif
+                                    @php $attachments = $comment->getMedia('attachments'); @endphp
+                                    @if($attachments->isNotEmpty())
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach($attachments as $media)
+                                                <a
+                                                    href="{{ $media->getFullUrl() }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="block w-24 h-24 rounded border border-gray-200 overflow-hidden hover:ring-2 hover:ring-primary-300 transition"
+                                                    title="{{ $media->file_name }}"
+                                                >
+                                                    <img
+                                                        src="{{ $media->hasGeneratedConversion('thumb') ? $media->getFullUrl('thumb') : $media->getFullUrl() }}"
+                                                        alt=""
+                                                        loading="lazy"
+                                                        class="w-full h-full object-cover"
+                                                    />
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 @endif
 
-                <div class="flex gap-2 items-start">
-                    <div class="flex-1">
+                <form
+                    wire:submit.prevent="addComment"
+                    class="space-y-2"
+                    x-data="{
+                        handlePaste(event) {
+                            const items = event.clipboardData?.items || [];
+                            const files = [];
+                            for (const it of items) if (it.kind === 'file') { const f = it.getAsFile(); if (f) files.push(f); }
+                            if (files.length) {
+                                event.preventDefault();
+                                $wire.uploadMultiple('commentImages', files, () => {}, () => {}, () => {});
+                            }
+                        }
+                    }"
+                >
+                    <div
+                        x-on:dragover.prevent="$el.classList.add('ring-2','ring-primary-300')"
+                        x-on:dragleave="$el.classList.remove('ring-2','ring-primary-300')"
+                        x-on:drop.prevent="
+                            $el.classList.remove('ring-2','ring-primary-300');
+                            if ($event.dataTransfer.files.length) {
+                                $wire.uploadMultiple('commentImages', Array.from($event.dataTransfer.files), () => {}, () => {}, () => {});
+                            }
+                        "
+                        class="rounded-lg transition-all"
+                    >
                         <x-form-textarea
                             wire:model="commentText"
                             rows="2"
-                            placeholder="Add a comment..."
+                            placeholder="Add a comment or drop/paste an image..."
+                            x-on:paste="handlePaste($event)"
                             :error="$errors->first('commentText')"
                         />
                     </div>
-                    <button
-                        wire:click="addComment"
-                        class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
-                    >
-                        Post
-                    </button>
-                </div>
+
+                    @error('commentImages.*')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('commentImages')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+
+                    @if(count($commentImages) > 0)
+                        <div
+                            class="flex flex-wrap gap-2"
+                            wire:loading.class="opacity-50"
+                            wire:target="commentImages"
+                        >
+                            @foreach($commentImages as $idx => $upload)
+                                @if(is_object($upload) && method_exists($upload, 'temporaryUrl') && method_exists($upload, 'isPreviewable') && $upload->isPreviewable())
+                                    <div class="relative w-16 h-16 rounded border border-gray-200 overflow-hidden group">
+                                        <img src="{{ $upload->temporaryUrl() }}" class="w-full h-full object-cover" alt="">
+                                        <button
+                                            type="button"
+                                            wire:click="removeCommentImage({{ $idx }})"
+                                            class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-gray-900/75 text-white text-xs leading-none flex items-center justify-center"
+                                            title="Remove"
+                                        >&times;</button>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="flex items-center gap-2">
+                        <label
+                            class="cursor-pointer px-2.5 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 select-none"
+                            title="Attach image"
+                        >
+                            <span aria-hidden="true">📎</span>
+                            <input
+                                type="file"
+                                wire:model="commentImages"
+                                multiple
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                class="hidden"
+                            >
+                        </label>
+                        <button
+                            type="submit"
+                            class="px-3 py-2.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700"
+                            wire:loading.attr="disabled"
+                            wire:target="addComment,commentImages"
+                        >
+                            <span wire:loading.remove wire:target="addComment,commentImages">Post</span>
+                            <span wire:loading wire:target="addComment,commentImages">Saving…</span>
+                        </button>
+                        <label class="text-xs text-gray-600 flex items-center gap-2 ml-auto select-none">
+                            <input type="checkbox" wire:model.live="commentVisibleToReporter" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            Visible to reporter (sent to widget). Uncheck to keep as an internal note.
+                        </label>
+                    </div>
+                </form>
             </div>
         </div>
 

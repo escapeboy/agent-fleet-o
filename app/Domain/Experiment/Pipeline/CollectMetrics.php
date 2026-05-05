@@ -118,17 +118,32 @@ class CollectMetrics extends BaseStageJob
             ];
         }
 
+        // Always record a pipeline_completed metric so the stage output is never empty.
+        // This covers tracks like web_build that have no outbound actions or workflow steps.
+        $metrics[] = [
+            'name' => 'pipeline_completed',
+            'type' => 'pipeline',
+            'value' => 1.0,
+            'metadata' => ['iteration' => $experiment->current_iteration],
+        ];
+
         $stage->update([
             'output_snapshot' => [
+                'metrics' => $metrics,
                 'metrics_collected' => count($metrics),
-                'summary' => $metrics,
             ],
         ]);
 
-        $transition->execute(
-            experiment: $experiment,
-            toState: ExperimentStatus::Evaluating,
-            reason: 'Metrics collected',
-        );
+        // Guard against double-transition on verification retry: if the experiment
+        // already moved to Evaluating (e.g. a previous process() attempt succeeded
+        // the transition but failed verification), skip the transition.
+        $experiment->refresh();
+        if ($experiment->status === ExperimentStatus::CollectingMetrics) {
+            $transition->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Evaluating,
+                reason: 'Metrics collected',
+            );
+        }
     }
 }

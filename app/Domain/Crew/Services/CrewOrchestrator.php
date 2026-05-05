@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\BuildAdversarialRoundTasksAction;
 use App\Domain\Crew\Actions\ClaimNextTaskAction;
 use App\Domain\Crew\Actions\CollectCrewArtifactsAction;
+use App\Domain\Crew\Actions\ComputeCrewQualityAction;
 use App\Domain\Crew\Actions\DecomposeGoalAction;
 use App\Domain\Crew\Actions\SendAgentMessageAction;
 use App\Domain\Crew\Actions\SynthesizeResultAction;
@@ -19,13 +20,17 @@ use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
+use App\Domain\Skill\Jobs\ExtractSkillFromTrajectoryJob;
 use App\Domain\Workflow\Services\ConditionEvaluator;
+use App\Mcp\DeadlineContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
 class CrewOrchestrator
 {
+    private \WeakMap $taskCache;
+
     public function __construct(
         private readonly DecomposeGoalAction $decomposeGoal,
         private readonly SynthesizeResultAction $synthesizeResult,
@@ -35,7 +40,9 @@ class CrewOrchestrator
         private readonly CollectCrewArtifactsAction $collectArtifacts,
         private readonly NotificationService $notifications,
         private readonly ConditionEvaluator $conditionEvaluator,
-    ) {}
+    ) {
+        $this->taskCache = new \WeakMap;
+    }
 
     /**
      * Run the full plan → execute → validate → synthesize lifecycle.
@@ -43,6 +50,12 @@ class CrewOrchestrator
     public function run(CrewExecution $execution): void
     {
         try {
+            // Honor MCP-propagated deadline if the orchestrator was invoked
+            // synchronously via an MCP tool (e.g., crew_execute).
+            app(DeadlineContext::class)->assertNotExpired();
+
+            $scope = new CrewExecutionScope($execution);
+
             $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
 
             // Fanout and ChatRoom manage their own task creation — skip decomposition
@@ -63,19 +76,23 @@ class CrewOrchestrator
             }
 
             match ($processType) {
-                CrewProcessType::Sequential => $this->dispatchSequential($execution),
-                CrewProcessType::Parallel => $this->dispatchParallel($execution),
-                CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
-                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution),
-                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution),
-                CrewProcessType::Fanout => $this->dispatchFanout($execution),
-                CrewProcessType::ChatRoom => $this->dispatchChatRoom($execution),
+                CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
+                CrewProcessType::Parallel => $this->dispatchParallel($execution, $scope),
+                CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution, $scope),
+                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution, $scope),
+                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution, $scope),
+                CrewProcessType::Fanout => $this->dispatchFanout($execution, $scope),
+                CrewProcessType::ChatRoom => $this->dispatchChatRoom($execution, $scope),
             };
         } catch (\Throwable $e) {
             Log::error('Crew orchestration failed', [
                 'execution_id' => $execution->id,
                 'error' => $e->getMessage(),
             ]);
+
+            if (isset($scope)) {
+                $scope->dispose();
+            }
 
             $this->failExecution($execution, $e->getMessage());
         }
@@ -85,9 +102,11 @@ class CrewOrchestrator
      * Sequential: dispatch ready tasks one at a time.
      * Called initially and after each task validation.
      */
-    public function dispatchSequential(CrewExecution $execution): void
+    public function dispatchSequential(CrewExecution $execution, CrewExecutionScope $scope): void
     {
-        $tasks = $execution->taskExecutions()->get();
+        $scope->assertNotCancelled();
+
+        $tasks = $this->getTasks($execution);
         $ready = $this->dependencyResolver->resolveReady($tasks);
 
         if ($ready->isEmpty()) {
@@ -113,10 +132,16 @@ class CrewOrchestrator
     /**
      * Parallel: dispatch all independent tasks at once via Bus::batch.
      */
-    public function dispatchParallel(CrewExecution $execution): void
+    public function dispatchParallel(CrewExecution $execution, CrewExecutionScope $scope): void
     {
-        $tasks = $execution->taskExecutions()->get();
+        $scope->assertNotCancelled();
+
+        $tasks = $this->getTasks($execution);
         $ready = $this->dependencyResolver->resolveReady($tasks);
+
+        $snapshot = is_array($execution->config_snapshot) ? $execution->config_snapshot : [];
+        $maxParallel = (int) ($snapshot['max_parallel_tasks'] ?? 10);
+        $ready = $ready->take($maxParallel);
 
         if ($ready->isEmpty()) {
             if ($this->dependencyResolver->allTerminal($tasks)) {
@@ -151,8 +176,10 @@ class CrewOrchestrator
     /**
      * Hierarchical: coordinator decides one task at a time dynamically.
      */
-    public function dispatchHierarchical(CrewExecution $execution): void
+    public function dispatchHierarchical(CrewExecution $execution, CrewExecutionScope $scope): void
     {
+        $scope->assertNotCancelled();
+
         CoordinatorDecisionJob::dispatch(
             crewExecutionId: $execution->id,
             teamId: $execution->team_id,
@@ -162,11 +189,13 @@ class CrewOrchestrator
     /**
      * Self-Claim: seed one task per worker; agents claim subsequent tasks themselves after completion.
      */
-    public function dispatchSelfClaim(CrewExecution $execution): void
+    public function dispatchSelfClaim(CrewExecution $execution, CrewExecutionScope $scope): void
     {
+        $scope->assertNotCancelled();
+
         $config = $execution->config_snapshot;
         $workers = collect($config['workers'] ?? []);
-        $tasks = $execution->taskExecutions()->get();
+        $tasks = $this->getTasks($execution);
 
         if ($tasks->isEmpty()) {
             $this->failExecution($execution, 'No tasks to execute.');
@@ -216,10 +245,10 @@ class CrewOrchestrator
     /**
      * Adversarial: round 1 tasks are already created by DecomposeGoalAction — dispatch them as parallel.
      */
-    public function dispatchAdversarial(CrewExecution $execution): void
+    public function dispatchAdversarial(CrewExecution $execution, CrewExecutionScope $scope): void
     {
         // Round 1 hypothesis tasks are created as Pending by DecomposeGoalAction; dispatch them in parallel
-        $this->dispatchParallel($execution);
+        $this->dispatchParallel($execution, $scope);
     }
 
     /**
@@ -229,8 +258,10 @@ class CrewOrchestrator
      * and works on it independently. Results are gathered and synthesized.
      * Ideal for getting diverse perspectives on the same problem.
      */
-    public function dispatchFanout(CrewExecution $execution): void
+    public function dispatchFanout(CrewExecution $execution, CrewExecutionScope $scope): void
     {
+        $scope->assertNotCancelled();
+
         $crew = $execution->crew;
         $members = $crew->workerMembers()->with('agent')->get();
 
@@ -240,20 +271,28 @@ class CrewOrchestrator
             return;
         }
 
-        // Create one task per member, all with the same goal as input
+        // Create one task per member, all with the same goal as input.
+        // External members get external_agent_id set (and agent_id left null); the
+        // orchestrator branches on that in dispatchTask().
         $taskExecutions = [];
         foreach ($members as $index => $member) {
+            $memberName = $member->isExternal()
+                ? (string) $member->externalAgent?->name
+                : (string) $member->agent?->name;
+
             $taskExecutions[] = CrewTaskExecution::create([
                 'crew_execution_id' => $execution->id,
-                'agent_id' => $member->agent_id,
-                'title' => "Fanout: {$member->agent->name}",
+                'agent_id' => $member->isExternal() ? null : $member->agent_id,
+                'external_agent_id' => $member->isExternal() ? $member->external_agent_id : null,
+                'title' => "Fanout: {$memberName}",
                 'description' => $execution->goal,
                 'status' => CrewTaskStatus::Pending,
                 'input_context' => [
                     'fanout_mode' => true,
                     'original_goal' => $execution->goal,
                     'expected_output' => 'Provide your independent analysis or solution.',
-                    'assigned_to' => $member->agent->name,
+                    'assigned_to' => $memberName,
+                    'external' => $member->isExternal(),
                 ],
                 'depends_on' => [],
                 'attempt_number' => 1,
@@ -266,28 +305,42 @@ class CrewOrchestrator
             'task_plan' => collect($taskExecutions)->map(fn ($t) => [
                 'id' => $t->id,
                 'title' => $t->title,
-                'agent' => $t->agent?->name,
+                'agent' => $t->isExternal()
+                    ? $t->externalAgent?->name
+                    : $t->agent?->name,
             ])->toArray(),
         ]);
 
-        // Dispatch all in parallel
-        $jobs = collect($taskExecutions)->map(fn (CrewTaskExecution $task) => new ExecuteCrewTaskJob(
+        // Dispatch all in parallel. Route external tasks through the protocol dispatcher
+        // instead of ExecuteCrewTaskJob (which assumes internal agent skill resolution).
+        $internalTasks = collect($taskExecutions)->filter(fn (CrewTaskExecution $t) => ! $t->isExternal());
+        $externalTasks = collect($taskExecutions)->filter(fn (CrewTaskExecution $t) => $t->isExternal());
+
+        foreach ($externalTasks as $task) {
+            app(CrewExternalMemberDispatcher::class)->dispatch($task, $execution);
+        }
+
+        $jobs = $internalTasks->map(fn (CrewTaskExecution $task) => new ExecuteCrewTaskJob(
             crewExecutionId: $execution->id,
             taskExecutionId: $task->id,
             teamId: $execution->team_id,
         ))->toArray();
 
-        Bus::batch($jobs)
-            ->name("crew-fanout:{$execution->id}")
-            ->onQueue('ai-calls')
-            ->dispatch();
+        if (! empty($jobs)) {
+            Bus::batch($jobs)
+                ->name("crew-fanout:{$execution->id}")
+                ->onQueue('ai-calls')
+                ->dispatch();
+        }
     }
 
     /**
      * ChatRoom: agents discuss collaboratively in rounds on a shared message bus.
      */
-    public function dispatchChatRoom(CrewExecution $execution): void
+    public function dispatchChatRoom(CrewExecution $execution, CrewExecutionScope $scope): void
     {
+        $scope->assertNotCancelled();
+
         $orchestrator = app(CrewChatRoomOrchestrator::class);
         $orchestrator->start($execution);
     }
@@ -297,17 +350,20 @@ class CrewOrchestrator
      */
     public function onTaskValidated(CrewExecution $execution, CrewTaskExecution $task): void
     {
+        $this->invalidateTaskCache($execution);
+
         // Unblock tasks whose UUID-based depends_on list is now fully satisfied.
         // autoUnblock() checks that $task->status is Validated or Skipped before acting,
         // and directly dispatches ExecuteCrewTaskJob for each newly unblocked task.
         $this->dependencyGraph->autoUnblock($execution, $task);
 
         $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
+        $scope = new CrewExecutionScope($execution);
 
         match ($processType) {
-            CrewProcessType::Sequential => $this->dispatchSequential($execution),
+            CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
             CrewProcessType::Parallel => $this->checkParallelProgress($execution),
-            CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
+            CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution, $scope),
             CrewProcessType::SelfClaim => $this->continueSelfClaim($execution, $task),
             CrewProcessType::Adversarial => $this->advanceAdversarialRound($execution),
             CrewProcessType::Fanout => $this->checkParallelProgress($execution),
@@ -320,6 +376,8 @@ class CrewOrchestrator
      */
     public function onTaskRejected(CrewExecution $execution, CrewTaskExecution $task): void
     {
+        $this->invalidateTaskCache($execution);
+
         if ($task->canRetry()) {
             // Retry: increment attempt, reset status, re-dispatch
             $task->update([
@@ -338,7 +396,8 @@ class CrewOrchestrator
 
             if ($processType === CrewProcessType::Hierarchical) {
                 // Let coordinator decide what to do
-                $this->dispatchHierarchical($execution);
+                $scope = new CrewExecutionScope($execution);
+                $this->dispatchHierarchical($execution, $scope);
             } else {
                 // Check if we can continue (sequential/parallel/self_claim/adversarial skip this task)
                 $this->checkContinuation($execution);
@@ -351,6 +410,8 @@ class CrewOrchestrator
      */
     public function onTaskFailed(CrewExecution $execution, CrewTaskExecution $task): void
     {
+        $this->invalidateTaskCache($execution);
+
         if ($task->canRetry()) {
             $task->update([
                 'status' => CrewTaskStatus::Pending,
@@ -390,7 +451,7 @@ class CrewOrchestrator
         }
 
         // No more tasks available for this agent — check if all agents are done
-        $tasks = $execution->taskExecutions()->get();
+        $tasks = $this->getTasks($execution);
         if ($this->dependencyResolver->allTerminal($tasks)) {
             if ($this->checkConvergenceReached($execution)) {
                 $this->synthesizeAndComplete($execution);
@@ -410,7 +471,7 @@ class CrewOrchestrator
         $config = $execution->config_snapshot;
         $maxRounds = $config['adversarial_rounds'] ?? 2;
 
-        $tasks = $execution->taskExecutions()->get();
+        $tasks = $this->getTasks($execution);
 
         // Determine the current round from task input_context
         $currentRound = $tasks->max(fn ($t) => $t->input_context['debate_round'] ?? 1) ?? 1;
@@ -475,7 +536,7 @@ class CrewOrchestrator
 
         for ($i = 0; $i < $maxSkipIterations; $i++) {
             // Gather dependency outputs as context
-            $allTasks = $execution->taskExecutions()->get();
+            $allTasks = $this->getTasks($execution);
             $depOutputs = $this->dependencyResolver->gatherDependencyOutputs($currentTask, $allTasks);
 
             if (! empty($depOutputs)) {
@@ -498,7 +559,8 @@ class CrewOrchestrator
                 ]);
 
                 // Find next ready task instead of recursing
-                $tasks = $execution->taskExecutions()->get();
+                $this->invalidateTaskCache($execution);
+                $tasks = $this->getTasks($execution);
                 $ready = $this->dependencyResolver->resolveReady($tasks);
 
                 if ($ready->isEmpty()) {
@@ -522,6 +584,15 @@ class CrewOrchestrator
 
             // Task is not skipped — dispatch it
             $currentTask->update(['status' => CrewTaskStatus::Assigned]);
+
+            if ($currentTask->external_agent_id !== null) {
+                // Route external members through the Agent Chat Protocol (synchronous dispatch;
+                // the protocol's own retries + circuit breaker handle reliability).
+                app(CrewExternalMemberDispatcher::class)
+                    ->dispatch($currentTask, $execution);
+
+                return;
+            }
 
             ExecuteCrewTaskJob::dispatch(
                 crewExecutionId: $execution->id,
@@ -566,13 +637,14 @@ class CrewOrchestrator
 
     private function checkParallelProgress(CrewExecution $execution): void
     {
-        $tasks = $execution->taskExecutions()->get();
+        $tasks = $this->getTasks($execution);
 
         // Check if there are more tasks to dispatch (phase 2 of dependency resolution)
         $ready = $this->dependencyResolver->resolveReady($tasks);
 
         if ($ready->isNotEmpty()) {
-            $this->dispatchParallel($execution);
+            $scope = new CrewExecutionScope($execution);
+            $this->dispatchParallel($execution, $scope);
         } elseif ($this->dependencyResolver->allTerminal($tasks)) {
             if ($this->checkConvergenceReached($execution)) {
                 $this->synthesizeAndComplete($execution);
@@ -587,7 +659,7 @@ class CrewOrchestrator
 
     private function checkContinuation(CrewExecution $execution): void
     {
-        $tasks = $execution->taskExecutions()->get();
+        $tasks = $this->getTasks($execution);
 
         if ($this->dependencyResolver->allTerminal($tasks)) {
             if ($this->checkConvergenceReached($execution)) {
@@ -604,14 +676,15 @@ class CrewOrchestrator
         } else {
             // Continue with remaining tasks
             $processType = CrewProcessType::from($execution->config_snapshot['process_type']);
+            $scope = new CrewExecutionScope($execution);
             match ($processType) {
-                CrewProcessType::Sequential => $this->dispatchSequential($execution),
-                CrewProcessType::Parallel => $this->dispatchParallel($execution),
-                CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution),
+                CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
+                CrewProcessType::Parallel => $this->dispatchParallel($execution, $scope),
+                CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution, $scope),
                 // For self-claim, re-seed available workers
-                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution),
+                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution, $scope),
                 // For adversarial, re-dispatch the current round
-                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution),
+                CrewProcessType::Adversarial => $this->dispatchAdversarial($execution, $scope),
             };
         }
     }
@@ -638,6 +711,8 @@ class CrewOrchestrator
                     ? (int) $execution->started_at->diffInMilliseconds(now())
                     : null,
             ]);
+
+            app(ComputeCrewQualityAction::class)->execute($execution);
 
             // Collect artifacts from task outputs
             $this->collectArtifacts->execute($execution);
@@ -667,6 +742,9 @@ class CrewOrchestrator
                     actionUrl: '/crews/'.$execution->crew_id.'/execute',
                     data: ['crew_execution_id' => $execution->id, 'url' => '/crews/'.$execution->crew_id.'/execute'],
                 );
+            }
+            if (($execution->coordinator_iterations ?? 0) >= 3) {
+                ExtractSkillFromTrajectoryJob::dispatch($execution->id, 'crew');
             }
         } catch (\Throwable $e) {
             $this->failExecution($execution, 'Synthesis failed: '.$e->getMessage());
@@ -737,6 +815,20 @@ class CrewOrchestrator
         }
 
         return array_intersect_key($context, array_flip($contextScope));
+    }
+
+    private function getTasks(CrewExecution $execution): Collection
+    {
+        if (! isset($this->taskCache[$execution])) {
+            $this->taskCache[$execution] = $execution->taskExecutions()->get();
+        }
+
+        return $this->taskCache[$execution];
+    }
+
+    private function invalidateTaskCache(CrewExecution $execution): void
+    {
+        unset($this->taskCache[$execution]);
     }
 
     private function failExecution(CrewExecution $execution, string $error): void

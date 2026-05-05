@@ -5,6 +5,7 @@ namespace App\Domain\Project\Jobs;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Services\ProjectScheduler;
+use App\Jobs\Middleware\ApplyTenantTracer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -23,6 +24,17 @@ class ExecuteProjectRunJob implements ShouldQueue
         public readonly string $trigger = 'schedule',
     ) {
         $this->onQueue('experiments');
+    }
+
+    public function middleware(): array
+    {
+        return [new ApplyTenantTracer];
+    }
+
+    /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
+    public function teamId(): ?string
+    {
+        return Project::withoutGlobalScopes()->where('id', $this->projectId)->value('team_id');
     }
 
     public function handle(TriggerProjectRunAction $triggerAction): void

@@ -3,8 +3,9 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Services\TermsAcceptanceService;
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class TermsAcceptanceStatusTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'terms_acceptance_status';
 
     protected string $description = 'Get the current terms acceptance status for a user. Returns the current terms version, the user\'s accepted version, and whether acceptance is required.';
@@ -35,12 +38,12 @@ class TermsAcceptanceStatusTool extends Tool
         if ($userId) {
             $user = User::find($userId);
             if (! $user) {
-                return Response::error('User not found.');
+                return $this->notFoundError('user');
             }
         } else {
             $user = auth()->user();
             if (! $user) {
-                return Response::error('No authenticated user.');
+                return $this->permissionDeniedError('No authenticated user.');
             }
         }
 

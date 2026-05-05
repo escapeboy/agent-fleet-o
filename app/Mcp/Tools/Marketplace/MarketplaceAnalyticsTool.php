@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Marketplace;
 use App\Domain\Marketplace\Models\MarketplaceListing;
 use App\Domain\Marketplace\Models\MarketplaceUsageRecord;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class MarketplaceAnalyticsTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'marketplace_analytics';
 
     protected string $description = 'Get usage analytics for a marketplace listing: total runs, success rate, avg cost, avg duration, usage trend (last 12 months), and monetization summary.';
@@ -38,7 +41,7 @@ class MarketplaceAnalyticsTool extends Tool
 
         // Only the team that published the listing may access its analytics.
         if ($listing->team_id !== $teamId) {
-            return Response::error('Listing not found or access denied.');
+            return $this->notFoundError('listing');
         }
 
         $successRate = $listing->run_count > 0

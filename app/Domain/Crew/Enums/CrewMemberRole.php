@@ -9,6 +9,7 @@ enum CrewMemberRole: string
     case Worker = 'worker';
     case ProcessReviewer = 'process_reviewer';
     case OutputReviewer = 'output_reviewer';
+    case Judge = 'judge';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum CrewMemberRole: string
             self::Worker => 'Worker',
             self::ProcessReviewer => 'Process Reviewer',
             self::OutputReviewer => 'Output Reviewer',
+            self::Judge => 'Judge',
         };
     }
 
@@ -29,6 +31,7 @@ enum CrewMemberRole: string
             self::Worker => 'sky',
             self::ProcessReviewer => 'amber',
             self::OutputReviewer => 'rose',
+            self::Judge => 'emerald',
         };
     }
 }

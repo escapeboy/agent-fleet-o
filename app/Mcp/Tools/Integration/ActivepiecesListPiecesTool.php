@@ -6,6 +6,7 @@ use App\Domain\Integration\Models\Integration;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool as ToolModel;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -25,6 +26,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ActivepiecesListPiecesTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'activepieces_list_pieces';
 
     protected string $description = 'List all Activepieces pieces that have been synced as MCP-HTTP tools. Returns piece name, display name, MCP endpoint URL, and last-synced timestamp.';
@@ -54,7 +57,7 @@ class ActivepiecesListPiecesTool extends Tool
                 ->first();
 
             if (! $integration) {
-                return Response::error('Activepieces integration not found.');
+                return $this->notFoundError('Activepieces integration');
             }
         }
 

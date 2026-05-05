@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Evolution;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class EvolutionRejectTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'evolution_reject';
 
     protected string $description = 'Reject a pending or approved evolution proposal, preventing it from being applied to the agent.';
@@ -38,16 +41,16 @@ class EvolutionRejectTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->find($proposalId);
 
         if (! $proposal) {
-            return Response::error("Evolution proposal {$proposalId} not found.");
+            return $this->notFoundError('evolution proposal', $proposalId);
         }
 
         if (! in_array($proposal->status, [EvolutionProposalStatus::Pending, EvolutionProposalStatus::Approved])) {
-            return Response::error("Cannot reject proposal in '{$proposal->status->value}' status. Only pending or approved proposals can be rejected.");
+            return $this->failedPreconditionError("Cannot reject proposal in '{$proposal->status->value}' status. Only pending or approved proposals can be rejected.");
         }
 
         $proposal->update([

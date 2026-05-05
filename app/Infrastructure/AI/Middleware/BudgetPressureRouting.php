@@ -8,6 +8,7 @@ use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Enums\BudgetPressureLevel;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Enums\RequestComplexity;
 use App\Infrastructure\AI\Services\ComplexityClassifier;
 use Closure;
@@ -28,6 +29,15 @@ class BudgetPressureRouting implements AiMiddlewareInterface
 
         $classified = $this->classifier->classify($request);
         $pressure = $this->costCalculator->getBudgetPressureLevel($request->teamId);
+
+        // When effort=Auto, resolve to a concrete thinkingBudget based on classified complexity.
+        // Under budget pressure we suppress extended thinking for Auto requests to save costs.
+        $resolvedThinkingBudget = $request->thinkingBudget;
+        if ($request->effort === ReasoningEffort::Auto && $resolvedThinkingBudget === null) {
+            $resolvedThinkingBudget = $pressure === BudgetPressureLevel::None
+                ? ReasoningEffort::fromComplexity($classified)
+                : null;
+        }
 
         if ($pressure === BudgetPressureLevel::None) {
             return $next(new AiRequestDTO(
@@ -50,13 +60,15 @@ class BudgetPressureRouting implements AiMiddlewareInterface
                 maxSteps: $request->maxSteps,
                 toolChoice: $request->toolChoice,
                 providerName: $request->providerName,
-                thinkingBudget: $request->thinkingBudget,
+                thinkingBudget: $resolvedThinkingBudget,
+                effort: $request->effort,
                 workingDirectory: $request->workingDirectory,
                 enablePromptCaching: $request->enablePromptCaching,
                 complexity: $request->complexity,
                 classifiedComplexity: $classified,
                 budgetPressureLevel: $pressure,
                 escalationAttempts: $request->escalationAttempts,
+                fastMode: $request->fastMode,
             ));
         }
 
@@ -93,13 +105,15 @@ class BudgetPressureRouting implements AiMiddlewareInterface
             maxSteps: $request->maxSteps,
             toolChoice: $request->toolChoice,
             providerName: $request->providerName,
-            thinkingBudget: $request->thinkingBudget,
+            thinkingBudget: $resolvedThinkingBudget,
+            effort: $request->effort,
             workingDirectory: $request->workingDirectory,
             enablePromptCaching: $request->enablePromptCaching,
             complexity: $request->complexity,
             classifiedComplexity: $classified,
             budgetPressureLevel: $pressure,
             escalationAttempts: $request->escalationAttempts,
+            fastMode: $request->fastMode,
         ));
     }
 

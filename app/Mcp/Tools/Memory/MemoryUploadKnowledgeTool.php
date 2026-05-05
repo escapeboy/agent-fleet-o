@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class MemoryUploadKnowledgeTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'memory_upload_knowledge';
 
     protected string $description = 'Store a new knowledge item in agent memory. Useful for injecting domain knowledge, facts, or reference material that agents should recall during execution.';
@@ -45,12 +48,12 @@ class MemoryUploadKnowledgeTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $content = $request->get('content');
         if (! $content || strlen(trim($content)) === 0) {
-            return Response::error('content is required and must not be empty.');
+            return $this->invalidArgumentError('content is required and must not be empty.');
         }
 
         $metadata = array_filter([
@@ -81,7 +84,7 @@ class MemoryUploadKnowledgeTool extends Tool
                 'created_at' => $memory->created_at->toIso8601String(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

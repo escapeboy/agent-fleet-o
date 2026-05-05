@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Evaluation;
 use App\Domain\Evaluation\Actions\RunFlowEvaluationAction;
 use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Workflow\Models\Workflow;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class FlowEvaluationRunStartTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'flow_evaluation_run_start';
 
     protected string $description = 'Start a workflow evaluation run against a dataset. Runs the workflow on each row and scores outputs with an LLM judge. Results are available via flow_evaluation_results.';
@@ -38,14 +41,14 @@ class FlowEvaluationRunStartTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $datasetId = $request->get('dataset_id');
         $dataset = EvaluationDataset::find($datasetId);
 
         if (! $dataset || $dataset->team_id !== $teamId) {
-            return Response::error("Dataset not found: {$datasetId}");
+            return $this->notFoundError('dataset', $datasetId);
         }
 
         $workflowId = $request->get('workflow_id');
@@ -54,7 +57,7 @@ class FlowEvaluationRunStartTool extends Tool
             ->where('team_id', $teamId)
             ->first();
         if (! $workflow) {
-            return Response::error("Workflow not found: {$workflowId}");
+            return $this->notFoundError('workflow', $workflowId);
         }
 
         try {
@@ -74,7 +77,7 @@ class FlowEvaluationRunStartTool extends Tool
                 'judge_model' => $run->judge_model,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

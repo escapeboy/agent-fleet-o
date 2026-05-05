@@ -45,7 +45,9 @@ class ExecuteHeartbeatTurnAction
             model: $agent->model ?? $resolved['model'],
             systemPrompt: $agent->backstory ?? '',
             userPrompt: $prompt,
+            userId: $project->user_id,
             teamId: $project->team_id,
+            agentId: $agent?->id,
             maxTokens: 2048,
         );
 

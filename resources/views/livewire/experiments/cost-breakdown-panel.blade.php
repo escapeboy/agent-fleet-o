@@ -167,9 +167,7 @@
         </div>
     @else
         <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <i class="fa-solid fa-coins mx-auto text-3xl text-gray-300"></i>
             <p class="mt-3 text-sm text-gray-400">No LLM calls recorded yet.</p>
             <p class="text-xs text-gray-400">Cost breakdown will appear once the experiment starts making AI calls.</p>
         </div>

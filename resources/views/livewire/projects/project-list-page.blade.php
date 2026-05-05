@@ -11,7 +11,7 @@
         <div class="relative flex-1">
             <x-form-input wire:model.live.debounce.300ms="search" type="text" placeholder="Search projects..." toolparamdescription="Free-text search across project titles and descriptions">
                 <x-slot:leadingIcon>
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
                 </x-slot:leadingIcon>
             </x-form-input>
         </div>
@@ -42,6 +42,10 @@
         @endif
     </form>
 
+    @if(count($selectedIds) > 0)
+        <x-assistant-select-toolbar :count="count($selectedIds)" />
+    @endif
+
     {{-- Table --}}
     <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div class="overflow-x-auto">
@@ -53,6 +57,7 @@
                             ? ($sortDirection === 'asc' ? '&#9650;' : '&#9660;')
                             : '<span class="text-gray-300">&#9650;</span>';
                     @endphp
+                    <th class="w-10 px-3 py-2 md:px-6"></th>
                     <th wire:click="sortBy('title')" class="cursor-pointer px-3 py-2 md:px-6 md:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
                         Title {!! $sortIcon('title') !!}
                     </th>
@@ -69,7 +74,13 @@
             </thead>
             <tbody class="divide-y divide-gray-200">
                 @forelse($projects as $project)
-                    <tr class="transition hover:bg-gray-50">
+                    <tr class="transition hover:bg-gray-50 {{ $this->isSelected($project->id) ? 'bg-indigo-50/50' : '' }}">
+                        <td class="px-3 py-3 md:px-6 md:py-4" wire:click.stop="toggleSelection('{{ $project->id }}')">
+                            <input type="checkbox"
+                                   @checked($this->isSelected($project->id))
+                                   wire:click.stop="toggleSelection('{{ $project->id }}')"
+                                   class="h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        </td>
                         <td class="px-3 py-3 md:px-6 md:py-4">
                             <a href="{{ route('projects.show', $project) }}" class="font-medium text-primary-600 hover:text-primary-800">
                                 {{ $project->title }}
@@ -123,20 +134,20 @@
                                 @if($project->status->canTransitionTo(\App\Domain\Project\Enums\ProjectStatus::Paused))
                                     <button wire:click="pause('{{ $project->id }}')"
                                         class="rounded p-1 text-gray-400 hover:bg-yellow-50 hover:text-yellow-600" title="Pause">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <i class="fa-solid fa-pause text-base"></i>
                                     </button>
                                 @endif
                                 @if($project->status === \App\Domain\Project\Enums\ProjectStatus::Paused)
                                     <button wire:click="resume('{{ $project->id }}')"
                                         class="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600" title="Resume">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <i class="fa-solid fa-play text-base"></i>
                                     </button>
                                 @endif
                                 @if($project->status->canTransitionTo(\App\Domain\Project\Enums\ProjectStatus::Archived))
                                     <button wire:click="archive('{{ $project->id }}')"
                                         wire:confirm="Archive this project? It cannot be reactivated."
                                         class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600" title="Archive">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                                        <i class="fa-solid fa-box-archive text-base"></i>
                                     </button>
                                 @endif
                             </div>

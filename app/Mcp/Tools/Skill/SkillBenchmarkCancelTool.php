@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\CancelSkillBenchmarkAction;
 use App\Domain\Skill\Models\SkillBenchmark;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillBenchmarkCancelTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_benchmark_cancel';
 
     protected string $description = 'Gracefully cancel a running skill benchmark. The current iteration will finish, then the loop stops.';
@@ -32,7 +35,7 @@ class SkillBenchmarkCancelTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $benchmark = SkillBenchmark::withoutGlobalScopes()
@@ -40,13 +43,13 @@ class SkillBenchmarkCancelTool extends Tool
             ->find($validated['benchmark_id']);
 
         if (! $benchmark) {
-            return Response::error('Benchmark not found.');
+            return $this->notFoundError('benchmark');
         }
 
         try {
             $benchmark = app(CancelSkillBenchmarkAction::class)->execute($benchmark);
         } catch (\RuntimeException $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
 
         return Response::text(json_encode([

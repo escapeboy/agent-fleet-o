@@ -19,6 +19,10 @@ use Illuminate\Support\Str;
  * @property array<string, mixed>|null $settings
  * @property string|null $plan
  * @property array<string, mixed>|null $custom_limits
+ * @property string|null $sub_program_slug
+ * @property float|null $credit_margin_multiplier
+ * @property int|null $max_credits_per_call
+ * @property int|null $byok_platform_fee_per_call
  */
 class Team extends Model
 {
@@ -55,10 +59,12 @@ class Team extends Model
         'allowed_models',
         'widget_public_key',
         'dashboard_config',
+        'git_webhook_secret',
     ];
 
     protected $hidden = [
         'credential_key',
+        'git_webhook_secret',
     ];
 
     protected function casts(): array
@@ -127,5 +133,48 @@ class Team extends Model
     public function hasFeature(string $feature): bool
     {
         return true;
+    }
+
+    /**
+     * Community edition has no per-team override — falls through to config.
+     */
+    public function effectiveMarginMultiplier(): float
+    {
+        return (float) config('llm_pricing.margin_multiplier', 1.30);
+    }
+
+    /**
+     * Community edition has no per-team cap — falls through to config.
+     */
+    public function effectiveMaxCreditsPerCall(): ?int
+    {
+        $configMax = config('llm_pricing.max_credits_per_call');
+
+        return $configMax !== null ? (int) $configMax : null;
+    }
+
+    /**
+     * Community edition has no per-team BYOK fee — falls through to config.
+     */
+    public function effectiveByokPlatformFee(): int
+    {
+        return (int) config('llm_pricing.byok_platform_fee_per_call', 0);
+    }
+
+    /**
+     * Look up the owner_id for a team without instantiating the model and
+     * without relying on TeamScope. Used as a userId fallback in actions
+     * that don't have an originating user context (e.g. team-default
+     * routing) — required by VPS gateway's userId check.
+     */
+    public static function ownerIdFor(?string $teamId): ?string
+    {
+        if (! $teamId) {
+            return null;
+        }
+
+        return self::withoutGlobalScopes()
+            ->where('id', $teamId)
+            ->value('owner_id');
     }
 }

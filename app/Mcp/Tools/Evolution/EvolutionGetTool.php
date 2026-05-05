@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Evolution;
 
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class EvolutionGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'evolution_proposal_get';
 
     protected string $description = 'Get details of a specific evolution proposal.';
@@ -31,7 +34,7 @@ class EvolutionGetTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $proposal = EvolutionProposal::withoutGlobalScopes()
@@ -40,7 +43,7 @@ class EvolutionGetTool extends Tool
             ->find($request->get('proposal_id'));
 
         if (! $proposal) {
-            return Response::error('Evolution proposal not found.');
+            return $this->notFoundError('evolution proposal');
         }
 
         return Response::text(json_encode([

@@ -3,8 +3,9 @@
 namespace App\Mcp\Tools\System;
 
 use App\Domain\Shared\Services\DeploymentMode;
-use App\Models\GlobalSetting;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\GlobalSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('destructive')]
 class GlobalSettingsUpdateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'global_settings_update';
 
     protected string $description = 'Update global platform settings. Only whitelisted keys are allowed. Returns previous and new values for each updated key.';
@@ -49,18 +52,18 @@ class GlobalSettingsUpdateTool extends Tool
         // In cloud mode only super-admins may update global settings.
         // In self-hosted mode any authenticated user may do so (single-team, owner controls the install).
         if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            return Response::error('Access denied: super admin privileges required.');
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
         }
 
         $settings = $request->get('settings');
 
         if (! is_array($settings) || empty($settings)) {
-            return Response::error('settings must be a non-empty object of key-value pairs.');
+            return $this->invalidArgumentError('settings must be a non-empty object of key-value pairs.');
         }
 
         $unknownKeys = array_diff(array_keys($settings), self::ALLOWED_KEYS);
         if (! empty($unknownKeys)) {
-            return Response::error(
+            return $this->invalidArgumentError(
                 'Unknown or disallowed setting key(s): '.implode(', ', $unknownKeys).
                 '. Allowed keys: '.implode(', ', self::ALLOWED_KEYS),
             );

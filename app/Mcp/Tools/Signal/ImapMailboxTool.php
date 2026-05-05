@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools\Signal;
 
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use App\Models\Connector;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -12,13 +14,14 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Webklex\PHPIMAP\ClientManager;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class ImapMailboxTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'imap_mailbox';
 
     protected string $description = 'Directly access IMAP mailboxes — search emails, read a specific email by UID, or list available folders. '
@@ -60,7 +63,7 @@ class ImapMailboxTool extends Tool
     {
         $connectorId = $request->get('connector_id');
         if (! $connectorId) {
-            return Response::error('connector_id is required');
+            return $this->invalidArgumentError('connector_id is required');
         }
 
         $connector = Connector::where('id', $connectorId)
@@ -68,7 +71,7 @@ class ImapMailboxTool extends Tool
             ->first();
 
         if (! $connector) {
-            return Response::error("IMAP connector {$connectorId} not found. Use inbound_connector_manage(list_connectors) to list available connectors.");
+            return $this->notFoundError('IMAP connector', $connectorId);
         }
 
         try {
@@ -87,12 +90,12 @@ class ImapMailboxTool extends Tool
             $client->disconnect();
 
             if ($result === null) {
-                return Response::error('Unknown action. Valid actions: search, read, list_folders');
+                return $this->invalidArgumentError('Unknown action. Valid actions: search, read, list_folders');
             }
 
             return $result;
         } catch (\Throwable $e) {
-            return Response::error('IMAP error: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -103,7 +106,7 @@ class ImapMailboxTool extends Tool
 
         $mailFolder = $client->getFolder($folder);
         if (! $mailFolder) {
-            return Response::error("Folder '{$folder}' not found");
+            return $this->notFoundError('folder', $folder);
         }
 
         $query = $mailFolder->messages();
@@ -125,7 +128,7 @@ class ImapMailboxTool extends Tool
                 $date = new \DateTime($since);
                 $query->since($date);
             } catch (\Throwable) {
-                return Response::error("Invalid 'since' date format. Use ISO 8601, e.g. 2026-03-01");
+                return $this->invalidArgumentError("Invalid 'since' date format. Use ISO 8601, e.g. 2026-03-01");
             }
         }
 
@@ -153,20 +156,20 @@ class ImapMailboxTool extends Tool
     {
         $uid = $request->get('uid');
         if (! $uid) {
-            return Response::error("'uid' is required for the read action");
+            return $this->invalidArgumentError("'uid' is required for the read action");
         }
 
         $folder = $request->get('folder') ?: ($config['folder'] ?? 'INBOX');
         $mailFolder = $client->getFolder($folder);
         if (! $mailFolder) {
-            return Response::error("Folder '{$folder}' not found");
+            return $this->notFoundError('folder', $folder);
         }
 
         $messages = $mailFolder->messages()->whereUid((string) $uid)->get();
         $message = $messages->first();
 
         if (! $message) {
-            return Response::error("Email with UID {$uid} not found in folder '{$folder}'");
+            return $this->notFoundError("email with UID {$uid} in folder '{$folder}'");
         }
 
         $body = $message->getTextBody();

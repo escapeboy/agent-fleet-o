@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Workflow;
 
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Workflow\Actions\SuggestWorkflowAction;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -13,6 +14,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 class WorkflowSuggestionTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'workflow_suggest';
 
     protected string $description = 'Analyze a workflow experiment and get AI-powered optimization suggestions (parallelize steps, switch to cheaper models, replace underperforming skills).';
@@ -33,16 +36,16 @@ class WorkflowSuggestionTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $experiment = Experiment::withoutGlobalScopes()->where('team_id', $teamId)->find($experimentId);
 
         if (! $experiment) {
-            return Response::error("Experiment '{$experimentId}' not found.");
+            return $this->notFoundError('experiment', $experimentId);
         }
 
         if (! $experiment->hasWorkflow()) {
-            return Response::error('This experiment does not use a workflow. Suggestions are only available for workflow experiments.');
+            return $this->failedPreconditionError('This experiment does not use a workflow. Suggestions are only available for workflow experiments.');
         }
 
         $suggestions = app(SuggestWorkflowAction::class)->execute($experiment);

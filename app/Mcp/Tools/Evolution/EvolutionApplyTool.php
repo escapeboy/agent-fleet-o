@@ -6,6 +6,7 @@ use App\Domain\Evolution\Actions\ApplyEvolutionProposalAction;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class EvolutionApplyTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'evolution_apply';
 
     protected string $description = 'Approve and apply an evolution proposal to update the agent. The proposal must be in pending or approved status.';
@@ -33,7 +36,7 @@ class EvolutionApplyTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $proposal = EvolutionProposal::withoutGlobalScopes()->where('team_id', $teamId)->findOrFail($request->get('proposal_id'));
 

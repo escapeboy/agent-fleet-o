@@ -32,7 +32,10 @@ class SynthesizeResultAction
             throw new \RuntimeException('Coordinator agent not found.');
         }
 
-        $resolved = $this->providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $this->providerResolver->forCrewRole($coordinatorMember)
+            : $this->providerResolver->resolve(agent: $coordinator);
 
         $processType = $config['process_type'] ?? 'parallel';
         $isAdversarial = $processType === 'adversarial';
@@ -82,12 +85,15 @@ class SynthesizeResultAction
                 .'Synthesize these into a final result.';
         }
 
+        $userId = $execution->resolveUserId();
+
         $request = new AiRequestDTO(
             provider: $resolved['provider'],
             model: $resolved['model'],
             systemPrompt: $systemPrompt,
             userPrompt: $userPrompt,
             maxTokens: 4096,
+            userId: $userId,
             teamId: $execution->team_id,
             agentId: $coordinator->id,
             purpose: 'crew.synthesize_result',
@@ -109,7 +115,7 @@ class SynthesizeResultAction
             $reviewerAgent = Agent::withoutGlobalScopes()->find($outputReviewerMember->agent_id);
 
             if ($reviewerAgent) {
-                $reviewResolved = $this->providerResolver->resolve(agent: $reviewerAgent);
+                $reviewResolved = $this->providerResolver->forCrewRole($outputReviewerMember);
 
                 $reviewSystem = "You are {$reviewerAgent->role}. Your task is to review the synthesized result for quality, completeness, and accuracy. "
                     .'Output valid JSON with: "approved" (bool), "score" (0-1), "feedback" (string), '
@@ -125,6 +131,7 @@ class SynthesizeResultAction
                     systemPrompt: $reviewSystem,
                     userPrompt: $reviewUser,
                     maxTokens: 2048,
+                    userId: $userId,
                     teamId: $execution->team_id,
                     agentId: $reviewerAgent->id,
                     purpose: 'crew.output_review',

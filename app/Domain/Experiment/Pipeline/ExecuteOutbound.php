@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -31,6 +32,18 @@ class ExecuteOutbound extends BaseStageJob
 
     protected function process(Experiment $experiment, ExperimentStage $stage): void
     {
+        // web_build experiments have no outbound proposals — skip directly to metrics
+        if ($experiment->track === ExperimentTrack::WebBuild) {
+            $stage->update(['output_snapshot' => ['skipped' => true, 'reason' => 'web_build track has no outbound']]);
+            app(TransitionExperimentAction::class)->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::CollectingMetrics,
+                reason: 'web_build: no outbound to execute',
+            );
+
+            return;
+        }
+
         $sendAction = app(SendOutboundAction::class);
         $transition = app(TransitionExperimentAction::class);
 

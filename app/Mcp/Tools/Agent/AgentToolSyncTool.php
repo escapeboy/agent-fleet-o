@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Agent;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Tool\Models\Tool as AgentTool;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[AssistantTool('write')]
 class AgentToolSyncTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_tool_sync';
 
     protected string $description = 'Attach, detach, or replace tools on an agent. Mode "sync" replaces all tools, "attach" adds the given tools, "detach" removes them.';
@@ -44,22 +47,22 @@ class AgentToolSyncTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $agent = Agent::withoutGlobalScopes()->where('team_id', $teamId)->find($agentId);
         if (! $agent) {
-            return Response::error("Agent {$agentId} not found.");
+            return $this->notFoundError('agent', $agentId);
         }
 
         if (! is_array($toolIds)) {
-            return Response::error('tool_ids must be an array of UUIDs.');
+            return $this->invalidArgumentError('tool_ids must be an array of UUIDs.');
         }
 
         // Validate that all tool IDs exist
         $validTools = AgentTool::whereIn('id', $toolIds)->pluck('id')->toArray();
         $invalidIds = array_diff($toolIds, $validTools);
         if (! empty($invalidIds)) {
-            return Response::error('Invalid tool IDs: '.implode(', ', $invalidIds).'. Use tool_list to discover valid tool IDs.');
+            return $this->invalidArgumentError('Invalid tool IDs: '.implode(', ', $invalidIds).'. Use tool_list to discover valid tool IDs.');
         }
 
         try {
@@ -79,7 +82,7 @@ class AgentToolSyncTool extends Tool
                 'attached_tool_ids' => $agent->tools->pluck('id')->toArray(),
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

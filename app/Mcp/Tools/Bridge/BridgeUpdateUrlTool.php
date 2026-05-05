@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Bridge;
 
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class BridgeUpdateUrlTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'bridge_update_url';
 
     protected string $description = 'Update the tunnel URL for an HTTP-mode bridge connection. Use when the tunnel URL changes (e.g., Cloudflare quick tunnels regenerate on daemon restart). Only applies to HTTP-mode connections.';
@@ -46,11 +49,11 @@ class BridgeUpdateUrlTool extends Tool
             ->find($validated['connection_id']);
 
         if (! $connection) {
-            return Response::error('Bridge connection not found.');
+            return $this->notFoundError('bridge connection');
         }
 
         if (! $connection->isHttpMode()) {
-            return Response::error('URL updates are only available for HTTP-mode connections.');
+            return $this->failedPreconditionError('URL updates are only available for HTTP-mode connections.');
         }
 
         $updates = ['endpoint_url' => rtrim($validated['endpoint_url'], '/')];

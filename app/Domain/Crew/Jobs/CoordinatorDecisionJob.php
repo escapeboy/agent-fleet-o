@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Domain\Experiment\Actions\SpawnSubExperimentAction;
@@ -93,7 +94,10 @@ class CoordinatorDecisionJob implements ShouldQueue
             return;
         }
 
-        $resolved = $providerResolver->resolve(agent: $coordinator);
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $providerResolver->forCrewRole($coordinatorMember)
+            : $providerResolver->resolve(agent: $coordinator);
 
         // Build context: completed tasks and their outputs
         $completedTasks = $execution->taskExecutions()
@@ -142,6 +146,7 @@ class CoordinatorDecisionJob implements ShouldQueue
                 systemPrompt: $systemPrompt,
                 userPrompt: $userPrompt,
                 maxTokens: 2048,
+                userId: $execution->resolveUserId(),
                 teamId: $execution->team_id,
                 agentId: $coordinator->id,
                 purpose: 'crew.coordinator_decision',

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Email;
 use App\Domain\Email\Actions\DeleteEmailTemplateAction;
 use App\Domain\Email\Models\EmailTemplate;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class EmailTemplateDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'email_template_delete';
 
     protected string $description = 'Delete an email template (soft delete). The template will be marked as deleted and no longer visible.';
@@ -32,12 +35,12 @@ class EmailTemplateDeleteTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $template = EmailTemplate::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('id'));
 
         if (! $template) {
-            return Response::error('Email template not found.');
+            return $this->notFoundError('email template');
         }
 
         try {
@@ -49,7 +52,7 @@ class EmailTemplateDeleteTool extends Tool
                 'deleted' => true,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

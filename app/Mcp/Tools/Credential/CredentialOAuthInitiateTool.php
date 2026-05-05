@@ -3,6 +3,8 @@
 namespace App\Mcp\Tools\Credential;
 
 use App\Domain\Agent\Models\Agent;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -10,12 +12,13 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsDestructive]
 #[AssistantTool('write')]
 class CredentialOAuthInitiateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'credential_oauth_initiate';
 
     protected string $description = 'Initiates an OAuth flow on behalf of an agent. Returns a correlation_id and a URL the user must visit to complete authorization. The agent never sees the raw token — call credential_oauth_finalize with the correlation_id after the user authorizes.';
@@ -52,7 +55,7 @@ class CredentialOAuthInitiateTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return Response::error('Agent not found.');
+            return $this->notFoundError('agent');
         }
 
         $correlationId = (string) Str::uuid();

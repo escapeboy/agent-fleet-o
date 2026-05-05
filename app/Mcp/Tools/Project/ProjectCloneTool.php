@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Project;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Models\Project;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class ProjectCloneTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_clone';
 
     protected string $description = 'Clone an existing project with a new name.';
@@ -31,12 +34,12 @@ class ProjectCloneTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('project_id'));
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         $clone = $project->replicate();

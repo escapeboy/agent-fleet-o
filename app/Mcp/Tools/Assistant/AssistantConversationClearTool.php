@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Assistant;
 
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AssistantConversationClearTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'assistant_conversation_clear';
 
     protected string $description = 'Delete an assistant conversation and all its messages.';
@@ -32,7 +35,7 @@ class AssistantConversationClearTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $conversation = AssistantConversation::withoutGlobalScopes()
@@ -41,7 +44,7 @@ class AssistantConversationClearTool extends Tool
             ->first();
 
         if (! $conversation) {
-            return Response::error('Conversation not found.');
+            return $this->notFoundError('conversation');
         }
 
         $conversation->messages()->delete();

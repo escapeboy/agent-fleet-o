@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Project;
 
 use App\Domain\Project\Models\Project;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[IsDestructive]
 class ProjectHeartbeatConfigureTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_heartbeat_configure';
 
     protected string $description = 'Configure heartbeat monitoring for a continuous project. Heartbeat periodically checks context sources (signals, metrics, audit, experiments) and triggers a run only when something needs attention.';
@@ -48,21 +51,21 @@ class ProjectHeartbeatConfigureTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $project = Project::withoutGlobalScopes()->where('team_id', $teamId)->find($validated['project_id']);
         if (! $project) {
-            return Response::error('Project not found.');
+            return $this->notFoundError('project');
         }
 
         if (! $project->isContinuous()) {
-            return Response::error('Heartbeat is only available for continuous projects.');
+            return $this->failedPreconditionError('Heartbeat is only available for continuous projects.');
         }
 
         $schedule = $project->schedule;
         if (! $schedule) {
-            return Response::error('This project has no schedule configured.');
+            return $this->failedPreconditionError('This project has no schedule configured.');
         }
 
         $updateData = array_filter([

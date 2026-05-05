@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\AgentChatProtocol\Models\ExternalAgent;
 use App\Domain\Crew\Enums\CrewMemberRole;
 use Database\Factories\Domain\Crew\CrewMemberFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -22,6 +23,8 @@ class CrewMember extends Model
     protected $fillable = [
         'crew_id',
         'agent_id',
+        'external_agent_id',
+        'member_kind',
         'role',
         'sort_order',
         'config',
@@ -46,6 +49,16 @@ class CrewMember extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function externalAgent(): BelongsTo
+    {
+        return $this->belongsTo(ExternalAgent::class);
+    }
+
+    public function isExternal(): bool
+    {
+        return ($this->member_kind ?? 'internal') === 'external' || $this->external_agent_id !== null;
     }
 
     /**
@@ -106,5 +119,44 @@ class CrewMember extends Model
         $value = $this->config['max_credits'] ?? null;
 
         return $value !== null ? (int) $value : null;
+    }
+
+    /**
+     * Look up the CrewMember row for a given agent within a specific crew,
+     * if one exists. Returns null when the agent is not enrolled in the crew
+     * (e.g., legacy executions whose qa_agent / coordinator predates the
+     * members table population).
+     */
+    public static function forAgentInCrew(?string $agentId, ?string $crewId): ?self
+    {
+        if ($agentId === null || $crewId === null) {
+            return null;
+        }
+
+        return static::query()
+            ->where('crew_id', $crewId)
+            ->where('agent_id', $agentId)
+            ->first();
+    }
+
+    /**
+     * Per-role model override resolved from config JSONB.
+     * Returns ['provider' => string, 'model' => string] or null when unset.
+     *
+     * @return array{provider: string, model: string}|null
+     */
+    public function getModelOverrideAttribute(): ?array
+    {
+        $override = $this->config['model_override'] ?? null;
+        if (! is_array($override)) {
+            return null;
+        }
+        $provider = $override['provider'] ?? null;
+        $model = $override['model'] ?? null;
+        if (! is_string($provider) || $provider === '' || ! is_string($model) || $model === '') {
+            return null;
+        }
+
+        return ['provider' => $provider, 'model' => $model];
     }
 }

@@ -3,10 +3,17 @@
 namespace App\Mcp\Tools\Compact;
 
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
+use App\Mcp\DeadlineContext;
+use App\Mcp\ErrorClassifier;
+use App\Mcp\ErrorCode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
+use Throwable;
 
 /**
  * Base class for compact/consolidated MCP tools.
@@ -103,6 +110,10 @@ abstract class CompactTool extends Tool
                 ->description('Action to perform: '.implode(', ', $actions))
                 ->enum($actions)
                 ->required(),
+            'deadline_ms' => $schema->number()
+                ->description('Optional: max wall-clock time (ms) the tool may spend. '
+                    .'If exceeded during the call, returns a DEADLINE_EXCEEDED error. '
+                    .'Minimum 100 ms. Leave unset for no deadline.'),
         ];
 
         // Auto-merge schemas from all child tools so clients discover every parameter.
@@ -115,7 +126,7 @@ abstract class CompactTool extends Tool
                         $merged[$key] = $value;
                     }
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Skip tools that can't be instantiated at schema time.
             }
         }
@@ -130,7 +141,8 @@ abstract class CompactTool extends Tool
         if (! $action) {
             $actions = array_keys($this->toolMap());
 
-            return Response::error(
+            return static::structuredError(
+                ErrorCode::InvalidArgument,
                 "Missing required parameter 'action'. Valid actions: ".implode(', ', $actions),
             );
         }
@@ -138,11 +150,76 @@ abstract class CompactTool extends Tool
         $map = $this->toolMap();
 
         if (! isset($map[$action])) {
-            return Response::error(
+            return static::structuredError(
+                ErrorCode::InvalidArgument,
                 "Unknown action '{$action}'. Valid actions: ".implode(', ', array_keys($map)),
             );
         }
 
-        return app($map[$action])->handle($request);
+        $deadline = $request->get('deadline_ms');
+        $deadlineContext = app(DeadlineContext::class);
+        $deadlineWasSetByUs = false;
+
+        if ($deadline !== null && ! $deadlineContext->isSet()) {
+            $deadlineContext->set((int) $deadline);
+            $deadlineWasSetByUs = true;
+        }
+
+        $tracer = app(FleetTracerProvider::class)->tracer('fleetq.mcp');
+        $span = $tracer->spanBuilder('mcp.tool.'.$this->name())
+            ->setSpanKind(SpanKind::KIND_SERVER)
+            ->setAttribute('mcp.tool.name', $this->name())
+            ->setAttribute('mcp.tool.action', (string) $action)
+            ->setAttribute('mcp.team.id', app()->bound('mcp.team_id') ? (string) app('mcp.team_id') : 'unknown')
+            ->startSpan();
+        $scope = $span->activate();
+
+        try {
+            $response = app($map[$action])->handle($request);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $response;
+        } catch (Throwable $e) {
+            report($e);
+
+            $payload = app(ErrorClassifier::class)->classify($e);
+
+            $span->recordException($e);
+            $span->setAttribute('mcp.error.code', $payload['code']);
+            $span->setStatus(StatusCode::STATUS_ERROR, $payload['code']);
+
+            return Response::error(json_encode(
+                ['error' => $payload],
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+            ));
+        } finally {
+            $scope->detach();
+            $span->end();
+
+            if ($deadlineWasSetByUs) {
+                $deadlineContext->clear();
+            }
+        }
+    }
+
+    /**
+     * Build an error Response with a structured JSON payload.
+     */
+    protected static function structuredError(ErrorCode $code, string $message, ?int $retryAfterMs = null): Response
+    {
+        $error = [
+            'code' => $code->value,
+            'message' => $message,
+            'retryable' => $code->isRetryable(),
+        ];
+
+        if ($retryAfterMs !== null) {
+            $error['retry_after_ms'] = $retryAfterMs;
+        }
+
+        return Response::error(json_encode(
+            ['error' => $error],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        ));
     }
 }

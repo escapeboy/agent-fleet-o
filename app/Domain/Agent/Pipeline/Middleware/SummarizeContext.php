@@ -51,6 +51,7 @@ class SummarizeContext
                 systemPrompt: 'You are a context summarizer. Compress the following JSON input into the key facts needed to complete the task. Be concise and preserve all actionable information.',
                 userPrompt: $encoded,
                 maxTokens: 512,
+                userId: $ctx->userId,
                 teamId: $ctx->teamId,
                 agentId: $ctx->agent->id,
                 experimentId: $ctx->experimentId,

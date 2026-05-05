@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Skill;
 use App\Domain\Shared\Enums\DataClassification;
 use App\Domain\Skill\Actions\CreateSkillAction;
 use App\Domain\Skill\Enums\SkillType;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_create';
 
     protected string $description = 'Create a new skill. Specify name, type, and optionally description and prompt template.';
@@ -49,7 +52,7 @@ class SkillCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -72,7 +75,7 @@ class SkillCreateTool extends Tool
                 'status' => $skill->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

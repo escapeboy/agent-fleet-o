@@ -7,6 +7,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpStdioClient;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -23,9 +24,11 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class BorunaRunTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'boruna_run';
 
-    protected string $description = 'Execute a Boruna deterministic .ax script. Runs in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call, etc.). Use inline mode for ad-hoc scripts or skill mode for saved reusable scripts.';
+    protected string $description = 'Execute a Boruna deterministic .ax script (v1.x LTS). Runs in a capability-safe VM with explicit gates (net.fetch, fs.read, llm.call, etc.). Use inline mode for ad-hoc scripts or skill mode for saved reusable scripts. Capability gating supports shorthand (allow-all/deny-all) and structured Policy objects (default_allow + per-capability rules + net_policy). Optional resource limits (max_wall_ms, max_output_bytes) available in inline mode.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -37,12 +40,16 @@ class BorunaRunTool extends McpTool
             'script' => $schema->string()
                 ->description('(inline mode) The .ax script source code to execute'),
             'policy' => $schema->string()
-                ->description('(inline mode) Capability policy: allow-all or deny-all (default: deny-all)')
+                ->description('(inline mode) Legacy capability policy shorthand: "allow-all" or "deny-all" (default: deny-all). For Boruna v0.2.0+ fine-grained gating, use policy_structured instead.')
                 ->enum(['allow-all', 'deny-all']),
+            'policy_structured' => $schema->object()
+                ->description('(inline mode, Boruna v0.2.0+) Structured Capability Policy object with required default_allow (bool), optional rules (per-capability {allow, budget}), and optional net_policy (allowed_domains, allowed_methods, max_response_bytes, timeout_ms, allow_redirects). Capability keys: net.fetch, fs.read, fs.write, db.query, ui.render, time.now, random, llm.call, actor.spawn, actor.send. When set, takes precedence over the legacy policy parameter. See https://github.com/escapeboy/boruna/blob/v0.2.0/docs/reference/policy-schema.md.'),
             'boruna_tool_id' => $schema->string()
                 ->description('(inline mode) UUID of the mcp_stdio Tool pointing to the Boruna binary. If omitted, auto-detects.'),
             'input' => $schema->object()
                 ->description('Optional input data passed to the script as JSON'),
+            'limits' => $schema->object()
+                ->description('(inline mode, v1.0+) Optional resource limits: max_wall_ms (int) and/or max_output_bytes (int)'),
             'skill_id' => $schema->string()
                 ->description('(skill mode) UUID of the boruna_script Skill to execute'),
         ];
@@ -54,8 +61,13 @@ class BorunaRunTool extends McpTool
             'mode' => 'required|in:inline,skill',
             'script' => 'nullable|string',
             'policy' => 'nullable|in:allow-all,deny-all',
+            'policy_structured' => 'nullable|array',
+            'policy_structured.default_allow' => 'required_with:policy_structured|boolean',
             'boruna_tool_id' => 'nullable|uuid',
             'input' => 'nullable|array',
+            'limits' => 'nullable|array',
+            'limits.max_wall_ms' => 'nullable|integer|min:1',
+            'limits.max_output_bytes' => 'nullable|integer|min:1',
             'skill_id' => 'nullable|uuid',
         ]);
 
@@ -74,20 +86,29 @@ class BorunaRunTool extends McpTool
         $script = $validated['script'] ?? null;
 
         if (! $script) {
-            return Response::error('script is required in inline mode.');
+            return $this->invalidArgumentError('script is required in inline mode.');
         }
 
-        $tool = $this->resolveBorунaTool($teamId, $validated['boruna_tool_id'] ?? null);
+        $tool = $this->resolveBorunaTool($teamId, $validated['boruna_tool_id'] ?? null);
 
         if (! $tool) {
-            return Response::error('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
+            return $this->failedPreconditionError('No active Boruna tool found. Create an mcp_stdio Tool pointing to the Boruna binary.');
         }
 
-        $policy = $validated['policy'] ?? 'deny-all';
+        // policy_structured (v0.2.0+ Capability Policy object) wins over the
+        // legacy string shorthand when both are sent.
+        $policy = $validated['policy_structured']
+            ?? $validated['policy']
+            ?? 'deny-all';
+
+        // boruna_run accepts `source` (not `script`). Does not accept `input`.
+        // `limits` (max_wall_ms, max_output_bytes) added v0.3.0/LTS in v1.0.
+        $limits = $validated['limits'] ?? [];
+
         $arguments = array_filter([
-            'script' => $script,
+            'source' => $script,
             'policy' => $policy,
-            'input' => isset($validated['input']) ? json_encode($validated['input']) : null,
+            'limits' => $limits ?: null,
         ], fn ($v) => $v !== null);
 
         try {
@@ -100,7 +121,7 @@ class BorunaRunTool extends McpTool
                 'output' => $output,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Boruna execution failed: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -109,7 +130,7 @@ class BorunaRunTool extends McpTool
         $skillId = $validated['skill_id'] ?? null;
 
         if (! $skillId) {
-            return Response::error('skill_id is required in skill mode.');
+            return $this->invalidArgumentError('skill_id is required in skill mode.');
         }
 
         $skill = Skill::where('id', $skillId)
@@ -118,7 +139,7 @@ class BorunaRunTool extends McpTool
             ->first();
 
         if (! $skill) {
-            return Response::error('Boruna skill not found.');
+            return $this->notFoundError('Boruna skill');
         }
 
         try {
@@ -139,27 +160,25 @@ class BorunaRunTool extends McpTool
                 'duration_ms' => $result['execution']->duration_ms,
             ]));
         } catch (\Throwable $e) {
-            return Response::error("Boruna skill execution failed: {$e->getMessage()}");
+            throw $e;
         }
     }
 
-    private function resolveBorунaTool(string $teamId, ?string $toolId): ?Tool
+    private function resolveBorunaTool(string $teamId, ?string $toolId): ?Tool
     {
         if ($toolId) {
             return Tool::where('id', $toolId)
                 ->where('team_id', $teamId)
                 ->where('type', 'mcp_stdio')
                 ->where('status', 'active')
+                ->where('subkind', 'boruna')
                 ->first();
         }
 
         return Tool::where('team_id', $teamId)
             ->where('type', 'mcp_stdio')
             ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereRaw("transport_config->>'command' ILIKE '%boruna%'")
-                    ->orWhereRaw("transport_config->>'command' ILIKE '%boruna-mcp%'");
-            })
+            ->where('subkind', 'boruna')
             ->first();
     }
 }

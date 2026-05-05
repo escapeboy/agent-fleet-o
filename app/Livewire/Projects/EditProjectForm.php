@@ -13,6 +13,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class EditProjectForm extends Component
@@ -81,6 +82,11 @@ class EditProjectForm extends Component
 
     public array $selectedCredentialIds = [];
 
+    // Quality Gates (live in project.settings JSONB)
+    public bool $doneGateEnabled = false;
+
+    public bool $doneGateKillSwitch = false;
+
     public function mount(Project $project): void
     {
         $this->project = $project;
@@ -129,15 +135,22 @@ class EditProjectForm extends Component
         // Tools & Credentials
         $this->selectedToolIds = $project->allowed_tool_ids ?? [];
         $this->selectedCredentialIds = $project->allowed_credential_ids ?? [];
+
+        // Quality Gates
+        $settings = $project->settings ?? [];
+        $this->doneGateEnabled = (bool) ($settings['done_gate_enabled'] ?? false);
+        $this->doneGateKillSwitch = (bool) ($settings['done_gate_kill_switch'] ?? false);
     }
 
     protected function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         $rules = [
             'title' => 'required|min:2|max:255',
             'description' => 'nullable|max:2000',
-            'workflowId' => 'nullable|exists:workflows,id',
-            'agentId' => $this->workflowId ? 'nullable' : 'required|exists:agents,id',
+            'workflowId' => "nullable|exists:workflows,id,team_id,{$teamId}",
+            'agentId' => $this->workflowId ? 'nullable' : "required|exists:agents,id,team_id,{$teamId}",
         ];
 
         if ($this->project->isContinuous()) {
@@ -161,11 +174,16 @@ class EditProjectForm extends Component
         $rules['heartbeatContextSources'] = 'array';
         $rules['heartbeatContextSources.*'] = 'string|in:signals,metrics,audit,experiments';
 
+        $rules['doneGateEnabled'] = 'boolean';
+        $rules['doneGateKillSwitch'] = 'boolean';
+
         return $rules;
     }
 
     public function save(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $budgetConfig = array_filter([
@@ -194,6 +212,13 @@ class EditProjectForm extends Component
             'agent_config' => $this->agentId ? ['lead_agent_id' => $this->agentId] : $this->project->agent_config,
             'budget_config' => $budgetConfig ?: [],
             'delivery_config' => $deliveryConfig,
+            'allowed_tool_ids' => array_values($this->selectedToolIds),
+            'allowed_credential_ids' => array_values($this->selectedCredentialIds),
+            'email_template_id' => $this->emailTemplateId ?: null,
+            'settings' => [
+                'done_gate_enabled' => $this->doneGateEnabled,
+                'done_gate_kill_switch' => $this->doneGateKillSwitch,
+            ],
         ];
 
         if ($this->project->isContinuous()) {
@@ -211,13 +236,6 @@ class EditProjectForm extends Component
         }
 
         app(UpdateProjectAction::class)->execute($this->project, $data);
-
-        // Update tools, credentials, email template
-        $this->project->update([
-            'allowed_tool_ids' => array_values($this->selectedToolIds),
-            'allowed_credential_ids' => array_values($this->selectedCredentialIds),
-            'email_template_id' => $this->emailTemplateId ?: null,
-        ]);
 
         session()->flash('message', 'Project updated successfully!');
         $this->redirect(route('projects.show', $this->project));

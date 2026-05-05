@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('write')]
 class ChatbotSessionListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_session_list';
 
     protected string $description = 'List conversation sessions for a chatbot. Returns session id, channel, message count, last activity.';
@@ -38,14 +41,14 @@ class ChatbotSessionListTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $idOrSlug = $request->get('chatbot_id');
         $chatbot = Chatbot::where('id', $idOrSlug)->orWhere('slug', $idOrSlug)->first();
 
         if (! $chatbot) {
-            return Response::error("Chatbot not found: {$idOrSlug}");
+            return $this->notFoundError('chatbot', $idOrSlug);
         }
 
         $query = ChatbotSession::withCount('messages')

@@ -7,9 +7,7 @@
         {{-- Panel header --}}
         <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
+                <i class="fa-regular fa-clipboard text-lg text-gray-400"></i>
                 <span class="text-sm font-medium text-gray-700">Execution Log</span>
                 <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{{ $blocks->count() }} {{ Str::plural('block', $blocks->count()) }}</span>
             </div>
@@ -18,9 +16,7 @@
                 <button
                     onclick="document.querySelector('[data-failed-block]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                     class="inline-flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100">
-                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
+                    <i class="fa-solid fa-triangle-exclamation text-xs"></i>
                     Jump to failed
                 </button>
             @endif
@@ -67,34 +63,23 @@
                             {{-- Status indicator --}}
                             @if(! $isStage)
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100">
-                                    <svg class="h-3.5 w-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
+                                    <i class="fa-regular fa-clock text-sm text-gray-500"></i>
                                 </span>
                             @elseif($isRunning)
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                                    <svg class="h-3.5 w-3.5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                    </svg>
+                                    <i class="fa-solid fa-spinner fa-spin text-sm text-blue-600"></i>
                                 </span>
                             @elseif($isCompleted)
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
-                                    <svg class="h-3.5 w-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                    </svg>
+                                    <i class="fa-solid fa-check text-sm text-green-600"></i>
                                 </span>
                             @elseif($isFailed)
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
-                                    <svg class="h-3.5 w-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
+                                    <i class="fa-solid fa-xmark text-sm text-red-600"></i>
                                 </span>
                             @else
                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100">
-                                    <svg class="h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
+                                    <i class="fa-regular fa-clock text-sm text-gray-400"></i>
                                 </span>
                             @endif
 
@@ -141,11 +126,8 @@
                                 </span>
                             @endif
 
-                            <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-150"
-                                :class="open ? 'rotate-180' : ''"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
+                            <i class="fa-solid fa-chevron-down text-base shrink-0 text-gray-400 transition-transform duration-150"
+                                :class="open ? 'rotate-180' : ''"></i>
                         </div>
                     </button>
 
@@ -251,17 +233,11 @@
                                 <div class="flex gap-3">
                                     <div class="mt-0.5 flex-shrink-0">
                                         @if($approvalStatus === 'pending')
-                                            <svg class="h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                            </svg>
+                                            <i class="fa-regular fa-clock text-base text-amber-500"></i>
                                         @elseif($approvalStatus === 'approved')
-                                            <svg class="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-circle-check text-base text-green-500"></i>
                                         @else
-                                            <svg class="h-4 w-4 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                            </svg>
+                                            <i class="fa-solid fa-circle-xmark text-base text-red-400"></i>
                                         @endif
                                     </div>
 
@@ -281,9 +257,7 @@
                                                     wire:click="approveInline('{{ $approval->id }}')"
                                                     wire:loading.attr="disabled"
                                                     class="inline-flex items-center rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50">
-                                                    <svg class="mr-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-                                                    </svg>
+                                                    <i class="fa-solid fa-check mr-1 text-xs"></i>
                                                     Approve
                                                 </button>
                                                 <button

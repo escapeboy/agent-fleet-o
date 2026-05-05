@@ -11,6 +11,8 @@
         <i class="fas fa-flask-vial h-5 w-5"></i>
     @elseif($icon === 'puzzle-piece')
         <i class="fas fa-puzzle-piece h-5 w-5"></i>
+    @elseif($icon === 'academic-cap')
+        <i class="fas fa-graduation-cap h-5 w-5"></i>
     @elseif($icon === 'cpu-chip')
         <i class="fas fa-microchip h-5 w-5"></i>
     @elseif($icon === 'arrow-path')
@@ -85,6 +87,8 @@
         <i class="fas fa-bug h-5 w-5"></i>
     @elseif($icon === 'light-bulb')
         <i class="fas fa-lightbulb h-5 w-5"></i>
+    @elseif($icon === 'sitemap')
+        <i class="fas fa-sitemap h-5 w-5"></i>
     @endif
     {{ $slot }}
 </a>

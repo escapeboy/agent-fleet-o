@@ -6,6 +6,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Mcp\DeadlineContext;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
@@ -51,7 +52,11 @@ class LocalToolLoopExecutor
         $currentPrompt = $userPrompt;
         $lastResponse = null;
 
+        $deadlineContext = app(DeadlineContext::class);
+
         for ($step = 0; $step < $maxSteps; $step++) {
+            $deadlineContext->assertNotExpired();
+
             $request = new AiRequestDTO(
                 provider: $provider,
                 model: $model,

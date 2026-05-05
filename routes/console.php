@@ -26,10 +26,25 @@ Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOv
 Schedule::command('connectors:poll --driver=signal_protocol')->everyMinute()->withoutOverlapping(2);
 Schedule::command('connectors:poll --driver=matrix')->everyMinute()->withoutOverlapping(2);
 Schedule::command('digest:send-weekly')->weeklyOn(1, '09:00');
+
+// Harvest unmatched ErrorTranslator patterns weekly so future dictionary
+// expansion is data-driven. Output is appended to a dedicated log file
+// for ops review and downstream pipeline processing.
+Schedule::command('error-translator:harvest --format=json')
+    ->weeklyOn(1, '08:30')
+    ->withoutOverlapping(15)
+    ->appendOutputTo(storage_path('logs/error-translator-harvest.log'));
+
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+Schedule::command('agent-session-events:cleanup')->dailyAt('03:45')->withoutOverlapping(60)->onOneServer();
+Schedule::command('memory:check-drift --notify')->dailyAt('04:15')->withoutOverlapping(60)->onOneServer();
+Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
+Schedule::command('kg:build-communities')->dailyAt('02:45')->withoutOverlapping(60)->onOneServer();
+Schedule::command('kg:merge-entities')->dailyAt('04:30')->withoutOverlapping(30)->onOneServer();
 Schedule::command('signals:cleanup-bug-reports')->dailyAt('03:00');
 Schedule::command('sanctum:prune-expired --hours=48')->daily();
 Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
+Schedule::command('websites:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
 Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
 
@@ -59,6 +74,9 @@ Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);
 // Agent feedback analysis — weekly batch generates EvolutionProposals for underperforming agents
 Schedule::command('agents:analyze-feedback')->weeklyOn(1, '06:00');
 
+// GEPA skill evolution cycle — generates and evaluates system_prompt mutations for mature skills
+Schedule::command('skills:evolve')->weeklyOn(0, '03:00')->withoutOverlapping(120);
+
 // Skill degradation monitor — hourly scan creates EvolutionProposals for underperforming skills
 Schedule::command('skills:monitor-degradation')->hourly();
 
@@ -73,6 +91,14 @@ Schedule::command('system:check-updates')->hourly()->runInBackground();
 
 // Pre-generate OpenAPI spec so /docs/api.json is served from a static file
 Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
+
+// Boruna Audit Console — nightly bundle integrity verification
+if (config('boruna_audit.enabled', false)) {
+    Schedule::command('boruna:verify --tenant=all --sample='.config('boruna_audit.verification.sample_size', 20))
+        ->cron(config('boruna_audit.verification.schedule_cron', '0 3 * * *'))
+        ->withoutOverlapping(120)
+        ->runInBackground();
+}
 
 Schedule::command('conversations:expire')->everyFiveMinutes();
 

@@ -24,11 +24,11 @@ class ToolTemplateController extends Controller
     {
         $templates = QueryBuilder::for(ToolTemplate::class)
             ->active()
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('category'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['name', 'sort_order', 'created_at'])
+            )
+            ->allowedSorts('name', 'sort_order', 'created_at')
             ->defaultSort('sort_order')
             ->cursorPaginate(min((int) $request->input('per_page', 24), 100));
 

@@ -11,6 +11,9 @@ enum BuiltInToolKind: string
     case BrowserRelay = 'browser_relay';
     case ComputerUse = 'computer_use';
     case BrowserUseCloud = 'browser_use_cloud';
+    case ExecuteCode = 'execute_code';
+    case BrowserHarness = 'browser_harness';
+    case ProgressAppend = 'progress_append';
 
     public function label(): string
     {
@@ -22,6 +25,9 @@ enum BuiltInToolKind: string
             self::BrowserRelay => 'Browser Relay (via relay agent)',
             self::ComputerUse => 'Computer Use (desktop automation)',
             self::BrowserUseCloud => 'Browser Use Cloud (cloud.browser-use.com)',
+            self::ExecuteCode => 'Execute Code',
+            self::BrowserHarness => 'Browser Harness (self-healing CDP)',
+            self::ProgressAppend => 'Progress Log (workspace contract)',
         };
     }
 }

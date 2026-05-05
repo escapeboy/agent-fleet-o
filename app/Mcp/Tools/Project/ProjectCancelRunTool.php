@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Project;
 use App\Domain\Project\Enums\ProjectRunStatus;
 use App\Domain\Project\Models\ProjectRun;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class ProjectCancelRunTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'project_run_cancel';
 
     protected string $description = 'Cancel an active project run.';
@@ -30,7 +33,7 @@ class ProjectCancelRunTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $run = ProjectRun::withoutGlobalScopes()
@@ -38,11 +41,11 @@ class ProjectCancelRunTool extends Tool
             ->find($request->get('run_id'));
 
         if (! $run) {
-            return Response::error('Project run not found.');
+            return $this->notFoundError('project run');
         }
 
         if ($run->status->isTerminal()) {
-            return Response::error('Project run is already in a terminal state: '.$run->status->value);
+            return $this->failedPreconditionError('Project run is already in a terminal state: '.$run->status->value);
         }
 
         $run->status = ProjectRunStatus::Cancelled;

@@ -60,29 +60,29 @@
                         @switch($task->status->value)
                             @case('validated')
                                 <span class="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-600">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <i class="fa-solid fa-check text-sm"></i>
                                 </span>
                                 @break
                             @case('running')
                             @case('assigned')
                                 <span class="flex h-5 w-5 items-center justify-center">
-                                    <svg class="h-4 w-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                    <i class="fa-solid fa-spinner fa-spin text-base text-blue-500"></i>
                                 </span>
                                 @break
                             @case('failed')
                             @case('qa_failed')
                                 <span class="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <i class="fa-solid fa-xmark text-sm"></i>
                                 </span>
                                 @break
                             @case('needs_revision')
                                 <span class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    <i class="fa-solid fa-rotate text-sm"></i>
                                 </span>
                                 @break
                             @default
                                 <span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                                    <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                    <i class="fa-solid fa-circle text-[8px]"></i>
                                 </span>
                         @endswitch
 

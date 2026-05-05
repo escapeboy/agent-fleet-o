@@ -243,8 +243,16 @@ class BridgeController extends Controller
             return response()->json(['error' => 'Missing parameters'], 400);
         }
 
-        // Authorize: only allow daemon.{teamId} channels matching user's team
-        if (preg_match('/^private-daemon\.(.+)$/', $channelName, $m)) {
+        // Authorize. Two channel patterns are accepted on the API-side broadcast auth:
+        //   - private-daemon.{teamId}      — bridge daemon's reverse-tunnel control channel
+        //   - private-team.{teamId}.activity — unified per-team firehose consumed by the
+        //                                      desktop app and any future API-bearer client.
+        // In both cases the caller's team (resolved from Sanctum token abilities, falling
+        // back to current_team_id) must match the channel's teamId. The web frontend
+        // continues to use Laravel's standard /broadcasting/auth via session cookies and
+        // is unaffected by this method.
+        if (preg_match('/^private-daemon\.(.+)$/', $channelName, $m)
+            || preg_match('/^private-team\.(.+)\.activity$/', $channelName, $m)) {
             if ($this->resolveTeamId($request) !== $m[1]) {
                 return response()->json(['error' => 'Forbidden'], 403);
             }

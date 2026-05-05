@@ -77,12 +77,33 @@ class LinearIntegrationDriver implements IntegrationDriverInterface, Subscribabl
         try {
             $response = Http::withToken($token)
                 ->timeout(10)
-                ->post(self::API_URL, ['query' => '{ viewer { id } }']);
+                ->post(self::API_URL, ['query' => '{ viewer { id name email organization { name urlKey } } }']);
             $latency = (int) ((microtime(true) - $start) * 1000);
 
-            return ($response->successful() && isset($response->json()['data']['viewer']))
-                ? HealthResult::ok($latency)
-                : HealthResult::fail("HTTP {$response->status()}");
+            $viewer = $response->json('data.viewer');
+            if (! $response->successful() || ! is_array($viewer)) {
+                return HealthResult::fail("HTTP {$response->status()}");
+            }
+
+            $name = $viewer['name'] ?? null;
+            $orgName = $viewer['organization']['name'] ?? null;
+            $orgKey = $viewer['organization']['urlKey'] ?? null;
+
+            return HealthResult::ok(
+                latencyMs: $latency,
+                message: $name ? "Connected as {$name}".($orgName ? " on {$orgName}" : '') : null,
+                identity: [
+                    'label' => $name && $orgName ? "{$name} · {$orgName}" : ($name ?? $orgName ?? 'Linear'),
+                    'identifier' => $viewer['id'] ?? null,
+                    'url' => $orgKey ? "https://linear.app/{$orgKey}" : null,
+                    'metadata' => array_filter([
+                        'name' => $name,
+                        'email' => $viewer['email'] ?? null,
+                        'organization' => $orgName,
+                        'organization_key' => $orgKey,
+                    ]),
+                ],
+            );
         } catch (\Throwable $e) {
             return HealthResult::fail($e->getMessage());
         }

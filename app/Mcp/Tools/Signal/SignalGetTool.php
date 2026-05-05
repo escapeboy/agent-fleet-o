@@ -3,19 +3,22 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\Signal\Models\Signal;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
 class SignalGetTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'signal_get';
 
     protected string $description = 'Get full details of a specific signal including the complete payload and score.';
@@ -41,7 +44,7 @@ class SignalGetTool extends Tool
             ->find($validated['signal_id']);
 
         if (! $signal) {
-            return Response::error('Signal not found.');
+            return $this->notFoundError('signal');
         }
 
         $attachments = $signal->getMedia('attachments')->map(fn ($m) => [
@@ -61,6 +64,7 @@ class SignalGetTool extends Tool
             'payload' => $signal->payload,
             'score' => $signal->score,
             'scored_at' => $signal->scored_at?->toIso8601String(),
+            'metadata' => $signal->metadata,
             'experiment_id' => $signal->experiment_id,
             'attachments' => $attachments,
             'created_at' => $signal->created_at?->toIso8601String(),

@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Chatbot;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotLearningEntry;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ChatbotLearningEntriesListTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'chatbot_learning_entries_list';
 
     protected string $description = 'List operator corrections (learning entries) for a chatbot. Each entry represents a case where the operator modified the AI draft before approving.';
@@ -39,14 +42,14 @@ class ChatbotLearningEntriesListTool extends Tool
     public function handle(Request $request): Response
     {
         if (! (auth()->user()->currentTeam?->settings['chatbot_enabled'] ?? false)) {
-            return Response::error('Chatbot feature is not enabled for this team.');
+            return $this->failedPreconditionError('Chatbot feature is not enabled for this team.');
         }
 
         $idOrSlug = $request->get('chatbot_id');
         $chatbot = Chatbot::where('id', $idOrSlug)->orWhere('slug', $idOrSlug)->first();
 
         if (! $chatbot) {
-            return Response::error("Chatbot not found: {$idOrSlug}");
+            return $this->notFoundError('chatbot', $idOrSlug);
         }
 
         $limit = min((int) ($request->get('limit', 20)), 100);

@@ -4,19 +4,22 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
+use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool as McpTool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
-use App\Mcp\Attributes\AssistantTool;
 
 #[IsIdempotent]
 #[IsDestructive]
 #[AssistantTool('write')]
 class ToolProbeRemoteMcpTool extends McpTool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'tool_probe_remote_mcp';
 
     protected string $description = 'Connect to a remote MCP HTTP/SSE server, fetch its tools/list, and store the definitions in the Tool record. Call this after creating an mcp_http Tool to populate its tool_definitions so agents can use its capabilities.';
@@ -36,21 +39,21 @@ class ToolProbeRemoteMcpTool extends McpTool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
         $tool = Tool::withoutGlobalScopes()->where('team_id', $teamId)->find($toolId);
 
         if (! $tool) {
-            return Response::error('Tool not found.');
+            return $this->notFoundError('tool');
         }
 
         if ($tool->type->value !== 'mcp_http') {
-            return Response::error("Tool must be of type mcp_http (got: {$tool->type->value}).");
+            return $this->failedPreconditionError("Tool must be of type mcp_http (got: {$tool->type->value}).");
         }
 
         $url = $tool->transport_config['url'] ?? null;
         if (! $url) {
-            return Response::error('Tool has no URL in transport_config.');
+            return $this->failedPreconditionError('Tool has no URL in transport_config.');
         }
 
         $credentials = (array) $tool->credentials;
@@ -60,11 +63,11 @@ class ToolProbeRemoteMcpTool extends McpTool
         try {
             $tools = app(McpHttpClient::class)->listTools($url, $headers);
         } catch (\Throwable $e) {
-            return Response::error("Failed to probe MCP server at {$url}: {$e->getMessage()}");
+            throw $e;
         }
 
         if (empty($tools)) {
-            return Response::error('MCP server returned no tools.');
+            return $this->failedPreconditionError('MCP server returned no tools.');
         }
 
         // Normalise to FleetQ tool_definitions format

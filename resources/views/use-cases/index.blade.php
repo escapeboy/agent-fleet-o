@@ -64,9 +64,7 @@
                 >
                     <a href="{{ route('register') }}" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">
                         Start free — no credit card
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                        </svg>
+                        <i class="fa-solid fa-arrow-right text-base"></i>
                     </a>
                     <a href="{{ route('marketplace.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
                         Browse Marketplace
@@ -96,9 +94,7 @@
                     >
                         <div class="flex items-center gap-3 mb-4">
                             <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl {{ $uc['icon_bg'] }} flex-shrink-0">
-                                <svg class="w-5 h-5 {{ $uc['icon_text'] }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-                                </svg>
+                                <i class="fa-solid fa-wand-magic-sparkles text-lg {{ $uc['icon_text'] }}"></i>
                             </span>
                             <span class="text-sm font-semibold text-gray-900">{{ $uc['title_short'] }}</span>
                         </div>
@@ -127,9 +123,7 @@
 
                         <div class="mt-4 flex items-center gap-1 text-xs font-medium {{ $uc['icon_text'] }} group-hover:gap-2 transition-all">
                             Explore workflow
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                            </svg>
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
                         </div>
                     </a>
                 @endforeach
@@ -151,9 +145,9 @@
             >
                 @php
                 $pillars = [
-                    ['icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>', 'title' => 'Trigger from anywhere', 'desc' => 'Start workflows from webhooks, email, RSS, Telegram, scheduled jobs, or manual API calls. Any signal can kick off an agent crew.'],
-                    ['icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>', 'title' => 'Specialised agents, coordinated', 'desc' => 'Assign unique roles, tools, and skills to each agent. Crews collaborate sequentially or in parallel to solve complex, multi-step tasks.'],
-                    ['icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275"/>', 'title' => 'Human-in-the-loop, always optional', 'desc' => 'Add approval gates at any workflow node. Route sensitive decisions to a human reviewer before the crew continues.'],
+                    ['icon' => 'fa-solid fa-bolt', 'title' => 'Trigger from anywhere', 'desc' => 'Start workflows from webhooks, email, RSS, Telegram, scheduled jobs, or manual API calls. Any signal can kick off an agent crew.'],
+                    ['icon' => 'fa-solid fa-wand-magic-sparkles', 'title' => 'Specialised agents, coordinated', 'desc' => 'Assign unique roles, tools, and skills to each agent. Crews collaborate sequentially or in parallel to solve complex, multi-step tasks.'],
+                    ['icon' => 'fa-solid fa-user-circle', 'title' => 'Human-in-the-loop, always optional', 'desc' => 'Add approval gates at any workflow node. Route sensitive decisions to a human reviewer before the crew continues.'],
                 ];
                 @endphp
                 @foreach ($pillars as $i => $p)
@@ -163,9 +157,7 @@
                         :style="'transition-delay: {{ $i * 120 }}ms'"
                     >
                         <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 border border-primary-100">
-                            <svg class="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                {!! $p['icon'] !!}
-                            </svg>
+                            <i class="{{ $p['icon'] }} text-xl text-primary-600"></i>
                         </div>
                         <h3 class="text-base font-semibold text-gray-900">{{ $p['title'] }}</h3>
                         <p class="text-sm text-gray-600 leading-relaxed">{{ $p['desc'] }}</p>

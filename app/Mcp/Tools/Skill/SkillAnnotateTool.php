@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\AnnotateSkillResponseAction;
 use App\Domain\Skill\Enums\AnnotationRating;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -18,6 +19,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[IsDestructive]
 class SkillAnnotateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_annotate';
 
     protected string $description = 'Annotate a skill playground response as good or bad. Annotations are used to generate improved skill versions.';
@@ -59,7 +62,7 @@ class SkillAnnotateTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -80,7 +83,7 @@ class SkillAnnotateTool extends Tool
                 'rating' => $annotation->rating->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

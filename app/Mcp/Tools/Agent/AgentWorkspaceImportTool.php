@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\ImportAgentWorkspaceAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class AgentWorkspaceImportTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'agent_workspace_import';
 
     protected string $description = 'Import an agent workspace from a file path (zip or yaml). Creates a new agent or merges into an existing one.';
@@ -43,17 +46,17 @@ class AgentWorkspaceImportTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $filePath = $validated['file_path'];
         if (! file_exists($filePath)) {
-            return Response::error("File not found: {$filePath}");
+            return $this->notFoundError('file', $filePath);
         }
 
         $mode = $validated['mode'] ?? 'create';
         if ($mode === 'merge' && empty($validated['agent_id'])) {
-            return Response::error('agent_id is required when mode is merge.');
+            return $this->invalidArgumentError('agent_id is required when mode is merge.');
         }
 
         try {
@@ -66,7 +69,7 @@ class AgentWorkspaceImportTool extends Tool
 
             return Response::text(json_encode(array_merge(['success' => true], $result)));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

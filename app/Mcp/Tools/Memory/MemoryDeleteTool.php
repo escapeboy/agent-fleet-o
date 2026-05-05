@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Models\Memory;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class MemoryDeleteTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'memory_delete';
 
     protected string $description = 'Delete one or more agent memories by their UUIDs. Only memories belonging to the current team can be deleted.';
@@ -34,13 +37,13 @@ class MemoryDeleteTool extends Tool
         $teamId = app('mcp.team_id') ?? $user?->current_team_id;
 
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $memoryIds = $request->get('memory_ids', []);
 
         if (! is_array($memoryIds) || empty($memoryIds)) {
-            return Response::error('memory_ids must be a non-empty array of UUIDs.');
+            return $this->invalidArgumentError('memory_ids must be a non-empty array of UUIDs.');
         }
 
         // Only delete memories belonging to the current team (security: no cross-team deletion)

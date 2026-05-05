@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Skill;
 use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Models\Skill;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class SkillCloneTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'skill_clone';
 
     protected string $description = 'Clone an existing skill with a new name.';
@@ -31,12 +34,12 @@ class SkillCloneTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         $skill = Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($request->get('skill_id'));
         if (! $skill) {
-            return Response::error('Skill not found.');
+            return $this->notFoundError('skill');
         }
 
         $clone = $skill->replicate();

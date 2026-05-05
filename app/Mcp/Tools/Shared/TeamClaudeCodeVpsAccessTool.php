@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Shared;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Request;
@@ -16,6 +17,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class TeamClaudeCodeVpsAccessTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'team_claude_code_vps_access';
 
     protected string $description = 'Super-admin only. Manage VPS Claude Code access for teams. Actions: list (all teams with their VPS flag), enable (grant access to a team), disable (revoke access).';
@@ -36,7 +39,7 @@ class TeamClaudeCodeVpsAccessTool extends Tool
     {
         $user = Auth::user();
         if (! $user || ! $user->is_super_admin) {
-            return Response::error('Only super admins can manage Claude Code VPS access.');
+            return $this->permissionDeniedError('Only super admins can manage Claude Code VPS access.');
         }
 
         $action = $request->get('action');
@@ -45,7 +48,7 @@ class TeamClaudeCodeVpsAccessTool extends Tool
             'list' => $this->list(),
             'enable' => $this->toggle($request, true),
             'disable' => $this->toggle($request, false),
-            default => Response::error("Unknown action: {$action}"),
+            default => $this->invalidArgumentError("Unknown action: {$action}"),
         };
     }
 
@@ -71,12 +74,12 @@ class TeamClaudeCodeVpsAccessTool extends Tool
     {
         $teamId = $request->get('team_id');
         if (! $teamId) {
-            return Response::error('team_id is required.');
+            return $this->invalidArgumentError('team_id is required.');
         }
 
         $team = Team::withoutGlobalScopes()->find($teamId);
         if (! $team) {
-            return Response::error("Team {$teamId} not found.");
+            return $this->notFoundError('team', $teamId);
         }
 
         $previous = (bool) $team->claude_code_vps_allowed;

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Integration;
 
 use App\Domain\Integration\Actions\ConnectIntegrationAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +15,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class IntegrationConnectTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'integration_connect';
 
     protected string $description = 'Connect a new external integration by providing driver credentials (API key, token, etc.).';
@@ -41,14 +44,14 @@ class IntegrationConnectTool extends Tool
         $teamId = app('mcp.team_id') ?? null;
 
         if (! $teamId) {
-            return Response::error('No team context.');
+            return $this->permissionDeniedError('No team context.');
         }
 
         $driver = $request->get('driver');
         $name = $request->get('name');
 
         if (! $driver || ! $name) {
-            return Response::error('driver and name are required.');
+            return $this->invalidArgumentError('driver and name are required.');
         }
 
         try {
@@ -68,7 +71,7 @@ class IntegrationConnectTool extends Tool
                 'status' => $integration->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error('Connection failed: '.$e->getMessage());
+            throw $e;
         }
     }
 }

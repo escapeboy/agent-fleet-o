@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\RunPod;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\RunPod\RunPodClient;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -29,6 +30,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class RunPodManageTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'runpod_manage';
 
     protected string $description = 'Manage RunPod GPU cloud integration: save API keys, run serverless endpoint jobs, manage persistent pods. Actions: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_status, pod_stop.';
@@ -78,7 +81,7 @@ class RunPodManageTool extends Tool
             'pod_list' => $this->listPods($teamId),
             'pod_status' => $this->getPodStatus($request, $teamId),
             'pod_stop' => $this->stopPod($request, $teamId),
-            default => Response::error("Unknown action: {$action}. Valid: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_status, pod_stop"),
+            default => $this->invalidArgumentError("Unknown action: {$action}. Valid: credential_save, credential_check, credential_remove, endpoint_run, endpoint_status, endpoint_health, pod_create, pod_list, pod_status, pod_stop"),
         };
     }
 
@@ -87,11 +90,11 @@ class RunPodManageTool extends Tool
         $apiKey = $request->get('api_key');
 
         if (! $apiKey) {
-            return Response::error('api_key is required for credential_save');
+            return $this->invalidArgumentError('api_key is required for credential_save');
         }
 
         if (! $this->client->validateApiKey($apiKey)) {
-            return Response::error('RunPod API key validation failed. Check your key at https://www.runpod.io/console/user/settings');
+            return $this->failedPreconditionError('RunPod API key validation failed. Check your key at https://www.runpod.io/console/user/settings');
         }
 
         TeamProviderCredential::withoutGlobalScopes()->updateOrCreate(
@@ -144,13 +147,13 @@ class RunPodManageTool extends Tool
         $endpointId = $request->get('endpoint_id');
 
         if (! $endpointId) {
-            return Response::error('endpoint_id is required for endpoint_run');
+            return $this->invalidArgumentError('endpoint_id is required for endpoint_run');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured. Use runpod_manage with action=credential_save first.');
+            return $this->failedPreconditionError('No RunPod API key configured. Use runpod_manage with action=credential_save first.');
         }
 
         $input = $request->get('input', []);
@@ -166,7 +169,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod endpoint_run failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -176,13 +179,13 @@ class RunPodManageTool extends Tool
         $jobId = $request->get('job_id');
 
         if (! $endpointId || ! $jobId) {
-            return Response::error('endpoint_id and job_id are required for endpoint_status');
+            return $this->invalidArgumentError('endpoint_id and job_id are required for endpoint_status');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -190,7 +193,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod endpoint_status failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -199,13 +202,13 @@ class RunPodManageTool extends Tool
         $endpointId = $request->get('endpoint_id');
 
         if (! $endpointId) {
-            return Response::error('endpoint_id is required for endpoint_health');
+            return $this->invalidArgumentError('endpoint_id is required for endpoint_health');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -213,7 +216,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod endpoint_health failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -222,13 +225,13 @@ class RunPodManageTool extends Tool
         $podConfig = $request->get('pod_config');
 
         if (! is_array($podConfig) || empty($podConfig)) {
-            return Response::error('pod_config is required for pod_create. Provide imageName, gpuTypeIds, etc.');
+            return $this->invalidArgumentError('pod_config is required for pod_create. Provide imageName, gpuTypeIds, etc.');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -236,7 +239,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod pod_create failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -245,7 +248,7 @@ class RunPodManageTool extends Tool
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -253,7 +256,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod pod_list failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -262,13 +265,13 @@ class RunPodManageTool extends Tool
         $podId = $request->get('pod_id');
 
         if (! $podId) {
-            return Response::error('pod_id is required for pod_status');
+            return $this->invalidArgumentError('pod_id is required for pod_status');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -276,7 +279,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod pod_status failed: '.$e->getMessage());
+            throw $e;
         }
     }
 
@@ -285,13 +288,13 @@ class RunPodManageTool extends Tool
         $podId = $request->get('pod_id');
 
         if (! $podId) {
-            return Response::error('pod_id is required for pod_stop');
+            return $this->invalidArgumentError('pod_id is required for pod_stop');
         }
 
         $apiKey = $this->resolveApiKey($teamId);
 
         if (! $apiKey) {
-            return Response::error('No RunPod API key configured.');
+            return $this->failedPreconditionError('No RunPod API key configured.');
         }
 
         try {
@@ -299,7 +302,7 @@ class RunPodManageTool extends Tool
 
             return Response::text(json_encode($result));
         } catch (\Throwable $e) {
-            return Response::error('RunPod pod_stop failed: '.$e->getMessage());
+            throw $e;
         }
     }
 

@@ -3,8 +3,9 @@
 namespace App\Mcp\Tools\Shared;
 
 use App\Domain\Shared\Models\TermsAcceptance;
-use App\Models\User;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
+use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -17,6 +18,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class TermsAcceptanceHistoryTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'terms_acceptance_history';
 
     protected string $description = 'Get the full terms acceptance audit log for a user. Returns all versions the user has accepted, with timestamps and metadata.';
@@ -35,12 +38,12 @@ class TermsAcceptanceHistoryTool extends Tool
         if ($userId) {
             $user = User::find($userId);
             if (! $user) {
-                return Response::error('User not found.');
+                return $this->notFoundError('user');
             }
         } else {
             $user = auth()->user();
             if (! $user) {
-                return Response::error('No authenticated user.');
+                return $this->permissionDeniedError('No authenticated user.');
             }
         }
 

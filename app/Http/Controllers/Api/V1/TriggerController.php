@@ -26,12 +26,12 @@ class TriggerController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $triggers = QueryBuilder::for(TriggerRule::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::partial('name'),
-            ])
-            ->allowedSorts(['created_at', 'name', 'total_triggers', 'last_triggered_at'])
+            )
+            ->allowedSorts('created_at', 'name', 'total_triggers', 'last_triggered_at')
             ->defaultSort('-created_at')
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 

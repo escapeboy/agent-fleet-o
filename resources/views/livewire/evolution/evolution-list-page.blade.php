@@ -147,10 +147,7 @@
             </div>
         @empty
             <div class="rounded-xl border border-dashed border-gray-200 bg-white p-12 text-center">
-                <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
+                <i class="fa-solid fa-wand-magic-sparkles mx-auto text-3xl text-gray-300"></i>
                 <p class="mt-3 text-sm text-gray-500">No {{ $statusFilter }} evolution proposals.</p>
                 <p class="mt-1 text-xs text-gray-400">Open an agent's Evolution tab to generate proposals from execution history.</p>
             </div>

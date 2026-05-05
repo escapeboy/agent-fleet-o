@@ -15,6 +15,7 @@ use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
 use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
+use App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -186,6 +187,7 @@ class ToolTranslator
             BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
+            BuiltInToolKind::ExecuteCode => $this->buildExecuteCodeTools($tool, $workspace),
             default => [],
         };
     }
@@ -518,6 +520,18 @@ class ToolTranslator
                         $options['start_url'] = $start_url;
                     }
 
+                    // Network policy — restrict browser to an allowlist of hosts.
+                    // Stored per-tool as tools.network_policy.allowed_domains (JSONB).
+                    // Enforced at the browser-use level by the Python sidecar and the
+                    // browser-use Cloud API. Null/empty = no restriction (backward-compat).
+                    $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
+                    if (is_array($allowedDomains) && ! empty($allowedDomains)) {
+                        $options['allowed_domains'] = array_values(array_filter(
+                            $allowedDomains,
+                            fn ($d) => is_string($d) && $d !== '',
+                        ));
+                    }
+
                     // Resolve API key from tool credentials or env fallback.
                     /** @var array<string, mixed> $credentials */
                     $credentials = (array) $toolModel->credentials;
@@ -672,6 +686,15 @@ class ToolTranslator
 
                     if ($start_url) {
                         $options['start_url'] = $start_url;
+                    }
+
+                    // Network policy — see buildBrowserTools() for rationale.
+                    $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
+                    if (is_array($allowedDomains) && ! empty($allowedDomains)) {
+                        $options['allowed_domains'] = array_values(array_filter(
+                            $allowedDomains,
+                            fn ($d) => is_string($d) && $d !== '',
+                        ));
                     }
 
                     // API key resolution order:
@@ -1000,5 +1023,30 @@ class ToolTranslator
 
         // Fallback: raw proxy_url in transport_config (for manual/legacy config).
         return $config['proxy_url'] ?? null;
+    }
+
+    private function buildExecuteCodeTools(Tool $tool, ?SandboxedWorkspace $workspace = null): array
+    {
+        $timeout = $tool->settings['timeout'] ?? 30;
+
+        return [
+            PrismTool::as('execute_code')
+                ->for('Execute Python code in a sandboxed environment. No network access. Returns stdout, stderr, exit_code.')
+                ->withStringParameter('code', 'Python code to execute', required: true)
+                ->withNumberParameter('timeout_seconds', 'Execution timeout in seconds (max 120, default 30)', required: false)
+                ->using(function (string $code, ?float $timeout_seconds = null) use ($workspace, $timeout): string {
+                    $effectiveTimeout = $timeout_seconds !== null ? (int) $timeout_seconds : $timeout;
+
+                    $handler = app(ExecuteCodeHandler::class);
+                    $result = $handler->execute($code, $effectiveTimeout, $workspace);
+
+                    return json_encode([
+                        'stdout' => $result['stdout'],
+                        'stderr' => $result['stderr'],
+                        'exit_code' => $result['exit_code'],
+                        'successful' => $result['successful'],
+                    ]);
+                }),
+        ];
     }
 }

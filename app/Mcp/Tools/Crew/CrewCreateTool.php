@@ -5,6 +5,7 @@ namespace App\Mcp\Tools\Crew;
 use App\Domain\Crew\Actions\CreateCrewAction;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('write')]
 class CrewCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'crew_create';
 
     protected string $description = 'Create a new crew (multi-agent team). Requires a name, coordinator agent, and QA agent. '
@@ -31,8 +34,7 @@ class CrewCreateTool extends Tool
                 ->description('UUID of the coordinator agent')
                 ->required(),
             'qa_agent_id' => $schema->string()
-                ->description('UUID of the QA agent')
-                ->required(),
+                ->description('UUID of the QA agent. Optional — when omitted, the coordinator reviews their own work (solo-mode crew).'),
             'description' => $schema->string()
                 ->description('Crew description'),
             'process_type' => $schema->string()
@@ -52,7 +54,7 @@ class CrewCreateTool extends Tool
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'coordinator_agent_id' => 'required|string',
-            'qa_agent_id' => 'required|string',
+            'qa_agent_id' => 'nullable|string',
             'description' => 'nullable|string',
             'process_type' => 'nullable|string|in:sequential,parallel,hierarchical',
             'convergence_mode' => 'nullable|string|in:any_validated,all_validated,threshold_ratio,quality_gate',
@@ -60,7 +62,7 @@ class CrewCreateTool extends Tool
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
-            return Response::error('No current team.');
+            return $this->permissionDeniedError('No current team.');
         }
 
         try {
@@ -76,7 +78,7 @@ class CrewCreateTool extends Tool
                 userId: auth()->id(),
                 name: $validated['name'],
                 coordinatorAgentId: $validated['coordinator_agent_id'],
-                qaAgentId: $validated['qa_agent_id'],
+                qaAgentId: $validated['qa_agent_id'] ?? null,
                 description: $validated['description'] ?? null,
                 processType: CrewProcessType::from($validated['process_type'] ?? 'hierarchical'),
                 settings: $settings,
@@ -90,7 +92,7 @@ class CrewCreateTool extends Tool
                 'status' => $crew->status->value,
             ]));
         } catch (\Throwable $e) {
-            return Response::error($e->getMessage());
+            throw $e;
         }
     }
 }

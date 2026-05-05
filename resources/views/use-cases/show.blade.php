@@ -93,9 +93,7 @@
                     >
                         <a href="{{ route('register') }}" class="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">
                             Try it free
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                            </svg>
+                            <i class="fa-solid fa-arrow-right text-base"></i>
                         </a>
                         <a href="{{ route('use-cases.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                             All use cases
@@ -136,9 +134,7 @@
                                 :style="'transition-delay: {{ $i * 80 }}ms'"
                             >
                                 <span class="flex-shrink-0 mt-0.5 flex items-center justify-center w-5 h-5 rounded-full bg-red-100 border border-red-200">
-                                    <svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
+                                    <i class="fa-solid fa-xmark text-xs text-red-500"></i>
                                 </span>
                                 <span class="text-sm text-gray-700 leading-relaxed">{{ $pain }}</span>
                             </li>

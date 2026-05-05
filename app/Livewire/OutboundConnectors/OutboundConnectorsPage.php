@@ -4,6 +4,7 @@ namespace App\Livewire\OutboundConnectors;
 
 use App\Domain\Email\Models\EmailTemplate;
 use App\Domain\Outbound\Models\OutboundConnectorConfig;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class OutboundConnectorsPage extends Component
@@ -66,6 +67,8 @@ class OutboundConnectorsPage extends Component
 
     public function save(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate([
             'host' => 'required|string|max:255',
             'port' => 'required|integer|between:1,65535',
@@ -116,6 +119,8 @@ class OutboundConnectorsPage extends Component
 
     public function testConnection(): void
     {
+        Gate::authorize('manage-team');
+
         $team = auth()->user()->currentTeam;
         $config = OutboundConnectorConfig::where('team_id', $team->id)
             ->where('channel', 'email')
