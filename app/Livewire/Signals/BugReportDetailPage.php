@@ -4,6 +4,7 @@ namespace App\Livewire\Signals;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Signal\Actions\AddSignalCommentAction;
+use App\Domain\Signal\Actions\AssignSignalAction;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
 use App\Domain\Signal\Enums\CommentAuthorType;
@@ -12,7 +13,9 @@ use App\Domain\Signal\Exceptions\InvalidSignalTransitionException;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Domain\Signal\Services\SignalStatusTransitionMap;
+use App\Models\User;
 use Illuminate\View\View;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -28,6 +31,14 @@ class BugReportDetailPage extends Component
     public bool $commentVisibleToReporter = true;
 
     public string $delegateAgentId = '';
+
+    public bool $showAssignModal = false;
+
+    #[Validate('nullable|string|uuid')]
+    public ?string $assignUserId = null;
+
+    #[Validate('nullable|string|max:2000')]
+    public ?string $assignReason = null;
 
     /** @var array<int, TemporaryUploadedFile> */
     public array $commentImages = [];
@@ -131,6 +142,39 @@ class BugReportDetailPage extends Component
         $this->delegateAgentId = '';
     }
 
+    public function openAssignModal(): void
+    {
+        $this->assignUserId = $this->signal->assigned_user_id;
+        $this->assignReason = null;
+        $this->showAssignModal = true;
+    }
+
+    public function submitAssign(): void
+    {
+        $this->validate();
+
+        $assignee = $this->assignUserId ? User::find($this->assignUserId) : null;
+        $actor = auth()->user();
+
+        try {
+            app(AssignSignalAction::class)->execute(
+                signal: $this->signal,
+                assignee: $assignee,
+                actor: $actor,
+                reason: $this->assignReason ?: null,
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('assignUserId', $e->getMessage());
+
+            return;
+        }
+
+        $this->signal->refresh();
+        $this->showAssignModal = false;
+        $this->assignUserId = null;
+        $this->assignReason = null;
+    }
+
     public function render(): View
     {
         $transitionMap = app(SignalStatusTransitionMap::class);
@@ -140,12 +184,17 @@ class BugReportDetailPage extends Component
 
         $agents = Agent::query()->orderBy('name')->get(['id', 'name']);
 
-        $this->signal->load('comments.user', 'comments.media');
+        $this->signal->load('comments.user', 'comments.media', 'assignedUser');
+
+        $teamMembers = User::whereHas('teams', fn ($q) => $q->where('teams.id', auth()->user()->current_team_id))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
 
         return view('livewire.signals.bug-report-detail', [
             'allowedTransitions' => $allowedTransitions,
             'agents' => $agents,
             'mediaFiles' => $this->signal->getMedia('bug_report_files'),
+            'teamMembers' => $teamMembers,
         ]);
     }
 }

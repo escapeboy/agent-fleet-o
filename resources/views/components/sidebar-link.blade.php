@@ -32,7 +32,7 @@
     @elseif($icon === 'credit-card')
         <i class="fas fa-credit-card h-5 w-5"></i>
     @elseif($icon === 'shield-check')
-        <i class="fas fa-shield-check h-5 w-5"></i>
+        <i class="fas fa-shield-halved h-5 w-5"></i>
     @elseif($icon === 'wrench-screwdriver')
         <i class="fas fa-screwdriver h-5 w-5"></i>
     @elseif($icon === 'key')

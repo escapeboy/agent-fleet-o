@@ -75,10 +75,23 @@ class ClaudeCodeVpsGateTest extends TestCase
         $this->assertFalse($this->gate->isAllowedForUser($user, null));
     }
 
-    public function test_null_user_is_denied(): void
+    public function test_null_user_on_whitelisted_team_is_allowed(): void
     {
+        // Queue jobs and automated pipeline calls have no HTTP session / user.
+        // A whitelisted team must still be allowed to use VPS Claude Code.
         $team = $this->createTeam(true);
+        $this->assertTrue($this->gate->isAllowedForUser(null, $team));
+    }
+
+    public function test_null_user_on_non_whitelisted_team_is_denied(): void
+    {
+        $team = $this->createTeam(false);
         $this->assertFalse($this->gate->isAllowedForUser(null, $team));
+    }
+
+    public function test_null_user_without_team_is_denied(): void
+    {
+        $this->assertFalse($this->gate->isAllowedForUser(null, null));
     }
 
     public function test_global_flag_does_not_block_super_admin(): void
