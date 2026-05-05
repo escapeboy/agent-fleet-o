@@ -17,6 +17,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property string $team_id
+ * @property string|null $assigned_user_id
+ * @property \Carbon\Carbon|null $assigned_at
+ * @property array<string, mixed> $payload
+ * @property array<string, mixed> $scoring_details
+ * @property array<string, mixed> $metadata
+ * @property array<int, string> $tags
+ */
 class Signal extends Model implements HasMedia
 {
     use BelongsToTeam, HasFactory, HasUuids, InteractsWithMedia;

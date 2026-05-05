@@ -22,7 +22,8 @@ class SignalAssignedMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $title = $this->signal->payload['subject'] ?? $this->signal->payload['title'] ?? "Signal #{$this->signal->id}";
+        $p = (array) $this->signal->payload;
+        $title = $p['subject'] ?? $p['title'] ?? "Signal #{$this->signal->id}";
 
         return new Envelope(
             subject: "[FleetQ] Signal assigned to you: {$title}",
