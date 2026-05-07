@@ -118,7 +118,7 @@ class EvaluateExecutionJob implements ShouldQueue
         }
 
         $skill = $execution->skill;
-        $config = $skill?->configuration ?? [];
+        $config = $skill->configuration ?? [];
 
         return ! empty($config['provider']) && ! empty($config['model'])
             ? $config['provider'].'/'.$config['model']
@@ -130,10 +130,10 @@ class EvaluateExecutionJob implements ShouldQueue
         $default = ['relevance', 'accuracy', 'completeness'];
 
         if ($execution instanceof AgentExecution) {
-            return $execution->agent?->evaluation_criteria ?? $default;
+            return $execution->agent->evaluation_criteria ?? $default;
         }
 
-        return $execution->skill?->evaluation_criteria ?? $default;
+        return $execution->skill->evaluation_criteria ?? $default;
     }
 
     private function resolveJudgeOverride(AgentExecution|SkillExecution $execution): ?string

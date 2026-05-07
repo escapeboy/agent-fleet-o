@@ -52,7 +52,7 @@ class RecalculateIntentScoreJob implements ShouldQueue
             return;
         }
 
-        $previousScore = $existing?->composite_score ?? 0;
+        $previousScore = $existing->composite_score ?? 0;
 
         $score = $engine->recalculate($this->teamId, $this->entityKey, $this->entityType);
 

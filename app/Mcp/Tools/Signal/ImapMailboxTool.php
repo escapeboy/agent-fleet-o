@@ -137,7 +137,7 @@ class ImapMailboxTool extends Tool
         $results = $messages->map(function ($message) {
             return [
                 'uid' => $message->getUid(),
-                'from' => (string) ($message->getFrom()?->first()?->mail ?? ''),
+                'from' => (string) ($message->getFrom()?->first()->mail ?? ''),
                 'subject' => (string) $message->getSubject(),
                 'date' => $message->getDate()?->format('c'),
                 'seen' => $message->getFlags()->contains('Seen'),
@@ -189,7 +189,7 @@ class ImapMailboxTool extends Tool
             'uid' => $message->getUid(),
             'message_id' => (string) $message->getMessageId(),
             'subject' => (string) $message->getSubject(),
-            'from' => (string) ($message->getFrom()?->first()?->mail ?? ''),
+            'from' => (string) ($message->getFrom()?->first()->mail ?? ''),
             'to' => $message->getTo()?->map(fn ($a) => $a->mail)->toArray() ?? [],
             'cc' => $message->getCc()?->map(fn ($a) => $a->mail)->toArray() ?? [],
             'date' => $message->getDate()?->format('c'),

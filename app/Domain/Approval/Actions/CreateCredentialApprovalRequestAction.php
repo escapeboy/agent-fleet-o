@@ -19,7 +19,7 @@ class CreateCredentialApprovalRequestAction
         $creatorName = null;
         if ($credential->creator_id && $credential->creator_type) {
             $creator = $credential->creator;
-            $creatorName = $creator?->name ?? $credential->creator_id;
+            $creatorName = $creator->name ?? $credential->creator_id;
         }
 
         return ApprovalRequest::withoutGlobalScopes()->create([

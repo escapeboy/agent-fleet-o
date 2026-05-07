@@ -261,7 +261,7 @@ class AgentDetailPage extends Component
         $this->editEnableScoutPhase = (bool) ($this->agent->config['enable_scout_phase'] ?? false);
         $this->editGitRepositoryIds = $this->agent->config['git_repository_ids'] ?? [];
         $this->editToolProfile = $this->agent->tool_profile ?? '';
-        $this->editEnvironment = $this->agent->environment?->value ?? '';
+        $this->editEnvironment = $this->agent->environment->value ?? '';
         $this->editReasoningEffort = $this->agent->config['reasoning_effort'] ?? 'none';
         $this->editUseToolSearch = (bool) ($this->agent->config['use_tool_search'] ?? false);
         $this->editToolSearchTopK = (int) ($this->agent->config['tool_search_top_k'] ?? 5);

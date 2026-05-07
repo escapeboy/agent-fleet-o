@@ -55,7 +55,7 @@ class MemoryPromoteTool extends Tool
         $memory = Memory::withoutGlobalScopes()
             ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
             ->findOrFail($validated['memory_id']);
-        $previousTier = $memory->tier?->value ?? 'working';
+        $previousTier = $memory->tier->value ?? 'working';
 
         $memory->update(['tier' => $tier->value]);
 

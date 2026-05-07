@@ -58,7 +58,7 @@ class ResolveStackTraceAction
 
                 $resolvedFrames[] = $entry;
 
-                if ($firstProjectFrame === null && ($entry['isProjectCode'] ?? false)) {
+                if ($firstProjectFrame === null && $entry['isProjectCode']) {
                     $firstProjectFrame = [
                         'file' => $entry['file'],
                         'line' => $entry['line'],

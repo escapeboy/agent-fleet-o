@@ -53,7 +53,7 @@ class ToolDetailPage extends Component
     protected function initCredentialInputs(): void
     {
         $envVars = $this->tool->transport_config['env'] ?? [];
-        $overrides = $this->activation?->credential_overrides ?? [];
+        $overrides = $this->activation->credential_overrides ?? [];
 
         foreach (array_keys($envVars) as $key) {
             $this->credentialInputs[$key] = $overrides[$key] ?? '';
@@ -114,7 +114,7 @@ class ToolDetailPage extends Component
         $this->editName = $this->tool->name;
         $this->editDescription = $this->tool->description ?? '';
         $this->editTimeout = $this->tool->settings['timeout'] ?? 30;
-        $this->editRiskLevel = $this->tool->risk_level?->value ?? '';
+        $this->editRiskLevel = $this->tool->risk_level->value ?? '';
         $this->editing = true;
     }
 

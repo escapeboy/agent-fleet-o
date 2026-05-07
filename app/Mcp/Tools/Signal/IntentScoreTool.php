@@ -159,8 +159,8 @@ class IntentScoreTool extends Tool
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'source_type' => $s->source_type,
-                'signal_type' => is_array($s->payload) ? ($s->payload['signal_type'] ?? null) : null,
-                'signal_category' => is_array($s->payload) ? ($s->payload['signal_category'] ?? null) : null,
+                'signal_type' => $s->payload['signal_type'] ?? null,
+                'signal_category' => $s->payload['signal_category'] ?? null,
                 'score' => $s->score,
                 'tags' => $s->tags,
                 'received_at' => $s->received_at,

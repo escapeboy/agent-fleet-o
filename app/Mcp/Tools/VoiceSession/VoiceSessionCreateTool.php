@@ -33,7 +33,7 @@ class VoiceSessionCreateTool extends Tool
     public function handle(Request $request): Response
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
-        $userId = auth()->user()?->id ?? 'system';
+        $userId = auth()->user()->id ?? 'system';
 
         try {
             $result = app(CreateVoiceSessionAction::class)->execute(

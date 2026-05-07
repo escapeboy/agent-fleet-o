@@ -89,8 +89,8 @@ class UnifiedMemorySearchAction
             $key = 'kg:'.$edge->id;
             $rrfScore = $kgWeight / ($rank + 1 + $rrfK);
 
-            $source = $edge->sourceEntity?->name ?? 'Unknown';
-            $target = $edge->targetEntity?->name ?? 'Unknown';
+            $source = $edge->sourceEntity->name ?? 'Unknown';
+            $target = $edge->targetEntity->name ?? 'Unknown';
 
             $fused->put($key, [
                 'type' => 'kg_fact',

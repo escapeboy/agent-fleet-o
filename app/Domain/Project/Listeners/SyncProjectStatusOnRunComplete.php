@@ -57,13 +57,13 @@ class SyncProjectStatusOnRunComplete
         $run->update([
             'status' => ProjectRunStatus::Completed,
             'completed_at' => now(),
-            'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
+            'spend_credits' => $run->experiment->budget_spent_credits ?? 0,
             'output_summary' => $outputSummary,
         ]);
 
         $updateData = [
             'successful_runs' => $project->successful_runs + 1,
-            'total_spend_credits' => $project->total_spend_credits + ($run->experiment?->budget_spent_credits ?? 0),
+            'total_spend_credits' => $project->total_spend_credits + ($run->experiment->budget_spent_credits ?? 0),
             'last_run_at' => now(),
         ];
 
@@ -98,13 +98,13 @@ class SyncProjectStatusOnRunComplete
         $run->update([
             'status' => ProjectRunStatus::Failed,
             'completed_at' => now(),
-            'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
+            'spend_credits' => $run->experiment->budget_spent_credits ?? 0,
             'error_message' => "Experiment reached state: {$event->toState->value}",
         ]);
 
         $project->update([
             'failed_runs' => $project->failed_runs + 1,
-            'total_spend_credits' => $project->total_spend_credits + ($run->experiment?->budget_spent_credits ?? 0),
+            'total_spend_credits' => $project->total_spend_credits + ($run->experiment->budget_spent_credits ?? 0),
             'last_run_at' => now(),
         ]);
 
@@ -121,7 +121,7 @@ class SyncProjectStatusOnRunComplete
 
         // Check consecutive failures for continuous projects
         if ($project->isContinuous()) {
-            $maxFailures = $project->schedule?->max_consecutive_failures ?? 3;
+            $maxFailures = $project->schedule->max_consecutive_failures ?? 3;
             if ($project->consecutiveFailures() >= $maxFailures) {
                 $project->update(['status' => ProjectStatus::Failed]);
                 Log::warning("Project {$project->id} failed after {$maxFailures} consecutive failures");
@@ -136,13 +136,13 @@ class SyncProjectStatusOnRunComplete
         $run->update([
             'status' => ProjectRunStatus::Skipped,
             'completed_at' => now(),
-            'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
+            'spend_credits' => $run->experiment->budget_spent_credits ?? 0,
             'error_message' => 'Experiment discarded after scoring',
         ]);
 
         $project->update([
             'last_run_at' => now(),
-            'total_spend_credits' => $project->total_spend_credits + ($run->experiment?->budget_spent_credits ?? 0),
+            'total_spend_credits' => $project->total_spend_credits + ($run->experiment->budget_spent_credits ?? 0),
         ]);
 
         Log::info("Project {$project->id} run #{$run->run_number} skipped (experiment discarded)");
@@ -153,13 +153,13 @@ class SyncProjectStatusOnRunComplete
         $run->update([
             'status' => ProjectRunStatus::Cancelled,
             'completed_at' => now(),
-            'spend_credits' => $run->experiment?->budget_spent_credits ?? 0,
+            'spend_credits' => $run->experiment->budget_spent_credits ?? 0,
             'error_message' => 'Experiment expired (approval timeout)',
         ]);
 
         $project->update([
             'last_run_at' => now(),
-            'total_spend_credits' => $project->total_spend_credits + ($run->experiment?->budget_spent_credits ?? 0),
+            'total_spend_credits' => $project->total_spend_credits + ($run->experiment->budget_spent_credits ?? 0),
         ]);
 
         Log::info("Project {$project->id} run #{$run->run_number} cancelled (experiment expired)");

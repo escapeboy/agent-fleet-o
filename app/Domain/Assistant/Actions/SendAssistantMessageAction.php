@@ -70,7 +70,7 @@ class SendAssistantMessageAction
         }
 
         // Resolve provider/model: team.settings → GlobalSetting → hardcoded default
-        $teamSettings = $user->currentTeam?->settings ?? [];
+        $teamSettings = $user->currentTeam->settings ?? [];
         $provider = $provider
             ?? ($teamSettings['assistant_llm_provider'] ?? null)
             ?? GlobalSetting::get('assistant_llm_provider')
@@ -547,7 +547,7 @@ class SendAssistantMessageAction
         // Save user message
         $this->conversationManager->addMessage($conversation, 'user', $userMessage);
 
-        $teamSettings = $user->currentTeam?->settings ?? [];
+        $teamSettings = $user->currentTeam->settings ?? [];
         $provider = $provider
             ?? ($teamSettings['assistant_llm_provider'] ?? null)
             ?? GlobalSetting::get('assistant_llm_provider')

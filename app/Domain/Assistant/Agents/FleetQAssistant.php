@@ -45,8 +45,8 @@ class FleetQAssistant implements Agent, HasMiddleware, HasTools
     public function instructions(): string
     {
         $user = $this->user ?? auth()->user();
-        $roleName = $user?->teamRole($user->currentTeam)?->value ?? 'viewer';
-        $userName = $user?->name ?? 'User';
+        $roleName = $user?->teamRole($user->currentTeam)->value ?? 'viewer';
+        $userName = $user->name ?? 'User';
 
         $context = '';
         if ($this->contextType && $this->contextId) {

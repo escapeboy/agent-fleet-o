@@ -64,7 +64,7 @@ class CredentialListTool extends Tool
                 'name' => $c->name,
                 'type' => $c->credential_type->value,
                 'status' => $c->status->value,
-                'creator_source' => $c->creator_source?->value ?? 'human',
+                'creator_source' => $c->creator_source->value ?? 'human',
                 'expires_at' => $c->expires_at?->toIso8601String(),
             ])->toArray(),
         ]));

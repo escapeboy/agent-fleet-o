@@ -116,7 +116,7 @@ class ProposeCrewRestructuringAction
         }
 
         $memberList = $members->map(function ($m) {
-            $agentName = $m->agent?->name ?? 'unknown';
+            $agentName = $m->agent->name ?? 'unknown';
 
             return "  - Role: {$m->role->value}, Agent: {$agentName}";
         });

@@ -44,7 +44,7 @@ class DelegateBugReportToAgentAction
             ->where('project', $projectKey)
             ->first();
 
-        $agentInstructions = $projectConfig?->config ?? [];
+        $agentInstructions = $projectConfig->config ?? [];
 
         // Map suspect files to related test paths using naming conventions
         $relatedTests = $this->discoverRelatedTests($suspectFiles);

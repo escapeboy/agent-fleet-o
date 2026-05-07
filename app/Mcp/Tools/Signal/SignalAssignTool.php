@@ -63,7 +63,7 @@ class SignalAssignTool extends Tool
         }
 
         if (! $actor) {
-            return $this->validationError('Could not resolve actor user.');
+            return $this->invalidArgumentError('Could not resolve actor user.');
         }
 
         $assignee = null;
@@ -82,7 +82,7 @@ class SignalAssignTool extends Tool
                 reason: $validated['reason'] ?? null,
             );
         } catch (\InvalidArgumentException $e) {
-            return $this->validationError($e->getMessage());
+            return $this->invalidArgumentError($e->getMessage());
         }
 
         return Response::text(json_encode([

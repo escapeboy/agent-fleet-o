@@ -131,8 +131,8 @@ class MarketplaceDetailPage extends Component
                 'avg_cost_credits' => $this->listing->avg_cost_credits,
                 'avg_duration_ms' => $this->listing->avg_duration_ms,
                 'usage_trend' => $this->listing->usage_trend ?? [],
-                'last_30d_runs' => (int) ($recent->get('completed')?->count ?? 0),
-                'last_30d_failures' => (int) ($recent->get('failed')?->count ?? 0),
+                'last_30d_runs' => (int) ($recent->get('completed')->count ?? 0),
+                'last_30d_failures' => (int) ($recent->get('failed')->count ?? 0),
                 'price_per_run' => $this->listing->price_per_run_credits,
                 'monetization_enabled' => $this->listing->monetization_enabled,
             ];

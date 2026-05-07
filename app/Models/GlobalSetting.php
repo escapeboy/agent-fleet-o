@@ -32,7 +32,7 @@ class GlobalSetting extends Model
     {
         $setting = static::find($key);
 
-        return $setting?->value ?? $default;
+        return $setting->value ?? $default;
     }
 
     public static function set(string $key, mixed $value): void

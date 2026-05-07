@@ -69,8 +69,8 @@ class PluginManageTool extends Tool
             return [
                 'id' => $plugin->getId(),
                 'name' => $plugin->getName(),
-                'version' => $state?->version ?? $plugin->getVersion(),
-                'enabled' => $state?->enabled ?? true,
+                'version' => $state->version ?? $plugin->getVersion(),
+                'enabled' => $state->enabled ?? true,
                 'installed_at' => $state?->installed_at?->toIso8601String(),
                 'health' => $health,
             ];

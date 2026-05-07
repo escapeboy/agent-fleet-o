@@ -68,7 +68,7 @@ class ToolTemplateCatalogPage extends Component
     {
         $this->selectedTemplateId = $templateId;
         $template = ToolTemplate::find($templateId);
-        $this->deployProvider = $template?->provider ?? 'runpod';
+        $this->deployProvider = $template->provider ?? 'runpod';
         $this->deployEndpointId = '';
         $this->showDeployModal = true;
     }

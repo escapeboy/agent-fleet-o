@@ -35,7 +35,7 @@ class AgentManifestCache
 
     private function cacheKey(Agent $agent): string
     {
-        return 'agent_chat_manifest:'.$agent->id.':'.($agent->updated_at?->timestamp ?? 0);
+        return 'agent_chat_manifest:'.$agent->id.':'.($agent->updated_at->timestamp ?? 0);
     }
 
     private function hydrate(array $data): AgentManifestDTO

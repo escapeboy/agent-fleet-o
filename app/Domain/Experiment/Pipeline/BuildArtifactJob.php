@@ -327,7 +327,7 @@ class BuildArtifactJob implements ShouldQueue
 
         // 3. Team-level default
         $team = Team::withoutGlobalScopes()->find($experiment->team_id);
-        $settings = $team?->settings ?? [];
+        $settings = $team->settings ?? [];
         if (! empty($settings['default_llm_provider']) && ! empty($settings['default_llm_model'])) {
             return [
                 'provider' => $settings['default_llm_provider'],

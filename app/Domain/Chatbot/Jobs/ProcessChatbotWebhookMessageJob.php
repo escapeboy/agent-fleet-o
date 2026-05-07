@@ -68,7 +68,7 @@ class ProcessChatbotWebhookMessageJob implements ShouldQueue
                 chatbot: $chatbot,
                 session: $session,
                 userText: $this->text,
-                actorUserId: $chatbot->agent?->user_id
+                actorUserId: $chatbot->agent->user_id
                     ?? Team::where('id', $chatbot->team_id)->value('owner_id')
                     ?? $chatbot->team_id,
             );

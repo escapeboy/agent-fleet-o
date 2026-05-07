@@ -125,7 +125,7 @@ class WorkflowProgressPanel extends Component
         $nodes = collect($graph['nodes'])->map(function ($node) use ($steps, $broadcaster) {
             $step = $steps->get($node['id']);
             $node['step_id'] = $step?->id;
-            $node['step_status'] = $step?->status ?? (in_array($node['type'], ['start', 'end']) ? 'system' : 'pending');
+            $node['step_status'] = $step->status ?? (in_array($node['type'], ['start', 'end']) ? 'system' : 'pending');
             $node['step_duration_ms'] = $step?->duration_ms;
             $node['step_error'] = $step?->error_message;
             $node['step_cost'] = $step?->cost_credits;

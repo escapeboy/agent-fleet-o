@@ -252,7 +252,7 @@ class ExperimentController extends Controller
 
         $byStage = $runs
             ->filter(fn ($r) => $r->cost_credits > 0)
-            ->groupBy(fn ($r) => $r->experimentStage?->stage_type ?? 'unknown')
+            ->groupBy(fn ($r) => $r->experimentStage->stage_type ?? 'unknown')
             ->map(fn ($group) => [
                 'runs' => $group->count(),
                 'cost_credits' => $group->sum('cost_credits'),

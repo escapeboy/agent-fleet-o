@@ -23,6 +23,12 @@ class FallbackChainTest extends TestCase
 
         $this->gateway = $this->createMock(PrismAiGateway::class);
         $this->circuitBreaker = $this->createMock(CircuitBreaker::class);
+
+        config([
+            'services.anthropic.key' => 'sk-test',
+            'services.openai.key' => 'sk-test',
+            'services.google.key' => 'sk-test',
+        ]);
     }
 
     private function makeResponse(string $provider = 'anthropic', string $model = 'claude-sonnet-4-5'): AiResponseDTO

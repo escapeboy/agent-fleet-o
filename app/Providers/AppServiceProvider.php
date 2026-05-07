@@ -607,7 +607,7 @@ class AppServiceProvider extends ServiceProvider
                 return Limit::perMinute(10)->by($request->ip());
             }
 
-            return Limit::perMinute(60)->by($user->currentAccessToken()?->id ?? $user->id);
+            return Limit::perMinute(60)->by($user->currentAccessToken()->id ?? $user->id);
         });
 
         // Scramble API documentation — only document /api/v1 routes

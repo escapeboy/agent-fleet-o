@@ -29,7 +29,7 @@ class ChatbotMemoryContextProvider implements MemoryContextProviderInterface
         // The chatbot's own team_id is the authoritative team source.
         $chatbot = $chatbotId ? Chatbot::withoutGlobalScopes()->find($chatbotId) : null;
         $agentId = $chatbot?->agent_id;
-        $teamId = $chatbot?->team_id ?? Team::first()?->id;
+        $teamId = $chatbot->team_id ?? Team::first()?->id;
 
         if (! $teamId) {
             return null;

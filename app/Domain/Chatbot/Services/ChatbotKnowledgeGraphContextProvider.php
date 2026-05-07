@@ -46,8 +46,8 @@ class ChatbotKnowledgeGraphContextProvider implements KnowledgeGraphContextProvi
             }
 
             $lines = $facts->map(function ($edge) {
-                $source = $edge->sourceEntity?->name ?? 'Unknown';
-                $target = $edge->targetEntity?->name ?? 'Unknown';
+                $source = $edge->sourceEntity->name ?? 'Unknown';
+                $target = $edge->targetEntity->name ?? 'Unknown';
 
                 return "- {$edge->fact} [{$source} → {$target}]";
             })->join("\n");

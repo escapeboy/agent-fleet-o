@@ -90,7 +90,7 @@ class RunBuildingStage extends BaseStageJob
             ->latest()
             ->first();
 
-        $plan = $planningStage?->output_snapshot ?? [];
+        $plan = $planningStage->output_snapshot ?? [];
 
         // Web Build track: generate site structure (1 LLM call), then dispatch one page job per page
         if ($experiment->track === ExperimentTrack::WebBuild) {

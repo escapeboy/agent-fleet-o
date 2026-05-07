@@ -83,7 +83,7 @@ PROMPT;
         }
 
         $chatbot = $event->chatbotId ? Chatbot::find($event->chatbotId) : null;
-        $agentId = $chatbot?->agent_id ?? 'barsy-chatbot';
+        $agentId = $chatbot->agent_id ?? 'barsy-chatbot';
         $teamId = $chatbot?->team_id;
 
         $team = $teamId ? Team::find($teamId) : Team::first();

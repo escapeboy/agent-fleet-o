@@ -312,7 +312,7 @@ class SignalConnectorsPage extends Component
         if (empty($password) && $this->editingImapId) {
             $stored = Connector::find($this->editingImapId);
             /** @var array<string, mixed> $storedConfig */
-            $storedConfig = (array) ($stored?->config ?? []);
+            $storedConfig = (array) ($stored->config ?? []);
             $password = $storedConfig['password'] ?? '';
         }
 
@@ -380,10 +380,10 @@ class SignalConnectorsPage extends Component
 
             // Use DB last_signal_at when available (avoids extra JOIN on signals).
             $stats = $signalStats->get($driver);
-            $lastReceived = $dbSetting?->last_signal_at
+            $lastReceived = $dbSetting->last_signal_at
                 ?? ($stats?->last_received_at ? Carbon::parse($stats->last_received_at) : null);
-            $totalSignals = $dbSetting?->signal_count
-                ?? (int) ($stats?->total ?? 0);
+            $totalSignals = $dbSetting->signal_count
+                ?? (int) ($stats->total ?? 0);
 
             $status = match (true) {
                 ! $secretConfigured && $totalSignals > 0 => 'unsecured',

@@ -506,6 +506,6 @@ class ConnectorConfigModal extends Component
             return app('team')->id;
         }
 
-        return auth()->user()->currentTeam?->id ?? auth()->user()->teams->first()->id;
+        return auth()->user()->currentTeam->id ?? auth()->user()->teams->first()->id;
     }
 }

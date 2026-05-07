@@ -100,7 +100,7 @@ final class ClassifySignalIntentAction
     {
         $source = $signal->source_type ?? 'unknown';
         $payload = $signal->payload ?? [];
-        $normalised = is_array($payload) ? json_encode($payload, JSON_UNESCAPED_UNICODE) : (string) $payload;
+        $normalised = json_encode($payload, JSON_UNESCAPED_UNICODE) ?: '';
 
         return sprintf("Source: %s\nPayload: %s", $source, mb_strimwidth($normalised, 0, 2000, '…'));
     }

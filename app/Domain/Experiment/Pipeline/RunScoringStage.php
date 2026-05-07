@@ -37,7 +37,7 @@ class RunScoringStage extends BaseStageJob
         $llm = $this->resolvePipelineLlm($experiment);
 
         $signal = $experiment->signals()->latest()->first();
-        $signalPayload = $signal?->payload ?? ['thesis' => $experiment->thesis];
+        $signalPayload = $signal->payload ?? ['thesis' => $experiment->thesis];
 
         // Inject relevant memories from past experiments
         $memoryContext = '';

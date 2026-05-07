@@ -56,7 +56,7 @@ class CreateOutboundProposals extends BaseStageJob
             ->latest()
             ->first();
 
-        $plan = $planningStage?->output_snapshot ?? [];
+        $plan = $planningStage->output_snapshot ?? [];
         $channels = $plan['outbound_channels'] ?? [
             ['channel' => 'email', 'target_description' => 'test@example.com'],
         ];
@@ -361,7 +361,7 @@ class CreateOutboundProposals extends BaseStageJob
             ->where('id', $run->project_id)
             ->where('team_id', $experiment->team_id)
             ->first();
-        $deliveryConfig = $project?->delivery_config ?? [];
+        $deliveryConfig = $project->delivery_config ?? [];
         $allowed = $deliveryConfig['allowed_outbound_channels'] ?? null;
 
         // No config = allow all (backward compat)

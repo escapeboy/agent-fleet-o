@@ -617,7 +617,7 @@ class WorkflowGraphExecutor
             if ($experiment->signal_id) {
                 $signal = Signal::withoutGlobalScopes()
                     ->find($experiment->signal_id);
-                $signalData = $signal?->metadata ?? [];
+                $signalData = $signal->metadata ?? [];
             }
 
             $attributeValue = $attribute ? data_get($signalData, $attribute) : null;

@@ -66,7 +66,7 @@ class BugReportProjectConfigTool extends Tool
 
         return Response::text(json_encode([
             'project' => $validated['project'],
-            'config' => $record?->config ?? [],
+            'config' => $record->config ?? [],
         ]));
     }
 }

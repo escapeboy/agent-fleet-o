@@ -72,7 +72,7 @@ class ExperimentDiagnoseTool extends Tool
             'experiment_diagnose:%s:%s:%s:%s',
             $experiment->id,
             $experiment->status->value,
-            $experiment->updated_at?->timestamp ?? 0,
+            $experiment->updated_at->timestamp ?? 0,
             $validated['locale'] ?? 'auto',
         );
 

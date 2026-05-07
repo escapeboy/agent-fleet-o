@@ -55,7 +55,7 @@ class EmailReplyTool extends Tool
             return $this->invalidArgumentError('body is required');
         }
 
-        $teamId = auth()->user()?->current_team_id
+        $teamId = auth()->user()->current_team_id
             ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         if (! $teamId) {
             return $this->permissionDeniedError('No active team context. Ensure you are authenticated with a team.');

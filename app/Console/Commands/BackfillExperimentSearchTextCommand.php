@@ -24,8 +24,8 @@ class BackfillExperimentSearchTextCommand extends Command
             ->chunkById($chunkSize, function ($stages) use (&$updated) {
                 foreach ($stages as $stage) {
                     $parts = [
-                        $stage->experiment?->title ?? '',
-                        $stage->experiment?->thesis ?? '',
+                        $stage->experiment->title ?? '',
+                        $stage->experiment->thesis ?? '',
                         $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
                     ];
 

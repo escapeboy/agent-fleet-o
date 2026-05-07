@@ -18,7 +18,7 @@ class AnalyzeMediaAction
      */
     public function execute(Media $media, ?Team $team = null): ?string
     {
-        $teamSettings = $team?->settings ?? [];
+        $teamSettings = $team->settings ?? [];
         $enabled = $teamSettings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false);
 
         if (! $enabled) {

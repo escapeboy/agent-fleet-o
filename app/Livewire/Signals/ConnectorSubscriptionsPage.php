@@ -60,7 +60,7 @@ class ConnectorSubscriptionsPage extends Component
     {
         if ($value) {
             $integration = Integration::find($value);
-            $this->selectedDriver = $integration?->driver ?? '';
+            $this->selectedDriver = $integration->driver ?? '';
         } else {
             $this->selectedDriver = '';
         }

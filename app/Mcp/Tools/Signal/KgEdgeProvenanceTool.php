@@ -97,7 +97,7 @@ class KgEdgeProvenanceTool extends Tool
                     'content' => mb_substr($m->content, 0, 400),
                     'source_type' => $m->source_type,
                     'confidence' => $m->confidence,
-                    'category' => $m->category?->value ?? null,
+                    'category' => $m->category->value ?? null,
                     'tags' => $m->tags ?? [],
                     'created' => $m->created_at?->toIso8601String(),
                 ])->values()->toArray(),

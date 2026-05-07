@@ -136,7 +136,7 @@ class HealthPage extends Component
                     'state' => $state->value,
                     'stuck_since' => $experiment->updated_at,
                     'stuck_duration' => $experiment->updated_at->diffForHumans(now(), true),
-                    'recovery_attempts' => $stage?->recovery_attempts ?? 0,
+                    'recovery_attempts' => $stage->recovery_attempts ?? 0,
                     'last_recovery_at' => $stage?->last_recovery_at,
                 ]);
             }

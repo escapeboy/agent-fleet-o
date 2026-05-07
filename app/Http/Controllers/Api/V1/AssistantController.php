@@ -224,7 +224,7 @@ class AssistantController extends Controller
                 'token_usage' => $reply->token_usage,
                 'created_at' => $reply->created_at,
             ] : null,
-            'total_tokens' => $response->usage?->totalTokens(),
+            'total_tokens' => $response->usage->totalTokens(),
         ]);
     }
 }

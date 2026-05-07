@@ -110,8 +110,8 @@ class TemporalKnowledgeGraphService
         }
 
         $lines = $facts->map(function (KgEdge $edge) {
-            $source = $edge->sourceEntity?->name ?? 'Unknown';
-            $target = $edge->targetEntity?->name ?? 'Unknown';
+            $source = $edge->sourceEntity->name ?? 'Unknown';
+            $target = $edge->targetEntity->name ?? 'Unknown';
             $since = $edge->valid_at ? ' (since '.$edge->valid_at->format('F Y').')' : '';
 
             return "- {$edge->fact} [{$source} → {$target}]{$since}";

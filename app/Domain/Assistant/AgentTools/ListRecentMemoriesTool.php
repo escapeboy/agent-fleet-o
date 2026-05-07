@@ -49,8 +49,8 @@ class ListRecentMemoriesTool implements Tool
             'count' => $memories->count(),
             'memories' => $memories->map(fn ($m) => [
                 'id' => $m->id,
-                'agent' => $m->agent?->name ?? 'N/A',
-                'project' => $m->project?->title ?? 'N/A',
+                'agent' => $m->agent->name ?? 'N/A',
+                'project' => $m->project->title ?? 'N/A',
                 'source_type' => $m->source_type,
                 'content' => Str::limit($m->content, 300),
                 'created' => $m->created_at->diffForHumans(),
