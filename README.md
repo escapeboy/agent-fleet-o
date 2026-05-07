@@ -28,7 +28,7 @@
 - [Configuration](#configuration)
 - [SSH Host Access](#ssh-host-access)
 - [Architecture](#architecture)
-- [MCP Server (485+ tools)](#mcp-server)
+- [MCP Server (493+ tools)](#mcp-server)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 - [Changelog](CHANGELOG.md)
@@ -225,7 +225,7 @@ Failed tasks display detailed error information including provider, error type, 
 
 ### API & MCP surface
 - **REST API** — 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, auto-generated OpenAPI 3.1 at `/docs/api`
-- **MCP Server** — **485+ Model Context Protocol tools across 46 domains** (stdio + HTTP/SSE + OAuth2/PKCE)
+- **MCP Server** — **493+ Model Context Protocol tools across 46 domains** (stdio + HTTP/SSE + OAuth2/PKCE)
 - **Real-World Action governance** — `ActionProposal` flow gates assistant tool calls, integration writes, and git pushes through a per-tier risk policy with auto-execute on approval
 - **Public discovery endpoint** — `GET /.well-known/fleetq` returns a config-gated capability manifest so external AI tools can auto-configure
 - **Live team graph** — `/team-graph` page with real-time updates via Laravel Reverb WebSockets
@@ -260,7 +260,7 @@ FleetQ is built for teams running AI agents in production, not toy demos.
 | **Open source** | ✅ AGPLv3 | ✅ Sustainable Use | ✅ MIT | ✅ MIT | ❌ Proprietary |
 | **Visual DAG builder** | ✅ 8 node types | ✅ (not AI-first) | ❌ | ❌ | ✅ |
 | **Multi-agent crews** | ✅ 7 process types | ❌ | ✅ | ✅ (build-your-own) | ❌ |
-| **MCP server (native)** | ✅ 485+ tools | ❌ | ❌ | ❌ | ❌ |
+| **MCP server (native)** | ✅ 493+ tools | ❌ | ❌ | ❌ | ❌ |
 | **Human-in-the-loop** | ✅ native | ⚠️ workaround | ⚠️ code | ⚠️ code | ⚠️ approve-node |
 | **Budget ledger + locks** | ✅ pessimistic | ❌ | ❌ | ❌ | ❌ |
 | **Audit trail** | ✅ every action | ✅ | ❌ | ❌ | ✅ |
