@@ -52,7 +52,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
         try {
             // Resolve team SMTP credentials — required for sending
             $dbConfig = $this->resolver->getDbConfig('email', $proposal->team_id);
-            $creds = $dbConfig?->credentials ?? [];
+            $creds = $dbConfig->credentials ?? [];
 
             if (empty($creds['host'])) {
                 throw new \RuntimeException(

@@ -40,7 +40,7 @@ class ProfileConnectedAccountsTool extends Tool
         $result = array_map(fn ($provider) => [
             'provider' => $provider,
             'connected' => isset($connected[$provider]),
-            'identity' => $connected[$provider]?->email ?? $connected[$provider]?->name,
+            'identity' => $connected[$provider]->email ?? $connected[$provider]?->name,
             'connected_at' => $connected[$provider]?->created_at?->toIso8601String(),
         ], $supportedProviders);
 

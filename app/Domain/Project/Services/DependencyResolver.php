@@ -99,7 +99,7 @@ class DependencyResolver
                         ->orderByDesc('version')
                         ->first();
 
-                    $content = $latestVersion?->content ?? '';
+                    $content = $latestVersion->content ?? '';
 
                     // Truncate very large artifacts to prevent context overflow
                     if (strlen($content) > 5000) {

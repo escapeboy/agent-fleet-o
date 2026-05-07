@@ -95,7 +95,7 @@ class ChatController extends Controller
             chatbot: $chatbot,
             session: $session,
             userText: $request->input('message'),
-            actorUserId: $chatbot->agent?->user_id
+            actorUserId: $chatbot->agent->user_id
                 ?? Team::where('id', $chatbot->team_id)->value('owner_id')
                 ?? $chatbot->team_id,
         );
@@ -148,7 +148,7 @@ class ChatController extends Controller
         $request->validate(['message' => 'required|string|max:4000']);
 
         $userText = $request->input('message');
-        $actorUserId = $chatbot->agent?->user_id
+        $actorUserId = $chatbot->agent->user_id
             ?? Team::where('id', $chatbot->team_id)->value('owner_id')
             ?? $chatbot->team_id;
 

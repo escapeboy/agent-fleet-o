@@ -33,7 +33,7 @@ class BorunaTools
             ->withStringParameter('description', 'Natural-language description of what the script should do — e.g. "validate that input is a non-empty email address" or "compute the SHA-256 of the input string".')
             ->withStringParameter('input_hint', 'Optional: type or shape of the input the script will receive — e.g. "String", "Int", "Map<String, Int>". Boruna .ax has no implicit input channel, so authors typically interpolate inputs as literals before each run.')
             ->using(function (string $description, ?string $input_hint = null) {
-                $teamId = (string) (auth()->user()?->current_team_id ?? '');
+                $teamId = (string) (auth()->user()->current_team_id ?? '');
 
                 $userMessage = "Description:\n{$description}";
                 if ($input_hint) {

@@ -176,7 +176,7 @@ final class DetectSchemaAction
             requiredFields: ['column_map', 'confidence', 'warnings'],
         );
 
-        $teamSettings = $user->currentTeam?->settings ?? [];
+        $teamSettings = $user->currentTeam->settings ?? [];
         $provider = ($teamSettings['assistant_llm_provider'] ?? null)
             ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');

@@ -77,7 +77,7 @@ class AssistantAgentToolRegistry
      */
     public function getTools(?User $user): array
     {
-        $role = $user?->teamRole($user->currentTeam)?->value ?? 'viewer';
+        $role = $user?->teamRole($user->currentTeam)->value ?? 'viewer';
 
         $tools = $this->readTools();
 

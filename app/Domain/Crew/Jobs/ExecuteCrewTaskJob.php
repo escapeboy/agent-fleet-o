@@ -125,7 +125,7 @@ class ExecuteCrewTaskJob implements ShouldQueue
                 agent: $agent,
                 input: $input,
                 teamId: $execution->team_id,
-                userId: $execution->crew?->user_id ?? $execution->team_id,
+                userId: $execution->crew->user_id ?? $execution->team_id,
                 allowedToolIds: ! empty($allowedToolIds) ? $allowedToolIds : null,
                 maxStepsOverride: $maxSteps,
             );

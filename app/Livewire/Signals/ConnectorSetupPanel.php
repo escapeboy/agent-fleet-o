@@ -160,7 +160,7 @@ class ConnectorSetupPanel extends Component
         $this->showSecret = false;
         $this->pasteSecretValue = '';
 
-        $teamId = auth()->user()?->currentTeam?->id ?? session('team_id');
+        $teamId = auth()->user()?->currentTeam->id ?? session('team_id');
 
         if (! $teamId) {
             $this->open = true;
@@ -206,7 +206,7 @@ class ConnectorSetupPanel extends Component
     {
         Gate::authorize('manage-team');
 
-        $teamId = auth()->user()?->currentTeam?->id ?? session('team_id');
+        $teamId = auth()->user()?->currentTeam->id ?? session('team_id');
 
         if (! $teamId) {
             return;
@@ -238,7 +238,7 @@ class ConnectorSetupPanel extends Component
 
         $this->validate(['pasteSecretValue' => 'required|min:8']);
 
-        $teamId = auth()->user()?->currentTeam?->id ?? session('team_id');
+        $teamId = auth()->user()?->currentTeam->id ?? session('team_id');
 
         if (! $teamId) {
             return;

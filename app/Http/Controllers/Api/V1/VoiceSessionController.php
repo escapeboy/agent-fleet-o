@@ -156,7 +156,7 @@ class VoiceSessionController extends Controller
         ]);
 
         // Verify the worker token was issued for this specific session.
-        $tokenName = $request->user()->currentAccessToken()?->name ?? '';
+        $tokenName = $request->user()->currentAccessToken()->name ?? '';
         if (! str_ends_with($tokenName, '-'.$voiceSession->id)) {
             return response()->json(['message' => 'Token is not authorized for this session.'], 403);
         }

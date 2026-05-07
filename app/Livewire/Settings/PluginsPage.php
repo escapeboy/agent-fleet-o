@@ -61,8 +61,8 @@ class PluginsPage extends Component
 
             $rows[] = [
                 'plugin' => $plugin,
-                'enabled' => $state?->enabled ?? true,
-                'version' => $state?->version ?? $plugin->getVersion(),
+                'enabled' => $state->enabled ?? true,
+                'version' => $state->version ?? $plugin->getVersion(),
                 'installed_at' => $state?->installed_at,
                 'health' => $health,
             ];

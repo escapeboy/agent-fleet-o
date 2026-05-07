@@ -38,7 +38,7 @@ class WorkflowSuggestionEngine
             return [
                 'id' => $step->id,
                 'order' => $step->order,
-                'execution_mode' => $step->execution_mode?->value ?? 'sequential',
+                'execution_mode' => $step->execution_mode->value ?? 'sequential',
                 'group_id' => $step->group_id,
                 'status' => $step->status,
                 'skill_name' => $step->skill?->name,
@@ -149,7 +149,7 @@ SYSTEM;
                     'type' => 'switch_model',
                     'step_id' => $step->id,
                     'node_id' => $step->workflow_node_id,
-                    'current_value' => $step->agent?->model ?? 'unknown',
+                    'current_value' => $step->agent->model ?? 'unknown',
                     'suggested_value' => 'claude-haiku-4-5-20251001',
                     'reason' => "Step costs {$step->cost_credits} credits — ".round($step->cost_credits / $teamAvgCost, 1).'× the team average.',
                     'expected_improvement' => 'Estimated 60–80% cost reduction by switching to a lighter model.',

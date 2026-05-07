@@ -56,7 +56,7 @@ class TransferMarketplaceCreditsAction
             $consumerLast = $firstId === $consumingTeamId ? $firstLast : $secondLast;
             $publisherLast = $firstId === $publisherTeamId ? $firstLast : $secondLast;
 
-            $consumerBalance = (float) ($consumerLast?->balance_after ?? 0);
+            $consumerBalance = (float) ($consumerLast->balance_after ?? 0);
 
             // Skip silently if insufficient balance (already charged by regular budget)
             if ($amount > $consumerBalance) {
@@ -75,7 +75,7 @@ class TransferMarketplaceCreditsAction
                 ],
             ]);
 
-            $publisherBalance = (float) ($publisherLast?->balance_after ?? 0);
+            $publisherBalance = (float) ($publisherLast->balance_after ?? 0);
 
             CreditLedger::withoutGlobalScopes()->create([
                 'team_id' => $publisherTeamId,

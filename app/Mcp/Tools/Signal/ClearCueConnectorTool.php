@@ -113,7 +113,7 @@ class ClearCueConnectorTool extends Tool
         return Response::text(json_encode([
             'configured' => $configured,
             'status' => $configured ? ($last24h > 0 ? 'active' : 'configured') : 'not_configured',
-            'total_signals' => (int) ($stats?->total ?? 0),
+            'total_signals' => (int) ($stats->total ?? 0),
             'last_received_at' => $stats?->last_received_at,
             'signals_last_24h' => $last24h,
             'webhook_url' => url('/api/signals/clearcue'),

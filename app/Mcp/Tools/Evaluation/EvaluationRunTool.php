@@ -57,7 +57,7 @@ class EvaluationRunTool extends Tool
 
     private function runEvaluation(Request $request): Response
     {
-        $teamId = auth()->user()?->currentTeam?->id ?? '';
+        $teamId = auth()->user()?->currentTeam->id ?? '';
         $criteria = $request->get('criteria', ['faithfulness', 'relevance']);
 
         $run = app(RunStructuredEvaluationAction::class)->execute(

@@ -34,7 +34,7 @@ class CostBreakdownPanel extends Component
         // Cost breakdown by stage type
         $byStage = $runs
             ->filter(fn ($r) => $r->cost_credits > 0)
-            ->groupBy(fn ($r) => $r->experimentStage?->stage ?? 'unknown')
+            ->groupBy(fn ($r) => $r->experimentStage->stage ?? 'unknown')
             ->map(fn ($group) => [
                 'runs' => $group->count(),
                 'cost' => $group->sum('cost_credits'),

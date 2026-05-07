@@ -66,7 +66,7 @@ class TeamGraphPage extends Component
                 'kind' => 'agent.executed',
                 'actor_id' => $exec->agent_id,
                 'actor_kind' => 'agent',
-                'actor_label' => $exec->agent?->name ?? 'Agent',
+                'actor_label' => $exec->agent->name ?? 'Agent',
                 'summary' => is_string($task) && trim($task) !== ''
                     ? "{$status}: ".\Str::limit($task, 80)
                     : $status,
@@ -100,7 +100,7 @@ class TeamGraphPage extends Component
 
         if ($kind === 'agent' && $id) {
             $agent = Agent::query()->where('team_id', $teamId)->where('id', $id)->first();
-            $this->drawerLabel = $agent?->name ?? 'Agent';
+            $this->drawerLabel = $agent->name ?? 'Agent';
             $this->drawerActivity = AgentExecution::query()
                 ->where('team_id', $teamId)
                 ->where('agent_id', $id)
@@ -121,7 +121,7 @@ class TeamGraphPage extends Component
 
         if ($kind === 'crew' && $id) {
             $crew = Crew::query()->where('team_id', $teamId)->where('id', $id)->first();
-            $this->drawerLabel = $crew?->name ?? 'Crew';
+            $this->drawerLabel = $crew->name ?? 'Crew';
             $this->drawerActivity = $crew
                 ? $crew->executions()->latest('created_at')->limit(5)
                     ->get(['id', 'status', 'created_at'])
@@ -137,7 +137,7 @@ class TeamGraphPage extends Component
 
         if ($kind === 'human' && $id) {
             $user = User::query()->where('id', $id)->first();
-            $this->drawerLabel = $user?->name ?? 'User';
+            $this->drawerLabel = $user->name ?? 'User';
             $this->drawerActivity = []; // Human activity feed deferred — no audit-by-user query in v1.
 
             return;

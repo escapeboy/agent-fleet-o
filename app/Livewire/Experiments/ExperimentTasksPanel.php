@@ -77,7 +77,7 @@ class ExperimentTasksPanel extends Component
                 'type' => $nodeConfig['type'] ?? 'agent',
                 'status' => $step->status,
                 'order' => $step->order,
-                'provider' => $step->agent?->provider ?? null,
+                'provider' => $step->agent->provider ?? null,
                 'model' => null,
                 'duration_ms' => $step->duration_ms,
                 'cost_credits' => $step->cost_credits,

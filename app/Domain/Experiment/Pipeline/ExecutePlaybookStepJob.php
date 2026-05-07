@@ -191,7 +191,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
                 $chainEvent = app(WorkflowEventRecorder::class)->recordStarted(
                     step: $step,
                     nodeType: $wfNode?->type->value ?? 'agent',
-                    nodeLabel: $wfNode?->label ?? '',
+                    nodeLabel: $wfNode->label ?? '',
                     rootEventId: $step->root_event_id,
                 );
             } catch (\Throwable) {

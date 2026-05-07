@@ -77,7 +77,7 @@ class EvaluationCurateFromAnnotationsTool extends Tool
             'name' => $dataset->name,
             'description' => $dataset->description,
             'case_count' => $dataset->case_count,
-            'rating_filter' => $rating?->value ?? 'any',
+            'rating_filter' => $rating->value ?? 'any',
             'window_days' => $windowDays,
             'next_step' => 'Run `evaluation_run` with this dataset_id + a new provider/model/prompt to compare outputs.',
         ]));

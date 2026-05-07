@@ -78,7 +78,7 @@ class InboundConnectorManageTool extends Tool
             'driver' => $d,
             'type' => 'webhook',
             'webhook_url' => url('/api/signals/'.($d === 'datadog' ? 'datadog/{secret}' : $d)),
-            'signals_last_30d' => (int) ($stats->get($d)?->total ?? 0),
+            'signals_last_30d' => (int) ($stats->get($d)->total ?? 0),
             'last_received_at' => $stats->get($d)?->last_received_at,
         ], $webhookDrivers);
 

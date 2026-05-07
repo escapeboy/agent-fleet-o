@@ -17,7 +17,7 @@ final class AssistantPromptBuilder
         bool $uiArtifactsEnabled = false,
     ): string {
         $role = $user->teamRole($user->currentTeam);
-        $roleName = $role?->value ?? 'viewer';
+        $roleName = $role->value ?? 'viewer';
 
         if ($supportsMcpNatively) {
             $toolsSection = self::buildMcpToolsSection($role);

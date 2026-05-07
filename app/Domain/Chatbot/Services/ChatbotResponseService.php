@@ -218,8 +218,8 @@ class ChatbotResponseService
         $gateway = app(AiGatewayInterface::class);
 
         $request = new AiRequestDTO(
-            provider: $chatbot->agent?->provider?->value ?? 'openai',
-            model: $chatbot->agent?->model ?? 'gpt-4o-mini',
+            provider: $chatbot->agent?->provider->value ?? 'openai',
+            model: $chatbot->agent->model ?? 'gpt-4o-mini',
             systemPrompt: $systemPrompt,
             userPrompt: $context,
             maxTokens: 2048,
@@ -438,8 +438,8 @@ class ChatbotResponseService
             return array_map(fn ($c) => [
                 'chunk_id' => $c['id'],
                 'similarity' => $c['similarity'],
-                'source_name' => $sources[$c['source_id']]?->name ?? null,
-                'source_url' => $sources[$c['source_id']]?->source_url ?? null,
+                'source_name' => $sources[$c['source_id']]->name ?? null,
+                'source_url' => $sources[$c['source_id']]->source_url ?? null,
             ], $ragChunks);
         }
 

@@ -48,7 +48,7 @@ class ReserveBudgetAction
                 ->orderByDesc('created_at')
                 ->first();
 
-            $currentBalance = $lastEntry?->balance_after ?? 0;
+            $currentBalance = $lastEntry->balance_after ?? 0;
 
             if ($amount > $currentBalance) {
                 throw new InsufficientBudgetException(

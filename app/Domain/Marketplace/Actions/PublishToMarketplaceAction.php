@@ -175,7 +175,7 @@ class PublishToMarketplaceAction
         }
 
         // Copy data_classification if the agent carries one (added by Phase 3a).
-        $profile['data_classification'] = $agent->data_classification?->value ?? 'internal';
+        $profile['data_classification'] = $agent->data_classification->value ?? 'internal';
 
         return $profile;
     }

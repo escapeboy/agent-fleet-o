@@ -50,7 +50,7 @@ class AiControlCenterPage extends Component
                 ->limit(10)
                 ->get()
                 ->map(function ($row) {
-                    $row->team_name = Team::withoutGlobalScopes()->find($row->team_id)?->name ?? 'Unknown';
+                    $row->team_name = Team::withoutGlobalScopes()->find($row->team_id)->name ?? 'Unknown';
 
                     return $row;
                 });
@@ -61,7 +61,7 @@ class AiControlCenterPage extends Component
                 ->orderByDesc('failure_count')
                 ->limit(10)
                 ->get()
-                ->keyBy(fn ($cb) => $cb->agent?->name ?? substr($cb->agent_id ?? '', 0, 8) ?: 'Unknown');
+                ->keyBy(fn ($cb) => $cb->agent->name ?? substr($cb->agent_id ?? '', 0, 8) ?: 'Unknown');
 
             // Semantic cache stats
             $cacheTotal = SemanticCacheEntry::count();

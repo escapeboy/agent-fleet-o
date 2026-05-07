@@ -128,7 +128,7 @@ class CircuitBreaker
                 'half_open_at' => now(),
             ]);
 
-            $providerName = $state->agent?->provider ?? 'unknown';
+            $providerName = $state->agent->provider ?? 'unknown';
             Log::info("CircuitBreaker: {$providerName} transitioned to half-open", [
                 'provider' => $providerName,
                 'cooldown_seconds' => $state->cooldown_seconds,

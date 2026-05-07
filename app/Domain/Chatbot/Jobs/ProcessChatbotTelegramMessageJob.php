@@ -77,7 +77,7 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
 
         try {
             $team = Team::find($chatbot->team_id);
-            $actorUserId = $team?->owner_id ?? $chatbot->team_id;
+            $actorUserId = $team->owner_id ?? $chatbot->team_id;
 
             $result = $responseService->handle(
                 chatbot: $chatbot,

@@ -69,9 +69,9 @@ class MarketplaceAnalyticsTool extends Tool
             'avg_duration_ms' => $listing->avg_duration_ms,
             'usage_trend_12m' => $listing->usage_trend ?? [],
             'last_30d' => [
-                'completed' => (int) ($recent->get('completed')?->count ?? 0),
-                'failed' => (int) ($recent->get('failed')?->count ?? 0),
-                'total_cost_credits' => round((float) ($recent->get('completed')?->total_cost ?? 0), 4),
+                'completed' => (int) ($recent->get('completed')->count ?? 0),
+                'failed' => (int) ($recent->get('failed')->count ?? 0),
+                'total_cost_credits' => round((float) ($recent->get('completed')->total_cost ?? 0), 4),
             ],
             'monetization' => [
                 'enabled' => $listing->monetization_enabled,

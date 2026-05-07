@@ -168,7 +168,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
         $manager = app(ConversationManager::class);
 
         // Resolve provider/model from team settings
-        $teamSettings = $user->currentTeam?->settings ?? [];
+        $teamSettings = $user->currentTeam->settings ?? [];
         $provider = $this->provider
             ?? ($teamSettings['assistant_llm_provider'] ?? null)
             ?? config('ai.default_provider', 'anthropic');

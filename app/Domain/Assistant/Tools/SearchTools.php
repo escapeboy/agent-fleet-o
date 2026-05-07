@@ -90,7 +90,7 @@ class SearchTools
                             model: 'claude-haiku-4-5',
                             systemPrompt: 'Summarize these experiment results into a concise answer. Focus on outcomes, decisions, and key findings.',
                             userMessage: "Query: {$query}\n\nResults:\n".json_encode($formatted),
-                            teamId: $results->first()?->team_id ?? '',
+                            teamId: $results->first()->team_id ?? '',
                             purpose: 'transcript_search_summary',
                             maxTokens: 1024,
                         ));

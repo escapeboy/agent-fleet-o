@@ -147,12 +147,12 @@ class KnowledgeGraphBrowserPage extends Component
 
         $this->viewingFact = [
             'id' => $edge->id,
-            'source_name' => $edge->sourceEntity?->name ?? '—',
-            'source_type' => $edge->sourceEntity?->type ?? '',
+            'source_name' => $edge->sourceEntity->name ?? '—',
+            'source_type' => $edge->sourceEntity->type ?? '',
             'relation_type' => $edge->relation_type,
             'edge_type' => $edge->edge_type ?? '—',
-            'target_name' => $edge->targetEntity?->name ?? '—',
-            'target_type' => $edge->targetEntity?->type ?? '',
+            'target_name' => $edge->targetEntity->name ?? '—',
+            'target_type' => $edge->targetEntity->type ?? '',
             'fact' => $edge->fact,
             'valid_at' => $edge->valid_at?->toDateTimeString(),
             'invalid_at' => $edge->invalid_at?->toDateTimeString(),
@@ -175,11 +175,11 @@ class KnowledgeGraphBrowserPage extends Component
         abort_unless($edge->team_id === auth()->user()->current_team_id, 403);
 
         $this->editingFactId = $edge->id;
-        $this->editSourceName = $edge->sourceEntity?->name ?? '';
-        $this->editSourceType = $edge->sourceEntity?->type ?? 'topic';
+        $this->editSourceName = $edge->sourceEntity->name ?? '';
+        $this->editSourceType = $edge->sourceEntity->type ?? 'topic';
         $this->editRelationType = $edge->relation_type ?? '';
-        $this->editTargetName = $edge->targetEntity?->name ?? '';
-        $this->editTargetType = $edge->targetEntity?->type ?? 'topic';
+        $this->editTargetName = $edge->targetEntity->name ?? '';
+        $this->editTargetType = $edge->targetEntity->type ?? 'topic';
         $this->editFact = $edge->fact ?? '';
         $this->viewingFact = null;
     }

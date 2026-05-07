@@ -319,7 +319,7 @@ class GoogleIntegrationDriver implements IntegrationDriverInterface
 
     private function resolveAccessToken(Integration $integration): string
     {
-        $creds = $integration->credential?->secret_data ?? [];
+        $creds = $integration->credential->secret_data ?? [];
         $expiresAt = $creds['expires_at'] ?? null;
         $accessToken = $creds['access_token'] ?? null;
 

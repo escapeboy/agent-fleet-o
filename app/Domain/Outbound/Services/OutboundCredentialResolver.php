@@ -152,6 +152,6 @@ class OutboundCredentialResolver
             return app('team')?->id;
         }
 
-        return auth()->user()?->currentTeam?->id ?? auth()->user()?->teams?->first()?->id ?? null;
+        return auth()->user()?->currentTeam->id ?? auth()->user()?->teams?->first()->id ?? null;
     }
 }

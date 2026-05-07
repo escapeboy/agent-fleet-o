@@ -135,10 +135,10 @@ class CreateVoiceSessionAction
                 'tts_voice_id' => $credentials['tts_voice_id'],
                 'fleetq_api_url' => config('app.url'),
                 'fleetq_api_token' => $workerToken,
-                'agent_name' => $agent?->name ?? 'Assistant',
-                'agent_role' => $agent?->role ?? '',
-                'agent_goal' => $agent?->goal ?? '',
-                'agent_backstory' => $agent?->backstory ?? '',
+                'agent_name' => $agent->name ?? 'Assistant',
+                'agent_role' => $agent->role ?? '',
+                'agent_goal' => $agent->goal ?? '',
+                'agent_backstory' => $agent->backstory ?? '',
             ]);
 
             Redis::connection('default')->lpush('voice_worker_dispatch', $payload);

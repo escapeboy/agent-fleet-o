@@ -88,7 +88,7 @@ class BugReportSignalController extends Controller
 
         return response()->json([
             'signal_id' => $signal->id,
-            'status' => $signal->status?->value ?? 'received',
+            'status' => $signal->status->value ?? 'received',
             'url' => URL::to('/bug-reports/'.$signal->id),
         ], 201);
     }

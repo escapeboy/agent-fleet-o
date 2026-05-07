@@ -104,7 +104,7 @@ class BugReportWidgetController extends Controller
 
         return response()->json([
             'signal_id' => $signal->id,
-            'status' => $signal->status?->value ?? 'received',
+            'status' => $signal->status->value ?? 'received',
         ], 201);
     }
 }

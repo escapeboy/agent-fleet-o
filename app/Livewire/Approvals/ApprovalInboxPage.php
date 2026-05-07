@@ -52,7 +52,7 @@ class ApprovalInboxPage extends Component
     {
         $approval = ApprovalRequest::findOrFail($approvalId);
         $this->editingChatbotApprovalId = $approvalId;
-        $this->editedChatbotContent = $approval->chatbotMessage?->draft_content ?? '';
+        $this->editedChatbotContent = $approval->chatbotMessage->draft_content ?? '';
     }
 
     public function approveWithEdit(string $approvalId): void

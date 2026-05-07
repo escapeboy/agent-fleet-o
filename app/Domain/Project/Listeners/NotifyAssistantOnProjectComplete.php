@@ -45,7 +45,7 @@ class NotifyAssistantOnProjectComplete
 
         /** @var Project|null $project */
         $project = $run->project;
-        $teamId = $project?->team_id ?? $conversation->team_id;
+        $teamId = $project->team_id ?? $conversation->team_id;
         $isCompleted = $event->toState === ExperimentStatus::Completed;
 
         $title = $isCompleted

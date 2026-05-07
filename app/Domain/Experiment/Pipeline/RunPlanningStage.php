@@ -47,7 +47,7 @@ class RunPlanningStage extends BaseStageJob
             ->latest()
             ->first();
 
-        $scoringOutput = $scoringStage?->output_snapshot ?? [];
+        $scoringOutput = $scoringStage->output_snapshot ?? [];
 
         // Check for rejection feedback from previous cycle
         $rejectionFeedback = $experiment->stateTransitions()
@@ -126,7 +126,7 @@ class RunPlanningStage extends BaseStageJob
 
         // Inject allowed outbound channels from project config
         $project = $run?->project_id ? Project::withoutGlobalScopes()->find($run->project_id) : null;
-        $deliveryConfig = $project?->delivery_config ?? [];
+        $deliveryConfig = $project->delivery_config ?? [];
         $allowedChannels = $deliveryConfig['allowed_outbound_channels'] ?? null;
         $channelConstraint = '';
         if ($allowedChannels && count($allowedChannels) > 0) {

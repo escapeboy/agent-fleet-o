@@ -736,7 +736,7 @@ class CrewOrchestrator
                     title: 'Crew Execution Complete',
                     body: sprintf(
                         'Crew "%s" finished successfully (quality score: %s%%).',
-                        $execution->crew?->name ?? 'Crew',
+                        $execution->crew->name ?? 'Crew',
                         round($finalQa['score'] * 100),
                     ),
                     actionUrl: '/crews/'.$execution->crew_id.'/execute',

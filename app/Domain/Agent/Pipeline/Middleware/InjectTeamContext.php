@@ -46,8 +46,8 @@ class InjectTeamContext
                     continue;
                 }
 
-                $peerName = $peer->agent?->name ?? '(external agent)';
-                $peerCrewRole = $peer->role?->value ?? 'member';
+                $peerName = $peer->agent->name ?? '(external agent)';
+                $peerCrewRole = $peer->role->value ?? 'member';
                 $peerPersonaRole = $peer->agent?->role;
 
                 $line = "- {$peerName} — {$peerCrewRole}";
@@ -61,7 +61,7 @@ class InjectTeamContext
                 continue;
             }
 
-            $myCrewRole = $self->role?->value ?? 'member';
+            $myCrewRole = $self->role->value ?? 'member';
 
             $section = "## Team Context: {$crew->name}\n\n";
             $section .= "Your role on this team: **{$myCrewRole}**.\n";

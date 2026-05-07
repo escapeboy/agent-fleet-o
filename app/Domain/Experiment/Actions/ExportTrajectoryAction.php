@@ -14,9 +14,9 @@ class ExportTrajectoryAction
         $rows = $steps->map(fn ($step) => [
             'step_order' => $step->order,
             'step_type' => $step->execution_mode->value,
-            'agent_name' => $step->agent?->name ?? '',
-            'skill_name' => $step->skill?->name ?? '',
-            'crew_name' => $step->crew?->name ?? '',
+            'agent_name' => $step->agent->name ?? '',
+            'skill_name' => $step->skill->name ?? '',
+            'crew_name' => $step->crew->name ?? '',
             'status' => $step->status,
             'duration_ms' => $step->duration_ms ?? 0,
             'cost_credits' => $step->cost_credits ?? 0,

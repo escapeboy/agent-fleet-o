@@ -41,7 +41,7 @@ class AssistantPanel extends Component
     public function mount(): void
     {
         $team = auth()->user()?->currentTeam;
-        $teamSettings = $team?->settings ?? [];
+        $teamSettings = $team->settings ?? [];
         $savedProvider = $teamSettings['assistant_llm_provider']
             ?? GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
@@ -120,7 +120,7 @@ class AssistantPanel extends Component
 
         $team = $user->currentTeam;
         $role = $team ? $user->teamRole($team) : null;
-        $roleValue = $role?->value ?? 'unknown';
+        $roleValue = $role->value ?? 'unknown';
 
         $rateKey = "assistant-artifact-click:{$user->id}";
         if (! RateLimiter::attempt(

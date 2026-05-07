@@ -113,7 +113,7 @@ class ProcessAgentHandoffAction
             app(WorkflowEventRecorder::class)->recordEvent(
                 step: $step,
                 nodeType: $wfNode?->type->value ?? 'agent',
-                nodeLabel: $wfNode?->label ?? $targetAgent->name,
+                nodeLabel: $wfNode->label ?? $targetAgent->name,
                 eventType: 'agent_handoff',
                 rootEventId: $step->root_event_id,
                 summary: "Handoff to {$targetAgent->name}: {$reason}",

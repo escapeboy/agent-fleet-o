@@ -83,9 +83,9 @@ class ChatbotDetailPage extends Component
         $this->editFallbackMessage = $this->chatbot->fallback_message ?? '';
         $this->editConfidenceThreshold = (float) $this->chatbot->confidence_threshold;
         $this->editHumanEscalationEnabled = $this->chatbot->human_escalation_enabled;
-        $this->editProvider = $this->chatbot->agent?->provider ?? 'anthropic';
-        $this->editModel = $this->chatbot->agent?->model ?? 'claude-sonnet-4-5';
-        $this->editSystemPrompt = $this->chatbot->agent?->backstory ?? '';
+        $this->editProvider = $this->chatbot->agent->provider ?? 'anthropic';
+        $this->editModel = $this->chatbot->agent->model ?? 'claude-sonnet-4-5';
+        $this->editSystemPrompt = $this->chatbot->agent->backstory ?? '';
         $this->editWorkflowId = $this->chatbot->workflow_id ?? '';
         $this->editing = true;
     }

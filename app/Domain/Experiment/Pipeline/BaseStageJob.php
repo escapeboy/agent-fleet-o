@@ -234,9 +234,9 @@ abstract class BaseStageJob implements ShouldQueue
                 'stage_latency_ms' => $durationMs,
                 'retry_round' => $verificationAttempt,
                 'job_attempts' => $this->attempts(),
-                'token_input' => (int) ($tokenUsage?->input_tokens ?? 0),
-                'token_output' => (int) ($tokenUsage?->output_tokens ?? 0),
-                'llm_calls' => (int) ($tokenUsage?->llm_calls ?? 0),
+                'token_input' => (int) ($tokenUsage->input_tokens ?? 0),
+                'token_output' => (int) ($tokenUsage->output_tokens ?? 0),
+                'llm_calls' => (int) ($tokenUsage->llm_calls ?? 0),
             ];
 
             // Only update if not already completed by process() — some stages
@@ -437,7 +437,7 @@ abstract class BaseStageJob implements ShouldQueue
 
         // 2. Team-level default
         $team = Team::withoutGlobalScopes()->find($experiment->team_id);
-        $settings = $team?->settings ?? [];
+        $settings = $team->settings ?? [];
         if (! empty($settings['default_llm_provider']) && ! empty($settings['default_llm_model'])) {
             return [
                 'provider' => $settings['default_llm_provider'],

@@ -49,7 +49,7 @@ class StoreExperimentLearnings
                 $content = "## {$learning['title']}\n\n{$learning['content']}";
                 $tags = array_merge(
                     $learning['tags'] ?? [],
-                    [$experiment->track?->value ?? 'general'],
+                    [$experiment->track->value ?? 'general'],
                 );
 
                 $this->storeMemory->execute(

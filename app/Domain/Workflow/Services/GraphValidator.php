@@ -506,7 +506,7 @@ class GraphValidator
 
     private function validateActivationMode(WorkflowNode $node, int $incomingCount): void
     {
-        $mode = $node->activation_mode?->value ?? 'all';
+        $mode = $node->activation_mode->value ?? 'all';
         $validModes = ['all', 'any', 'n_of_m'];
 
         if (! in_array($mode, $validModes, true)) {

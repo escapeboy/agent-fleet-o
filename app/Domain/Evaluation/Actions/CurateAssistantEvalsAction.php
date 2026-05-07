@@ -102,7 +102,7 @@ final class CurateAssistantEvalsAction
                 'Curated from %d annotated assistant messages (last %d days, rating=%s).',
                 count($cases),
                 $windowDays,
-                $ratingFilter?->value ?? 'any',
+                $ratingFilter->value ?? 'any',
             ),
             cases: $cases,
         );

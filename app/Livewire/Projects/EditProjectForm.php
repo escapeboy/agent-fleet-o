@@ -94,7 +94,7 @@ class EditProjectForm extends Component
 
         $this->title = $project->title;
         $this->description = $project->description ?? '';
-        $this->executionMode = $project->execution_mode?->value ?? 'autonomous';
+        $this->executionMode = $project->execution_mode->value ?? 'autonomous';
         $this->agentId = $project->agent_config['lead_agent_id'] ?? '';
         $this->workflowId = $project->workflow_id ?? '';
 

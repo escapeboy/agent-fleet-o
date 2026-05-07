@@ -76,7 +76,7 @@ class SkillBenchmarkStartTool extends Tool
             return $this->notFoundError('skill');
         }
 
-        $userId = auth()->id() ?? $skill->team?->owner?->id ?? '';
+        $userId = auth()->id() ?? $skill->team?->owner->id ?? '';
 
         try {
             $benchmark = app(StartSkillBenchmarkAction::class)->execute(
