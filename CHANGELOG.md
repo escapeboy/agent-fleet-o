@@ -2,6 +2,33 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.25.0] - 2026-05-07
+
+A maintenance release that pairs with FleetQ Cloud 1.25.0. The cloud edition adds Document OCR + cross-provider AI Gateway routing fixes; this release ensures the base AI gateway is the canonical routing layer for those features and shrinks the static-analysis surface.
+
+### Added — `AiGatewayProviderMatrixTest` (canonical routing test)
+
+The `cloud/tests/Feature/Infrastructure/AI/AiGatewayProviderMatrixTest.php` ships in the parent monorepo, but it tests the routing logic in this repo (`FallbackAiGateway`, `LocalAgentGateway`, `LocalBridgeGateway`). When you add a feature that calls `AiGatewayInterface::complete()`, run that test before merging — if your code skips the gateway and routes provider-by-name, that's a regression class.
+
+### Changed — PHPStan baseline detox (-8.2%)
+
+Baseline went **20,599 → 18,913 lines** (-1,686 lines / -8.2%) without sweeping refactors. Two safe levers:
+
+1. **Bulk-fix `?->X ?? Y` → `->X ?? Y`** for `nullsafe.neverNull` entries flagged by PHPStan as provably non-null on the LHS. 186 replacements across 119 files. Behavior identical.
+2. **Regenerate baseline** to drop stale entries from refactored/deleted code.
+
+PHPStan still reports zero errors. Recipe documented in the parent project memory under `feedback_phpstan_baseline_detox_recipe.md` for future detox sweeps.
+
+### Fixed — DisposableDomains baseline gap on CI
+
+`Propaganistas\LaravelDisposableEmail\Facades\DisposableDomains::isDisposable()` errors don't surface when PHPStan runs inside Docker but DO surface on the GitHub Actions runner. Manually re-added the baseline entry after each regen.
+
+### Internal
+
+- 0 new MCP tools; total stays at **493+**.
+- 0 new migrations.
+- 0 behavior changes — this release is static-analysis hygiene only.
+
 ## [1.24.0] - 2026-05-03
 
 Five borrowable patterns from the Trendshift research sweep ([`claudedocs/research_trendshift_borrowable_2026-05-03.md`](https://github.com/escapeboy/agent-fleet/blob/master/claudedocs/research_trendshift_borrowable_2026-05-03.md) in the parent repo) — each one shipped as a small, opt-in addition rather than a sweeping refactor.
