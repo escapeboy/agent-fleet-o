@@ -58,7 +58,7 @@ class SignalAssignTool extends Tool
 
         if (! $actor && $teamId) {
             $actor = User::whereHas('teams', fn ($q) => $q->where('teams.id', $teamId)
-                ->whereIn('team_user.role', ['owner'])
+                ->whereIn('team_user.role', ['owner']),
             )->first();
         }
 

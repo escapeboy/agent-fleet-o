@@ -17,6 +17,7 @@ use App\Infrastructure\Telemetry\TenantTracerTester;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -170,12 +171,12 @@ class TeamSettingsPage extends Component
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
 
         // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
-        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+        if (Schema::hasColumn('teams', 'max_credits_per_call')) {
             $this->maxCreditsPerCall = $team->max_credits_per_call !== null
                 ? (string) $team->max_credits_per_call
                 : '';
         }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+        if (Schema::hasColumn('teams', 'credit_margin_multiplier')) {
             $this->creditMarginMultiplier = $team->credit_margin_multiplier !== null
                 ? (string) $team->credit_margin_multiplier
                 : '';
@@ -480,7 +481,7 @@ class TeamSettingsPage extends Component
     {
         $this->authorize('manage-team', auth()->user()->currentTeam);
 
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'max_credits_per_call')) {
+        if (! Schema::hasColumn('teams', 'max_credits_per_call')) {
             session()->flash('error', 'Per-call credit limits are not available in this build.');
 
             return;
@@ -513,7 +514,7 @@ class TeamSettingsPage extends Component
             abort(403, 'Super-admin role required to change margin multiplier.');
         }
 
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('teams', 'credit_margin_multiplier')) {
+        if (! Schema::hasColumn('teams', 'credit_margin_multiplier')) {
             session()->flash('error', 'Margin override is not available in this build.');
 
             return;

@@ -64,7 +64,7 @@ class EnforceMaxCreditsPerCallAction
         if ($estimate > $cap) {
             throw new InsufficientBudgetException(
                 "Estimated {$estimate} platform_credits exceeds team cap of {$cap}. ".
-                'Increase max_credits_per_call in team settings or use a cheaper model.'
+                'Increase max_credits_per_call in team settings or use a cheaper model.',
             );
         }
     }

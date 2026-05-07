@@ -6,11 +6,12 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Signal\Enums\SignalStatus;
+use App\Models\User;
+use Carbon\Carbon;
 use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,7 +22,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property array<string, mixed> $payload
  * @property string $team_id
  * @property string|null $assigned_user_id
- * @property \Carbon\Carbon|null $assigned_at
+ * @property Carbon|null $assigned_at
  * @property User|null $assignedUser
  */
 class Signal extends Model implements HasMedia
