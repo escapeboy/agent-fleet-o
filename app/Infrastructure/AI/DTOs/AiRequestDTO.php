@@ -50,6 +50,17 @@ final readonly class AiRequestDTO
         public int $escalationAttempts = 0,
         /** Opt into Anthropic Fast Mode beta header for this call (ignored for non-Anthropic providers or if globally disabled) */
         public bool $fastMode = false,
+        /**
+         * Per-request BYOK override — raw provider API key supplied by an internal caller
+         * (e.g. Partner Program, finance sub-program). When set, wins over team BYOK credential
+         * lookup for this single call. Never persisted (excluded from logs, audit, idempotency).
+         * Capped at 512 chars to keep error-message truncation guarantees.
+         *
+         * @internal Sensitive — must be stripped from any serialization (Horizon payloads, audit, Sentry).
+         */
+        public ?string $providerCredentialOverride = null,
+        /** Reorder fallback chain by 24h-rolling provider metric — 'cost' | 'latency' | null (off, default). */
+        public ?string $gatewaySort = null,
     ) {}
 
     public function isStructured(): bool

@@ -27,6 +27,7 @@ class UsageTracking implements AiMiddlewareInterface
             'experiment_stage_id' => $request->experimentStageId,
             'purpose' => $request->purpose ?? '',
             'provider' => $response->provider,
+            'byok_source' => $this->resolveByokSource(),
             'model' => $response->model,
             'input_schema' => $request->outputSchema ? ['name' => $request->outputSchema->name] : null,
             'prompt_snapshot' => [
@@ -51,5 +52,16 @@ class UsageTracking implements AiMiddlewareInterface
         ]);
 
         return $response;
+    }
+
+    private function resolveByokSource(): ?string
+    {
+        if (! app()->bound('ai.byok_source')) {
+            return null;
+        }
+
+        $value = app('ai.byok_source');
+
+        return is_string($value) ? $value : null;
     }
 }

@@ -32,6 +32,7 @@ class LlmRequestLog extends Model
         'experiment_id',
         'experiment_stage_id',
         'provider',
+        'byok_source',
         'model',
         'prompt_hash',
         'status',

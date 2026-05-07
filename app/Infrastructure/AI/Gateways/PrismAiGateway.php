@@ -628,11 +628,9 @@ class PrismAiGateway implements AiGatewayInterface
     private function applyTeamCredentials(AiRequestDTO $request): void
     {
         if (in_array($request->provider, ['ollama', 'openai_compatible', 'litellm_proxy', 'custom_endpoint'], true)) {
-            return; // Handled via getPerRequestProviderConfig()
-        }
+            app()->instance('ai.byok_source', null);
 
-        if (! $request->teamId) {
-            return;
+            return; // Handled via getPerRequestProviderConfig()
         }
 
         $configKey = match ($request->provider) {
@@ -649,6 +647,21 @@ class PrismAiGateway implements AiGatewayInterface
             default => null,
         };
 
+        // Per-request BYOK override — used by Partner Program / finance sub-program flows.
+        // Wins over TeamProviderCredential lookup. Override key is NEVER persisted.
+        if ($request->providerCredentialOverride !== null && $request->providerCredentialOverride !== '' && $configKey) {
+            config([$configKey => $request->providerCredentialOverride]);
+            app()->instance('ai.byok_source', 'request_override');
+
+            return;
+        }
+
+        if (! $request->teamId) {
+            app()->instance('ai.byok_source', $configKey ? 'platform' : null);
+
+            return;
+        }
+
         $credential = TeamProviderCredential::where('team_id', $request->teamId)
             ->where('provider', $request->provider)
             ->where('is_active', true)
@@ -664,6 +677,7 @@ class PrismAiGateway implements AiGatewayInterface
             );
 
             config([$configKey => $credential->credentials['api_key']]);
+            app()->instance('ai.byok_source', 'team');
 
             return;
         }
@@ -683,6 +697,8 @@ class PrismAiGateway implements AiGatewayInterface
             $platformKey = config("services.platform_api_keys.{$request->provider}");
             config([$configKey => $platformKey]);
         }
+
+        app()->instance('ai.byok_source', $configKey ? 'platform' : null);
     }
 
     private function resolveProvider(string $provider): Provider|string

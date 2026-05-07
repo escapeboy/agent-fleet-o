@@ -7,6 +7,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\EscalationStrategy;
+use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Trace\SpanInterface;
@@ -27,6 +28,7 @@ class FallbackAiGateway implements AiGatewayInterface
         private readonly ?AiGatewayInterface $localGateway = null,
         private readonly ?LocalBridgeGateway $bridgeGateway = null,
         private readonly ?EscalationStrategy $escalationStrategy = null,
+        private readonly ?ProviderRanker $ranker = null,
     ) {}
 
     public function complete(AiRequestDTO $request): AiResponseDTO
@@ -73,6 +75,7 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
+        $chain = $this->maybeRankChain($chain, $request->gatewaySort);
 
         $lastException = null;
         $firstException = null;
@@ -118,6 +121,8 @@ class FallbackAiGateway implements AiGatewayInterface
                         budgetPressureLevel: $request->budgetPressureLevel,
                         escalationAttempts: $request->escalationAttempts,
                         fastMode: $request->fastMode,
+                        providerCredentialOverride: $request->providerCredentialOverride,
+                        gatewaySort: $request->gatewaySort,
                     );
 
                     $span->setAttribute('ai.gateway.route', 'bridge');
@@ -168,6 +173,10 @@ class FallbackAiGateway implements AiGatewayInterface
                     tools: $request->tools,
                     maxSteps: $request->maxSteps,
                     toolChoice: $request->toolChoice,
+                    providerCredentialOverride: $providerName === $request->provider
+                        ? $request->providerCredentialOverride
+                        : null,
+                    gatewaySort: $request->gatewaySort,
                 );
 
                 $response = $this->gateway->complete($adjustedRequest);
@@ -259,6 +268,7 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         $chain = $this->getFallbackChain($request->provider, $request->model, $request->fallbackChain);
+        $chain = $this->maybeRankChain($chain, $request->gatewaySort);
         $firstException = null;
         $lastException = null;
 
@@ -303,6 +313,8 @@ class FallbackAiGateway implements AiGatewayInterface
                         budgetPressureLevel: $request->budgetPressureLevel,
                         escalationAttempts: $request->escalationAttempts,
                         fastMode: $request->fastMode,
+                        providerCredentialOverride: $request->providerCredentialOverride,
+                        gatewaySort: $request->gatewaySort,
                     );
 
                     $span->setAttribute('ai.gateway.route', 'bridge');
@@ -349,6 +361,10 @@ class FallbackAiGateway implements AiGatewayInterface
                     tools: $request->tools,
                     maxSteps: $request->maxSteps,
                     toolChoice: $request->toolChoice,
+                    providerCredentialOverride: $providerName === $request->provider
+                        ? $request->providerCredentialOverride
+                        : null,
+                    gatewaySort: $request->gatewaySort,
                 );
 
                 $response = $this->gateway->stream($adjustedRequest, $onChunk);
@@ -409,6 +425,37 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return $chain;
+    }
+
+    /**
+     * Reorder the fallback chain by 24h-rolling provider metric, when requested
+     * and a ranker is wired up. Local/bridge entries pass through unchanged.
+     *
+     * @param  list<array{provider: string, model: string}>  $chain
+     * @return list<array{provider: string, model: string}>
+     */
+    private function maybeRankChain(array $chain, ?string $sortBy): array
+    {
+        if ($sortBy === null || $this->ranker === null || count($chain) <= 1) {
+            return $chain;
+        }
+
+        $cloud = [];
+        $passthrough = [];
+
+        foreach ($chain as $target) {
+            if ($this->isBridgeProvider($target['provider']) || $this->isLocalProvider($target['provider'])) {
+                $passthrough[] = $target;
+
+                continue;
+            }
+
+            $cloud[] = $target;
+        }
+
+        $ranked = $this->ranker->rank($cloud, $sortBy);
+
+        return array_values(array_merge($ranked, $passthrough));
     }
 
     private function isBridgeProvider(string $provider): bool
@@ -568,6 +615,10 @@ class FallbackAiGateway implements AiGatewayInterface
             classifiedComplexity: $request->classifiedComplexity,
             budgetPressureLevel: $request->budgetPressureLevel,
             escalationAttempts: $request->escalationAttempts + 1,
+            providerCredentialOverride: $provider === $request->provider
+                ? $request->providerCredentialOverride
+                : null,
+            gatewaySort: $request->gatewaySort,
         );
     }
 }

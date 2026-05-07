@@ -75,6 +75,7 @@ class IdempotencyCheck implements AiMiddlewareInterface
 
             $log->update([
                 'status' => 'completed',
+                'byok_source' => $this->resolveByokSource(),
                 'response_body' => $response->parsedOutput ?? ['text' => $response->content],
                 'input_tokens' => $response->usage->promptTokens,
                 'output_tokens' => $response->usage->completionTokens,
@@ -87,10 +88,22 @@ class IdempotencyCheck implements AiMiddlewareInterface
         } catch (\Throwable $e) {
             $log->update([
                 'status' => 'failed',
+                'byok_source' => $this->resolveByokSource(),
                 'error' => substr($e->getMessage(), 0, 1000),
             ]);
 
             throw $e;
         }
+    }
+
+    private function resolveByokSource(): ?string
+    {
+        if (! app()->bound('ai.byok_source')) {
+            return null;
+        }
+
+        $value = app('ai.byok_source');
+
+        return is_string($value) ? $value : null;
     }
 }

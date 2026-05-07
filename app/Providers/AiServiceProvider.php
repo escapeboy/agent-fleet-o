@@ -26,6 +26,7 @@ use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use Illuminate\Support\ServiceProvider;
 use Prism\Prism\PrismManager;
@@ -38,6 +39,7 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(CostCalculator::class);
         $this->app->singleton(CircuitBreaker::class);
         $this->app->singleton(EscalationStrategy::class);
+        $this->app->singleton(ProviderRanker::class);
         $this->app->singleton(LocalAgentDiscovery::class);
         $this->app->singleton(LocalLlmDiscovery::class);
         $this->app->singleton(LocalLlmUrlValidator::class);
@@ -136,6 +138,7 @@ class AiServiceProvider extends ServiceProvider
                     : null,
                 bridgeGateway: $app->make(LocalBridgeGateway::class),
                 escalationStrategy: $app->make(EscalationStrategy::class),
+                ranker: $app->make(ProviderRanker::class),
             );
         });
     }

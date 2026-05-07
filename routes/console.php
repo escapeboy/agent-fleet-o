@@ -2,6 +2,7 @@
 
 use App\Domain\Project\Jobs\DispatchScheduledProjectsJob;
 use App\Domain\Signal\Jobs\RefreshExpiringWebhooksJob;
+use App\Infrastructure\AI\Jobs\ComputeProviderRankingJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -103,6 +104,10 @@ if (config('boruna_audit.enabled', false)) {
 Schedule::command('conversations:expire')->everyFiveMinutes();
 
 Schedule::job(new DispatchScheduledProjectsJob)->everyMinute();
+
+// Provider ranker — aggregate 24h of llm_request_logs into per-(provider, model) median
+// latency + cost-per-1k-tokens. Consumed by FallbackAiGateway when AiRequestDTO::gatewaySort is set.
+Schedule::job(new ComputeProviderRankingJob)->everyFiveMinutes()->withoutOverlapping(4);
 
 // Agent heartbeats — evaluate scheduled autonomous tasks every minute
 Schedule::command('agents:heartbeats')->everyMinute()->withoutOverlapping(1);

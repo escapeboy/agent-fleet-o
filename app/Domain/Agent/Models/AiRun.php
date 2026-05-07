@@ -21,6 +21,7 @@ class AiRun extends Model
         'experiment_stage_id',
         'purpose',
         'provider',
+        'byok_source',
         'model',
         'input_schema',
         'prompt_snapshot',
