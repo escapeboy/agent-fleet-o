@@ -150,7 +150,7 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
      *
      * @param  array<string, mixed>  $hmacConfig
      * @param  array<string, mixed>  $context
-     * @return array{0: string, 1: string}|null  [header_name, header_value] or null when misconfigured.
+     * @return array{0: string, 1: string}|null [header_name, header_value] or null when misconfigured.
      */
     private function computeHmacHeader(array $hmacConfig, string $body, array $context): ?array
     {
