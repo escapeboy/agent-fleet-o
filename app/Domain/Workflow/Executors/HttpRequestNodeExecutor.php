@@ -22,11 +22,22 @@ use Illuminate\Support\Facades\Http;
  *   "headers": {"Authorization": "Bearer {{credential.my_key.value}}"},
  *   "body": "{{previous_node_id.text}}",
  *   "timeout": 30,
- *   "follow_redirects": true
+ *   "follow_redirects": true,
+ *   "sign_with_hmac": {
+ *     "secret": "{{credential.partner_hmac.secret}}",
+ *     "header": "X-Fleetq-Signature",
+ *     "algo": "sha256",
+ *     "body_format": "sha256={hex}"
+ *   }
  * }
  *
  * Security: URLs are validated via SsrfGuard. Credential references
  * ({{credential.name.field}}) resolve secret_data fields from team credentials.
+ *
+ * HMAC: when sign_with_hmac is set, the rendered body is hashed with hash_hmac
+ * using the configured algorithm, then injected into the named header. The body
+ * is sent over the wire verbatim (no JSON re-encoding) so the signature stays
+ * valid for partner verification.
  */
 class HttpRequestNodeExecutor implements NodeExecutorInterface
 {
@@ -52,7 +63,7 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
         }
 
         // SSRF guard — blocks requests to private/loopback addresses
-        $this->ssrfGuard->validate($url);
+        $this->ssrfGuard->assertPublicUrl($url);
 
         // Interpolate headers
         $headers = [];
@@ -64,6 +75,17 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
         $body = '';
         if (! empty($config['body'])) {
             $body = $this->interpolate($config['body'], $context);
+        }
+
+        // Optional HMAC signing of the rendered body.
+        // Must run AFTER body interpolation and BEFORE Http::withBody() so the
+        // signed bytes match the wire bytes exactly.
+        if (! empty($config['sign_with_hmac']) && is_array($config['sign_with_hmac'])) {
+            $signed = $this->computeHmacHeader($config['sign_with_hmac'], $body, $context);
+            if ($signed !== null) {
+                [$headerName, $headerValue] = $signed;
+                $headers[$headerName] = $headerValue;
+            }
         }
 
         $timeout = min((int) ($config['timeout'] ?? 30), 120);
@@ -121,5 +143,33 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
     private function detectContentType(array $headers): string
     {
         return $headers['Content-Type'] ?? $headers['content-type'] ?? 'application/json';
+    }
+
+    /**
+     * Compute the HMAC signature header for the rendered body.
+     *
+     * @param  array<string, mixed>  $hmacConfig
+     * @param  array<string, mixed>  $context
+     * @return array{0: string, 1: string}|null  [header_name, header_value] or null when misconfigured.
+     */
+    private function computeHmacHeader(array $hmacConfig, string $body, array $context): ?array
+    {
+        $secret = $this->interpolate((string) ($hmacConfig['secret'] ?? ''), $context);
+        $headerName = (string) ($hmacConfig['header'] ?? 'X-Signature');
+        $algo = (string) ($hmacConfig['algo'] ?? 'sha256');
+        $bodyFormat = (string) ($hmacConfig['body_format'] ?? '{hex}');
+
+        if ($secret === '' || $headerName === '') {
+            return null;
+        }
+
+        if (! in_array($algo, hash_hmac_algos(), true)) {
+            return null;
+        }
+
+        $hex = hash_hmac($algo, $body, $secret);
+        $value = str_replace('{hex}', $hex, $bodyFormat);
+
+        return [$headerName, $value];
     }
 }

@@ -33,12 +33,18 @@ trait InterpolatesTemplates
      */
     protected function buildStepContext(PlaybookStep $step, Experiment $experiment): array
     {
+        $meta = is_array($experiment->meta) ? $experiment->meta : [];
+        $inputData = is_array($meta['input_data'] ?? null) ? $meta['input_data'] : [];
+
         $context = [
             'experiment' => [
                 'id' => $experiment->id,
                 'title' => $experiment->title,
                 'thesis' => $experiment->thesis,
             ],
+            // Triggering payload (signal/manual/schedule) — populated by
+            // TriggerProjectRunAction from ProjectRun.input_data via meta.
+            'input' => $inputData,
         ];
 
         $completedSteps = PlaybookStep::where('experiment_id', $experiment->id)

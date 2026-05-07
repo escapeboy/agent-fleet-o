@@ -23,6 +23,9 @@ class WebhookEndpoint extends Model
         'retry_config',
         'last_triggered_at',
         'failure_count',
+        'signature_header',
+        'signature_format',
+        'signature_algo',
     ];
 
     protected function casts(): array

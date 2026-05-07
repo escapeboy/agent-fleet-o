@@ -43,12 +43,16 @@ class SignalInputMapperTest extends TestCase
         ]);
     }
 
-    public function test_empty_mapping_returns_empty_array(): void
+    public function test_empty_mapping_still_injects_signal_metadata_and_payload(): void
     {
         $signal = $this->makeSignal(['event' => 'test']);
         $result = $this->mapper->map(null, $signal);
 
-        $this->assertEmpty($result);
+        // Empty input_mapping must still surface signal context so workflows
+        // can read {{ input._signal_payload.* }} without explicit mapping.
+        $this->assertEquals($signal->id, $result['_signal_id']);
+        $this->assertEquals(['event' => 'test'], $result['_signal_payload']);
+        $this->assertSame([], $result['_signal_metadata']);
     }
 
     public function test_maps_top_level_payload_field(): void
@@ -84,6 +88,16 @@ class SignalInputMapperTest extends TestCase
         $this->assertEquals($signal->id, $result['_signal_id']);
         $this->assertEquals('github', $result['_signal_source']);
         $this->assertNotNull($result['_signal_received_at']);
+    }
+
+    public function test_injects_raw_payload(): void
+    {
+        $payload = ['document_id' => 'doc-123', 'confidence' => 0.97];
+        $signal = $this->makeSignal($payload);
+        $result = $this->mapper->map(['conf' => 'confidence'], $signal);
+
+        $this->assertEquals($payload, $result['_signal_payload']);
+        $this->assertEquals(0.97, $result['conf']);
     }
 
     public function test_multiple_mappings(): void
