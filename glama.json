@@ -3,7 +3,7 @@
   "maintainers": [
     "escapeboy"
   ],
-  "description": "Self-hosted AI Agent Mission Control — 33 consolidated tools across agents, workflows, experiments, signals, projects, marketplace, budgets, approvals, and more. Boots on stdio with a self-contained SQLite database.",
+  "description": "AI Agent Mission Control — 33 consolidated tools across agents, workflows, experiments, signals, projects, marketplace, budgets, approvals, and more. The Dockerfile is a stdio→HTTP wrapper that connects to your hosted FleetQ instance (FleetQ Cloud at https://fleetq.net or self-hosted) using a Sanctum API token; tool calls operate on your real team data.",
   "tags": [
     "ai-agents",
     "orchestration",

@@ -1,3 +1,5 @@
+# The wrapper Dockerfile copies no repo files; this list just keeps the
+# build context small for `docker build`.
 .git
 .github
 .idea
@@ -11,7 +13,7 @@
 .playwright-mcp
 .claude
 
-# Test + dev artifacts
+# Dev / test artifacts (not relevant to the wrapper image)
 tests
 .env
 .env.local
@@ -21,31 +23,22 @@ tests
 phpunit.xml
 phpstan.neon.dist
 phpstan-baseline.neon
-.editorconfig
 
 # Build / runtime
 node_modules
 public/build
 public/hot
 public/storage
-storage/app/public
-storage/framework/cache/data
-storage/framework/sessions
-storage/framework/views
-storage/logs
-storage/pail
-bootstrap/cache/*.php
-
-# Vendor (reinstalled inside builder)
+storage
+bootstrap/cache
 vendor
+packages
 
-# Docs / images / assets not needed for runtime
+# Docs
 docs
 claudedocs
 retro
 plans
-*.md
-!README.md
 
 # Misc
 *.log
