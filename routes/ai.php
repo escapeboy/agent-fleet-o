@@ -53,14 +53,21 @@ Route::post('oauth/register', OAuthRegisterController::class)
 Route::post('oauth/revoke', OAuthRevokeController::class)
     ->middleware('throttle:120,1');
 
-// Compact MCP endpoint (HTTP/SSE) — 33 consolidated tools for remote clients (Claude.ai)
+// Compact MCP endpoint (HTTP/SSE) — 33 consolidated tools for remote clients (Claude.ai, Glama).
 // Each tool supports multiple actions via "action" parameter, delegating to original tools.
+//
+// Multi-guard auth: tries Sanctum (personal access tokens minted at Settings →
+// API Tokens) first, then Passport OAuth tokens. Sanctum is the common case for
+// remote MCP clients that paste a Bearer token; Passport is used by browser
+// OAuth flows. The `scope:mcp:use` guard only fires for Passport tokens — Sanctum
+// tokens are validated by their team-scoping ability inside the server's
+// BootstrapsMcpAuth trait.
 Mcp::web('/mcp', CompactMcpServer::class)
-    ->middleware(['auth:passport', 'scope:mcp:use']);
+    ->middleware(['auth:sanctum,passport']);
 
 // Full MCP endpoint (HTTP/SSE) — all 259 tools for power users and clients without tool limits
 Mcp::web('/mcp/full', AgentFleetServer::class)
-    ->middleware(['auth:passport', 'scope:mcp:use']);
+    ->middleware(['auth:sanctum,passport']);
 
 // Local MCP server (stdio) — for CLI agents like Codex, Claude Code (no tool limit)
 Mcp::local('agent-fleet', AgentFleetServer::class);
