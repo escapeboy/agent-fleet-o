@@ -155,9 +155,9 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
     private function computeHmacHeader(array $hmacConfig, string $body, array $context): ?array
     {
         $secret = $this->interpolate((string) ($hmacConfig['secret'] ?? ''), $context);
-        $headerName = (string) ($hmacConfig['header'] ?? 'X-Signature');
+        $headerName = $this->stripCrlf((string) ($hmacConfig['header'] ?? 'X-Signature'));
         $algo = (string) ($hmacConfig['algo'] ?? 'sha256');
-        $bodyFormat = (string) ($hmacConfig['body_format'] ?? '{hex}');
+        $bodyFormat = $this->stripCrlf((string) ($hmacConfig['body_format'] ?? '{hex}'));
 
         if ($secret === '' || $headerName === '') {
             return null;
@@ -171,5 +171,13 @@ class HttpRequestNodeExecutor implements NodeExecutorInterface
         $value = str_replace('{hex}', $hex, $bodyFormat);
 
         return [$headerName, $value];
+    }
+
+    /**
+     * Strip CR/LF to defend against tenant-supplied header injection.
+     */
+    private function stripCrlf(string $value): string
+    {
+        return str_replace(["\r", "\n"], '', $value);
     }
 }

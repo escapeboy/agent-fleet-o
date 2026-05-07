@@ -110,11 +110,12 @@ class SendWebhookAction
             return null;
         }
 
-        $headerName = $endpoint->signature_header ?: 'X-Fleetq-Signature';
-        $format = $endpoint->signature_format ?: 'sha256={hex}';
+        // Strip CR/LF to defend against tenant-supplied header injection.
+        $headerName = str_replace(["\r", "\n"], '', $endpoint->signature_header ?: 'X-Fleetq-Signature');
+        $format = str_replace(["\r", "\n"], '', $endpoint->signature_format ?: 'sha256={hex}');
         $algo = $endpoint->signature_algo ?: 'sha256';
 
-        if (! in_array($algo, hash_hmac_algos(), true)) {
+        if ($headerName === '' || ! in_array($algo, hash_hmac_algos(), true)) {
             return null;
         }
 
