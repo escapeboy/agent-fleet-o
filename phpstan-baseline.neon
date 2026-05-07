@@ -1,6 +1,12 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Call to an undefined static method Propaganistas\\LaravelDisposableEmail\\Facades\\DisposableDomains\:\:isDisposable\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Domain/Signal/Rules/E01DisposableEmailRule.php
+
+		-
 			message: '#^PHPDoc tag @param references unknown parameter\: \$input$#'
 			identifier: parameter.notFound
 			count: 1
