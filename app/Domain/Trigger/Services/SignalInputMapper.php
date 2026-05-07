@@ -21,21 +21,20 @@ class SignalInputMapper
      */
     public function map(?array $inputMapping, Signal $signal): array
     {
-        if (empty($inputMapping)) {
-            return [];
-        }
-
         $result = [];
         $payload = $signal->payload ?? [];
 
-        foreach ($inputMapping as $targetKey => $sourcePath) {
+        foreach ($inputMapping ?? [] as $targetKey => $sourcePath) {
             $result[$targetKey] = $this->resolvePath((string) $sourcePath, $payload);
         }
 
-        // Also inject top-level signal metadata for convenience
+        // Always inject signal metadata + raw payload so workflows can read the
+        // triggering signal even when input_mapping is empty.
         $result['_signal_id'] = $signal->id;
         $result['_signal_source'] = $signal->source_type;
         $result['_signal_received_at'] = $signal->received_at?->toIso8601String();
+        $result['_signal_payload'] = $payload;
+        $result['_signal_metadata'] = $signal->metadata ?? [];
 
         return $result;
     }
