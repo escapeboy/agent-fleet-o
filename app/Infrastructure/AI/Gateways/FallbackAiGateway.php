@@ -455,7 +455,7 @@ class FallbackAiGateway implements AiGatewayInterface
 
         $ranked = $this->ranker->rank($cloud, $sortBy);
 
-        return array_values(array_merge($ranked, $passthrough));
+        return array_merge($ranked, $passthrough);
     }
 
     private function isBridgeProvider(string $provider): bool

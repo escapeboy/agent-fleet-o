@@ -51,7 +51,7 @@ class ProviderRanker
         $scored = array_map(
             function (array $target) use ($redis, $hashKey): array {
                 $field = $target['provider'].':'.$target['model'];
-                $samples = (int) ($redis->hget(self::HASH_SAMPLES, $field) ?? 0);
+                $samples = (int) $redis->hget(self::HASH_SAMPLES, $field);
 
                 if ($samples < self::MIN_SAMPLES) {
                     return ['target' => $target, 'metric' => null];
@@ -88,10 +88,10 @@ class ProviderRanker
 
         usort($missing, fn (array $a, array $b): int => $a['index'] <=> $b['index']);
 
-        return array_values(array_map(
+        return array_map(
             fn (array $entry): array => $entry['target'],
             array_merge($present, $missing),
-        ));
+        );
     }
 
     /**

@@ -85,7 +85,7 @@ class ComputeProviderRankingJob implements ShouldQueue
             $redis->expire($hashKey, 600);
         }
 
-        Redis::connection('cache')->set('gateway:ranker:computed_at', now()->toIso8601String(), 'EX', 600);
+        Redis::connection('cache')->set('gateway:ranker:computed_at', now()->toIso8601String(), ['EX' => 600]);
 
         Log::debug('provider_ranker_computed', [
             'eligible_pairs' => count($writeBatch[$keys['samples']]),
