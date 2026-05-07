@@ -13,7 +13,15 @@ class AssistantManageTool extends CompactTool
 {
     protected string $name = 'assistant_manage';
 
-    protected string $description = 'Manage AI assistant conversations. Actions: conversation_list, conversation_get (conversation_id), send_message (conversation_id, message), conversation_clear (conversation_id).';
+    protected string $description = <<<'TXT'
+FleetQ AI assistant conversations — the in-app chat panel that can call MCP tools on the user's behalf with role-gated authorization (read for all, write for Member+, destructive for Admin/Owner). Conversations bind to a context object (experiment, project, agent, crew, workflow) on first message.
+
+Actions:
+- conversation_list (read) — optional: limit, context_type filter.
+- conversation_get (read) — conversation_id. Full history including `tool_calls` / `tool_results`.
+- send_message (write) — message; optional: conversation_id (omit to start new), context_type, context_id, attachments[]. Triggers a synchronous tool-loop LLM call; consumes team credits.
+- conversation_clear (DESTRUCTIVE) — conversation_id. Erases all messages, retains the conversation shell.
+TXT;
 
     protected function toolMap(): array
     {

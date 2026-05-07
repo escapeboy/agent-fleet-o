@@ -14,7 +14,16 @@ class KnowledgeManageTool extends CompactTool
 {
     protected string $name = 'knowledge_manage';
 
-    protected string $description = 'Manage knowledge bases. Actions: list, create (name, description), ingest (knowledge_base_id, content/url), search (knowledge_base_id, query), delete (knowledge_base_id).';
+    protected string $description = <<<'TXT'
+Per-team knowledge bases — vector-indexed document collections agents can search at runtime. Ingestion runs an embedding job (consumes credits via the team's embedding provider). `search` is hybrid: cosine similarity over pgvector + keyword fallback.
+
+Actions:
+- list (read) — all knowledge bases for the team.
+- create (write) — name, description.
+- ingest (write — costs embedding credits) — knowledge_base_id; one of: content (raw text), url (fetched + extracted), file_id.
+- search (read) — knowledge_base_id, query; optional limit (default 10), threshold.
+- delete (DESTRUCTIVE) — knowledge_base_id. Drops all ingested chunks and embeddings.
+TXT;
 
     protected function toolMap(): array
     {

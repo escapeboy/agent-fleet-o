@@ -34,7 +34,7 @@ class McpAppsCapability
         $supported = $uiExt !== null
             && in_array(self::MIME_TYPE, (array) ($uiExt['mimeTypes'] ?? []), true);
 
-        Cache::store('redis')->put(self::CACHE_PREFIX.$sessionId, $supported, self::TTL);
+        Cache::store()->put(self::CACHE_PREFIX.$sessionId, $supported, self::TTL);
     }
 
     /**
@@ -46,7 +46,7 @@ class McpAppsCapability
             return false;
         }
 
-        return (bool) Cache::store('redis')->get(self::CACHE_PREFIX.$sessionId, false);
+        return (bool) Cache::store()->get(self::CACHE_PREFIX.$sessionId, false);
     }
 
     /**

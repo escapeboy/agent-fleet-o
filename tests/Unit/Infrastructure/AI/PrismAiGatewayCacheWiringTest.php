@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Infrastructure\AI;
 
+use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
-use App\Domain\Budget\Services\CostCalculator;
 use Prism\Prism\ValueObjects\Usage;
 use Tests\TestCase;
 
@@ -80,7 +80,7 @@ class PrismAiGatewayCacheWiringTest extends TestCase
             CostCalculator::CACHE_STRATEGY_5M,
             $this->callPrivate($gw, 'resolveCacheStrategy', [
                 new AiRequestDTO(...$base, enablePromptCaching: true),
-            ])
+            ]),
         );
 
         $this->assertNull($this->callPrivate($gw, 'resolveCacheStrategy', [

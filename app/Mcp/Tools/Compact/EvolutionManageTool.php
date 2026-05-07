@@ -14,7 +14,16 @@ class EvolutionManageTool extends CompactTool
 {
     protected string $name = 'evolution_manage';
 
-    protected string $description = 'Manage evolution proposals (AI-suggested improvements). Actions: list (status filter), analyze (proposal_id — detailed analysis), approve (proposal_id), apply (proposal_id — execute the improvement), reject (proposal_id, reason).';
+    protected string $description = <<<'TXT'
+AI-generated improvement proposals — the platform analyzes recent agent runs and suggests prompt tweaks, model swaps, skill additions. Proposals must be reviewed (`analyze`), then either `apply` (mutates the target agent/skill) or `reject`. `apply` is irreversible without a manual rollback through `agent_advanced.rollback`.
+
+Actions:
+- list (read) — optional: status (pending/applied/rejected), target_type, limit.
+- analyze (read) — proposal_id. Returns LLM-generated rationale, confidence score, diff preview.
+- approve (write) — proposal_id. Marks as approved without applying (queue for batch apply).
+- apply (DESTRUCTIVE) — proposal_id. Mutates the target entity in place; rollback only via config_history snapshot.
+- reject (write) — proposal_id, reason. Closes the proposal.
+TXT;
 
     protected function toolMap(): array
     {

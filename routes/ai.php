@@ -64,3 +64,7 @@ Mcp::web('/mcp/full', AgentFleetServer::class)
 
 // Local MCP server (stdio) — for CLI agents like Codex, Claude Code (no tool limit)
 Mcp::local('agent-fleet', AgentFleetServer::class);
+
+// Compact stdio server — 33 consolidated tools, used by the Glama Docker image
+// and any remote-tool-cap client (Claude.ai) that mounts the Dockerfile build.
+Mcp::local('compact', CompactMcpServer::class);

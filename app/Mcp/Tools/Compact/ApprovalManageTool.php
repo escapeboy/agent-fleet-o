@@ -14,7 +14,16 @@ class ApprovalManageTool extends CompactTool
 {
     protected string $name = 'approval_manage';
 
-    protected string $description = 'Manage approvals and human tasks. Actions: list (status filter), approve (approval_id, comment), reject (approval_id, reason), complete_human_task (approval_id, form_data), webhook_config (approval_id, webhook_url).';
+    protected string $description = <<<'TXT'
+Human-in-the-loop approvals and workflow human-task completion. Use this to unblock workflow steps gated on reviewer decisions or to submit form data for `human_task` DAG nodes. Each decision is audit-logged and emits a domain event the workflow runtime listens for.
+
+Actions:
+- list (read) — optional: status (pending/approved/rejected/expired), assignee_id, limit.
+- approve (write) — approval_id, optional comment. Unblocks the dependent step.
+- reject (write) — approval_id, reason. Terminates the dependent step (workflow may branch on rejection).
+- complete_human_task (write) — approval_id, form_data (JSON matching the node's form_schema). Validates against the schema before commit.
+- webhook_config (write) — approval_id, webhook_url. Configures external notification when status changes.
+TXT;
 
     protected function toolMap(): array
     {

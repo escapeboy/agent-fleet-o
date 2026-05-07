@@ -1,0 +1,56 @@
+.git
+.github
+.idea
+.vscode
+.zed
+.fleet
+.nova
+.phpunit.cache
+.phpunit.result.cache
+.serena
+.playwright-mcp
+.claude
+
+# Test + dev artifacts
+tests
+.env
+.env.local
+.env.production
+.env.testing
+.env.backup
+phpunit.xml
+phpstan.neon.dist
+phpstan-baseline.neon
+.editorconfig
+
+# Build / runtime
+node_modules
+public/build
+public/hot
+public/storage
+storage/app/public
+storage/framework/cache/data
+storage/framework/sessions
+storage/framework/views
+storage/logs
+storage/pail
+bootstrap/cache/*.php
+
+# Vendor (reinstalled inside builder)
+vendor
+
+# Docs / images / assets not needed for runtime
+docs
+claudedocs
+retro
+plans
+*.md
+!README.md
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
+docker-compose*.yml
+ssl
+auth.json

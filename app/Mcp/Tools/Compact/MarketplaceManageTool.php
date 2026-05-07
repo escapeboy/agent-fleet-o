@@ -15,7 +15,17 @@ class MarketplaceManageTool extends CompactTool
 {
     protected string $name = 'marketplace_manage';
 
-    protected string $description = 'Browse and manage marketplace listings. Actions: browse (query, category), publish (listing data), install (listing_slug), review (listing_slug, rating, comment), categories (list categories), analytics (listing_slug).';
+    protected string $description = <<<'TXT'
+Cross-team marketplace for shared skills, agents, and workflows. `browse` and `categories` are public (no auth scope); `publish`, `install`, `review` operate within the caller's team. Installing a listing copies the artifact into the team and increments the listing's install count.
+
+Actions:
+- browse (read) — optional: query, category, sort. Public.
+- categories (read) — taxonomy of available categories. Public.
+- publish (write) — listing data: target_type (skill/agent/workflow), target_id, name, description, visibility (public/private/team).
+- install (write) — listing_slug. Copies the listed entity into your team.
+- review (write) — listing_slug, rating (1-5), comment. One review per user per listing.
+- analytics (read) — listing_slug. Install counts, ratings (publisher only).
+TXT;
 
     protected function toolMap(): array
     {

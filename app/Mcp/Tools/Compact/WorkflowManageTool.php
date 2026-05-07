@@ -21,7 +21,27 @@ class WorkflowManageTool extends CompactTool
 {
     protected string $name = 'workflow_manage';
 
-    protected string $description = 'Manage workflow templates. Actions: list, get (workflow_id), create (name, description), update (workflow_id + fields), validate (workflow_id), activate (workflow_id), duplicate (workflow_id), generate (prompt — AI generates workflow from description), estimate_cost (workflow_id), suggestion (context), time_gate (workflow_id, config), execution_chain (workflow_id, chain config).';
+    protected string $description = <<<'TXT'
+Workflow templates — reusable DAGs that experiments and project runs execute. This tool covers metadata and lifecycle; for graph editing use `workflow_graph`. Lifecycle states: draft → active → archived. Activation is gated on `validate` passing.
+
+Core actions:
+- list / get (read) — optional: status filter.
+- create (write) — name, description.
+- update (write) — workflow_id + any creatable field.
+- delete (DESTRUCTIVE) — workflow_id. Soft-deletes; running experiments continue on cached graph.
+- validate (read) — workflow_id. Returns errors[] (cycles, orphans, invalid types) and warnings[].
+- activate (write) — workflow_id. Requires validation to pass.
+- duplicate (write) — workflow_id. Creates a draft copy with the same graph.
+
+AI / cost:
+- generate (write — costs LLM credits) — prompt. Decomposes natural language into a workflow graph and saves as draft.
+- estimate_cost (read) — workflow_id. Projected per-run credit cost.
+- suggestion (read — costs LLM credits) — context (object). Recommends improvements.
+
+Advanced:
+- time_gate (write) — workflow_id, config (delay/window). Adds time-based gating around step execution.
+- execution_chain (write) — workflow_id, chain config. Configures sequential workflow chaining.
+TXT;
 
     protected function toolMap(): array
     {

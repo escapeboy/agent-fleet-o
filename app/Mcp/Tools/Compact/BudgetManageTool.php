@@ -12,7 +12,14 @@ class BudgetManageTool extends CompactTool
 {
     protected string $name = 'budget_manage';
 
-    protected string $description = 'Manage team budget and costs. Actions: summary (get budget overview), check (check if budget allows operation, estimated_cost), forecast (period, granularity).';
+    protected string $description = <<<'TXT'
+Team-wide credit budget overview, pre-flight cost guards, and spend forecasting. Read-only — does not move money. 1 credit ≈ $0.001 USD; balances and reservations track LLM + outbound + compute spend with pessimistic locking. Use `check` before dispatching any expensive job to avoid mid-run pause-on-budget-exhausted events.
+
+Actions:
+- summary (read) — current balance, pending reservations, MTD spend by category (llm/outbound/compute).
+- check (read) — estimated_cost (credits). Returns pass/fail without reserving funds.
+- forecast (read) — period (week|month|quarter), granularity (day|week). Projects spend by extrapolating recent ledger entries.
+TXT;
 
     protected function toolMap(): array
     {

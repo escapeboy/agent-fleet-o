@@ -15,7 +15,17 @@ class IntegrationManageTool extends CompactTool
 {
     protected string $name = 'integration_manage';
 
-    protected string $description = 'Manage third-party integrations. Actions: list, connect (driver, name, credentials), disconnect (integration_id), ping (integration_id), execute (integration_id, integration_action, params), capabilities (integration_id).';
+    protected string $description = <<<'TXT'
+Third-party service integrations (Airtable, Notion, Linear, Stripe, Slack, GitHub via OAuth2 + driver interface). Each integration declares typed `capabilities` (action endpoints) discoverable at runtime. `execute` invokes one capability with params validated against the driver's schema; output is normalized to JSON.
+
+Actions:
+- list (read) — optional: driver, status filter.
+- connect (write) — driver, name, credentials (object — driver-specific). Initiates OAuth or stores API keys.
+- disconnect (DESTRUCTIVE) — integration_id. Revokes tokens and deletes the connection.
+- ping (read) — integration_id. Health-check the upstream API.
+- execute (write — side effects on upstream) — integration_id, integration_action (capability name), params (object).
+- capabilities (read) — integration_id. Available actions + parameter schemas.
+TXT;
 
     protected function toolMap(): array
     {

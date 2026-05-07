@@ -20,7 +20,24 @@ class SystemManageTool extends CompactTool
 {
     protected string $name = 'system_manage';
 
-    protected string $description = 'System administration and monitoring. Actions: dashboard_kpis (overview metrics), health (system health check), version_check, audit_log (query audit entries), global_settings (update platform settings), blacklist (manage email/domain blacklist), security_policy (manage security policies), cache_stats (semantic cache statistics), cache_purge (purge semantic cache), compute (manage compute resources), runpod (manage RunPod GPU instances).';
+    protected string $description = <<<'TXT'
+System administration and monitoring — KPIs, health checks, audit log, semantic cache, compute providers (RunPod). `global_settings`, `blacklist`, `security_policy`, `cache_purge`, and `runpod`/`compute` provisioning require the platform `admin` role; the rest are available to team admins.
+
+Read actions:
+- dashboard_kpis — platform-wide KPI snapshot.
+- health — system health (DB, cache, queue, Horizon, providers).
+- version_check — installed version, available updates.
+- audit_log — query audit entries; optional filter (actor, action, entity_type, since).
+- cache_stats — semantic cache hit/miss/savings.
+
+Write actions:
+- global_settings (PLATFORM ADMIN) — update platform-wide settings (object).
+- blacklist (PLATFORM ADMIN) — sub-actions add/remove/list email/domain entries.
+- security_policy (PLATFORM ADMIN) — sub-actions on security policies.
+- cache_purge (DESTRUCTIVE, PLATFORM ADMIN) — purges semantic cache cross-team.
+- compute (PLATFORM ADMIN) — sub-actions on compute resources.
+- runpod (PLATFORM ADMIN, costs real $) — sub-actions on RunPod GPU instances; spinning up pods bills the platform account immediately.
+TXT;
 
     protected function toolMap(): array
     {

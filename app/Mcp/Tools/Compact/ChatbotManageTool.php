@@ -20,7 +20,19 @@ class ChatbotManageTool extends CompactTool
 {
     protected string $name = 'chatbot_manage';
 
-    protected string $description = 'Manage chatbot instances. Actions: list, get (chatbot_id), create (name, agent_id, config), update (chatbot_id + fields), delete (chatbot_id), toggle_status (chatbot_id), token_create (chatbot_id), token_revoke (chatbot_id, token_id), session_list (chatbot_id), analytics (chatbot_id), learning_entries (chatbot_id).';
+    protected string $description = <<<'TXT'
+Embeddable chatbots backed by an existing FleetQ agent. Each instance issues per-widget tokens for embedding, tracks sessions, and exposes analytics + learning entries. Conversations consume team credits via the bound agent's provider.
+
+Actions:
+- list / get (read) — list all or fetch one (chatbot_id).
+- create (write) — name, agent_id, config (theme, greeting, allowed_origins[]).
+- update (write) — chatbot_id + any creatable field.
+- delete (DESTRUCTIVE) — chatbot_id. Cascades — also revokes all widget tokens.
+- toggle_status (write) — chatbot_id. Flips active ↔ disabled.
+- token_create (write) — chatbot_id. Returns an embeddable widget token (display once).
+- token_revoke (DESTRUCTIVE) — chatbot_id, token_id. Invalidates a single widget instance.
+- session_list / analytics / learning_entries (read) — chatbot_id; optional date range.
+TXT;
 
     protected function toolMap(): array
     {

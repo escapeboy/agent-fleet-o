@@ -2,5 +2,16 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "escapeboy"
-  ]
+  ],
+  "description": "Self-hosted AI Agent Mission Control — 33 consolidated tools across agents, workflows, experiments, signals, projects, marketplace, budgets, approvals, and more. Boots on stdio with a self-contained SQLite database.",
+  "tags": [
+    "ai-agents",
+    "orchestration",
+    "workflow",
+    "laravel",
+    "mcp-server",
+    "agent-platform"
+  ],
+  "license": "AGPL-3.0",
+  "language": "PHP"
 }

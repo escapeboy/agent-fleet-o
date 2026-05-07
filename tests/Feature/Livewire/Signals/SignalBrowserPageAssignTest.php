@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Signals;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Mail\SignalAssignedMail;
 use App\Domain\Signal\Models\Signal;
 use App\Livewire\Signals\SignalBrowserPage;
 use App\Models\User;
@@ -72,7 +73,7 @@ class SignalBrowserPageAssignTest extends TestCase
             'assigned_user_id' => $assignee->id,
         ]);
 
-        Mail::assertSent(\App\Domain\Signal\Mail\SignalAssignedMail::class, function ($mail) use ($assignee) {
+        Mail::assertSent(SignalAssignedMail::class, function ($mail) use ($assignee) {
             return $mail->hasTo($assignee->email);
         });
     }

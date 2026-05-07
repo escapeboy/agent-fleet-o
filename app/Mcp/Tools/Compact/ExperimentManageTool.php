@@ -22,7 +22,21 @@ class ExperimentManageTool extends CompactTool
 {
     protected string $name = 'experiment_manage';
 
-    protected string $description = 'Manage experiments (pipeline runs). Actions: list, get (experiment_id), create (name, hypothesis, workflow_id), start (experiment_id), pause, resume, retry, retry_from_step (experiment_id, step_id), kill, valid_transitions (experiment_id), cost (experiment_id), steps (experiment_id), share (experiment_id).';
+    protected string $description = <<<'TXT'
+Experiments — the platform's core unit of work. Each experiment runs a workflow (DAG) through a 20-state machine: Draft → Scoring → Planning → Building → AwaitingApproval → Approved → Executing → CollectingMetrics → Evaluating → (Iterating | Completed). Lifecycle transitions are validated by `ExperimentTransitionMap`; use `valid_transitions` to discover what's currently allowed.
+
+Actions:
+- list (read) — optional: status, workflow_id, limit.
+- get (read) — experiment_id.
+- create (write) — name, hypothesis; optional workflow_id (else uses default workflow).
+- start (write) — experiment_id. Transitions Draft → Scoring; reserves budget.
+- pause / resume (write) — experiment_id. Pause holds at the current stage.
+- retry (write) — experiment_id. Re-runs the failed stage.
+- retry_from_step (write) — experiment_id, step_id. Graph-aware BFS reset of step + downstream.
+- kill (DESTRUCTIVE) — experiment_id. Terminal; cannot resume.
+- valid_transitions (read) — experiment_id. Allowed next states for current state.
+- cost / steps / share (read) — experiment_id. Cost breakdown / step list / public share token.
+TXT;
 
     protected function toolMap(): array
     {

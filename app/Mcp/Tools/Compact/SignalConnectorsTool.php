@@ -22,7 +22,21 @@ class SignalConnectorsTool extends CompactTool
 {
     protected string $name = 'signal_connectors';
 
-    protected string $description = 'Manage signal connectors and knowledge graph. Actions: ticket (config), alert (config), slack (config), http_monitor (url, interval), clearcue (config), supabase (config), intent_score (company, query), kg_search (query), kg_facts (entity_id), kg_add_fact (entity_id, fact), inbound_connector (create/update/delete connector), subscription (manage subscriptions), telegram (bot config).';
+    protected string $description = <<<'TXT'
+Inbound signal connectors (ticketing, alerts, Slack, HTTP monitors, ClearCue, Supabase realtime, Telegram bots) plus the team's knowledge graph (KG) read/write surface. Distinct from `signal_manage`: this tool wires up SOURCES; signal_manage operates on already-ingested signals.
+
+Connector actions (each accepts a `config` object specific to that channel):
+- ticket / alert / slack / clearcue / supabase / telegram (write — upsert).
+- http_monitor (write) — url, interval (seconds). Polls and emits a signal on change.
+- inbound_connector (write) — sub-actions create/update/delete on generic connectors.
+- subscription (write) — sub-actions list/create/delete on per-connector subscriptions.
+
+Knowledge graph actions:
+- kg_search (read) — query. Hybrid semantic + symbolic search across entities and facts.
+- kg_facts (read) — entity_id. All facts attached to an entity.
+- kg_add_fact (write) — entity_id, fact (object: predicate, object, source, confidence).
+- intent_score (read — costs LLM credits) — company, query. Returns intent classification + score.
+TXT;
 
     protected function toolMap(): array
     {
