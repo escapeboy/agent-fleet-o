@@ -20,7 +20,24 @@ class SkillManageTool extends CompactTool
 {
     protected string $name = 'skill_manage';
 
-    protected string $description = 'Manage AI skills. Actions: list, get (skill_id), create (name, type, config), update (skill_id + fields), delete (skill_id), versions (skill_id), guardrail (input, rules), multi_model (prompt, models), code_exec (code, language), browser (url, actions), supabase_edge_function (function_name, payload).';
+    protected string $description = <<<'TXT'
+AI skills — reusable units agents invoke (LLM prompt templates, connector calls, rules, hybrid, guardrails). Skill executions are versioned (`SkillVersion`) and metered against the team budget. Direct execution actions (`guardrail`, `multi_model`, `code_exec`, `browser`, `supabase_edge_function`) bypass the agent layer for ad-hoc invocation.
+
+CRUD actions:
+- list (read) — optional: type, status filter.
+- get (read) — skill_id.
+- create (write) — name, type (llm|connector|rule|hybrid|guardrail), config (type-specific object).
+- update (write) — skill_id + any creatable field. Bumps version.
+- delete (DESTRUCTIVE) — skill_id. Soft-deletes; existing version history retained.
+- versions (read) — skill_id. Version log with diffs.
+
+Direct execution (each costs credits):
+- guardrail (read — costs LLM credits) — input, rules. Validates input against safety rules.
+- multi_model (write — costs LLM credits per model) — prompt, models[]. Runs same prompt across models for consensus.
+- code_exec (write — sandboxed) — code, language. Runs in DockerSandboxExecutor.
+- browser (write — costs browser credits) — url, actions[]. Headless browser automation.
+- supabase_edge_function (write) — function_name, payload. Invokes a deployed Supabase edge function.
+TXT;
 
     protected function toolMap(): array
     {

@@ -16,7 +16,18 @@ class CrewManageTool extends CompactTool
 {
     protected string $name = 'crew_manage';
 
-    protected string $description = 'Manage multi-agent crews. Actions: list, get (crew_id), create (name, process_type, agents), update (crew_id + fields), execute (crew_id, goal), execution_status (crew_id, execution_id), executions_list (crew_id).';
+    protected string $description = <<<'TXT'
+Multi-agent crews — coordinated teams of agents that decompose a goal across roles (sequential, parallel, or hierarchical process). `execute` is async: it queues `ExecuteCrewJob` and returns immediately with an `execution_id`; poll `execution_status` for progress. Each crew member must be a real agent_id in the same team.
+
+Actions:
+- list / get (read) — list all or fetch one (crew_id).
+- create (write) — name, process_type (sequential|parallel|hierarchical), agents[] (array of {agent_id, role}).
+- update (write) — crew_id + any creatable field.
+- delete (DESTRUCTIVE) — crew_id. Soft-deletes the crew.
+- execute (write — long-running) — crew_id, goal. Reserves budget, returns execution_id.
+- execution_status (read) — crew_id, execution_id. Status, current task, partial results.
+- executions_list (read) — crew_id; optional limit.
+TXT;
 
     protected function toolMap(): array
     {

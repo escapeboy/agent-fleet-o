@@ -23,7 +23,21 @@ class ProjectManageTool extends CompactTool
 {
     protected string $name = 'project_manage';
 
-    protected string $description = 'Manage projects (continuous & one-shot). Actions: list, get (project_id), create (name, type, workflow_id), update (project_id + fields), activate (project_id), pause, resume, restart, trigger_run (project_id), archive (project_id), schedule (project_id, frequency, cron), schedule_nlp (project_id, natural language schedule), run_list (project_id), run_get (project_id, run_id).';
+    protected string $description = <<<'TXT'
+Projects — recurring (continuous) or one-shot containers that schedule workflow runs against goals. Continuous projects spawn `ProjectRun`s on the configured cadence (cron-style or natural language); one-shot projects fire once on `trigger_run`. Lifecycle states: draft → active → (paused | archived). Each run reserves budget independently.
+
+Actions:
+- list / get (read).
+- create (write) — name, type (one_shot | continuous), workflow_id.
+- update (write) — project_id + any creatable field.
+- activate / pause / resume / restart (write) — project_id. Lifecycle transitions.
+- trigger_run (write — costs credits) — project_id. Dispatches a single run immediately.
+- archive (write) — project_id. Stops scheduling and hides from default lists; reversible via `restart`.
+- schedule (write) — project_id, frequency or cron expression.
+- schedule_nlp (write) — project_id, natural language schedule (e.g. "every weekday at 9am"). Calls LLM, costs credits.
+- run_list (read) — project_id; optional limit, status filter.
+- run_get (read) — project_id, run_id.
+TXT;
 
     protected function toolMap(): array
     {

@@ -18,7 +18,20 @@ class AdminManageTool extends CompactTool
 {
     protected string $name = 'admin_manage';
 
-    protected string $description = 'Super admin operations (requires admin role). Actions: team_suspend (team_id, reason), team_billing (team_id — billing details), billing_credit (team_id, amount, reason), billing_refund (team_id, amount), security_overview, user_revoke_sessions (user_id), user_send_password_reset (user_id), feedback_list (list user feedback), feedback_update (feedback_id, status).';
+    protected string $description = <<<'TXT'
+Platform super-admin actions: suspend tenants, adjust billing, force-rotate user sessions, browse cross-tenant feedback. Restricted to users with the platform `admin` role (HTTP 403 for everyone else). Every write is audit-logged.
+
+Actions (pass alongside `action`):
+- team_suspend (DESTRUCTIVE) — team_id, reason. Disables tenant logins.
+- team_billing (read) — team_id. Returns current invoice + plan.
+- billing_credit (write) — team_id, amount, reason. Credits the ledger.
+- billing_refund (DESTRUCTIVE) — team_id, amount. Issues a Stripe refund.
+- security_overview (read) — no params. Recent suspicious activity.
+- user_revoke_sessions (DESTRUCTIVE) — user_id. Invalidates all sessions and tokens.
+- user_send_password_reset (write) — user_id. Emails a reset link.
+- feedback_list (read) — optional status filter.
+- feedback_update (write) — feedback_id, status.
+TXT;
 
     protected function toolMap(): array
     {

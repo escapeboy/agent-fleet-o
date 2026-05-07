@@ -14,7 +14,17 @@ class TriggerManageTool extends CompactTool
 {
     protected string $name = 'trigger_manage';
 
-    protected string $description = 'Manage event-driven trigger rules. Actions: list, create (name, event, conditions, actions), update (trigger_id + fields), delete (trigger_id), test (trigger_id, sample payload — dry-run).';
+    protected string $description = <<<'TXT'
+Event-driven trigger rules — when-this-then-that automations that fire on signals or domain events. Rules evaluate conditions (expression-based) against the event payload and execute actions (start_experiment, send_outbound, etc.). `test` is a dry-run that returns whether the rule would have matched without executing actions.
+
+Actions:
+- list (read) — optional: event filter, status filter.
+- get (read) — trigger_id.
+- create (write) — name, event (e.g. "signal.ingested"), conditions (array of expressions), actions (array of action specs).
+- update (write) — trigger_id + any creatable field.
+- delete (DESTRUCTIVE) — trigger_id. Future events stop matching this rule.
+- test (read — costs no credits) — trigger_id, sample payload. Returns matched (bool), action_preview (what would have run).
+TXT;
 
     protected function toolMap(): array
     {

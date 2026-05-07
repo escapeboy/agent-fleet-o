@@ -22,7 +22,25 @@ class GitManageTool extends CompactTool
 {
     protected string $name = 'git_manage';
 
-    protected string $description = 'Manage git repositories and operations. Actions: repo_list, repo_get (repo_id), repo_create (name, url, credentials), repo_update (repo_id + fields), repo_delete (repo_id), repo_test (repo_id — test connection), file_read (repo_id, path, branch), file_write (repo_id, path, content, branch, message), file_list (repo_id, path, branch), branch_create (repo_id, name, source), commit (repo_id, message, files), pr_create (repo_id, title, body, source, target), pr_list (repo_id).';
+    protected string $description = <<<'TXT'
+Connect, browse, and modify external git repositories (GitHub, GitLab, Bitbucket, generic SSH). Repo connections store encrypted credentials and use `phpseclib` for SSH. File and commit ops happen through the platform's `AtomicCommittingGitClient` so concurrent agent edits don't corrupt working trees.
+
+Repo actions:
+- repo_list / repo_get (read).
+- repo_create (write) — name, url, credentials (object).
+- repo_update (write) — repo_id + any creatable field.
+- repo_delete (DESTRUCTIVE) — repo_id. Drops connection; does not delete the remote repo.
+- repo_test (read) — repo_id. Verifies connectivity + auth.
+
+File / branch / commit actions:
+- file_read (read) — repo_id, path, optional branch.
+- file_write (write — pushes to remote) — repo_id, path, content, branch, message.
+- file_list (read) — repo_id, optional path, branch.
+- branch_create (write) — repo_id, name, source branch.
+- commit (write — pushes to remote) — repo_id, message, files[].
+- pr_create (write) — repo_id, title, body, source branch, target branch. Returns PR URL.
+- pr_list (read) — repo_id; optional state filter.
+TXT;
 
     protected function toolMap(): array
     {

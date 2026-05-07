@@ -16,7 +16,18 @@ class MemoryManageTool extends CompactTool
 {
     protected string $name = 'memory_manage';
 
-    protected string $description = 'Manage team memory (semantic store). Actions: search (query, limit), list_recent (limit), stats, add (content, metadata), delete (memory_id), upload_knowledge (file content/url), supabase_provision (provision Supabase vector store).';
+    protected string $description = <<<'TXT'
+Team-scoped semantic memory — short snippets agents store and retrieve across conversations (preferences, constraints, prior decisions). Backed by pgvector with HNSW indexing. Distinct from `knowledge_manage`: memory is unstructured short notes; knowledge bases are document corpora.
+
+Actions:
+- search (read) — query, optional limit (default 20). Semantic similarity ranking.
+- list_recent (read) — optional limit (default 50). Reverse chronological.
+- stats (read) — total entries, embedding dim, last write.
+- add (write — costs embedding credits) — content, optional metadata (object).
+- delete (DESTRUCTIVE) — memory_id. Hard delete.
+- upload_knowledge (write — costs embedding credits) — one of: file content, url. Bulk-ingests into memory.
+- supabase_provision (write) — credentials. Switches the team to a Supabase-backed vector store.
+TXT;
 
     protected function toolMap(): array
     {

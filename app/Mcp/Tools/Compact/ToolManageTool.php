@@ -21,7 +21,23 @@ class ToolManageTool extends CompactTool
 {
     protected string $name = 'tool_manage';
 
-    protected string $description = 'Manage LLM tools (MCP servers, built-in). Actions: list, get (tool_id), create (name, type, config), update (tool_id + fields), delete (tool_id), activate (tool_id), deactivate (tool_id), discover_mcp (url), import_mcp (url, tool_names), probe_remote (url), ssh_fingerprints, bash_policy (agent_id, policy).';
+    protected string $description = <<<'TXT'
+LLM tool management — registers MCP servers (stdio/HTTP), built-in tools (bash/filesystem/browser/SSH), and external compute endpoints that agents can call at inference time. Tool execution may have any side effect declared by the underlying tool; the platform cannot constrain bash/filesystem/SSH effects beyond `bash_policy`.
+
+CRUD actions:
+- list / get (read) — optional: type, status filter.
+- create (write) — name, type (mcp_stdio | mcp_http | built_in), config (type-specific).
+- update (write) — tool_id + any creatable field.
+- delete (DESTRUCTIVE) — tool_id. Soft-deletes; agents lose access on next resolve.
+- activate / deactivate (write) — tool_id. Flips active flag without deleting.
+
+Discovery & integration:
+- discover_mcp (read — calls remote URL) — url. Probes a remote MCP server's tools/list without registering.
+- import_mcp (write) — url, tool_names[]. Registers selected tools from a discovered MCP server.
+- probe_remote (read) — url. Lightweight reachability check.
+- ssh_fingerprints (read) — list known TOFU-trusted SSH host fingerprints.
+- bash_policy (write — admin) — agent_id, policy (object: allowed_commands, disallowed_commands, working_dir).
+TXT;
 
     protected function toolMap(): array
     {

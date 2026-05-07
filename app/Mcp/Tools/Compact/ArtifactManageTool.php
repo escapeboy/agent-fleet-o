@@ -13,7 +13,15 @@ class ArtifactManageTool extends CompactTool
 {
     protected string $name = 'artifact_manage';
 
-    protected string $description = 'Manage experiment/workflow artifacts. Actions: list (experiment_id or project_run_id), get (artifact_id), content (artifact_id, version), download (artifact_id — returns download URL).';
+    protected string $description = <<<'TXT'
+Read-only access to artifacts produced by experiments, crew executions, and project runs (code, documents, data, media). Each artifact has 1..N `ArtifactVersion` entries; `version` defaults to latest when omitted. `download` returns a signed URL valid for ~5 minutes; `content` returns the body inline (base64 for binary MIMEs).
+
+Actions:
+- list (read) — exactly one of: experiment_id, crew_execution_id, project_run_id; optional limit.
+- get (read) — artifact_id. Metadata only (size, mime, version count, created_by AiRun id).
+- content (read) — artifact_id; optional version. Returns raw or base64 body.
+- download (read) — artifact_id; optional version. Returns short-lived signed URL.
+TXT;
 
     protected function toolMap(): array
     {

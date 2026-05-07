@@ -18,7 +18,20 @@ class SignalManageTool extends CompactTool
 {
     protected string $name = 'signal_manage';
 
-    protected string $description = 'Manage inbound signals. Actions: list (status, source filter), get (signal_id), ingest (source, payload), assign (signal_id, assignee_user_id, reason), connector_binding (connector_id, channel_id), connector_binding_delete (binding_id), contact (action, contact data), imap (mailbox config), email_reply (signal_id, body).';
+    protected string $description = <<<'TXT'
+Inbound signals — events from connectors (webhooks, RSS, email, Slack, ticketing) the platform processes through trigger rules into agent actions. Operates on already-ingested signals; for connector setup use `signal_connectors`.
+
+Actions:
+- list (read) — optional: status, source, channel, limit.
+- get (read) — signal_id. Full payload + processing trail.
+- ingest (write) — source, payload (object). Manually emits a signal as if from a connector; runs trigger evaluation.
+- assign (write) — signal_id, assignee_user_id, reason.
+- connector_binding (write) — connector_id, channel_id. Links a connector to a logical channel.
+- connector_binding_delete (DESTRUCTIVE) — binding_id. Severs the link; future signals from that connector go unrouted.
+- contact (write) — sub-actions on Contact (action, contact data).
+- imap (write) — mailbox config object. Sets/updates IMAP poller settings.
+- email_reply (write — sends email) — signal_id, body. Replies to the originating email signal via the team's outbound email connector.
+TXT;
 
     protected function toolMap(): array
     {

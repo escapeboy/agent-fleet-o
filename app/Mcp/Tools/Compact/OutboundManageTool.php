@@ -14,7 +14,15 @@ class OutboundManageTool extends CompactTool
 {
     protected string $name = 'outbound_manage';
 
-    protected string $description = 'Manage outbound delivery connectors (email, Slack, Telegram, webhook). Actions: list, get (connector_id), save (channel, config), delete (connector_id), test (connector_id, test_payload).';
+    protected string $description = <<<'TXT'
+Outbound delivery connectors — channels through which agents send messages: email (SMTP), Slack, Telegram, generic webhook. One connector per channel per team (save uses upsert semantics). All sends pass through `ChannelRateLimit` and `TargetRateLimit` middleware and are recorded as `OutboundAction`s.
+
+Actions:
+- list / get (read).
+- save (write — upsert) — channel (email/slack/telegram/webhook), config (channel-specific). Replaces any existing connector for the channel.
+- delete (DESTRUCTIVE) — connector_id. Pending outbound actions on this connector are cancelled.
+- test (write — sends a real test payload) — connector_id, test_payload (object). Counts against rate limits and budgets.
+TXT;
 
     protected function toolMap(): array
     {

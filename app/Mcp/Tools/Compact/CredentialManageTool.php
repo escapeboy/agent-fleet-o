@@ -17,7 +17,19 @@ class CredentialManageTool extends CompactTool
 {
     protected string $name = 'credential_manage';
 
-    protected string $description = 'Manage external service credentials. Actions: list, get (credential_id), create (name, type, secret_data), update (credential_id + fields), delete (credential_id), rotate (credential_id), oauth_initiate (provider, scopes), oauth_finalize (provider, code).';
+    protected string $description = <<<'TXT'
+Encrypted credential vault for external services (API keys, OAuth2 tokens, basic auth, bearer tokens). Secrets are encrypted at rest with the team's per-tenant key; `secret_data` is never returned by `get` — only metadata (name, type, expires_at, last_rotated_at).
+
+Actions:
+- list (read) — optional: type, status filter.
+- get (read) — credential_id. Metadata only, secrets redacted.
+- create (write) — name, type (api_key/oauth2/basic_auth/bearer_token/custom), secret_data (object).
+- update (write) — credential_id + any creatable field.
+- delete (DESTRUCTIVE) — credential_id. Hard delete; not recoverable.
+- rotate (write) — credential_id, new_secret_data. Bumps `last_rotated_at` and re-encrypts.
+- oauth_initiate (write) — provider, scopes[]. Returns authorization URL.
+- oauth_finalize (write) — provider, code (from OAuth callback). Stores tokens, returns credential_id.
+TXT;
 
     protected function toolMap(): array
     {
