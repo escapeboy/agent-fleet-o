@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-#
 # FleetQ Community Edition — Glama / standalone MCP server image.
 #
 # Boots the *compact* 33-tool MCP server on stdio with a self-contained
@@ -9,45 +7,36 @@
 # Run:     docker run --rm -i fleetq/mcp
 #
 # Targets the Glama auto-test pipeline: a single image whose CMD speaks
-# MCP JSON-RPC on stdin/stdout.
+# MCP JSON-RPC on stdin/stdout. Optimized for fast, deterministic builds
+# inside resource-constrained CI runners.
 
 # ─────────────────────────────────────────────────────────────
-# Stage 1 — composer install + autoload optimization
+# Stage 1 — composer install + Laravel pre-bake (SQLite)
 # ─────────────────────────────────────────────────────────────
 FROM php:8.4-cli-alpine AS builder
 
+# Build-time toolchain + minimum extensions for Laravel + MCP boot.
+# We deliberately omit gd / exif / redis-ext / pcntl: the compact MCP
+# server's tools/list does not exercise image processing, EXIF, queues,
+# or Redis — the runtime uses array cache and sync queues.
 RUN apk add --no-cache \
-        git \
-        unzip \
-        libzip-dev \
-        icu-dev \
-        libpng-dev \
-        libjpeg-turbo-dev \
-        freetype-dev \
-        sqlite-dev \
-        oniguruma-dev \
-        linux-headers \
+        git unzip \
+        libzip-dev icu-dev sqlite-dev oniguruma-dev \
         $PHPIZE_DEPS \
- && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" \
-        pdo_sqlite \
-        zip \
-        intl \
-        bcmath \
-        gd \
-        pcntl \
-        opcache \
-        exif \
- && pecl install redis \
- && docker-php-ext-enable redis
+        pdo_sqlite zip intl bcmath opcache \
+ && apk del $PHPIZE_DEPS \
+ && rm -rf /var/cache/apk/* /tmp/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Cache composer install separately from app code.
-# `packages/` contains local path-repo packages referenced from composer.json, so
-# it must be copied BEFORE `composer install` resolves the dependency graph.
+# Composer install — `packages/` is a local path-repo source so it MUST
+# be present before the dependency graph resolves.
+# `ext-exif` (spatie/laravel-medialibrary) and `ext-pcntl` (Horizon) are
+# declared by deps but unreachable from the compact MCP boot path —
+# tools/list never opens an image or forks a queue worker.
 COPY composer.json composer.lock ./
 COPY packages/ ./packages/
 RUN composer install \
@@ -55,13 +44,16 @@ RUN composer install \
         --no-scripts \
         --no-autoloader \
         --no-interaction \
-        --prefer-dist
+        --prefer-dist \
+        --ignore-platform-req=ext-exif \
+        --ignore-platform-req=ext-pcntl \
+ && rm -rf ~/.composer
 
 # App source
 COPY . .
 
-# Default env so the post-autoload-dump artisan calls (package:discover) succeed.
-# These values are also kept in the runtime stage.
+# Default env baked into the image. The MCP stdio server reads these on
+# every invocation; the runtime stage repeats them verbatim.
 ENV APP_ENV=production \
     APP_DEBUG=false \
     APP_URL=http://localhost \
@@ -74,13 +66,11 @@ ENV APP_ENV=production \
     BROADCAST_DRIVER=log \
     FILESYSTEM_DISK=local \
     BCRYPT_ROUNDS=4 \
-    REDIS_CLIENT=phpredis \
-    REDIS_HOST=127.0.0.1
+    MAIL_MAILER=log
 
-# Prepare runtime dirs + .env BEFORE any artisan call. `composer dump-autoload`
-# triggers `package:discover --ansi` which needs (a) vendor/autoload.php,
-# (b) writable bootstrap/cache, and (c) a populated APP_KEY in .env. We set a
-# placeholder key first, then dump-autoload, then regenerate a real key.
+# `composer dump-autoload` triggers `package:discover` which needs (a)
+# vendor/autoload.php, (b) writable bootstrap/cache, and (c) APP_KEY in
+# .env. Set a placeholder key first; regenerate before migrate.
 RUN cp .env.example .env \
  && touch /app/database/database.sqlite \
  && mkdir -p /app/bootstrap/cache \
@@ -91,10 +81,11 @@ RUN cp .env.example .env \
  && chmod -R 777 /app/storage /app/bootstrap/cache /app/database \
  && sed -i 's|^APP_KEY=.*|APP_KEY=base64:Z2xhbWEtZG9ja2VyLWJ1aWxkLXBsYWNlaG9sZGVy|' .env \
  && composer dump-autoload --optimize --no-dev --classmap-authoritative \
+       --ignore-platform-req=ext-exif --ignore-platform-req=ext-pcntl \
  && php artisan key:generate --force \
- && php artisan config:clear \
  && php artisan migrate --force --no-interaction \
- && php artisan db:seed --class=Database\\Seeders\\DemoTeamSeeder --force --no-interaction
+ && php artisan db:seed --class=Database\\Seeders\\DemoTeamSeeder --force --no-interaction \
+ && rm -rf /app/storage/logs/*.log
 
 # ─────────────────────────────────────────────────────────────
 # Stage 2 — slim runtime
@@ -102,30 +93,15 @@ RUN cp .env.example .env \
 FROM php:8.4-cli-alpine AS runtime
 
 RUN apk add --no-cache \
-        libzip \
-        icu-libs \
-        libpng \
-        libjpeg-turbo \
-        freetype \
-        sqlite-libs \
-        oniguruma \
+        libzip icu-libs sqlite-libs oniguruma \
  && apk add --no-cache --virtual .build-deps \
-        libzip-dev icu-dev libpng-dev libjpeg-turbo-dev freetype-dev sqlite-dev oniguruma-dev \
-        linux-headers $PHPIZE_DEPS \
- && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        libzip-dev icu-dev sqlite-dev oniguruma-dev $PHPIZE_DEPS \
  && docker-php-ext-install -j"$(nproc)" \
-        pdo_sqlite \
-        zip \
-        intl \
-        bcmath \
-        gd \
-        pcntl \
-        opcache \
+        pdo_sqlite zip intl bcmath opcache \
  && apk del .build-deps \
- && rm -rf /tmp/* /var/cache/apk/*
+ && rm -rf /var/cache/apk/* /tmp/*
 
 WORKDIR /app
-
 COPY --from=builder /app /app
 
 ENV APP_ENV=production \
@@ -140,9 +116,12 @@ ENV APP_ENV=production \
     BROADCAST_DRIVER=log \
     FILESYSTEM_DISK=local \
     BCRYPT_ROUNDS=4 \
-    REDIS_CLIENT=phpredis \
-    REDIS_HOST=127.0.0.1 \
-    PHP_CLI_SERVER_WORKERS=1
+    MAIL_MAILER=log
 
-# stdio MCP server — Glama connects to this process.
+LABEL org.opencontainers.image.title="FleetQ MCP Server" \
+      org.opencontainers.image.description="33-tool MCP server (stdio) for FleetQ AI Agent Mission Control" \
+      org.opencontainers.image.source="https://github.com/escapeboy/agent-fleet-o" \
+      org.opencontainers.image.licenses="AGPL-3.0"
+
+# stdio MCP server — Glama / Claude Desktop / Codex connect here.
 CMD ["php", "artisan", "mcp:start", "compact"]
