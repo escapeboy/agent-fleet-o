@@ -270,4 +270,153 @@ class BridgeControllerTest extends ApiTestCase
         $response->assertOk()
             ->assertJsonPath('auth', "fleetq-key:{$expectedSignature}");
     }
+
+    // -----------------------------------------------------------------------
+    // POST /api/v1/bridge/mcp-call — HTTP-direct path for HTTP-tunnel-mode bridges
+    // -----------------------------------------------------------------------
+
+    public function test_mcp_call_routes_via_http_when_bridge_is_in_http_mode(): void
+    {
+        $this->actingAsApiUser();
+
+        $bridge = BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-mode-session',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://harbormaster.tunnel.example',
+            'endpoint_secret' => 'shared-token-xyz',
+            'tunnel_provider' => 'cloudflare',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster', 'tools' => ['list_hosts']]],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://harbormaster.tunnel.example/mcp/harbormaster' => Http::response([
+                'result' => [
+                    'content' => [['type' => 'text', 'text' => 'friday, hetzner-1']],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'list_hosts', 'arguments' => []],
+            'timeout' => 30,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('result.content.0.text', 'friday, hetzner-1');
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://harbormaster.tunnel.example/mcp/harbormaster'
+                && $request->hasHeader('Authorization', 'Bearer shared-token-xyz')
+                && $request['method'] === 'tools/call'
+                && $request['params']['name'] === 'list_hosts'
+                && $request['timeout'] === 30
+                && ! empty($request['request_id']);
+        });
+
+        // last_seen_at should be touched by a successful HTTP-direct call
+        $this->assertNotNull($bridge->fresh()->last_seen_at);
+    }
+
+    public function test_mcp_call_skips_authorization_header_when_bridge_has_no_secret(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'no-secret-session',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'http://localhost:7531',
+            'endpoint_secret' => null,
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'http://localhost:7531/mcp/harbormaster' => Http::response(['result' => ['content' => []]], 200),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/list',
+            'params' => ['cursor' => null],
+        ]);
+
+        $response->assertOk();
+
+        Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization'));
+    }
+
+    public function test_mcp_call_returns_502_when_http_mode_bridge_responds_non_2xx(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'broken-bridge',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://broken.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://broken.example/mcp/harbormaster' => Http::response('Internal Server Error', 500),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/list',
+            'params' => ['cursor' => null],
+        ]);
+
+        $response->assertStatus(502)
+            ->assertJsonStructure(['error']);
+    }
+
+    public function test_mcp_call_returns_502_when_http_mode_bridge_unreachable(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'unreachable',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://unreachable.example',
+            'endpoint_secret' => null,
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://unreachable.example/mcp/harbormaster' => function () {
+                throw new \Illuminate\Http\Client\ConnectionException('connect timeout');
+            },
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/list',
+            'params' => ['cursor' => null],
+        ]);
+
+        $response->assertStatus(502)
+            ->assertJsonPath('error', fn ($v) => str_contains($v, 'connect timeout'));
+    }
 }
