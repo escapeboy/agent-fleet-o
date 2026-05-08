@@ -43,6 +43,8 @@
                     <p class="text-sm text-gray-500">Custom key-value pairs for flexible credential storage.</p>
                 @elseif($credentialType === 'proxy')
                     <p class="text-sm text-gray-500">SOCKS5 or HTTP proxy for browser automation. Assign to tools that need a residential IP.</p>
+                @elseif($credentialType === 'onepassword_service_account')
+                    <p class="text-sm text-gray-500">1Password Service Account token. Lets agents resolve <code class="rounded bg-gray-100 px-1 py-0.5 text-xs">op://vault/item/field</code> references at runtime without storing raw secrets in FleetQ.</p>
                 @endif
             </div>
         @endif
@@ -101,6 +103,19 @@
                         placeholder="Leave blank if using IP whitelist" />
                     <x-form-input wire:model="proxyPassword" label="Password (optional)" type="password"
                         placeholder="Leave blank if using IP whitelist" />
+                @endif
+
+                @if($credentialType === 'onepassword_service_account')
+                    {{-- data-1p-ignore prevents 1Password from offering to save FleetQ's own UI as a 1P entry. --}}
+                    <x-form-input wire:model="serviceAccountToken" label="Service Account Token"
+                        type="password" placeholder="ops_..."
+                        hint="1Password → Developer → Infrastructure Secrets → Service Accounts → Create. Token must start with ops_"
+                        data-1p-ignore="true" autocomplete="off"
+                        :error="$errors->first('serviceAccountToken')" />
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        <p class="font-medium">Scope this service account narrowly.</p>
+                        <p class="mt-1">Grant only the vaults and permissions FleetQ actually needs. Tokens are immutable — rotation means creating a new service account.</p>
+                    </div>
                 @endif
 
                 @if($credentialType === 'custom_kv')
@@ -202,6 +217,9 @@
                             <div class="text-gray-500">Auth</div>
                             <div class="text-gray-400">IP whitelist (no credentials)</div>
                         @endif
+                    @elseif($credentialType === 'onepassword_service_account')
+                        <div class="text-gray-500">Service Account Token</div>
+                        <div class="font-mono text-xs">{{ Str::mask($serviceAccountToken, '*', 4, mb_strlen($serviceAccountToken) - 8) }}</div>
                     @endif
 
                     @if($expiresAt)

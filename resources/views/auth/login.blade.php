@@ -46,11 +46,11 @@
                 @csrf
 
                 <div class="mb-4">
-                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required autofocus />
+                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
                 </div>
 
                 <div class="mb-6">
-                    <x-form-input label="Password" type="password" id="password" name="password" required />
+                    <x-form-input label="Password" type="password" id="password" name="password" required autocomplete="current-password" />
                 </div>
 
                 <div class="mb-6 flex items-center justify-between">

@@ -71,7 +71,7 @@
                             type="text"
                             id="recovery_code"
                             name="recovery_code"
-                            autocomplete="one-time-code"
+                            autocomplete="off"
                         />
                     </div>
 
