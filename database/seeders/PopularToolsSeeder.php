@@ -3074,7 +3074,10 @@ class PopularToolsSeeder extends Seeder
                 'transport_config' => [
                     'command' => 'npx',
                     'args' => ['-y', '@takescake/1password-mcp'],
-                    'env' => ['OP_SERVICE_ACCOUNT_TOKEN' => ''],
+                    // Resolved at launch time from the tool's linked Credential
+                    // (CredentialType::OnePasswordServiceAccount). See
+                    // McpStdioClient::resolveCredentialPlaceholders().
+                    'env' => ['OP_SERVICE_ACCOUNT_TOKEN' => 'credential:service_account_token'],
                 ],
                 'tool_definitions' => [
                     [

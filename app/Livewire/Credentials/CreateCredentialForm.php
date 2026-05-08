@@ -54,6 +54,9 @@ class CreateCredentialForm extends Component
 
     public string $proxyPassword = '';
 
+    // 1Password Service Account
+    public string $serviceAccountToken = '';
+
     // Step 3: Metadata
     public string $expiresAt = '';
 
@@ -63,7 +66,7 @@ class CreateCredentialForm extends Component
             $this->validate([
                 'name' => 'required|min:2|max:255',
                 'description' => 'max:1000',
-                'credentialType' => 'required|in:basic_auth,api_token,ssh_key,custom_kv,oauth2,proxy',
+                'credentialType' => 'required|in:basic_auth,api_token,ssh_key,custom_kv,oauth2,proxy,onepassword_service_account',
             ]);
         }
 
@@ -105,6 +108,9 @@ class CreateCredentialForm extends Component
                 'proxyPort' => 'required|integer|min:1|max:65535',
                 'proxyProtocol' => 'required|in:socks5,socks4,http,https',
             ]),
+            CredentialType::OnePasswordServiceAccount => $this->validate([
+                'serviceAccountToken' => ['required', 'string', 'starts_with:ops_', 'min:32'],
+            ]),
         };
     }
 
@@ -143,6 +149,7 @@ class CreateCredentialForm extends Component
         $this->passphrase = '';
         $this->customPairs = [['key' => '', 'value' => '']];
         $this->proxyPassword = '';
+        $this->serviceAccountToken = '';
 
         session()->flash('message', 'Credential created successfully!');
         $this->redirect(route('credentials.index'));
@@ -178,6 +185,9 @@ class CreateCredentialForm extends Component
                 'username' => $this->proxyUsername ?: null,
                 'password' => $this->proxyPassword ?: null,
             ]),
+            CredentialType::OnePasswordServiceAccount => [
+                'service_account_token' => $this->serviceAccountToken,
+            ],
         };
     }
 

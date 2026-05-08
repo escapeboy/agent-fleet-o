@@ -60,6 +60,9 @@ class CredentialDetailPage extends Component
     // Custom KV
     public array $rotateCustomPairs = [['key' => '', 'value' => '']];
 
+    // 1Password Service Account
+    public string $rotateServiceAccountToken = '';
+
     public function mount(Credential $credential): void
     {
         $this->credential = $credential;
@@ -187,6 +190,12 @@ class CredentialDetailPage extends Component
             CredentialType::ApiToken => $this->validate(['rotateToken' => 'required']),
             CredentialType::SshKey => $this->validate(['rotatePrivateKey' => 'required|min:10']),
             CredentialType::CustomKeyValue => null,
+            CredentialType::OnePasswordServiceAccount => $this->validate([
+                'rotateServiceAccountToken' => ['required', 'string', 'starts_with:ops_', 'min:32'],
+            ]),
+            // OAuth2 + Proxy rotation paths are unimplemented (UI gates them out).
+            // Throw a clear error rather than relying on UnhandledMatchError if reached.
+            default => throw new \LogicException("Rotation is not supported for credential type {$type->value}"),
         };
 
         $newSecretData = match ($type) {
@@ -209,6 +218,11 @@ class CredentialDetailPage extends Component
                 ->filter(fn ($p) => ! empty($p['key']) && ! empty($p['value']))
                 ->pluck('value', 'key')
                 ->toArray(),
+            // @phpstan-ignore match.alwaysTrue (kept explicit for readability — first match exhausts other cases)
+            CredentialType::OnePasswordServiceAccount => [
+                'service_account_token' => $this->rotateServiceAccountToken,
+            ],
+            default => throw new \LogicException("Rotation is not supported for credential type {$type->value}"),
         };
 
         app(RotateCredentialSecretAction::class)->execute(
@@ -234,6 +248,7 @@ class CredentialDetailPage extends Component
         $this->rotatePassphrase = '';
         $this->rotateSshHost = '';
         $this->rotateCustomPairs = [['key' => '', 'value' => '']];
+        $this->rotateServiceAccountToken = '';
     }
 
     public function deleteCredential(): void

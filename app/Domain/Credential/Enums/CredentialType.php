@@ -10,6 +10,7 @@ enum CredentialType: string
     case CustomKeyValue = 'custom_kv';
     case OAuth2 = 'oauth2';
     case Proxy = 'proxy';
+    case OnePasswordServiceAccount = 'onepassword_service_account';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum CredentialType: string
             self::CustomKeyValue => 'Custom Key-Value',
             self::OAuth2 => 'OAuth 2.0',
             self::Proxy => 'Proxy (SOCKS5/HTTP)',
+            self::OnePasswordServiceAccount => '1Password Service Account',
         };
     }
 
@@ -32,6 +34,7 @@ enum CredentialType: string
             self::CustomKeyValue => 'bg-gray-100 text-gray-800',
             self::OAuth2 => 'bg-indigo-100 text-indigo-800',
             self::Proxy => 'bg-emerald-100 text-emerald-800',
+            self::OnePasswordServiceAccount => 'bg-slate-900 text-white',
         };
     }
 
@@ -47,6 +50,7 @@ enum CredentialType: string
             self::CustomKeyValue => [],
             self::OAuth2 => ['access_token'],
             self::Proxy => ['host', 'port', 'protocol'],
+            self::OnePasswordServiceAccount => ['service_account_token'],
         };
     }
 }

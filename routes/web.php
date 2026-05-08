@@ -156,6 +156,13 @@ Route::get('/.well-known/agents/{slug}', [AgentManifestController::class, 'show'
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:120,1');
 
+// W3C change-password URL — lets password managers (1Password, Bitwarden, Apple Keychain,
+// Chrome ≥86, Safari since 2019) deep-link straight to the password change UI.
+// Spec: https://w3c.github.io/webappsec-change-password-url/
+Route::get('/.well-known/change-password', fn () => redirect(route('profile').'#security', 302))
+    ->name('well-known.change-password')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class]);
+
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 

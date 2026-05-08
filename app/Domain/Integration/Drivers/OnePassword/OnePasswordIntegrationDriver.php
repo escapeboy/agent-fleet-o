@@ -7,10 +7,28 @@ use App\Domain\Integration\DTOs\ActionDefinition;
 use App\Domain\Integration\DTOs\HealthResult;
 use App\Domain\Integration\Enums\AuthType;
 use App\Domain\Integration\Models\Integration;
-use Illuminate\Support\Facades\Http;
+use App\Infrastructure\Secrets\OnePasswordResolver;
+use Illuminate\Support\Facades\Process;
 
+/**
+ * 1Password integration driver — uses the `op` CLI v2 (installed in the
+ * Docker image) so Service Account tokens work as advertised.
+ *
+ * Why not the public REST API? 1Password's `api.1password.com` is internal —
+ * Service Account tokens authenticate only against (a) the official SDKs
+ * (Go/JS/Python — no PHP), (b) `op` CLI, or (c) a self-hosted Connect Server.
+ * The CLI is the only path that works for cloud BYOK without per-team
+ * infrastructure.
+ *
+ * @see https://developer.1password.com/docs/cli/reference/
+ * @see https://developer.1password.com/docs/service-accounts/
+ */
 class OnePasswordIntegrationDriver implements IntegrationDriverInterface
 {
+    public const DEFAULT_TIMEOUT_SECONDS = 15;
+
+    public function __construct(private OnePasswordResolver $resolver) {}
+
     public function key(): string
     {
         return '1password';
@@ -23,7 +41,7 @@ class OnePasswordIntegrationDriver implements IntegrationDriverInterface
 
     public function description(): string
     {
-        return 'Access 1Password vaults via Service Account. List vaults, search items, and resolve secrets at runtime. Agents can read credentials without exposing raw secrets.';
+        return 'Access 1Password vaults via Service Account. List vaults, search items, and resolve secrets at runtime via the `op` CLI. Agents can read credentials without exposing raw secrets.';
     }
 
     public function authType(): AuthType
@@ -47,7 +65,7 @@ class OnePasswordIntegrationDriver implements IntegrationDriverInterface
     {
         $token = $credentials['service_account_token'] ?? null;
 
-        return ! empty($token) && str_starts_with($token, 'ops_');
+        return ! empty($token) && str_starts_with($token, 'ops_') && strlen($token) >= 32;
     }
 
     public function ping(Integration $integration): HealthResult
@@ -55,7 +73,7 @@ class OnePasswordIntegrationDriver implements IntegrationDriverInterface
         $token = (string) $integration->getCredentialSecret('service_account_token');
 
         try {
-            $vaults = $this->apiRequest($token, 'GET', '/vaults');
+            $vaults = $this->opJson($token, ['op', 'vault', 'list', '--format=json']);
 
             return new HealthResult(
                 healthy: true,
@@ -79,11 +97,11 @@ class OnePasswordIntegrationDriver implements IntegrationDriverInterface
                 'query' => ['type' => 'string', 'required' => true, 'label' => 'Search query (item title)'],
                 'vault' => ['type' => 'string', 'required' => false, 'label' => 'Vault name or ID (searches all if omitted)'],
             ]),
-            new ActionDefinition('get_item', 'Get Item', 'Get full details of a specific item.', [
-                'vault_id' => ['type' => 'string', 'required' => true, 'label' => 'Vault ID'],
-                'item_id' => ['type' => 'string', 'required' => true, 'label' => 'Item ID'],
+            new ActionDefinition('get_item', 'Get Item', 'Get full details of a specific item (field values redacted).', [
+                'vault' => ['type' => 'string', 'required' => true, 'label' => 'Vault name or ID'],
+                'item' => ['type' => 'string', 'required' => true, 'label' => 'Item name or ID'],
             ]),
-            new ActionDefinition('resolve_secret', 'Resolve Secret Reference', 'Resolve a 1Password secret reference (op://vault/item/field) to its value.', [
+            new ActionDefinition('resolve_secret', 'Resolve Secret Reference', 'Resolve a 1Password secret reference (op://vault/item/field). Returns a masked preview only — actual values are only available to internal credential resolution paths.', [
                 'reference' => ['type' => 'string', 'required' => true, 'label' => 'Secret reference (e.g. op://vault/item/password)'],
             ]),
         ];
@@ -122,180 +140,141 @@ class OnePasswordIntegrationDriver implements IntegrationDriverInterface
             'list_vaults' => $this->listVaults($token),
             'search_items' => $this->searchItems($token, $params),
             'get_item' => $this->getItem($token, $params),
-            'resolve_secret' => $this->resolveSecret($token, $params),
+            'resolve_secret' => $this->resolveSecretMasked($token, $params),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),
         };
     }
 
     private function listVaults(string $token): array
     {
-        $response = $this->apiRequest($token, 'GET', '/vaults');
+        $vaults = $this->opJson($token, ['op', 'vault', 'list', '--format=json']);
 
         return array_map(fn ($v) => [
-            'id' => $v['id'],
-            'name' => $v['name'],
+            'id' => $v['id'] ?? '',
+            'name' => $v['name'] ?? '',
             'description' => $v['description'] ?? '',
-            'items' => $v['items'] ?? 0,
-        ], $response);
+            'items' => $v['items'] ?? null,
+        ], $vaults);
     }
 
     private function searchItems(string $token, array $params): array
     {
-        $query = str_replace(['"', '\\'], '', $params['query'] ?? '');
-        $vaultId = $params['vault'] ?? null;
+        $query = (string) ($params['query'] ?? '');
+        if ($query === '') {
+            throw new \InvalidArgumentException('query is required');
+        }
+        $vault = $params['vault'] ?? null;
 
-        if ($vaultId) {
-            $this->assertAlphanumericId($vaultId, 'vault');
-            $items = $this->apiRequest($token, 'GET', "/vaults/{$vaultId}/items", [
-                'filter' => "title co \"{$query}\"",
-            ]);
-        } else {
-            // Search across all vaults
-            $vaults = $this->listVaults($token);
-            $items = [];
-            foreach (array_slice($vaults, 0, 10) as $vault) {
-                $vaultItems = $this->apiRequest($token, 'GET', "/vaults/{$vault['id']}/items", [
-                    'filter' => "title co \"{$query}\"",
-                ]);
-                foreach ($vaultItems as $item) {
-                    $item['vault_name'] = $vault['name'];
-                    $items[] = $item;
-                }
-            }
+        $cmd = ['op', 'item', 'list', '--format=json'];
+        if ($vault) {
+            $cmd[] = '--vault';
+            $cmd[] = (string) $vault;
         }
 
+        $items = $this->opJson($token, $cmd);
+
+        // Filter client-side by title `co` (contains) — `op item list` doesn't
+        // support a server-side filter param.
+        $needle = mb_strtolower($query);
+        $matches = array_values(array_filter(
+            $items,
+            fn ($i) => str_contains(mb_strtolower((string) ($i['title'] ?? '')), $needle),
+        ));
+
         return array_map(fn ($i) => [
-            'id' => $i['id'],
+            'id' => $i['id'] ?? '',
             'title' => $i['title'] ?? '',
             'category' => $i['category'] ?? 'LOGIN',
-            'vault_id' => $i['vault']['id'] ?? $vaultId,
-            'vault_name' => $i['vault_name'] ?? null,
-        ], array_slice($items, 0, 50));
+            'vault_id' => $i['vault']['id'] ?? null,
+            'vault_name' => $i['vault']['name'] ?? null,
+        ], array_slice($matches, 0, 50));
     }
 
     private function getItem(string $token, array $params): array
     {
-        $vaultId = $params['vault_id'] ?? null;
-        $itemId = $params['item_id'] ?? null;
+        $vault = $params['vault'] ?? null;
+        $item = $params['item'] ?? null;
 
-        if (! $vaultId || ! $itemId) {
-            throw new \InvalidArgumentException('vault_id and item_id are required');
+        if (! $vault || ! $item) {
+            throw new \InvalidArgumentException('vault and item are required');
         }
 
-        $this->assertAlphanumericId($vaultId, 'vault_id');
-        $this->assertAlphanumericId($itemId, 'item_id');
+        // op accepts vault/item by ID or name.
+        $cmd = ['op', 'item', 'get', (string) $item, '--vault', (string) $vault, '--format=json'];
+        $itemData = $this->opJson($token, $cmd);
 
-        $item = $this->apiRequest($token, 'GET', "/vaults/{$vaultId}/items/{$itemId}");
-
-        // Redact actual secret values — return field labels and metadata only
+        // Field metadata only — values are NEVER returned raw via this user-facing tool.
         $fields = array_map(fn ($f) => [
             'id' => $f['id'] ?? '',
             'label' => $f['label'] ?? $f['id'] ?? '',
             'type' => $f['type'] ?? 'STRING',
             'purpose' => $f['purpose'] ?? '',
-            'has_value' => ! empty($f['value']),
+            'has_value' => isset($f['value']) && $f['value'] !== '',
             'reference' => $f['reference'] ?? null,
-        ], $item['fields'] ?? []);
+        ], $itemData['fields'] ?? []);
 
         return [
-            'id' => $item['id'],
-            'title' => $item['title'] ?? '',
-            'category' => $item['category'] ?? '',
+            'id' => $itemData['id'] ?? '',
+            'title' => $itemData['title'] ?? '',
+            'category' => $itemData['category'] ?? '',
             'fields' => $fields,
-            'urls' => $item['urls'] ?? [],
-            'tags' => $item['tags'] ?? [],
-            'created_at' => $item['createdAt'] ?? null,
-            'updated_at' => $item['updatedAt'] ?? null,
+            'urls' => $itemData['urls'] ?? [],
+            'tags' => $itemData['tags'] ?? [],
+            'created_at' => $itemData['created_at'] ?? null,
+            'updated_at' => $itemData['updated_at'] ?? null,
         ];
     }
 
-    private function resolveSecret(string $token, array $params): array
+    /**
+     * User-facing wrapper: returns only a masked preview, never the raw secret.
+     * Internal callers that need the actual value should inject and call
+     * {@see OnePasswordResolver::resolve()} directly.
+     */
+    private function resolveSecretMasked(string $token, array $params): array
     {
-        $reference = $params['reference'] ?? '';
+        $reference = (string) ($params['reference'] ?? '');
 
-        // Validate op:// reference format
-        if (! preg_match('#^op://([^/]+)/([^/]+)/([^/]+)$#', $reference, $matches)) {
-            throw new \InvalidArgumentException('Invalid secret reference. Use format: op://vault/item/field');
-        }
+        $value = $this->resolver->resolve($reference, $token);
+        $length = mb_strlen($value);
 
-        [$full, $vaultName, $itemName, $fieldName] = $matches;
-
-        // Reject segments containing quotes to prevent SCIM filter injection
-        foreach ([$vaultName, $itemName, $fieldName] as $segment) {
-            if (preg_match('/["\\\]/', $segment)) {
-                throw new \InvalidArgumentException('Secret reference segments must not contain quotes or backslashes');
-            }
-        }
-
-        // Resolve vault ID
-        $vaults = $this->apiRequest($token, 'GET', '/vaults', ['filter' => "name eq \"{$vaultName}\""]);
-        if (empty($vaults)) {
-            throw new \RuntimeException("Vault not found: {$vaultName}");
-        }
-        $vaultId = $vaults[0]['id'];
-
-        // Resolve item ID
-        $items = $this->apiRequest($token, 'GET', "/vaults/{$vaultId}/items", ['filter' => "title eq \"{$itemName}\""]);
-        if (empty($items)) {
-            throw new \RuntimeException("Item not found: {$itemName}");
-        }
-        $itemId = $items[0]['id'];
-
-        // Get full item with field values
-        $item = $this->apiRequest($token, 'GET', "/vaults/{$vaultId}/items/{$itemId}");
-
-        foreach ($item['fields'] ?? [] as $field) {
-            $label = strtolower($field['label'] ?? $field['id'] ?? '');
-            if ($label === strtolower($fieldName) || ($field['id'] ?? '') === $fieldName) {
-                $value = $field['value'] ?? '';
-
-                return [
-                    'reference' => $reference,
-                    'resolved' => true,
-                    'field_type' => $field['type'] ?? 'STRING',
-                    'value_preview' => mb_strlen($value) > 4
-                        ? str_repeat('*', mb_strlen($value) - 4).mb_substr($value, -4)
-                        : '****',
-                    'value_length' => mb_strlen($value),
-                ];
-            }
-        }
-
-        throw new \RuntimeException("Field not found: {$fieldName}");
+        return [
+            'reference' => $reference,
+            'resolved' => true,
+            'value_preview' => $length > 4
+                ? str_repeat('*', $length - 4).mb_substr($value, -4)
+                : '****',
+            'value_length' => $length,
+        ];
     }
 
     /**
-     * Validate that an ID is alphanumeric (1Password uses 26-char base32 IDs).
+     * Run an `op` command and decode JSON output.
+     *
+     * @param  list<string>  $command
+     * @return array<int|string, mixed>
      */
-    private function assertAlphanumericId(string $id, string $label): void
+    private function opJson(string $token, array $command): array
     {
-        if (! preg_match('/^[a-zA-Z0-9]{1,64}$/', $id)) {
-            throw new \InvalidArgumentException("Invalid {$label}: must be alphanumeric");
-        }
-    }
-
-    /**
-     * Make an authenticated request to the 1Password Connect/Service Account API.
-     */
-    private function apiRequest(string $token, string $method, string $path, array $query = []): array
-    {
-        // Service Account tokens use the Connect Server API format
-        // The base URL is derived from the token or uses the default
-        $baseUrl = 'https://api.1password.com/v1';
-
-        $response = Http::withHeaders([
-            'Authorization' => "Bearer {$token}",
-            'Content-Type' => 'application/json',
+        $result = Process::env([
+            'OP_SERVICE_ACCOUNT_TOKEN' => $token,
+            'OP_FORMAT' => 'json',
+            'NO_COLOR' => '1',
         ])
-            ->timeout(15)
-            ->send($method, $baseUrl.$path, [
-                'query' => $query,
-            ]);
+            ->timeout(self::DEFAULT_TIMEOUT_SECONDS)
+            ->run($command);
 
-        if (! $response->successful()) {
-            throw new \RuntimeException("1Password API error: HTTP {$response->status()}");
+        if (! $result->successful()) {
+            throw new \RuntimeException(
+                '1Password CLI error (exit '.$result->exitCode().'): '
+                .trim($result->errorOutput() ?: $result->output()),
+            );
         }
 
-        return $response->json() ?? [];
+        $decoded = json_decode($result->output(), true);
+        if (! is_array($decoded)) {
+            throw new \RuntimeException('1Password CLI returned invalid JSON');
+        }
+
+        return $decoded;
     }
 }

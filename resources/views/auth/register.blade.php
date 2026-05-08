@@ -47,19 +47,19 @@
                 @csrf
 
                 <div class="mb-4">
-                    <x-form-input label="Name" type="text" id="name" name="name" :value="old('name')" required autofocus />
+                    <x-form-input label="Name" type="text" id="name" name="name" :value="old('name')" required autofocus autocomplete="name" />
                 </div>
 
                 <div class="mb-4">
-                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required />
+                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required autocomplete="username" />
                 </div>
 
                 <div class="mb-4">
-                    <x-form-input label="Password" type="password" id="password" name="password" required />
+                    <x-form-input label="Password" type="password" id="password" name="password" required autocomplete="new-password" />
                 </div>
 
                 <div class="mb-4">
-                    <x-form-input label="Confirm Password" type="password" id="password_confirmation" name="password_confirmation" required />
+                    <x-form-input label="Confirm Password" type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password" />
                 </div>
 
                 <div class="mb-6">

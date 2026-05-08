@@ -20,6 +20,10 @@
         @if($hasPassword)
             {{-- Change existing password --}}
             <form wire:submit="updatePassword" class="px-6 py-5 space-y-4">
+                {{-- Hidden username companion lets password managers (1Password, Bitwarden, browsers) associate the change with the right account. --}}
+                <input type="text" name="username" autocomplete="username"
+                       value="{{ auth()->user()?->email }}" hidden aria-hidden="true" tabindex="-1">
+
                 <x-form-input
                     wire:model="currentPassword"
                     label="Current Password"
@@ -59,6 +63,10 @@
         @else
             {{-- Set initial password --}}
             <form wire:submit="setInitialPassword" class="px-6 py-5 space-y-4">
+                {{-- Hidden username companion lets password managers associate the new password with the right account. --}}
+                <input type="text" name="username" autocomplete="username"
+                       value="{{ auth()->user()?->email }}" hidden aria-hidden="true" tabindex="-1">
+
                 <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
                     You're signed in via a social provider. Setting a password lets you also log in with your email.
                 </div>

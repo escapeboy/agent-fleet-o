@@ -111,7 +111,9 @@ class McpStdioClient
         $this->validateBinaryAllowlist($fullCmd[0]);
         $this->validateArgs($args);
 
-        $env = $this->buildEnv($config['env'] ?? []);
+        /** @var array<string, mixed> $envConfig */
+        $envConfig = (array) ($config['env'] ?? []);
+        $env = $this->buildEnv($this->resolveCredentialPlaceholders($tool, $envConfig));
 
         $workdir = $config['working_directory'] ?? sys_get_temp_dir();
         if (! is_dir($workdir)) {
@@ -429,6 +431,61 @@ class McpStdioClient
                 );
             }
         }
+    }
+
+    /**
+     * Substitute `credential:<field>` placeholders in env values with the
+     * corresponding secret_data field from the tool's linked Credential.
+     *
+     * Lets MCP tool seeds declare their secret slots without baking real
+     * secrets into the database. Example:
+     *   transport_config.env: { OP_SERVICE_ACCOUNT_TOKEN: "credential:service_account_token" }
+     * Resolves at launch time to the linked Credential's
+     * secret_data.service_account_token value.
+     *
+     * @param  array<string, mixed>  $extraEnv
+     * @return array<string, string>
+     *
+     * @phpstan-ignore method.unused (called from openProcess; PHPStan can't see through the call due to mixed-typed transport_config)
+     */
+    private function resolveCredentialPlaceholders(Tool $tool, array $extraEnv): array
+    {
+        $resolved = [];
+        $credential = null;
+
+        foreach ($extraEnv as $key => $value) {
+            if (! is_string($value) || ! str_starts_with($value, 'credential:')) {
+                $resolved[$key] = $value;
+
+                continue;
+            }
+
+            $field = substr($value, strlen('credential:'));
+            if ($field === '') {
+                $resolved[$key] = '';
+
+                continue;
+            }
+
+            // Lazy-load the linked credential — most tools won't need this.
+            $credential ??= $tool->credential_id ? $tool->credential : null;
+
+            if ($credential === null) {
+                Log::warning('McpStdioClient: tool has credential placeholder but no linked credential', [
+                    'tool_id' => $tool->id,
+                    'env_var' => $key,
+                ]);
+                $resolved[$key] = '';
+
+                continue;
+            }
+
+            // secret_data is decrypted via the TeamEncryptedArray cast.
+            $secretData = (array) ($credential->getAttribute('secret_data') ?? []);
+            $resolved[$key] = (string) ($secretData[$field] ?? '');
+        }
+
+        return $resolved;
     }
 
     /**

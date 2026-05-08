@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Login - {{ config('app.name') }}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
@@ -17,7 +18,7 @@
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="flex min-h-screen items-center justify-center bg-gray-50 font-sans antialiased">
     <div class="w-full max-w-md">
@@ -46,11 +47,11 @@
                 @csrf
 
                 <div class="mb-4">
-                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required autofocus />
+                    <x-form-input label="Email" type="email" id="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
                 </div>
 
                 <div class="mb-6">
-                    <x-form-input label="Password" type="password" id="password" name="password" required />
+                    <x-form-input label="Password" type="password" id="password" name="password" required autocomplete="current-password" />
                 </div>
 
                 <div class="mb-6 flex items-center justify-between">
@@ -67,6 +68,27 @@
                     No account yet? <a href="{{ route('register') }}" class="text-primary-600 hover:text-primary-700">Create one</a>
                 </p>
             </form>
+
+            {{-- Passkey login (1Password / Apple Keychain / Google Password Manager / Windows Hello).
+                 Hidden on browsers that don't support the WebAuthn API. --}}
+            <div x-data="passkeyLogin" x-show="supported" x-cloak>
+                <div class="my-4 flex items-center gap-3 text-xs text-gray-400">
+                    <span class="h-px flex-1 bg-gray-200"></span>
+                    <span>or</span>
+                    <span class="h-px flex-1 bg-gray-200"></span>
+                </div>
+
+                <button type="button" @click="signIn()" :disabled="loading"
+                    class="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50">
+                    <i class="fa-solid fa-fingerprint text-base"></i>
+                    <span x-show="!loading">Sign in with a passkey</span>
+                    <span x-show="loading">Verifying…</span>
+                </button>
+
+                <template x-if="error">
+                    <p class="mt-2 text-center text-sm text-red-600" x-text="error"></p>
+                </template>
+            </div>
 
             <x-social-login-buttons />
         </div>

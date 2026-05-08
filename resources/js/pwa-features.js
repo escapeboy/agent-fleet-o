@@ -272,6 +272,89 @@ function encodeCredential(credential) {
 }
 
 document.addEventListener('alpine:init', () => {
+    // ─── Passkey Login Component ───────────────────────────────────────────
+    // Drives the WebAuthn assertion ceremony from the login page. Works in
+    // two modes:
+    //   - Passwordless / discoverable credential: user clicks "Sign in with
+    //     a passkey" without typing an email; the authenticator discovers
+    //     a resident key and identifies the user.
+    //   - Email-first: if the email field has a value, we scope the
+    //     allowed credentials to that account before the prompt.
+    Alpine.data('passkeyLogin', () => ({
+        supported: !!window.PublicKeyCredential,
+        loading: false,
+        error: null,
+
+        async signIn() {
+            if (!this.supported || this.loading) return;
+            this.loading = true;
+            this.error = null;
+
+            try {
+                const csrfToken = document.querySelector('meta[name=csrf-token]')?.content ?? '';
+
+                // 1. Optionally scope to a specific email (resident-key flow leaves it blank).
+                const emailInput = document.querySelector('input[name=email]');
+                const email = emailInput?.value?.trim() ?? '';
+                const body = email ? new URLSearchParams({ email }).toString() : '';
+
+                // 2. Fetch challenge + allowed credentials from the server.
+                const optRes = await fetch('/webauthn/auth/options', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body,
+                });
+                if (!optRes.ok) {
+                    const err = await optRes.json().catch(() => ({}));
+                    throw new Error(err.message || 'No passkey is registered for this account.');
+                }
+                const json = await optRes.json();
+                const options = decodeRequestOptions(json.publicKey ?? json);
+
+                // 3. Trigger the browser ceremony. Throws NotAllowedError on cancel.
+                const credential = await navigator.credentials.get({ publicKey: options });
+                if (!credential) throw new Error('Sign-in cancelled.');
+
+                // 4. Send the signed assertion back to the server.
+                const authRes = await fetch('/webauthn/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(encodeCredential(credential)),
+                });
+                if (!authRes.ok) {
+                    const err = await authRes.json().catch(() => ({}));
+                    throw new Error(err.message || 'Passkey sign-in failed.');
+                }
+
+                // 5. Follow the server's redirect or fall back to the dashboard.
+                if (authRes.redirected && authRes.url) {
+                    window.location.href = authRes.url;
+                } else {
+                    const result = await authRes.json().catch(() => ({}));
+                    window.location.href = result.redirect || '/dashboard';
+                }
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    this.error = 'Sign-in cancelled or timed out.';
+                } else {
+                    this.error = err.message || 'Passkey sign-in failed.';
+                }
+            } finally {
+                this.loading = false;
+            }
+        },
+    }));
+
     // ─── Passkey Registration Component ────────────────────────────────────
     Alpine.data('passkeyRegister', () => ({
         supported: !!window.PublicKeyCredential,
