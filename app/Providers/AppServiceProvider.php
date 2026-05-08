@@ -170,17 +170,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Pre-bind 'mcp.team_id' as null so any caller doing
+        // Pre-bind 'mcp.team_id' so any caller doing
         // `app('mcp.team_id') ?? auth()->user()?->current_team_id` works
         // without first checking $app->bound(). MCP request handlers
         // overwrite this with the resolved team ID via app()->instance(...).
-        // Without this default, calling app('mcp.team_id') on an unbound
-        // container (e.g. in test setup that has called forgetInstance)
-        // throws BindingResolutionException because Laravel tries to
-        // autoresolve the dotted string as a class name.
-        if (! $this->app->bound('mcp.team_id')) {
-            $this->app->instance('mcp.team_id', null);
-        }
+        //
+        // We MUST use bind(closure) instead of instance(null): Laravel's
+        // Container::resolve() and ::bound() both use isset() against
+        // $this->instances, and isset() is null-blind — a key bound to
+        // literal null behaves identically to an unbound key, so
+        // app('mcp.team_id') falls through to Container::build() and
+        // throws "Target class [mcp.team_id] does not exist." A closure
+        // binding populates $this->bindings (non-null entry), so resolve()
+        // finds it and invokes the closure to get null. Caller's `?? fallback`
+        // then evaluates correctly. Hit by Compact umbrella tools on the
+        // base HTTP MCP path where no middleware sets mcp.team_id.
+        $this->app->bind('mcp.team_id', fn () => null);
 
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
 

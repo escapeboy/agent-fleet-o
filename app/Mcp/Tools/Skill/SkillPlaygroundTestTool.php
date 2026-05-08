@@ -6,11 +6,11 @@ use App\Domain\Skill\Actions\SkillPlaygroundRunAction;
 use App\Domain\Skill\Models\Skill;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Mcp\Attributes\IsIdempotent;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 
 /**
  * MCP tool: skill_playground_test
