@@ -27,8 +27,8 @@ class WorkflowSnapshotListTool extends Tool
             'limit' => $schema->integer()
                 ->description('Max snapshots to return (default 50)')
                 ->default(50)
-                ->minimum(1)
-                ->maximum(200),
+                ->min(1)
+                ->max(200),
         ];
     }
 

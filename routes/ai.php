@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\OAuthRevokeController;
+use App\Http\Middleware\McpTeamBinding;
 use App\Mcp\Servers\AgentFleetServer;
 use App\Mcp\Servers\CompactMcpServer;
 use Illuminate\Support\Facades\Route;
@@ -63,11 +64,11 @@ Route::post('oauth/revoke', OAuthRevokeController::class)
 // tokens are validated by their team-scoping ability inside the server's
 // BootstrapsMcpAuth trait.
 Mcp::web('/mcp', CompactMcpServer::class)
-    ->middleware(['auth:sanctum,passport']);
+    ->middleware(['auth:sanctum,passport', McpTeamBinding::class]);
 
 // Full MCP endpoint (HTTP/SSE) — all 259 tools for power users and clients without tool limits
 Mcp::web('/mcp/full', AgentFleetServer::class)
-    ->middleware(['auth:sanctum,passport']);
+    ->middleware(['auth:sanctum,passport', McpTeamBinding::class]);
 
 // Local MCP server (stdio) — for CLI agents like Codex, Claude Code (no tool limit)
 Mcp::local('agent-fleet', AgentFleetServer::class);

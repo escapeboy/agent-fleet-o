@@ -29,11 +29,12 @@ class FlowEvaluationDatasetCreateTool extends Tool
                 ->description('Optional description'),
             'workflow_id' => $schema->string()
                 ->description('UUID of the workflow this dataset targets'),
-            'rows' => $schema->array(items: $schema->object(properties: [
-                'input' => $schema->object()->description('Input data as a JSON object (e.g. {"prompt": "..."}')->required(),
-                'expected_output' => $schema->string()->description('Expected output text for judge scoring'),
-                'metadata' => $schema->object()->description('Optional metadata'),
-            ]))
+            'rows' => $schema->array()
+                ->items($schema->object(properties: [
+                    'input' => $schema->object()->description('Input data as a JSON object (e.g. {"prompt": "..."}')->required(),
+                    'expected_output' => $schema->string()->description('Expected output text for judge scoring'),
+                    'metadata' => $schema->object()->description('Optional metadata'),
+                ]))
                 ->description('Test rows for the dataset'),
         ];
     }
