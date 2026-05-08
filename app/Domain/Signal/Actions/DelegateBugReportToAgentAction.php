@@ -4,6 +4,7 @@ namespace App\Domain\Signal\Actions;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\BugReportProjectConfig;
@@ -116,7 +117,7 @@ class DelegateBugReportToAgentAction
             userId: $actor->id,
             title: "Fix bug: {$title}",
             thesis: $thesis,
-            track: 'agentic',
+            track: ExperimentTrack::Debug->value,
             teamId: $signal->team_id,
             agentId: $agentId,
         );

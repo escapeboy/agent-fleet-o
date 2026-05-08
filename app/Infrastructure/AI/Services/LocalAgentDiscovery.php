@@ -19,12 +19,16 @@ class LocalAgentDiscovery
      */
     public function detect(): array
     {
-        if (! config('local_agents.enabled')) {
-            return [];
-        }
-
+        // Relay mode is a pure DB lookup against BridgeConnection.endpoints — no shell
+        // execution. The local_agents.enabled guard targets the direct shell-exec path
+        // (probe() below) which cloud edition forces off via CloudServiceProvider; it
+        // must not gate the relay path or the admin UI cannot list agents.
         if ($this->isRelayMode()) {
             return $this->relayDiscover();
+        }
+
+        if (! config('local_agents.enabled')) {
+            return [];
         }
 
         if ($this->shouldUseBridge()) {
