@@ -68,7 +68,7 @@ abstract class TestCase extends BaseTestCase
         $token = getenv('TEST_TOKEN');
         if ($token !== false && $token !== '' && (int) $token > 0) {
             $cacheDb = (int) $token;
-            putenv('REDIS_CACHE_DB=' . $cacheDb);
+            putenv('REDIS_CACHE_DB='.$cacheDb);
             $_ENV['REDIS_CACHE_DB'] = $cacheDb;
             $_SERVER['REDIS_CACHE_DB'] = $cacheDb;
         }
