@@ -170,17 +170,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Pre-bind 'mcp.team_id' as null so any caller doing
-        // `app('mcp.team_id') ?? auth()->user()?->current_team_id` works
-        // without first checking $app->bound(). MCP request handlers
-        // overwrite this with the resolved team ID via app()->instance(...).
-        // Without this default, calling app('mcp.team_id') on an unbound
-        // container (e.g. in test setup that has called forgetInstance)
-        // throws BindingResolutionException because Laravel tries to
-        // autoresolve the dotted string as a class name.
-        if (! $this->app->bound('mcp.team_id')) {
-            $this->app->instance('mcp.team_id', null);
-        }
+        // 'mcp.team_id' is bound per-request by McpTeamBinding middleware (HTTP MCP)
+        // or BootstrapsMcpAuth trait (stdio MCP). Outside MCP context the binding
+        // is intentionally absent so callers fall back to auth()->user()->current_team_id
+        // via the `app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->...`
+        // defensive pattern. Do NOT pre-bind here: a `bind('mcp.team_id', fn () => null)`
+        // pre-bind makes bound() return true with a null value, breaking that fallback.
+        // A `instance('mcp.team_id', null)` pre-bind is null-blind via isset() and
+        // also doesn't help. The only correct shape is "bound iff middleware ran".
 
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
 
