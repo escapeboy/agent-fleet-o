@@ -112,7 +112,7 @@ class BitbucketToolsTest extends TestCase
         $this->assertStringNotContainsString('token', strtolower((string) ($payload['error']['message'] ?? '')));
     }
 
-    public function test_read_file_returns_failed_precondition_when_credential_not_basic_auth(): void
+    public function test_read_file_returns_invalid_argument_when_credential_lacks_basic_auth_shape(): void
     {
         $apiTokenCred = Credential::factory()->create([
             'team_id' => $this->team->id,
@@ -129,7 +129,7 @@ class BitbucketToolsTest extends TestCase
         ]));
 
         $payload = $this->decode($response);
-        $this->assertSame('FAILED_PRECONDITION', $payload['error']['code']);
+        $this->assertSame('INVALID_ARGUMENT', $payload['error']['code']);
     }
 
     public function test_read_file_returns_not_found_for_unknown_credential(): void

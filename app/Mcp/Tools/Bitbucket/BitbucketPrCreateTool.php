@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools\Bitbucket;
 
-use App\Domain\Credential\Enums\CredentialType;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Drivers\Bitbucket\BitbucketBasicAuthDriver;
 use App\Mcp\Concerns\HasStructuredErrors;
@@ -62,10 +61,6 @@ class BitbucketPrCreateTool extends Tool
 
         if (! $credential) {
             return $this->notFoundError('credential', $request->get('credential_id'));
-        }
-
-        if ($credential->credential_type !== CredentialType::BasicAuth) {
-            return $this->failedPreconditionError('Credential must be of type basic_auth.');
         }
 
         try {

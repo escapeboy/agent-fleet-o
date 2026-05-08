@@ -21,8 +21,6 @@ class BitbucketBasicAuthDriver
 {
     private const API_BASE = 'https://api.bitbucket.org/2.0';
 
-    private const TIMEOUT_SECONDS = 15;
-
     public function readFile(Credential $credential, string $repoSlug, string $branch, string $path): string
     {
         $repo = $this->assertWorkspaceAllowed($credential, $repoSlug);
@@ -129,29 +127,39 @@ class BitbucketBasicAuthDriver
 
     private function http(Credential $credential): PendingRequest
     {
-        $secret = $credential->secret_data ?? [];
-        $username = $secret['username'] ?? null;
-        $password = $secret['password'] ?? null;
+        $secret = $this->secretData($credential);
+        $username = (string) ($secret['username'] ?? '');
+        $password = (string) ($secret['password'] ?? '');
 
-        if ($username === null || $username === '' || $password === null || $password === '') {
+        if ($username === '' || $password === '') {
             throw new \InvalidArgumentException('Bitbucket credential is missing username or password.');
         }
 
         return Http::withBasicAuth($username, $password)
-            ->timeout(self::TIMEOUT_SECONDS)
+            ->timeout(15)
             ->acceptJson();
     }
 
     private function workspace(Credential $credential): string
     {
-        $secret = $credential->secret_data ?? [];
-        $workspace = $secret['workspace'] ?? null;
+        $workspace = (string) ($this->secretData($credential)['workspace'] ?? '');
 
-        if ($workspace === null || $workspace === '') {
+        if ($workspace === '') {
             throw new \InvalidArgumentException('Bitbucket credential must include `workspace` in secret_data.');
         }
 
-        return (string) $workspace;
+        return $workspace;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function secretData(Credential $credential): array
+    {
+        /** @var mixed $data */
+        $data = $credential->secret_data;
+
+        return is_array($data) ? $data : [];
     }
 
     private function assertWorkspaceAllowed(Credential $credential, string $repoSlug): string
