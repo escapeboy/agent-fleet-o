@@ -7,6 +7,13 @@ use RuntimeException;
 
 final class LocalAgentPromptBuilder
 {
+    /**
+     * Default `--mcp-config` payload when the agent has no attached MCP tools.
+     * Combined with `--strict-mcp-config`, this disables Claude Code's default
+     * `~/.claude.json` lookup so a stray host config can't bleed into the run.
+     */
+    private const EMPTY_MCP_CONFIG_JSON = '{"mcpServers":{}}';
+
     public static function buildPrompt(AiRequestDTO $request): string
     {
         $parts = [];
@@ -28,7 +35,12 @@ final class LocalAgentPromptBuilder
         return in_array($agentKey, ['codex', 'claude-code', 'gemini-cli'], true);
     }
 
-    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null): string
+    /**
+     * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
+     *                                                ['mcpServers' => [...]]. When null/empty,
+     *                                                falls back to the empty default.
+     */
+    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null, ?array $mcpConfig = null): string
     {
         $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
@@ -49,10 +61,11 @@ final class LocalAgentPromptBuilder
         }
 
         $escapedPrompt = $prompt ? ' '.escapeshellarg($prompt) : '';
+        $mcpConfigJson = self::encodeMcpConfig($mcpConfig);
 
         return match ($agentKey) {
             'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
-            'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg('{"mcpServers":{}}').$modelFlag,
+            'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg($mcpConfigJson).$modelFlag,
             'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
             'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
             'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
@@ -77,9 +90,12 @@ final class LocalAgentPromptBuilder
      * the ARG_MAX limit when the system prompt is very large (e.g. 200+ tools).
      * When null, falls back to inline --system-prompt.
      *
+     * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
+     *                                                ['mcpServers' => [...]]. When null/empty,
+     *                                                falls back to the empty default.
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null): array
+    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null): array
     {
         $systemPromptArgs = $systemPromptFile
             ? ['--system-prompt-file', $systemPromptFile]
@@ -88,7 +104,7 @@ final class LocalAgentPromptBuilder
         $args = array_merge(
             [$binaryPath, '--print', '--output-format', 'json'],
             $systemPromptArgs,
-            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}'],
+            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
         );
 
         if ($model) {
@@ -105,9 +121,12 @@ final class LocalAgentPromptBuilder
      * progressive JSONL events from stdout and emit incremental text chunks
      * to the UI instead of waiting for the final JSON payload.
      *
+     * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
+     *                                                ['mcpServers' => [...]]. When null/empty,
+     *                                                falls back to the empty default.
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null): array
+    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null): array
     {
         $systemPromptArgs = $systemPromptFile
             ? ['--system-prompt-file', $systemPromptFile]
@@ -116,7 +135,7 @@ final class LocalAgentPromptBuilder
         $args = array_merge(
             [$binaryPath, '--print', '--output-format', 'stream-json', '--verbose'],
             $systemPromptArgs,
-            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}'],
+            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
         );
 
         if ($model) {
@@ -125,5 +144,31 @@ final class LocalAgentPromptBuilder
         }
 
         return $args;
+    }
+
+    /**
+     * Normalize an mcpServers config (or the parent envelope) to the JSON
+     * payload Claude Code expects on `--mcp-config`. Empty / null collapses
+     * to the static empty config so behavior is unchanged when no tools are
+     * attached to the agent.
+     *
+     * @param  array<string, mixed>|null  $mcpConfig
+     */
+    private static function encodeMcpConfig(?array $mcpConfig): string
+    {
+        if ($mcpConfig === null || $mcpConfig === []) {
+            return self::EMPTY_MCP_CONFIG_JSON;
+        }
+
+        // Accept either the bare server map or the wrapped envelope.
+        $envelope = isset($mcpConfig['mcpServers']) ? $mcpConfig : ['mcpServers' => $mcpConfig];
+
+        if (($envelope['mcpServers'] ?? []) === []) {
+            return self::EMPTY_MCP_CONFIG_JSON;
+        }
+
+        $encoded = json_encode($envelope, JSON_UNESCAPED_SLASHES);
+
+        return $encoded === false ? self::EMPTY_MCP_CONFIG_JSON : $encoded;
     }
 }

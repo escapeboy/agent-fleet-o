@@ -57,12 +57,17 @@ class LocalAgentGateway implements AiGatewayInterface
             $request->workingDirectory ?? config('local_agents.working_directory'),
         );
 
+        // Build the agent's MCP config once — both branches need it so the
+        // spawned Claude Code process can reach the agent's attached tools
+        // instead of running with the empty default config.
+        $mcpConfig = $agentKey === 'claude-code' ? $this->buildAgentMcpConfig($request) : null;
+
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
         if ($agentKey === 'claude-code' && $isAssistant) {
             $systemPromptFile = $workdir.'/system-prompt.txt';
             file_put_contents($systemPromptFile, $request->systemPrompt);
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile);
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig);
             $prompt = $request->userPrompt;
             $env = getenv();
             unset($env['CLAUDECODE']);
@@ -72,6 +77,7 @@ class LocalAgentGateway implements AiGatewayInterface
                 'prompt_length' => strlen($prompt),
                 'system_prompt_length' => strlen($request->systemPrompt),
                 'timeout' => $timeout,
+                'mcp_servers' => array_keys($mcpConfig['mcpServers'] ?? []),
             ]);
 
             $startTime = hrtime(true);
@@ -83,6 +89,7 @@ class LocalAgentGateway implements AiGatewayInterface
             $command = LocalAgentPromptBuilder::buildCommand(
                 $agentKey, $binaryPath, $request->model, $request->purpose,
                 $usesStdin ? null : $prompt,
+                $mcpConfig,
             );
 
             Log::debug("LocalAgentGateway: executing {$agentKey}", [
@@ -482,39 +489,17 @@ class LocalAgentGateway implements AiGatewayInterface
      */
     private function writeAgentMcpConfig(AiRequestDTO $request, string $workdir): void
     {
-        if (! $request->agentId) {
+        $config = $this->buildAgentMcpConfig($request);
+        if ($config === null) {
             return;
         }
 
         try {
-            $agent = Agent::withoutGlobalScopes()->find($request->agentId);
-            if (! $agent) {
-                return;
-            }
-
-            // Bypass TeamScope on the relationship as well — VPS execution
-            // can run from queue/MCP contexts where the scope may resolve
-            // to a different team than the agent's, silently dropping tools.
-            $tools = $agent->tools()
-                ->withoutGlobalScopes()
-                ->where('tools.team_id', $agent->team_id)
-                ->where('tools.status', ToolStatus::Active->value)
-                ->get();
-
-            if ($tools->isEmpty()) {
-                return;
-            }
-
-            $config = app(ClaudeCodeMcpConfigBuilder::class)->build($tools);
-            if ($config === []) {
-                return;
-            }
-
             $path = $workdir.'/.claude.json';
             $bytes = @file_put_contents($path, json_encode($config, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
             if ($bytes === false) {
                 Log::warning('LocalAgentGateway: failed to write Claude Code MCP config file', [
-                    'agent_id' => $agent->id,
+                    'agent_id' => $request->agentId,
                     'path' => $path,
                 ]);
 
@@ -523,7 +508,7 @@ class LocalAgentGateway implements AiGatewayInterface
             @chmod($path, 0600);
 
             Log::info('LocalAgentGateway: wrote Claude Code MCP config for agent run', [
-                'agent_id' => $agent->id,
+                'agent_id' => $request->agentId,
                 'team_id' => $request->teamId,
                 'tool_count' => count($config['mcpServers'] ?? []),
                 'tool_slugs' => array_keys($config['mcpServers'] ?? []),
@@ -533,6 +518,58 @@ class LocalAgentGateway implements AiGatewayInterface
                 'agent_id' => $request->agentId,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Build the Claude Code `--mcp-config` envelope for the agent attached to
+     * the request. Used by:
+     *   - `executeVps()` (writes to `.claude.json` in HOME)
+     *   - `complete()` non-bridge local-direct path (passes inline via flag)
+     *   - `executeViaBridge()` (forwards in the POST body for the bridge to
+     *     materialize on the host where the CLI actually runs)
+     *
+     * Returns null when the agent has no attached MCP tools — callers should
+     * leave the empty default in place so behavior matches the pre-MCP
+     * codepath.
+     *
+     * @return array{mcpServers: array<string, array<string, mixed>>}|null
+     */
+    private function buildAgentMcpConfig(AiRequestDTO $request): ?array
+    {
+        if (! $request->agentId) {
+            return null;
+        }
+
+        try {
+            $agent = Agent::withoutGlobalScopes()->find($request->agentId);
+            if (! $agent) {
+                return null;
+            }
+
+            // Bypass TeamScope on the relationship — VPS / queue / MCP contexts
+            // can resolve the scope to a different team than the agent's,
+            // silently dropping tools.
+            $tools = $agent->tools()
+                ->withoutGlobalScopes()
+                ->where('tools.team_id', $agent->team_id)
+                ->where('tools.status', ToolStatus::Active->value)
+                ->get();
+
+            if ($tools->isEmpty()) {
+                return null;
+            }
+
+            $config = app(ClaudeCodeMcpConfigBuilder::class)->build($tools);
+
+            return $config === [] ? null : $config;
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: failed to build Claude Code MCP config', [
+                'agent_id' => $request->agentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
         }
     }
 
@@ -575,11 +612,18 @@ class LocalAgentGateway implements AiGatewayInterface
         $bridgeUrl = $this->discovery->bridgeUrl();
         $bridgeSecret = $this->discovery->bridgeSecret();
 
+        // Forward the agent's attached MCP tools so the bridge can write them
+        // into the spawned Claude Code's --mcp-config (the bridge can't see the
+        // agent → tool wiring). Empty / non-Claude agents skip this entirely.
+        $mcpConfig = $agentKey === 'claude-code' ? $this->buildAgentMcpConfig($request) : null;
+        $mcpServers = $mcpConfig['mcpServers'] ?? [];
+
         Log::info("LocalAgentGateway: executing {$agentKey} via bridge", [
             'bridge_url' => $bridgeUrl,
             'prompt_length' => strlen($prompt),
             'bridge_timeout' => $bridgeTimeout,
             'http_timeout' => $httpTimeout,
+            'mcp_servers' => array_keys($mcpServers),
         ]);
 
         $startTime = hrtime(true);
@@ -608,6 +652,11 @@ class LocalAgentGateway implements AiGatewayInterface
                     'timeout' => $bridgeTimeout,
                     'working_directory' => $request->workingDirectory ?? config('local_agents.working_directory'),
                     'purpose' => $request->purpose,
+                    // Backward-compatible: bridges that don't know this field
+                    // ignore it (Go's encoding/json silently drops unknowns).
+                    // Newer bridges write it into the spawned process's
+                    // --mcp-config JSON file before exec.
+                    'mcp_servers' => (object) $mcpServers,
                 ]);
         } catch (\Throwable $e) {
             $elapsedMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -716,10 +765,14 @@ class LocalAgentGateway implements AiGatewayInterface
         $bridgeUrl = $this->discovery->bridgeUrl();
         $bridgeSecret = $this->discovery->bridgeSecret();
 
+        $mcpConfig = $agentKey === 'claude-code' ? $this->buildAgentMcpConfig($request) : null;
+        $mcpServers = $mcpConfig['mcpServers'] ?? [];
+
         Log::info("LocalAgentGateway: streaming {$agentKey} via bridge", [
             'bridge_url' => $bridgeUrl,
             'prompt_length' => strlen($prompt),
             'bridge_timeout' => $bridgeTimeout,
+            'mcp_servers' => array_keys($mcpServers),
         ]);
 
         $startTime = hrtime(true);
@@ -737,6 +790,8 @@ class LocalAgentGateway implements AiGatewayInterface
                     'stream' => true,
                     'working_directory' => $request->workingDirectory ?? config('local_agents.working_directory'),
                     'purpose' => $request->purpose,
+                    // See executeViaBridge() — backward-compatible per-request MCP injection.
+                    'mcp_servers' => (object) $mcpServers,
                 ],
                 'headers' => [
                     'Authorization' => 'Bearer '.$bridgeSecret,

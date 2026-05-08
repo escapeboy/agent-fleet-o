@@ -3,6 +3,7 @@
 namespace Tests\Feature\Domain\Signal;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
@@ -235,6 +236,26 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $this->assertStringContainsString('Comment 19', $thesis);
         $this->assertStringNotContainsString('Comment 20', $thesis);
         $this->assertStringContainsString('5 older comments omitted', $thesis);
+    }
+
+    /**
+     * Regression for `ValueError: "agentic" is not a valid backing value for enum
+     * App\Domain\Experiment\Enums\ExperimentTrack`. Uses the real
+     * CreateExperimentAction so the enum cast on the Experiment model fires
+     * end-to-end — a string the enum doesn't accept will throw during persist.
+     */
+    public function test_delegation_persists_with_valid_experiment_track(): void
+    {
+        $signal = $this->makeSignal();
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertInstanceOf(Experiment::class, $experiment);
+        $this->assertInstanceOf(ExperimentTrack::class, $experiment->track);
+        $this->assertContains($experiment->track, ExperimentTrack::cases());
     }
 
     public function test_thesis_sanitizes_reporter_comments(): void
