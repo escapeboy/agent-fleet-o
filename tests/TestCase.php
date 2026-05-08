@@ -58,6 +58,21 @@ abstract class TestCase extends BaseTestCase
             ? $parentBootstrap
             : __DIR__.'/../bootstrap/app.php';
 
+        // paratest worker isolation: when running under paratest, each worker
+        // gets a unique TEST_TOKEN env var (1..N for --processes=N). Map that
+        // to a distinct Redis DB so per-test tearDown() flushdb() calls
+        // don't wipe the keys another worker just wrote. Without this the
+        // CreditsTest deduct assertions fail intermittently because worker
+        // A's flushdb clears worker B's just-written usage counter mid-test.
+        // No-op when phpunit runs serially (TEST_TOKEN unset).
+        $token = getenv('TEST_TOKEN');
+        if ($token !== false && $token !== '' && (int) $token > 0) {
+            $cacheDb = (int) $token;
+            putenv('REDIS_CACHE_DB=' . $cacheDb);
+            $_ENV['REDIS_CACHE_DB'] = $cacheDb;
+            $_SERVER['REDIS_CACHE_DB'] = $cacheDb;
+        }
+
         $app = require $bootstrap;
 
         $app->make(Kernel::class)->bootstrap();
