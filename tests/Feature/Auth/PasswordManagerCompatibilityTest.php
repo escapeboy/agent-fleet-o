@@ -31,6 +31,20 @@ class PasswordManagerCompatibilityTest extends TestCase
         $response->assertSee('autocomplete="current-password"', false);
     }
 
+    public function test_login_page_offers_passkey_signin_with_csrf_meta(): void
+    {
+        // Passkey login depends on the CSRF meta (so the JS can read it for
+        // the WebAuthn fetch call) and on the Alpine x-data="passkeyLogin"
+        // component being mounted. Removing either breaks 1Password / Apple
+        // Keychain / Google PWM / Windows Hello sign-in.
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee('name="csrf-token"', false);
+        $response->assertSee('x-data="passkeyLogin"', false);
+        $response->assertSee('Sign in with a passkey', false);
+    }
+
     public function test_register_page_advertises_new_password_on_both_password_fields(): void
     {
         $response = $this->get('/register');
