@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property CredentialType $credential_type
@@ -21,9 +22,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property CredentialSource|null $creator_source
  * @property array<string, mixed>|null $secret_data
  * @property array<string, mixed>|null $metadata
- * @property \Illuminate\Support\Carbon|null $expires_at
- * @property \Illuminate\Support\Carbon|null $last_used_at
- * @property \Illuminate\Support\Carbon|null $last_rotated_at
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $last_used_at
+ * @property Carbon|null $last_rotated_at
  */
 class Credential extends Model
 {
