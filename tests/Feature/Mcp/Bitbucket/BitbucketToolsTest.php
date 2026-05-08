@@ -61,8 +61,7 @@ class BitbucketToolsTest extends TestCase
     public function test_read_file_returns_content_on_happy_path(): void
     {
         Http::fake([
-            'api.bitbucket.org/2.0/repositories/lukanet/collector/src/develop/Order.php'
-                => Http::response('<?php class Order {}', 200),
+            'api.bitbucket.org/2.0/repositories/lukanet/collector/src/develop/Order.php' => Http::response('<?php class Order {}', 200),
         ]);
 
         $tool = new BitbucketRepoReadFileTool;
