@@ -107,6 +107,10 @@ use App\Mcp\Tools\AuditConsole\AuditConsoleSettingsTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleVerifyBundleTool;
 use App\Mcp\Tools\Auth\SocialAccountListTool;
 use App\Mcp\Tools\Auth\SocialAccountUnlinkTool;
+use App\Mcp\Tools\Bitbucket\BitbucketPrCreateTool;
+use App\Mcp\Tools\Bitbucket\BitbucketPrManageTool;
+use App\Mcp\Tools\Bitbucket\BitbucketRepoReadFileTool;
+use App\Mcp\Tools\Bitbucket\BitbucketRepoSearchTool;
 use App\Mcp\Tools\Boruna\BorunaCapabilityListTool;
 use App\Mcp\Tools\Boruna\BorunaEvidenceTool;
 use App\Mcp\Tools\Boruna\BorunaRunTool;
@@ -1243,6 +1247,12 @@ class AgentFleetServer extends Server
         AuditConsoleGetDecisionTool::class,
         AuditConsoleVerifyBundleTool::class,
         AuditConsoleSettingsTool::class,
+
+        // Bitbucket (4) — basic-auth, workspace-scoped read/write for bug-fix-agent
+        BitbucketRepoReadFileTool::class,
+        BitbucketRepoSearchTool::class,
+        BitbucketPrCreateTool::class,
+        BitbucketPrManageTool::class,
 
         // Boruna (5)
         BorunaRunTool::class,
