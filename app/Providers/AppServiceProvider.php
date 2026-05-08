@@ -170,22 +170,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Pre-bind 'mcp.team_id' so any caller doing
-        // `app('mcp.team_id') ?? auth()->user()?->current_team_id` works
-        // without first checking $app->bound(). MCP request handlers
-        // overwrite this with the resolved team ID via app()->instance(...).
-        //
-        // We MUST use bind(closure) instead of instance(null): Laravel's
-        // Container::resolve() and ::bound() both use isset() against
-        // $this->instances, and isset() is null-blind — a key bound to
-        // literal null behaves identically to an unbound key, so
-        // app('mcp.team_id') falls through to Container::build() and
-        // throws "Target class [mcp.team_id] does not exist." A closure
-        // binding populates $this->bindings (non-null entry), so resolve()
-        // finds it and invokes the closure to get null. Caller's `?? fallback`
-        // then evaluates correctly. Hit by Compact umbrella tools on the
-        // base HTTP MCP path where no middleware sets mcp.team_id.
-        $this->app->bind('mcp.team_id', fn () => null);
+        // 'mcp.team_id' is bound per-request by McpTeamBinding middleware (HTTP MCP)
+        // or BootstrapsMcpAuth trait (stdio MCP). Outside MCP context the binding
+        // is intentionally absent so callers fall back to auth()->user()->current_team_id
+        // via the `app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->...`
+        // defensive pattern. Do NOT pre-bind here: a `bind('mcp.team_id', fn () => null)`
+        // pre-bind makes bound() return true with a null value, breaking that fallback.
+        // A `instance('mcp.team_id', null)` pre-bind is null-blind via isset() and
+        // also doesn't help. The only correct shape is "bound iff middleware ran".
 
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
 
