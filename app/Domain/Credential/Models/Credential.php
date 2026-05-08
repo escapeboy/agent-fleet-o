@@ -15,6 +15,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property CredentialType $credential_type
+ * @property CredentialStatus $status
+ * @property CredentialSource|null $creator_source
+ * @property array<string, mixed>|null $secret_data
+ * @property array<string, mixed>|null $metadata
+ * @property \Illuminate\Support\Carbon|null $expires_at
+ * @property \Illuminate\Support\Carbon|null $last_used_at
+ * @property \Illuminate\Support\Carbon|null $last_rotated_at
+ */
 class Credential extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;

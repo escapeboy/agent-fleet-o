@@ -218,6 +218,7 @@ class CredentialDetailPage extends Component
                 ->filter(fn ($p) => ! empty($p['key']) && ! empty($p['value']))
                 ->pluck('value', 'key')
                 ->toArray(),
+            // @phpstan-ignore match.alwaysTrue (kept explicit for readability — first match exhausts other cases)
             CredentialType::OnePasswordServiceAccount => [
                 'service_account_token' => $this->rotateServiceAccountToken,
             ],
