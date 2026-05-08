@@ -111,7 +111,9 @@ class McpStdioClient
         $this->validateBinaryAllowlist($fullCmd[0]);
         $this->validateArgs($args);
 
-        $env = $this->buildEnv($this->resolveCredentialPlaceholders($tool, $config['env'] ?? []));
+        /** @var array<string, mixed> $envConfig */
+        $envConfig = (array) ($config['env'] ?? []);
+        $env = $this->buildEnv($this->resolveCredentialPlaceholders($tool, $envConfig));
 
         $workdir = $config['working_directory'] ?? sys_get_temp_dir();
         if (! is_dir($workdir)) {
@@ -441,8 +443,10 @@ class McpStdioClient
      * Resolves at launch time to the linked Credential's
      * secret_data.service_account_token value.
      *
-     * @param  array<string, string>  $extraEnv
+     * @param  array<string, mixed>  $extraEnv
      * @return array<string, string>
+     *
+     * @phpstan-ignore method.unused (called from openProcess; PHPStan can't see through the call due to mixed-typed transport_config)
      */
     private function resolveCredentialPlaceholders(Tool $tool, array $extraEnv): array
     {

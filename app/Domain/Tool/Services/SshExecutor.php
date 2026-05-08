@@ -91,7 +91,7 @@ class SshExecutor
 
         return new SshExecutionResult(
             output: $output,
-            exitCode: $exitCode ?? 0,
+            exitCode: $exitCode,
             durationMs: $durationMs,
         );
     }
