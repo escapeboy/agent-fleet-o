@@ -286,10 +286,18 @@ class BridgeController extends Controller
     }
 
     /**
-     * Proxy an MCP tool call through the relay to a bridge-hosted MCP server.
+     * Proxy an MCP tool call to a bridge-hosted MCP server.
      *
-     * Uses the same Redis frame-based protocol as all bridge communication:
-     * RPUSH to bridge:req:{teamId} → relay binary → WebSocket → bridge daemon → MCP server.
+     * Two transport paths:
+     *  - HTTP-mode bridges (endpoint_url set): POST directly to
+     *    {endpoint_url}/mcp/{server} with the validated body and
+     *    return whatever the bridge returns (must be MCP JSON-RPC shape).
+     *  - Relay-binary bridges (default): RPUSH to bridge:req:{teamId} →
+     *    relay binary → WebSocket → bridge daemon → MCP server, response
+     *    streamed back via bridge:stream:{request_id}.
+     *
+     * Both paths use the same validated body shape, so callers don't have
+     * to know which transport is in play.
      *
      * @response 200 {"result": {"content": [{"type": "text", "text": "..."}]}}
      */
@@ -322,7 +330,24 @@ class BridgeController extends Controller
             'server' => $serverName,
             'method' => $validated['method'],
             'tool' => $validated['params']['name'] ?? null,
+            'transport' => $bridge->isHttpMode() ? 'http_direct' : 'relay',
         ]);
+
+        // HTTP-tunnel-mode bridges (Cloudflare Tunnel / Tailscale Funnel /
+        // ngrok / etc.): the daemon exposes an HTTP endpoint at endpoint_url.
+        // Skip the Redis+relay path entirely and POST directly. Synchronous
+        // request/response with no streaming for now — daemons that want
+        // chunked output can keep the relay path.
+        if ($bridge->isHttpMode()) {
+            return $this->mcpCallViaHttp(
+                bridge: $bridge,
+                serverName: $serverName,
+                method: $validated['method'],
+                params: $validated['params'],
+                requestId: $requestId,
+                timeout: $timeout,
+            );
+        }
 
         try {
             $registry = app(BridgeRequestRegistry::class);
@@ -372,6 +397,77 @@ class BridgeController extends Controller
                 'error' => "Bridge MCP call failed: {$e->getMessage()}",
             ], 502);
         }
+    }
+
+    /**
+     * HTTP-direct path of mcpCall: POST to {endpoint_url}/mcp/{server} on
+     * the bridge daemon and forward the response.
+     *
+     * Auth: Bearer {endpoint_secret} when present. Bridge daemons that
+     * configure no secret accept anonymous calls (loopback-only deployment).
+     *
+     * Failure modes:
+     *   - HTTP exception (DNS / connect / timeout) → 502
+     *   - Non-2xx response from the daemon → 502 with status + body tail
+     *   - Successful 2xx → forward the parsed JSON body verbatim
+     */
+    private function mcpCallViaHttp(
+        BridgeConnection $bridge,
+        string $serverName,
+        string $method,
+        array $params,
+        string $requestId,
+        int $timeout,
+    ): JsonResponse {
+        $headers = ['Accept' => 'application/json'];
+        if (! empty($bridge->endpoint_secret)) {
+            $headers['Authorization'] = 'Bearer '.$bridge->endpoint_secret;
+        }
+
+        $url = rtrim($bridge->endpoint_url, '/').'/mcp/'.$serverName;
+        $body = [
+            'request_id' => $requestId,
+            'method' => $method,
+            'params' => $params,
+            'timeout' => $timeout,
+        ];
+
+        try {
+            // Add a small buffer over the per-call timeout so the HTTP layer
+            // doesn't fire before the daemon's own timeout check returns.
+            $response = Http::timeout($timeout + 5)
+                ->withHeaders($headers)
+                ->post($url, $body);
+        } catch (\Throwable $e) {
+            Log::error('BridgeController: HTTP-direct MCP call failed', [
+                'request_id' => $requestId,
+                'bridge_id' => $bridge->id,
+                'endpoint_url' => $bridge->endpoint_url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => "Bridge HTTP-direct call failed: {$e->getMessage()}",
+            ], 502);
+        }
+
+        if (! $response->successful()) {
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
+            ], 502);
+        }
+
+        // Touch last_seen_at so the connection's health stays fresh.
+        $bridge->update(['last_seen_at' => now()]);
+
+        $payload = $response->json();
+        if (! is_array($payload)) {
+            return response()->json([
+                'error' => 'Bridge returned non-JSON body for an HTTP-direct MCP call.',
+            ], 502);
+        }
+
+        return response()->json($payload);
     }
 
     /**
