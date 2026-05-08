@@ -44,8 +44,8 @@ class CodeSearchTool extends Tool
                 ->enum(['class', 'function', 'method', 'file']),
             'limit' => $schema->integer()
                 ->description('Maximum number of results to return (1–20)')
-                ->minimum(1)
-                ->maximum(20)
+                ->min(1)
+                ->max(20)
                 ->default(5),
         ];
     }

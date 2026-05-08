@@ -26,7 +26,8 @@ class EvaluationRunTool extends Tool
                 ->required(),
             'run_id' => $schema->string()
                 ->description('Run ID (for get action)'),
-            'criteria' => $schema->array(items: $schema->string())
+            'criteria' => $schema->array()
+                ->items($schema->string())
                 ->description('Criteria to evaluate: faithfulness, relevance, correctness, completeness'),
             'input' => $schema->string()
                 ->description('The input/task that was given'),

@@ -40,8 +40,8 @@ class CodeCallChainTool extends Tool
                 ->required(),
             'hops' => $schema->integer()
                 ->description('Traversal depth (1–4, default 2)')
-                ->minimum(1)
-                ->maximum(4)
+                ->min(1)
+                ->max(4)
                 ->default(2),
             'edge_type' => $schema->string()
                 ->description('Filter by edge type: calls, imports, or inherits')
