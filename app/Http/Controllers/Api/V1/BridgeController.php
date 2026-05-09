@@ -408,7 +408,11 @@ class BridgeController extends Controller
      *
      * Failure modes:
      *   - HTTP exception (DNS / connect / timeout) → 502
-     *   - Non-2xx response from the daemon → 502 with status + body tail
+     *   - 4xx response from the daemon → forward status + body verbatim so
+     *     callers see the original "tool not found" / "bad payload" error
+     *     instead of a generic 502 wrapping
+     *   - 5xx response from the daemon → 502 with status + body tail
+     *     (the daemon itself is broken)
      *   - Successful 2xx → forward the parsed JSON body verbatim
      */
     private function mcpCallViaHttp(
@@ -451,7 +455,22 @@ class BridgeController extends Controller
             ], 502);
         }
 
-        if (! $response->successful()) {
+        if ($response->clientError()) {
+            // 4xx from the daemon: pass the daemon's status + body to the
+            // caller unchanged. The daemon already produced a meaningful
+            // error (e.g. 404 "tool not found", 400 "bad payload") and
+            // wrapping it as 502 obscures the real cause.
+            $payload = $response->json();
+            if (is_array($payload)) {
+                return response()->json($payload, $response->status());
+            }
+
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
+            ], $response->status());
+        }
+
+        if ($response->serverError()) {
             return response()->json([
                 'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
             ], 502);
