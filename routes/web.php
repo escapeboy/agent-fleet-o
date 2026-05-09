@@ -8,6 +8,8 @@ use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Controllers\PublicReleaseController;
+use App\Http\Controllers\ReleaseKeysController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
@@ -62,6 +64,7 @@ use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
+use App\Livewire\Inbox\InboxPage;
 use App\Livewire\Insights\InsightsPage;
 use App\Livewire\Integrations\EditIntegrationForm;
 use App\Livewire\Integrations\IntegrationDetailPage;
@@ -85,6 +88,9 @@ use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
+use App\Livewire\Releases\ReleaseDetailPage;
+use App\Livewire\Releases\ReleaseDiffPage;
+use App\Livewire\Releases\ReleaseListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
@@ -165,6 +171,13 @@ Route::get('/.well-known/change-password', fn () => redirect(route('profile').'#
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
+Route::get('/share/release/{shareToken}', [PublicReleaseController::class, 'show'])->name('releases.share');
+
+// Public JWKS endpoint — release signing public keys (no auth, throttled).
+Route::get('/.well-known/release-keys.json', ReleaseKeysController::class)
+    ->name('release-keys.jwks')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
 
 // ── Social Login (OAuth) ──────────────────────────────────────────────────────
 // Guest-only initiation + callback routes (rate limited)
@@ -326,6 +339,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');
     Route::get('/crews/{crew}/execute', CrewExecutionPage::class)->name('crews.execute');
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
+
+    Route::get('/releases', ReleaseListPage::class)->name('releases.index');
+    Route::get('/releases/{release}/diff', ReleaseDiffPage::class)->name('releases.diff');
+    Route::get('/releases/{release}', ReleaseDetailPage::class)->name('releases.show');
+
+    Route::get('/inbox', InboxPage::class)->name('inbox.index');
 
     Route::get('/projects', ProjectListPage::class)->name('projects.index');
     Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');

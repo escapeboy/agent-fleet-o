@@ -66,6 +66,29 @@
 
     {{-- Overview Tab --}}
     @if($activeTab === 'overview')
+        {{-- View toggle: org chart vs flat list --}}
+        <div class="mb-4 flex items-center justify-end">
+            <div class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 text-xs font-medium" role="group">
+                <button wire:click="$set('orgChartView', 'chart')"
+                    class="rounded-md px-3 py-1.5 transition
+                        {{ $orgChartView === 'chart' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50' }}"
+                    data-test="org-chart-toggle-chart">
+                    <i class="fa-solid fa-sitemap mr-1"></i>Org chart
+                </button>
+                <button wire:click="$set('orgChartView', 'list')"
+                    class="rounded-md px-3 py-1.5 transition
+                        {{ $orgChartView === 'list' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50' }}"
+                    data-test="org-chart-toggle-list">
+                    <i class="fa-solid fa-list mr-1"></i>Member list
+                </button>
+            </div>
+        </div>
+
+        @if($orgChartView === 'chart')
+            <div @if($hasActiveExecution) wire:poll.5s @endif>
+                <x-crew-org-chart :crew="$crew" :members="$members" :active-agent-ids="$activeAgentIds" />
+            </div>
+        @else
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {{-- Coordinator --}}
             <div class="rounded-xl border border-gray-200 bg-white p-6">
@@ -189,6 +212,7 @@
                 @endif
             </div>
         </div>
+        @endif
     @endif
 
     {{-- Executions Tab --}}
