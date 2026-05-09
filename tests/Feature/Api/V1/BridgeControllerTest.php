@@ -490,4 +490,261 @@ class BridgeControllerTest extends ApiTestCase
         $response->assertStatus(502)
             ->assertJsonPath('error', fn ($v) => str_contains($v, 'connect timeout'));
     }
+
+    // -----------------------------------------------------------------------
+    // POST /api/v1/bridge/mcp/call — stream=true (SSE forwarding)
+    // -----------------------------------------------------------------------
+
+    public function test_mcp_call_stream_true_forwards_sse_content_type(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-stream-bridge',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        // Two concatenated SSE events: a heartbeat + a final result.
+        $sseBody = "event: heartbeat\n"
+            ."data: {\"elapsed_ms\":50}\n\n"
+            ."event: result\n"
+            ."data: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}}\n\n";
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                $sseBody,
+                200,
+                ['Content-Type' => 'text/event-stream'],
+            ),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'list_hosts', 'arguments' => []],
+            'stream' => true,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertStringStartsWith(
+            'text/event-stream',
+            $response->headers->get('Content-Type'),
+        );
+        $this->assertSame('no', $response->headers->get('X-Accel-Buffering'));
+        // Laravel's middleware may append `, private` to Cache-Control;
+        // we only care that no-cache made it through so reverse proxies
+        // don't cache the SSE stream.
+        $this->assertStringContainsString(
+            'no-cache',
+            (string) $response->headers->get('Cache-Control'),
+        );
+
+        // Body forwarding is verified end-to-end by the harbormaster
+        // streaming smoke (PR-side, not here). Re-invoking the callback
+        // from the test would consume an already-exhausted PSR stream
+        // (Http::fake creates a one-shot in-memory body), and Laravel
+        // 13's TestResponse::streamedContent() collides with our buffer
+        // handling under PHPUnit. Header + status + outgoing-request
+        // assertions in the other tests are sufficient unit coverage
+        // for this controller's responsibilities; the live wire shape
+        // is covered by harbormaster's `smoke-fleetq` CI job.
+        $this->assertNotNull($response->baseResponse->getCallback());
+    }
+
+    public function test_mcp_call_stream_true_sends_accept_event_stream_to_daemon(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-stream-accept',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                "event: result\ndata: {\"result\":{\"content\":[]}}\n\n",
+                200,
+                ['Content-Type' => 'text/event-stream'],
+            ),
+        ]);
+
+        $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/list',
+            'params' => ['cursor' => null],
+            'stream' => true,
+        ])->assertStatus(200);
+
+        // Verify the outgoing request actually asked for an SSE stream
+        // and carried the bridge's bearer token.
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://daemon.example/mcp/harbormaster'
+                && $request->header('Accept')[0] === 'text/event-stream'
+                && $request->header('Authorization')[0] === 'Bearer secret';
+        });
+    }
+
+    public function test_mcp_call_stream_true_passes_4xx_through_as_json(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-stream-4xx',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                ['detail' => "tool not found: 'nope'"],
+                404,
+            ),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'nope', 'arguments' => []],
+            'stream' => true,
+        ]);
+
+        // Pre-stream 4xx → JSON pass-through, NOT SSE. Same shape as the
+        // synchronous path so callers don't need a different error reader
+        // for stream=true vs stream=false.
+        $response->assertStatus(404)
+            ->assertExactJson(['detail' => "tool not found: 'nope'"]);
+    }
+
+    public function test_mcp_call_stream_true_returns_502_on_5xx(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-stream-5xx',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                'Internal Server Error',
+                500,
+            ),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'list_hosts', 'arguments' => []],
+            'stream' => true,
+        ]);
+
+        $response->assertStatus(502)
+            ->assertJsonStructure(['error']);
+    }
+
+    public function test_mcp_call_stream_true_rejected_for_relay_mode_bridge(): void
+    {
+        $this->actingAsApiUser();
+
+        // Relay-mode bridge: no endpoint_url set.
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'relay-bridge',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => null,
+            'endpoint_secret' => null,
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'list_hosts', 'arguments' => []],
+            'stream' => true,
+        ]);
+
+        $response->assertStatus(400)
+            ->assertJsonPath(
+                'error',
+                fn ($v) => str_contains($v, 'HTTP-tunnel-mode'),
+            );
+    }
+
+    public function test_mcp_call_stream_false_unchanged_from_sync_path(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-stream-default',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                ['result' => ['content' => [['type' => 'text', 'text' => 'sync']]]],
+                200,
+            ),
+        ]);
+
+        // No stream flag → backwards-compat JSON response.
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'list_hosts', 'arguments' => []],
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertStringStartsWith(
+            'application/json',
+            $response->headers->get('Content-Type'),
+        );
+
+        // Daemon must have been called with Accept: application/json (not SSE).
+        Http::assertSent(function ($request): bool {
+            return $request->header('Accept')[0] === 'application/json';
+        });
+    }
 }
