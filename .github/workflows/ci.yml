@@ -41,7 +41,7 @@ jobs:
         run: vendor/bin/pint --test
 
       - name: PHPStan
-        run: vendor/bin/phpstan analyse --memory-limit=512M
+        run: vendor/bin/phpstan analyse --memory-limit=2G
 
   # ─────────────────────────────────────────
   # Job 2: Test Suite (SQLite in-memory)
