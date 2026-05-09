@@ -225,18 +225,15 @@ abstract class BaseStageJob implements ShouldQueue
 
             // Collect per-node telemetry from LLM request logs written during this stage
             $stageStarted = $stage->started_at ?? now()->subMilliseconds($durationMs);
-            $tokenUsage = LlmRequestLog::where('experiment_id', $this->experimentId)
-                ->where('created_at', '>=', $stageStarted)
-                ->selectRaw('COALESCE(SUM((usage->>\'input_tokens\')::int), 0) as input_tokens, COALESCE(SUM((usage->>\'output_tokens\')::int), 0) as output_tokens, COUNT(*) as llm_calls')
-                ->first();
+            $tokenUsage = $this->collectStageTokenUsage($stageStarted);
 
             $telemetry = [
                 'stage_latency_ms' => $durationMs,
                 'retry_round' => $verificationAttempt,
                 'job_attempts' => $this->attempts(),
-                'token_input' => (int) ($tokenUsage->input_tokens ?? 0),
-                'token_output' => (int) ($tokenUsage->output_tokens ?? 0),
-                'llm_calls' => (int) ($tokenUsage->llm_calls ?? 0),
+                'token_input' => $tokenUsage['input_tokens'],
+                'token_output' => $tokenUsage['output_tokens'],
+                'llm_calls' => $tokenUsage['llm_calls'],
             ];
 
             // Only update if not already completed by process() — some stages
@@ -337,6 +334,23 @@ abstract class BaseStageJob implements ShouldQueue
             StageType::CollectingMetrics, StageType::Evaluating => ExperimentStatus::Completed,
             default => null,
         };
+    }
+
+    /**
+     * @return array{input_tokens: int, output_tokens: int, llm_calls: int}
+     */
+    protected function collectStageTokenUsage(\DateTimeInterface $stageStarted): array
+    {
+        $row = LlmRequestLog::where('experiment_id', $this->experimentId)
+            ->where('created_at', '>=', $stageStarted)
+            ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens, COALESCE(SUM(output_tokens), 0) as output_tokens, COUNT(*) as llm_calls')
+            ->first();
+
+        return [
+            'input_tokens' => (int) ($row->input_tokens ?? 0),
+            'output_tokens' => (int) ($row->output_tokens ?? 0),
+            'llm_calls' => (int) ($row->llm_calls ?? 0),
+        ];
     }
 
     protected function findOrCreateStage(Experiment $experiment): ExperimentStage
