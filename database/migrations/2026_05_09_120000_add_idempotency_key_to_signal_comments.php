@@ -17,7 +17,7 @@ return new class extends Migration
             DB::statement(
                 'CREATE UNIQUE INDEX IF NOT EXISTS signal_comments_signal_idem_unique '
                 .'ON signal_comments (signal_id, idempotency_key) '
-                .'WHERE idempotency_key IS NOT NULL'
+                .'WHERE idempotency_key IS NOT NULL',
             );
         }
     }
