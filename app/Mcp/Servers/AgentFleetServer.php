@@ -344,6 +344,11 @@ use App\Mcp\Tools\RAGFlow\RagflowDocumentUploadTool;
 use App\Mcp\Tools\RAGFlow\RagflowKnowledgeGraphBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowRaptorBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
+use App\Mcp\Tools\Release\ReleaseAttachArtifactTool;
+use App\Mcp\Tools\Release\ReleaseCreateTool;
+use App\Mcp\Tools\Release\ReleaseGetTool;
+use App\Mcp\Tools\Release\ReleaseListTool;
+use App\Mcp\Tools\Release\ReleasePublishTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\ContactHealthScoreTool;
@@ -857,6 +862,13 @@ class AgentFleetServer extends Server
         CredentialOAuthFinalizeTool::class,
         CredentialListVersionsTool::class,
         CredentialRollbackTool::class,
+
+        // Release (5) — versioned artifact bundles
+        ReleaseListTool::class,
+        ReleaseGetTool::class,
+        ReleaseCreateTool::class,
+        ReleasePublishTool::class,
+        ReleaseAttachArtifactTool::class,
 
         // Workflow (23) — Kestra-inspired YAML Git Sync (build #5)
         WorkflowExportYamlTool::class,

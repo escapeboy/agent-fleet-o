@@ -18,6 +18,8 @@ class CrewDetailPage extends Component
 
     public string $activeTab = 'overview';
 
+    public string $orgChartView = 'chart';
+
     // Editing state
     public bool $editing = false;
 
