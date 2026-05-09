@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\Team;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 class BridgeControllerTest extends ApiTestCase
@@ -356,7 +357,7 @@ class BridgeControllerTest extends ApiTestCase
         Http::assertSent(fn ($request) => ! $request->hasHeader('Authorization'));
     }
 
-    public function test_mcp_call_returns_502_when_http_mode_bridge_responds_non_2xx(): void
+    public function test_mcp_call_returns_502_when_http_mode_bridge_responds_5xx(): void
     {
         $this->actingAsApiUser();
 
@@ -387,6 +388,76 @@ class BridgeControllerTest extends ApiTestCase
             ->assertJsonStructure(['error']);
     }
 
+    public function test_mcp_call_passes_4xx_through_from_http_mode_bridge(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-bridge-4xx',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => 'secret',
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response(
+                ['detail' => "tool not found: 'i_do_not_exist'"],
+                404,
+            ),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'i_do_not_exist', 'arguments' => []],
+        ]);
+
+        // 4xx from the daemon must reach the caller unchanged — neither the
+        // status nor the body is wrapped in a generic 502.
+        $response->assertStatus(404)
+            ->assertExactJson(['detail' => "tool not found: 'i_do_not_exist'"]);
+    }
+
+    public function test_mcp_call_passes_4xx_through_with_non_json_body(): void
+    {
+        $this->actingAsApiUser();
+
+        BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'http-bridge-4xx-text',
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoint_url' => 'https://daemon.example',
+            'endpoint_secret' => null,
+            'endpoints' => [
+                'mcp_servers' => [['name' => 'harbormaster']],
+            ],
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://daemon.example/mcp/harbormaster' => Http::response('Bad Request', 400),
+        ]);
+
+        $response = $this->postJson('/api/v1/bridge/mcp/call', [
+            'server' => 'harbormaster',
+            'method' => 'tools/call',
+            'params' => ['name' => 'whatever', 'arguments' => []],
+        ]);
+
+        // Non-JSON 4xx body falls back to the wrapper shape but keeps the
+        // original status code so callers can distinguish bad-request from
+        // gateway-error semantics.
+        $response->assertStatus(400)
+            ->assertJsonStructure(['error']);
+    }
+
     public function test_mcp_call_returns_502_when_http_mode_bridge_unreachable(): void
     {
         $this->actingAsApiUser();
@@ -406,7 +477,7 @@ class BridgeControllerTest extends ApiTestCase
 
         Http::fake([
             'https://unreachable.example/mcp/harbormaster' => function () {
-                throw new \Illuminate\Http\Client\ConnectionException('connect timeout');
+                throw new ConnectionException('connect timeout');
             },
         ]);
 
