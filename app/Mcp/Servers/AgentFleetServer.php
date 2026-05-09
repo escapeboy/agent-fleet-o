@@ -553,10 +553,11 @@ class AgentFleetServer extends Server
 
     protected string $version = '1.13.0';
 
-    // Return all tools in a single page — MCP clients like Claude.ai/Codex don't follow cursors
-    public int $defaultPaginationLength = 300;
+    // Return all tools in a single page — MCP clients like Claude.ai/Codex/Barsy bug-fix-agent
+    // don't follow cursors. 1000 covers the current ~540 registered tools with headroom.
+    public int $defaultPaginationLength = 1000;
 
-    public int $maxPaginationLength = 300;
+    public int $maxPaginationLength = 1000;
 
     protected string $instructions = <<<'INSTRUCTIONS'
         FleetQ — AI Agent Mission Control Platform (Laravel 12, multi-tenant, event-driven pipeline)
