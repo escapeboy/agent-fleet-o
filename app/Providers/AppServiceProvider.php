@@ -88,11 +88,14 @@ use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Events\SignalAssigned;
+use App\Domain\Signal\Events\SignalCommentAdded;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\CloseBugReportOnPrMergeListener;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\ReDelegateOnReporterFollowupListener;
 use App\Domain\Signal\Listeners\SendSignalAssignedNotification;
 use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
@@ -535,6 +538,13 @@ class AppServiceProvider extends ServiceProvider
 
         // Bug report delegation: advance signal to review when agent experiment completes
         Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
+
+        // Reporter follow-up after a previous attempt landed in Review:
+        // re-engage the agent loop with the new context.
+        Event::listen(SignalCommentAdded::class, ReDelegateOnReporterFollowupListener::class);
+
+        // Bitbucket PR merged → close the originating bug-report Signal.
+        Event::listen(SignalIngested::class, CloseBugReportOnPrMergeListener::class);
 
         // Team member removal: revoke tokens + pause active experiments
         Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);
