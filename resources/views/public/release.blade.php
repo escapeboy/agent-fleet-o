@@ -19,6 +19,28 @@
             @if($release->notes)
                 <p class="mt-4 text-base text-gray-700">{{ $release->notes }}</p>
             @endif
+
+            {{-- Signature verification badge --}}
+            @php
+                $badge = match($verification['status']) {
+                    'verified' => ['icon' => '✓', 'color' => 'green', 'label' => 'Verified', 'desc' => 'Signature valid; signed by team\'s active key.'],
+                    'verified_grace' => ['icon' => '⚠', 'color' => 'amber', 'label' => 'Verified (rotated)', 'desc' => 'Signed by a key in 90-day grace period after rotation.'],
+                    'revoked' => ['icon' => '✗', 'color' => 'red', 'label' => 'Revoked', 'desc' => 'Signing key was revoked. Do not trust this release.'],
+                    'unverified' => ['icon' => '✗', 'color' => 'red', 'label' => 'Unverified', 'desc' => 'Signature did not match — content may have been tampered with.'],
+                    default => ['icon' => '—', 'color' => 'gray', 'label' => 'Unsigned', 'desc' => 'This release predates signing or no signing key was configured.'],
+                };
+            @endphp
+            <div class="mt-4 inline-flex items-start gap-2 rounded-lg border border-{{ $badge['color'] }}-200 bg-{{ $badge['color'] }}-50 px-3 py-2 text-xs text-{{ $badge['color'] }}-700"
+                 data-test="release-signature-badge"
+                 data-test-status="{{ $verification['status'] }}">
+                <span class="font-bold">{{ $badge['icon'] }}</span>
+                <span>
+                    <span class="font-semibold">{{ $badge['label'] }}</span> · {{ $badge['desc'] }}
+                    @if($verification['kid'])
+                        <br><span class="font-mono text-[10px] opacity-70">kid: {{ $verification['kid'] }}</span>
+                    @endif
+                </span>
+            </div>
         </header>
 
         <section>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Release\Crypto\Actions\VerifyReleaseSignatureAction;
 use App\Domain\Release\Models\Release;
 use Illuminate\Http\Response;
 
@@ -22,10 +23,12 @@ class PublicReleaseController extends Controller
         }
 
         $artifacts = $release->artifacts()->orderByPivot('sort_order')->get();
+        $verification = app(VerifyReleaseSignatureAction::class)->execute($release);
 
         return response()->view('public.release', [
             'release' => $release,
             'artifacts' => $artifacts,
+            'verification' => $verification,
         ]);
     }
 }

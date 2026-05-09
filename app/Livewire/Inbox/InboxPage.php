@@ -8,7 +8,9 @@ use App\Domain\Approval\Actions\ApproveAction;
 use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Inbox\Actions\RefineTriageWithLlmAction;
 use App\Domain\Inbox\Models\InboxQueue;
+use App\Domain\Inbox\Services\TriageFeedbackTracker;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Livewire\Inbox\DTOs\InboxItemDTO;
@@ -178,7 +180,7 @@ class InboxPage extends Component
         session()->flash('message', "Rejected {$count} item(s).");
     }
 
-    public function quickApprove(string $approvalId, ApproveAction $action): void
+    public function quickApprove(string $approvalId, ApproveAction $action, TriageFeedbackTracker $feedback): void
     {
         Gate::authorize('edit-content');
 
@@ -188,10 +190,14 @@ class InboxPage extends Component
         }
 
         $action->execute(approvalRequest: $approval, reviewerId: (string) auth()->id());
+
+        $kind = $approval->isHumanTask() ? 'human_task' : 'approval';
+        $feedback->recordAction($approval->team_id, $kind, $approval->id, 'approved');
+
         session()->flash('message', 'Approved.');
     }
 
-    public function quickReject(string $approvalId, RejectAction $action): void
+    public function quickReject(string $approvalId, RejectAction $action, TriageFeedbackTracker $feedback): void
     {
         Gate::authorize('edit-content');
 
@@ -205,7 +211,32 @@ class InboxPage extends Component
             reviewerId: (string) auth()->id(),
             reason: 'Rejected from inbox.',
         );
+
+        $kind = $approval->isHumanTask() ? 'human_task' : 'approval';
+        $feedback->recordAction($approval->team_id, $kind, $approval->id, 'rejected');
+
         session()->flash('message', 'Rejected.');
+    }
+
+    public function refineWithLlm(string $approvalOrProposalId, string $kind, RefineTriageWithLlmAction $refiner): void
+    {
+        Gate::authorize('edit-content');
+
+        $item = $kind === 'proposal'
+            ? OutboundProposal::find($approvalOrProposalId)
+            : ApprovalRequest::find($approvalOrProposalId);
+
+        if (! $item) {
+            return;
+        }
+
+        $verdict = $refiner->execute($item);
+        session()->flash('message', sprintf(
+            'AI triage: %s (score %.2f). %s',
+            $verdict->recommendation,
+            $verdict->score,
+            $verdict->reason,
+        ));
     }
 
     public function render()

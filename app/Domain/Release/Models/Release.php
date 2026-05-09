@@ -32,6 +32,9 @@ class Release extends Model
         'metadata',
         'published_at',
         'archived_at',
+        'signature',
+        'signing_key_id',
+        'signed_at',
     ];
 
     protected function casts(): array
@@ -41,6 +44,7 @@ class Release extends Model
             'metadata' => 'array',
             'published_at' => 'datetime',
             'archived_at' => 'datetime',
+            'signed_at' => 'datetime',
         ];
     }
 

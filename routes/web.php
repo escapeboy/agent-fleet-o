@@ -9,6 +9,7 @@ use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
+use App\Http\Controllers\ReleaseKeysController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
@@ -171,6 +172,12 @@ Route::get('/.well-known/change-password', fn () => redirect(route('profile').'#
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 Route::get('/share/release/{shareToken}', [PublicReleaseController::class, 'show'])->name('releases.share');
+
+// Public JWKS endpoint — release signing public keys (no auth, throttled).
+Route::get('/.well-known/release-keys.json', ReleaseKeysController::class)
+    ->name('release-keys.jwks')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
 
 // ── Social Login (OAuth) ──────────────────────────────────────────────────────
 // Guest-only initiation + callback routes (rate limited)
