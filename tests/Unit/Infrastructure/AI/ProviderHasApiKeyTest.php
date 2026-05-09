@@ -119,7 +119,7 @@ class ProviderHasApiKeyTest extends TestCase
             config(["ai.providers.{$provider}.key" => $key]);
             $this->assertTrue(
                 $this->invoke($provider),
-                "providerHasApiKey({$provider}) should return true when ai.providers.{$provider}.key is set"
+                "providerHasApiKey({$provider}) should return true when ai.providers.{$provider}.key is set",
             );
         }
     }
