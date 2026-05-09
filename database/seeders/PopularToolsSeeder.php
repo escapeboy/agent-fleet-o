@@ -148,6 +148,96 @@ class PopularToolsSeeder extends Seeder
             // ─── MCP Stdio Tools ────────────────────────────────────
 
             [
+                'name' => 'Harbormaster',
+                'slug' => 'harbormaster',
+                'description' => 'Project router MCP — ask any of your local projects (or remote SSH hosts) a question without changing cwd. Each project loads its own CLAUDE.md and Serena memories before answering. Read-only delegation in v1; allow_writes returns an error. Streams partial output via SSE for ask_project. Requires `uvx` (or `pipx`) and a per-project Anthropic seat. Part of the FleetQ ecosystem.',
+                'type' => ToolType::McpStdio,
+                'risk_level' => ToolRiskLevel::Read,
+                'transport_config' => [
+                    'command' => 'uvx',
+                    'args' => ['--prerelease=allow', 'harbormaster-mcp'],
+                    'env' => [],
+                ],
+                'tool_definitions' => [
+                    [
+                        'name' => 'list_projects',
+                        'description' => 'Enumerate configured projects (local) or remote dir listing (SSH).',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'host' => ['type' => 'string', 'description' => 'Optional host alias from ~/.ssh/config; omit or set to "local" for local projects'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => 'list_hosts',
+                        'description' => 'List configured [hosts] entries plus ~/.ssh/config Host aliases.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => new \stdClass,
+                        ],
+                    ],
+                    [
+                        'name' => 'project_status',
+                        'description' => 'Recent git log, Serena memories, log tails for a single project.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Project directory name'],
+                                'host' => ['type' => 'string', 'description' => 'Optional SSH host alias'],
+                            ],
+                            'required' => ['name'],
+                        ],
+                    ],
+                    [
+                        'name' => 'ask_project',
+                        'description' => 'Spawn a Claude Code subagent inside the project, return a markdown summary (≤ 800 words). Streams partial output when called over SSE.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Project directory name'],
+                                'question' => ['type' => 'string', 'description' => 'Question to ask the subagent'],
+                                'max_turns' => ['type' => 'integer', 'description' => 'Max conversation turns (default 5)'],
+                                'host' => ['type' => 'string', 'description' => 'Optional SSH host alias'],
+                            ],
+                            'required' => ['name', 'question'],
+                        ],
+                    ],
+                    [
+                        'name' => 'delegate_task',
+                        'description' => 'Delegate a task to a project subagent. Read-only in v1 (allow_writes=true returns an error).',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string', 'description' => 'Project directory name'],
+                                'task' => ['type' => 'string', 'description' => 'Task description'],
+                                'deliverable' => ['type' => 'string', 'description' => 'Expected output shape'],
+                                'allow_writes' => ['type' => 'boolean', 'description' => 'Reserved for v1.x; v1 fails closed when true'],
+                                'host' => ['type' => 'string', 'description' => 'Optional SSH host alias'],
+                            ],
+                            'required' => ['name', 'task', 'deliverable'],
+                        ],
+                    ],
+                    [
+                        'name' => 'fan_out_ask',
+                        'description' => 'Ask the same question of N projects in parallel. Returns one markdown section per target.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'question' => ['type' => 'string', 'description' => 'Question to ask each project'],
+                                'project_filter' => ['type' => 'string', 'description' => 'Optional substring filter on project names'],
+                                'host_filter' => ['type' => 'string', 'description' => 'Optional substring filter on host aliases'],
+                                'max_concurrency' => ['type' => 'integer', 'description' => 'Max parallel subagents (default 5)'],
+                                'max_turns' => ['type' => 'integer', 'description' => 'Max conversation turns per subagent (default 3)'],
+                            ],
+                            'required' => ['question'],
+                        ],
+                    ],
+                ],
+                'settings' => ['timeout' => 90],
+            ],
+
+            [
                 'name' => 'Web Fetch',
                 'slug' => 'web-fetch',
                 'description' => 'Fetch and read web pages, converting HTML to markdown. Useful for agents that need to retrieve information from URLs, read documentation, or scrape web content.',
