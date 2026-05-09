@@ -32,10 +32,16 @@ class SignalStatusTransitionMap
         SignalStatus::AgentFixing->value => [
             SignalStatus::Review->value,
             SignalStatus::InProgress->value,
+            // Reporter follow-up may re-engage the agent loop while the previous
+            // attempt is still mid-fix.
+            SignalStatus::DelegatedToAgent->value,
         ],
         SignalStatus::Review->value => [
             SignalStatus::Resolved->value,
             SignalStatus::InProgress->value,
+            // Reporter follow-up may re-engage the agent loop after the previous
+            // attempt landed in Review without resolving the bug.
+            SignalStatus::DelegatedToAgent->value,
         ],
         SignalStatus::Resolved->value => [],
         SignalStatus::Dismissed->value => [],

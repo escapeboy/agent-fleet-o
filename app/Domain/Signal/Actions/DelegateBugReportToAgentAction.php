@@ -23,8 +23,12 @@ class DelegateBugReportToAgentAction
         private readonly TransitionExperimentAction $transitionExperiment,
     ) {}
 
-    public function execute(Signal $signal, User $actor, ?string $agentId = null): Experiment
-    {
+    public function execute(
+        Signal $signal,
+        User $actor,
+        ?string $agentId = null,
+        ?string $additionalContext = null,
+    ): Experiment {
         $payload = $signal->payload ?? [];
         $title = $payload['title'] ?? 'Bug report';
         $projectKey = $signal->project_key ?? ($payload['project'] ?? 'unknown');
@@ -90,6 +94,11 @@ class DelegateBugReportToAgentAction
         $commentBlock = $this->buildCommentBlock($signal);
         if ($commentBlock !== null) {
             $structuredBlock[] = $commentBlock;
+        }
+
+        if ($additionalContext !== null && $additionalContext !== '') {
+            // Hard cap and control-char strip — same posture the rest of the thesis uses.
+            $structuredBlock[] = '**Re-delegation Context:**'."\n".$this->sanitize($additionalContext, 4000);
         }
 
         $thesis = implode("\n\n", array_filter([
