@@ -487,7 +487,10 @@ class FallbackAiGateway implements AiGatewayInterface
             return true;
         }
 
+        // config/ai.php declares providers as `'key' => env(...)`; keep `.api_key`
+        // as a fallback for forks that already standardised on that field name.
         $candidates = [
+            config("ai.providers.{$providerName}.key"),
             config("ai.providers.{$providerName}.api_key"),
             config("services.{$providerName}.key"),
             config("services.{$providerName}"),
