@@ -22,6 +22,7 @@ class SignalComment extends Model implements HasMedia
         'author_type',
         'body',
         'widget_visible',
+        'idempotency_key',
     ];
 
     protected function casts(): array
