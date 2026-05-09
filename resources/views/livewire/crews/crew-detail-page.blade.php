@@ -85,7 +85,9 @@
         </div>
 
         @if($orgChartView === 'chart')
-            <x-crew-org-chart :crew="$crew" :members="$members" />
+            <div @if($hasActiveExecution) wire:poll.5s @endif>
+                <x-crew-org-chart :crew="$crew" :members="$members" :active-agent-ids="$activeAgentIds" />
+            </div>
         @else
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {{-- Coordinator --}}

@@ -18,6 +18,10 @@ final class InboxItemDTO
         public readonly ?CarbonInterface $slaDeadline,
         public readonly string $slaState,    // ok | warn | red | none
         public readonly ?string $detailUrl,
+        public readonly float $triageScore = 0.0,
+        public readonly string $triageRec = 'low_priority',
+        public readonly string $triageLabel = 'Low priority',
+        public readonly string $triageColor = 'gray',
     ) {}
 
     public static function slaState(?CarbonInterface $deadline): string

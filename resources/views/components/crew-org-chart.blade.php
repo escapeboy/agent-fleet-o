@@ -65,7 +65,7 @@
     <div class="hidden md:flex md:flex-col md:items-center">
         {{-- Coordinator tile --}}
         @if($coordinator)
-            <div class="{{ $coordinatorTile }} {{ in_array($coordinator->id, $activeAgentIds) ? 'ring-2 ring-blue-400 ring-offset-2' : '' }}"
+            <div class="{{ $coordinatorTile }} {{ in_array($coordinator->id, $activeAgentIds) ? 'ring-2 ring-blue-400 ring-offset-2 animate-pulse' : '' }}"
                  data-test="org-chart-coordinator">
                 <div class="mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                     <i class="fa-solid fa-shield text-sm"></i>
@@ -90,11 +90,27 @@
             <div class="h-6 w-px bg-gray-300"></div>
 
             {{-- Bottom row: QA + workers --}}
-            <div class="flex flex-row flex-wrap items-start justify-center gap-x-6 gap-y-4">
+            <div class="flex flex-row flex-wrap items-start justify-center gap-x-6 gap-y-4"
+                 x-data="{
+                     draggedId: null,
+                     onDrop(targetId) {
+                         if (!this.draggedId || this.draggedId === targetId) return;
+                         const tiles = Array.from(this.$el.querySelectorAll('[data-worker-id]'));
+                         const ids = tiles.map(t => t.getAttribute('data-worker-id'));
+                         const fromIdx = ids.indexOf(this.draggedId);
+                         const toIdx = ids.indexOf(targetId);
+                         if (fromIdx < 0 || toIdx < 0) return;
+                         const reordered = [...ids];
+                         const [moved] = reordered.splice(fromIdx, 1);
+                         reordered.splice(toIdx, 0, moved);
+                         this.$wire.call('reorderWorkers', reordered);
+                         this.draggedId = null;
+                     }
+                 }">
                 @if($qa)
                     <div class="flex flex-col items-center">
                         <div class="h-4 w-px bg-gray-300"></div>
-                        <div class="{{ $qaTile }} {{ in_array($qa->id, $activeAgentIds) ? 'ring-2 ring-purple-400 ring-offset-2' : '' }}"
+                        <div class="{{ $qaTile }} {{ in_array($qa->id, $activeAgentIds) ? 'ring-2 ring-purple-400 ring-offset-2 animate-pulse' : '' }}"
                              data-test="org-chart-qa">
                             <div class="mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-600">
                                 <i class="fa-solid fa-circle-check text-sm"></i>
@@ -111,9 +127,14 @@
                 @endif
 
                 @foreach($workers as $worker)
-                    <div class="flex flex-col items-center">
+                    <div class="flex flex-col items-center"
+                         data-worker-id="{{ $worker->id }}"
+                         draggable="true"
+                         @dragstart="draggedId = '{{ $worker->id }}'"
+                         @dragover.prevent
+                         @drop.prevent="onDrop('{{ $worker->id }}')">
                         <div class="h-4 w-px bg-gray-300"></div>
-                        <div class="{{ $workerTile }} {{ in_array($worker->agent_id, $activeAgentIds) ? 'ring-2 ring-gray-400 ring-offset-2' : '' }}"
+                        <div class="{{ $workerTile }} cursor-move {{ in_array($worker->agent_id, $activeAgentIds) ? 'ring-2 ring-gray-400 ring-offset-2 animate-pulse' : '' }}"
                              data-test="org-chart-worker">
                             <div class="mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600">
                                 <i class="fa-solid fa-user-gear text-sm"></i>

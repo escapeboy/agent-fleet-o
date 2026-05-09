@@ -88,6 +88,7 @@ use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Releases\ReleaseDetailPage;
+use App\Livewire\Releases\ReleaseDiffPage;
 use App\Livewire\Releases\ReleaseListPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
@@ -333,6 +334,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
 
     Route::get('/releases', ReleaseListPage::class)->name('releases.index');
+    Route::get('/releases/{release}/diff', ReleaseDiffPage::class)->name('releases.diff');
     Route::get('/releases/{release}', ReleaseDetailPage::class)->name('releases.show');
 
     Route::get('/inbox', InboxPage::class)->name('inbox.index');

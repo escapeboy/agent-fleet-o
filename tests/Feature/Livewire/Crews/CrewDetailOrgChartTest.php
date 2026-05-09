@@ -6,10 +6,14 @@ namespace Tests\Feature\Livewire\Crews;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\AgentChatProtocol\Models\ExternalAgent;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Enums\CrewStatus;
+use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
+use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Models\Team;
 use App\Livewire\Crews\CrewDetailPage;
 use App\Models\User;
@@ -119,6 +123,43 @@ class CrewDetailOrgChartTest extends TestCase
 
         Livewire::test(CrewDetailPage::class, ['crew' => $crew])
             ->assertSee('external');
+    }
+
+    public function test_it_marks_active_agents_during_running_execution(): void
+    {
+        $crew = $this->makeCrew(workerCount: 2);
+        $worker = $crew->workerMembers()->first();
+
+        $execution = CrewExecution::create([
+            'team_id' => $this->team->id,
+            'crew_id' => $crew->id,
+            'user_id' => $this->user->id,
+            'status' => CrewExecutionStatus::Executing,
+            'goal' => 'Test goal',
+        ]);
+
+        CrewTaskExecution::create([
+            'team_id' => $this->team->id,
+            'crew_execution_id' => $execution->id,
+            'agent_id' => $worker->agent_id,
+            'title' => 'Running task',
+            'description' => 'Test',
+            'status' => CrewTaskStatus::Running,
+            'sort_order' => 0,
+        ]);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertSeeHtml('animate-pulse')
+            ->assertSeeHtml('wire:poll.5s');
+    }
+
+    public function test_it_does_not_pulse_when_no_running_execution(): void
+    {
+        $crew = $this->makeCrew(workerCount: 1);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertDontSeeHtml('animate-pulse')
+            ->assertDontSeeHtml('wire:poll.5s');
     }
 
     public function test_it_toggles_between_chart_and_list_views(): void
