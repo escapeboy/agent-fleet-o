@@ -3,6 +3,7 @@
 namespace App\Domain\Signal\Actions;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
@@ -19,6 +20,7 @@ class DelegateBugReportToAgentAction
     public function __construct(
         private readonly CreateExperimentAction $createExperiment,
         private readonly UpdateSignalStatusAction $updateStatus,
+        private readonly TransitionExperimentAction $transitionExperiment,
     ) {}
 
     public function execute(Signal $signal, User $actor, ?string $agentId = null): Experiment
@@ -132,10 +134,16 @@ class DelegateBugReportToAgentAction
             actor: $actor,
         );
 
-        // Auto-advance experiment to Scoring
-        $experiment->update(['status' => ExperimentStatus::Scoring]);
-
-        return $experiment;
+        // Auto-advance experiment to Scoring via the canonical state machine so
+        // ExperimentTransitioned fires → DispatchNextStageJob queues RunScoringStage.
+        // A raw $experiment->update(['status' => Scoring]) would freeze the experiment
+        // in scoring forever (no event, no listener, no queue job).
+        return $this->transitionExperiment->execute(
+            experiment: $experiment,
+            toState: ExperimentStatus::Scoring,
+            reason: 'Bug report delegated to agent',
+            actorId: $actor->id,
+        );
     }
 
     /**

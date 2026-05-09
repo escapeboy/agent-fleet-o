@@ -3,8 +3,12 @@
 namespace Tests\Feature\Domain\Signal;
 
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
+use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
 use App\Domain\Signal\Models\Signal;
@@ -67,7 +71,12 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $updateStatus = Mockery::mock(UpdateSignalStatusAction::class);
         $updateStatus->shouldReceive('execute')->once();
 
-        return new DelegateBugReportToAgentAction($createExperiment, $updateStatus);
+        $transitionExperiment = Mockery::mock(TransitionExperimentAction::class);
+        $transitionExperiment->shouldReceive('execute')
+            ->once()
+            ->andReturnUsing(fn (Experiment $exp) => $exp);
+
+        return new DelegateBugReportToAgentAction($createExperiment, $updateStatus, $transitionExperiment);
     }
 
     public function test_signal_with_ai_extracted_adds_structured_sections_to_thesis(): void
@@ -256,6 +265,41 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $this->assertInstanceOf(Experiment::class, $experiment);
         $this->assertInstanceOf(ExperimentTrack::class, $experiment->track);
         $this->assertContains($experiment->track, ExperimentTrack::cases());
+    }
+
+    /**
+     * Regression: DelegateBugReportToAgentAction used to advance the new experiment
+     * with `$experiment->update(['status' => Scoring])`, which bypassed the state
+     * machine — no audit row, no event, no queue job, experiment frozen in scoring
+     * forever. The fix is to call TransitionExperimentAction so DispatchNextStageJob
+     * can pick up the ExperimentTransitioned event and queue RunScoringStage.
+     */
+    public function test_delegation_advances_through_state_machine(): void
+    {
+        $signal = $this->makeSignal();
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertSame(ExperimentStatus::Scoring, $experiment->status);
+
+        // Audit row proves the canonical path was used (raw column updates don't write these).
+        $transitions = ExperimentStateTransition::withoutGlobalScopes()
+            ->where('experiment_id', $experiment->id)
+            ->get();
+        $this->assertCount(1, $transitions);
+        $this->assertSame('draft', $transitions->first()->from_state);
+        $this->assertSame('scoring', $transitions->first()->to_state);
+
+        // Event fired → DispatchNextStageJob listener would queue RunScoringStage in real run.
+        Event::assertDispatched(
+            ExperimentTransitioned::class,
+            fn (ExperimentTransitioned $e) => $e->experiment->id === $experiment->id
+                && $e->fromState === ExperimentStatus::Draft
+                && $e->toState === ExperimentStatus::Scoring,
+        );
     }
 
     public function test_thesis_sanitizes_reporter_comments(): void
