@@ -2,11 +2,13 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\BugReportProjectConfig;
 use App\Domain\Signal\Models\Signal;
@@ -124,12 +126,15 @@ class DelegateBugReportToAgentAction
             ...$structuredBlock,
         ]));
 
+        $workflowId = $this->resolveDefaultWorkflowId($agentId, $signal->team_id);
+
         $experiment = $this->createExperiment->execute(
             userId: $actor->id,
             title: "Fix bug: {$title}",
             thesis: $thesis,
             track: ExperimentTrack::Debug->value,
             teamId: $signal->team_id,
+            workflowId: $workflowId,
             agentId: $agentId,
         );
 
@@ -153,6 +158,40 @@ class DelegateBugReportToAgentAction
             reason: 'Bug report delegated to agent',
             actorId: $actor->id,
         );
+    }
+
+    /**
+     * Resolve the workflow_id to materialize for this bug-fix experiment.
+     *
+     * Order: agent's default_workflow_id → team's default_bug_fix_workflow_id →
+     * null (legacy stage path; CreateExperimentAction skips materialization).
+     *
+     * Agent and team lookups bypass TeamScope intentionally — this action runs
+     * during webhook ingestion where the current-team context may not be set.
+     */
+    private function resolveDefaultWorkflowId(?string $agentId, ?string $teamId): ?string
+    {
+        if ($agentId !== null) {
+            $agentWorkflow = Agent::withoutGlobalScopes()
+                ->where('id', $agentId)
+                ->value('default_workflow_id');
+
+            if (is_string($agentWorkflow) && $agentWorkflow !== '') {
+                return $agentWorkflow;
+            }
+        }
+
+        if ($teamId !== null) {
+            $teamWorkflow = Team::withoutGlobalScopes()
+                ->where('id', $teamId)
+                ->value('default_bug_fix_workflow_id');
+
+            if (is_string($teamWorkflow) && $teamWorkflow !== '') {
+                return $teamWorkflow;
+            }
+        }
+
+        return null;
     }
 
     /**
