@@ -108,6 +108,7 @@ class Agent extends Model
         'chat_protocol_config',
         'chat_protocol_secret',
         'tool_deny_list',
+        'default_workflow_id',
     ];
 
     protected function casts(): array

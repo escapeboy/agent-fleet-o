@@ -28,6 +28,8 @@ enum WorkflowNodeType: string
     case WorkflowRef = 'workflow_ref';
     case SignalRoute = 'signal_route';
     case ExternalAgent = 'external_agent';
+    case ClassifyPrTier = 'classify_pr_tier';
+    case BitbucketPrMerge = 'bitbucket_pr_merge';
 
     public function label(): string
     {
@@ -56,6 +58,8 @@ enum WorkflowNodeType: string
             self::WorkflowRef => 'Workflow Reference',
             self::SignalRoute => 'Signal Route',
             self::ExternalAgent => 'External Agent',
+            self::ClassifyPrTier => 'Classify PR Tier',
+            self::BitbucketPrMerge => 'Merge Bitbucket PR',
         };
     }
 
@@ -86,6 +90,8 @@ enum WorkflowNodeType: string
             self::WorkflowRef => 'arrow-top-right-on-square',
             self::SignalRoute => 'signal',
             self::ExternalAgent => 'link',
+            self::ClassifyPrTier => 'tag',
+            self::BitbucketPrMerge => 'check-circle',
         };
     }
 
@@ -205,6 +211,27 @@ enum WorkflowNodeType: string
                 'inputs' => [['name' => 'context', 'type' => 'text|structured']],
                 'outputs' => [['name' => 'result', 'type' => 'text|structured'], ['name' => 'session_id', 'type' => 'string']],
             ],
+            self::ClassifyPrTier => [
+                'inputs' => [['name' => 'pr_url', 'type' => 'text']],
+                'outputs' => [
+                    ['name' => 'tier', 'type' => 'text'],
+                    ['name' => 'reason', 'type' => 'text'],
+                    ['name' => 'pr_url', 'type' => 'text'],
+                    ['name' => 'files_changed', 'type' => 'array'],
+                    ['name' => 'files_count', 'type' => 'integer'],
+                    ['name' => 'lines_changed', 'type' => 'integer'],
+                ],
+            ],
+            self::BitbucketPrMerge => [
+                'inputs' => [
+                    ['name' => 'pr_url', 'type' => 'text'],
+                    ['name' => 'merge_strategy', 'type' => 'text'],
+                ],
+                'outputs' => [
+                    ['name' => 'merged', 'type' => 'boolean'],
+                    ['name' => 'merge_sha', 'type' => 'text'],
+                ],
+            ],
             default => [
                 'inputs' => [['name' => 'data', 'type' => 'any']],
                 'outputs' => [['name' => 'data', 'type' => 'any']],
@@ -248,6 +275,8 @@ enum WorkflowNodeType: string
             self::KnowledgeRetrieval,
             self::WorkflowRef,
             self::ExternalAgent,
+            self::ClassifyPrTier,
+            self::BitbucketPrMerge,
         ]);
     }
 }
