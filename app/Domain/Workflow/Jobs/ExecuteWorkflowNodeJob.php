@@ -6,6 +6,8 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\PlaybookStep;
 use App\Domain\Workflow\Contracts\NodeExecutorInterface;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
+use App\Domain\Workflow\Executors\BitbucketPrMergeNodeExecutor;
+use App\Domain\Workflow\Executors\ClassifyPrTierNodeExecutor;
 use App\Domain\Workflow\Executors\HttpRequestNodeExecutor;
 use App\Domain\Workflow\Executors\KnowledgeRetrievalNodeExecutor;
 use App\Domain\Workflow\Executors\LlmNodeExecutor;
@@ -162,6 +164,8 @@ class ExecuteWorkflowNodeJob implements ShouldQueue
             WorkflowNodeType::TemplateTransform => app(TemplateTransformNodeExecutor::class),
             WorkflowNodeType::KnowledgeRetrieval => app(KnowledgeRetrievalNodeExecutor::class),
             WorkflowNodeType::ExternalAgent => app(ExternalAgentNodeExecutor::class),
+            WorkflowNodeType::ClassifyPrTier => app(ClassifyPrTierNodeExecutor::class),
+            WorkflowNodeType::BitbucketPrMerge => app(BitbucketPrMergeNodeExecutor::class),
             default => throw new \InvalidArgumentException("No executor for node type: {$type->value}"),
         };
     }

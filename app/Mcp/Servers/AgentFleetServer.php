@@ -521,6 +521,7 @@ use App\Mcp\Tools\Website\WebsitePageUnpublishTool;
 use App\Mcp\Tools\Website\WebsitePageUpdateTool;
 use App\Mcp\Tools\Website\WebsiteUnpublishTool;
 use App\Mcp\Tools\Website\WebsiteUpdateTool;
+use App\Mcp\Tools\Workflow\ClassifyPrTierTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDeactivateTool;
@@ -890,6 +891,7 @@ class AgentFleetServer extends Server
         WorkflowCreateTool::class,
         WorkflowUpdateTool::class,
         WorkflowValidateTool::class,
+        ClassifyPrTierTool::class,
         WorkflowActivateTool::class,
         WorkflowDuplicateTool::class,
         WorkflowSaveGraphTool::class,

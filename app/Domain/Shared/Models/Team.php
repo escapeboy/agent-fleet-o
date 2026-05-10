@@ -60,6 +60,7 @@ class Team extends Model
         'widget_public_key',
         'dashboard_config',
         'git_webhook_secret',
+        'default_bug_fix_workflow_id',
     ];
 
     protected $hidden = [
