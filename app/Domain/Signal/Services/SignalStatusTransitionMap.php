@@ -28,6 +28,12 @@ class SignalStatusTransitionMap
         SignalStatus::DelegatedToAgent->value => [
             SignalStatus::AgentFixing->value,
             SignalStatus::InProgress->value,
+            // T1 auto-merge path (workflow's bitbucket_pr_merge node merges the PR
+            // before any human review step runs): the Bitbucket webhook fires
+            // CloseBugReportOnPrMergeListener while the Signal is still
+            // DelegatedToAgent, so the listener needs this edge to transition to
+            // Resolved without throwing InvalidSignalTransitionException.
+            SignalStatus::Resolved->value,
         ],
         SignalStatus::AgentFixing->value => [
             SignalStatus::Review->value,
@@ -35,6 +41,10 @@ class SignalStatusTransitionMap
             // Reporter follow-up may re-engage the agent loop while the previous
             // attempt is still mid-fix.
             SignalStatus::DelegatedToAgent->value,
+            // Same T1 auto-merge consideration as DelegatedToAgent — the webhook
+            // may arrive mid-fix when the merge happens before status flips back
+            // to Review.
+            SignalStatus::Resolved->value,
         ],
         SignalStatus::Review->value => [
             SignalStatus::Resolved->value,
