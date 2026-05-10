@@ -46,6 +46,7 @@ class GraphValidator
         $this->validateActivationModes();
         $this->validateSubWorkflowNodes();
         $this->validateCompensationNodes();
+        $this->validateT4HumanTaskFloor();
         $this->validateDataTypeCompatibility();
 
         return $this->errors;
@@ -624,6 +625,105 @@ class GraphValidator
                 ];
             }
         }
+    }
+
+    /**
+     * Enforce the T4 server-side floor: any path from a Conditional node's "T4"
+     * case branch to a BitbucketPrMerge node must pass through at least one
+     * HumanTask node. PRs targeting the project's promote_branch must always
+     * require human approval before auto-merge — the workflow builder UI may
+     * configure tier policies per project, but cannot bypass this invariant.
+     */
+    private function validateT4HumanTaskFloor(): void
+    {
+        $mergeNodeIds = $this->nodes
+            ->where('type', WorkflowNodeType::BitbucketPrMerge)
+            ->pluck('id')
+            ->all();
+
+        if (empty($mergeNodeIds)) {
+            return;
+        }
+
+        $adjacency = [];
+        foreach ($this->edges as $edge) {
+            $adjacency[$edge->source_node_id][] = $edge->target_node_id;
+        }
+
+        $humanTaskNodeIds = $this->nodes
+            ->where('type', WorkflowNodeType::HumanTask)
+            ->pluck('id')
+            ->all();
+
+        $conditionalNodes = $this->nodes->where('type', WorkflowNodeType::Conditional);
+
+        foreach ($conditionalNodes as $conditional) {
+            $t4Edges = $this->edges
+                ->where('source_node_id', $conditional->id)
+                ->filter(fn ($edge) => is_string($edge->case_value)
+                    && strcasecmp(trim($edge->case_value), 'T4') === 0);
+
+            foreach ($t4Edges as $t4Edge) {
+                if ($this->reachesMergeWithoutHumanTask(
+                    $t4Edge->target_node_id,
+                    $adjacency,
+                    $mergeNodeIds,
+                    $humanTaskNodeIds,
+                )) {
+                    $this->errors[] = [
+                        'type' => 't4_floor_violation',
+                        'message' => sprintf(
+                            "T4 floor: PRs targeting promote_branch must require human approval before auto-merge. Conditional '%s' routes T4 directly to a Bitbucket merge without an intervening Human Task.",
+                            $conditional->label,
+                        ),
+                        'node_id' => $conditional->id,
+                        'edge_id' => $t4Edge->id,
+                    ];
+
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * BFS from $startNodeId. Returns true if any path reaches a node in
+     * $mergeNodeIds without first encountering a node in $humanTaskNodeIds.
+     *
+     * @param  array<string, list<string>>  $adjacency
+     * @param  list<string>  $mergeNodeIds
+     * @param  list<string>  $humanTaskNodeIds
+     */
+    private function reachesMergeWithoutHumanTask(
+        string $startNodeId,
+        array $adjacency,
+        array $mergeNodeIds,
+        array $humanTaskNodeIds,
+    ): bool {
+        $queue = [$startNodeId];
+        $visited = [$startNodeId => true];
+
+        while (! empty($queue)) {
+            $currentId = array_shift($queue);
+
+            if (in_array($currentId, $mergeNodeIds, true)) {
+                return true;
+            }
+
+            // HumanTask is a barrier — paths through it are safe.
+            if (in_array($currentId, $humanTaskNodeIds, true)) {
+                continue;
+            }
+
+            foreach ($adjacency[$currentId] ?? [] as $neighbor) {
+                if (! isset($visited[$neighbor])) {
+                    $visited[$neighbor] = true;
+                    $queue[] = $neighbor;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function validateDataTypeCompatibility(): void

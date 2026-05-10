@@ -114,6 +114,69 @@ class BitbucketBasicAuthDriver
             ->json();
     }
 
+    /**
+     * Fetch a PR's diffstat — file list with per-file lines added/removed counts
+     * plus the PR's source/destination branch metadata.
+     *
+     * @return array{
+     *     pr_url: string,
+     *     source_branch: string,
+     *     destination_branch: string,
+     *     state: string,
+     *     files: list<array{path: string, lines_added: int, lines_removed: int, status: string}>,
+     *     totals: array{files: int, lines_added: int, lines_removed: int},
+     * }
+     */
+    public function getPullRequestDiffStat(Credential $credential, string $repoSlug, int $prId): array
+    {
+        $repo = $this->assertWorkspaceAllowed($credential, $repoSlug);
+
+        $pr = $this->http($credential)
+            ->get(self::API_BASE."/repositories/{$repo}/pullrequests/{$prId}")
+            ->throw()
+            ->json();
+
+        $diffstatResponse = $this->http($credential)
+            ->get(self::API_BASE."/repositories/{$repo}/pullrequests/{$prId}/diffstat", [
+                'pagelen' => 100,
+            ])
+            ->throw()
+            ->json();
+
+        $files = [];
+        $totalAdded = 0;
+        $totalRemoved = 0;
+
+        foreach ($diffstatResponse['values'] ?? [] as $entry) {
+            $path = $entry['new']['path'] ?? $entry['old']['path'] ?? '';
+            $linesAdded = (int) ($entry['lines_added'] ?? 0);
+            $linesRemoved = (int) ($entry['lines_removed'] ?? 0);
+
+            $files[] = [
+                'path' => $path,
+                'lines_added' => $linesAdded,
+                'lines_removed' => $linesRemoved,
+                'status' => (string) ($entry['status'] ?? 'modified'),
+            ];
+
+            $totalAdded += $linesAdded;
+            $totalRemoved += $linesRemoved;
+        }
+
+        return [
+            'pr_url' => (string) ($pr['links']['html']['href'] ?? ''),
+            'source_branch' => (string) ($pr['source']['branch']['name'] ?? ''),
+            'destination_branch' => (string) ($pr['destination']['branch']['name'] ?? ''),
+            'state' => (string) ($pr['state'] ?? 'OPEN'),
+            'files' => $files,
+            'totals' => [
+                'files' => count($files),
+                'lines_added' => $totalAdded,
+                'lines_removed' => $totalRemoved,
+            ],
+        ];
+    }
+
     public function mergePullRequest(Credential $credential, string $repoSlug, int $prId, ?string $mergeStrategy = null): array
     {
         $repo = $this->assertWorkspaceAllowed($credential, $repoSlug);
