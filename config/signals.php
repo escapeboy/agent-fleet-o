@@ -50,6 +50,15 @@ return [
         'widget_comment_attachments_enabled' => (bool) env('BUG_REPORT_WIDGET_COMMENT_ATTACHMENTS', true),
         'widget_comment_max_attachments' => (int) env('BUG_REPORT_WIDGET_COMMENT_MAX_ATTACHMENTS', 4),
         'widget_comment_max_attachment_mb' => (int) env('BUG_REPORT_WIDGET_COMMENT_MAX_ATTACHMENT_MB', 5),
+
+        /*
+         * Auto-triage classifier — when enabled, bug-report Signals with
+         * reported_type='auto' trigger a Haiku call that writes a suggested_type
+         * and an internal agent comment with rationale. Fail-open: if the LLM
+         * call fails the signal is left unannotated. Default OFF — flip per-env
+         * after dry-run validation.
+         */
+        'triage_classifier_enabled' => (bool) env('BUG_REPORT_TRIAGE_CLASSIFIER', false),
     ],
 
 ];
