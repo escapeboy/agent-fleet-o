@@ -67,8 +67,8 @@ class RunBuildingStage extends BaseStageJob
 
         $stage = $this->findOrCreateStage($experiment);
 
-        // Idempotency: if this stage already has a batch_id, it was already dispatched.
-        if (! empty($stage->output_snapshot['batch_id'])) {
+        // Idempotency: if this stage already has a batch_id or the debug-track flag, it was already dispatched.
+        if (! empty($stage->output_snapshot['batch_id']) || ! empty($stage->output_snapshot['debug_track'])) {
             Log::info('RunBuildingStage: Batch already dispatched for this stage, skipping', [
                 'experiment_id' => $experiment->id,
                 'batch_id' => $stage->output_snapshot['batch_id'],
@@ -91,6 +91,18 @@ class RunBuildingStage extends BaseStageJob
             ->first();
 
         $plan = $planningStage->output_snapshot ?? [];
+
+        // Debug track: the bridge agent signals completion via experiment_complete_building MCP tool.
+        // No tasks, no batch — just mark the stage Running and return.
+        if ($experiment->track === ExperimentTrack::Debug) {
+            $stage->update([
+                'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                    'debug_track' => true,
+                ]),
+            ]);
+
+            return;
+        }
 
         // Web Build track: generate site structure (1 LLM call), then dispatch one page job per page
         if ($experiment->track === ExperimentTrack::WebBuild) {

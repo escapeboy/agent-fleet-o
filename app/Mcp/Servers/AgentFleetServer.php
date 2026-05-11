@@ -209,6 +209,7 @@ use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Evolution\SkillEvolveTool;
 use App\Mcp\Tools\Evolution\SkillMutationApplyTool;
 use App\Mcp\Tools\Evolution\SkillMutationListTool;
+use App\Mcp\Tools\Experiment\ExperimentCompleteBuildingTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
@@ -780,6 +781,7 @@ class AgentFleetServer extends Server
         ExperimentResumeFromCheckpointTool::class,
         ExperimentStageTelemetryTool::class,
         ExperimentKillTool::class,
+        ExperimentCompleteBuildingTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
