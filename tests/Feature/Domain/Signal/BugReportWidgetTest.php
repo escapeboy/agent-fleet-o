@@ -193,6 +193,66 @@ class BugReportWidgetTest extends ApiTestCase
         $response->assertStatus(201);
     }
 
+    public function test_widget_accepts_reported_type_auto_and_persists_to_column(): void
+    {
+        $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(['reported_type' => 'auto']),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ))->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()->where('team_id', $this->team->id)->first();
+        $this->assertNotNull($signal);
+        $this->assertEquals('auto', $signal->reported_type);
+        $this->assertArrayNotHasKey('reported_type', $signal->payload ?? []);
+    }
+
+    public function test_widget_accepts_reported_type_bug_and_persists(): void
+    {
+        $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(['reported_type' => 'bug']),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ))->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()->where('team_id', $this->team->id)->first();
+        $this->assertNotNull($signal);
+        $this->assertEquals('bug', $signal->reported_type);
+        $this->assertArrayNotHasKey('reported_type', $signal->payload ?? []);
+    }
+
+    public function test_widget_accepts_reported_type_feature_request_and_persists(): void
+    {
+        $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(['reported_type' => 'feature_request']),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ))->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()->where('team_id', $this->team->id)->first();
+        $this->assertNotNull($signal);
+        $this->assertEquals('feature_request', $signal->reported_type);
+        $this->assertArrayNotHasKey('reported_type', $signal->payload ?? []);
+    }
+
+    public function test_widget_defaults_reported_type_to_auto_when_field_is_missing(): void
+    {
+        // Submit without reported_type — old widgets don't send it
+        $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ))->assertStatus(201);
+
+        $signal = Signal::withoutGlobalScopes()->where('team_id', $this->team->id)->first();
+        $this->assertNotNull($signal);
+        $this->assertEquals('auto', $signal->reported_type);
+    }
+
+    public function test_widget_rejects_unknown_reported_type_with_422(): void
+    {
+        $this->postJson('/api/public/widget/bug-report', array_merge(
+            $this->validPayload(['reported_type' => 'banana']),
+            ['screenshot' => UploadedFile::fake()->image('screenshot.png')],
+        ))->assertStatus(422)->assertJsonValidationErrors(['reported_type']);
+    }
+
     public function test_widget_scopes_signal_to_correct_team(): void
     {
         $otherTeam = Team::factory()->create();

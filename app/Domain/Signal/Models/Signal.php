@@ -43,6 +43,7 @@ class Signal extends Model implements HasMedia
         'content_hash',
         'status',
         'project_key',
+        'reported_type',
         'tags',
         'received_at',
         'scored_at',
