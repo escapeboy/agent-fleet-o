@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Infrastructure\Observability\Alerts\AlertEvaluator;
 use App\Infrastructure\Observability\Alerts\AlertRules;
 use App\Infrastructure\Observability\Alerts\PlatformAlertTriggered;
+use App\Infrastructure\Observability\Health\HealthCheckRegistry;
 use App\Infrastructure\Observability\Prometheus\MetricEmitter;
 use App\Infrastructure\Observability\Prometheus\PrometheusRegistry;
 use App\Infrastructure\Observability\Prometheus\TopNTeamLabeller;
@@ -99,6 +100,9 @@ final class ObservabilityServiceProvider extends ServiceProvider
                 http: $app->make(HttpFactory::class),
             );
         });
+
+        // ----- Spatie laravel-health declarative registry -----
+        $this->app->singleton(HealthCheckRegistry::class, fn (): HealthCheckRegistry => new HealthCheckRegistry);
     }
 
     public function boot(): void
@@ -109,5 +113,14 @@ final class ObservabilityServiceProvider extends ServiceProvider
 
         // Wire alert dispatcher.
         Event::listen(PlatformAlertTriggered::class, SendAlertEmail::class);
+
+        // Register declarative health checks with the spatie/laravel-health facade.
+        // The existing HealthPage Livewire reads its own data; this registry is
+        // the canonical source for basic infrastructure checks (DB/Redis/cache/queue).
+        // Skip in console for `package:discover` and other early boot hooks where
+        // the facade might not be ready yet.
+        if (! $this->app->runningInConsole() || $this->app->runningUnitTests()) {
+            $this->app->make(HealthCheckRegistry::class)->register();
+        }
     }
 }

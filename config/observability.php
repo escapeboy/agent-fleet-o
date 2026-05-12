@@ -90,6 +90,13 @@ return [
         'prometheus_api_url' => env('PROMETHEUS_API_URL', ''),
     ],
 
+    'health' => [
+        // When set, EnvironmentCheck fails unless `APP_ENV` matches this value.
+        // Set to `production` in prod .env to surface accidental APP_ENV regressions
+        // (e.g. cache:clear that leaked dev config). Empty = check disabled.
+        'expected_env' => env('OBSERVABILITY_HEALTH_EXPECTED_ENV', ''),
+    ],
+
     'monitoring' => [
         // Grafana base URL behind Cloudflare Access. Used by MonitoringIframePage.
         'grafana_base_url' => env('GRAFANA_BASE_URL', 'https://monitoring.fleetq.net'),
