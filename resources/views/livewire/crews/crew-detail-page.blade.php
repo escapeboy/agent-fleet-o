@@ -303,7 +303,11 @@
                             @endif
                         @endif
 
-                        @if($execution->error_message)
+                        @if($execution->error_metadata)
+                            <div class="mt-3">
+                                <x-error-badge :metadata="$execution->error_metadata" />
+                            </div>
+                        @elseif($execution->error_message)
                             <div class="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
                                 {{ $execution->error_message }}
                             </div>

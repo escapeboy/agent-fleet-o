@@ -6,6 +6,7 @@ use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\ResolveWebsiteByDomain;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SentryContextWebMiddleware;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -58,7 +59,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsureTermsAccepted::class);
         $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->appendToGroup('web', ApplyTenantTracer::class);
+        $middleware->appendToGroup('web', SentryContextWebMiddleware::class);
         $middleware->appendToGroup('api', ApplyTenantTracer::class);
+        $middleware->appendToGroup('api', SentryContextWebMiddleware::class);
         $middleware->statefulApi();
         $middleware->alias([
             'scope' => CheckToken::class,

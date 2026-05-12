@@ -19,6 +19,7 @@ class OutboundAction extends Model
         'status',
         'external_id',
         'response',
+        'error_metadata',
         'retry_count',
         'idempotency_key',
         'sent_at',
@@ -29,6 +30,7 @@ class OutboundAction extends Model
         return [
             'status' => OutboundActionStatus::class,
             'response' => 'array',
+            'error_metadata' => 'array',
             'retry_count' => 'integer',
             'sent_at' => 'datetime',
         ];
