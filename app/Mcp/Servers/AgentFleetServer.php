@@ -460,6 +460,7 @@ use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\System\SystemRecentErrorsTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\BrowserHarnessRunTool;
@@ -1186,9 +1187,10 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (11)
+        // System (12)
         DashboardKpisTool::class,
         SystemHealthTool::class,
+        SystemRecentErrorsTool::class,
         SystemVersionCheckTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,

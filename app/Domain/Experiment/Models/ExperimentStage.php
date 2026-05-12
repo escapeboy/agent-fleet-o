@@ -33,6 +33,7 @@ class ExperimentStage extends Model
         'completed_at',
         'searchable_text',
         'telemetry',
+        'error_metadata',
     ];
 
     protected function casts(): array
@@ -43,6 +44,7 @@ class ExperimentStage extends Model
             'input_snapshot' => 'array',
             'output_snapshot' => 'array',
             'telemetry' => 'array',
+            'error_metadata' => 'array',
             'iteration' => 'integer',
             'retry_count' => 'integer',
             'recovery_attempts' => 'integer',

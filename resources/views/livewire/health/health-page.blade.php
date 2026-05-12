@@ -1,4 +1,11 @@
 <div wire:poll.5s>
+    {{-- Declarative infrastructure checks (spatie/laravel-health) --}}
+    @if(!empty($spatieChecks))
+        <div class="mb-6">
+            <x-health-card :checks="$spatieChecks" />
+        </div>
+    @endif
+
     {{-- Stuck Experiments --}}
     @if($stuckExperiments->isNotEmpty())
         <div class="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-6">

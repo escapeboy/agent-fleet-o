@@ -24,6 +24,7 @@ class ExperimentStateTransition extends Model
         'metadata',
         'judge_verdict',
         'created_at',
+        'error_metadata',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class ExperimentStateTransition extends Model
             'metadata' => 'array',
             'judge_verdict' => 'array',
             'created_at' => 'datetime',
+            'error_metadata' => 'array',
         ];
     }
 

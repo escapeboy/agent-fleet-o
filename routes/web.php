@@ -7,6 +7,7 @@ use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\MarketplacePageController;
+use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
 use App\Http\Controllers\ReleaseKeysController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\WebsitePagePreviewController;
 use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\InternalNetworkOnly;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Admin\AiControlCenterPage;
@@ -174,6 +176,14 @@ Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->
 Route::get('/share/release/{shareToken}', [PublicReleaseController::class, 'show'])->name('releases.share');
 
 // Public JWKS endpoint — release signing public keys (no auth, throttled).
+// Prometheus scrape target — internal network only (Docker bridge 172.16/12 + localhost
+// + custom OBSERVABILITY_METRICS_ALLOWED_IPS). Returns text/plain Prometheus exposition
+// format. No `web` middleware group → no session, no CSRF, no team scope.
+Route::get('/metrics', PrometheusMetricsController::class)
+    ->withoutMiddleware('web')
+    ->middleware(InternalNetworkOnly::class)
+    ->name('metrics.prometheus');
+
 Route::get('/.well-known/release-keys.json', ReleaseKeysController::class)
     ->name('release-keys.jwks')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])

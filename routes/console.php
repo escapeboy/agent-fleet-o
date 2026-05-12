@@ -21,6 +21,13 @@ Schedule::command('bridge:health-check')->everyFiveMinutes()->withoutOverlapping
 Schedule::command('bridge:detect-stale')->everyTwoMinutes()->withoutOverlapping(2);
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
+// Prometheus gauge sampler — runs every minute (Laravel's smallest native interval).
+// Counter metrics arrive via event listeners; this command keeps gauges fresh.
+Schedule::command('metrics:sample')->everyMinute()->withoutOverlapping(1);
+// Hourly: trim the top-N ranking sorted set to bound Redis memory.
+Schedule::command('metrics:sample --trim')->hourly();
+// Platform alerting: evaluate every minute, dedup via Redis cooldown.
+Schedule::command('alerts:check')->everyMinute()->withoutOverlapping(1);
 Schedule::command('connectors:poll')->everyFifteenMinutes();
 Schedule::command('connectors:poll --driver=http_monitor')->everyFiveMinutes()->withoutOverlapping(5);
 Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOverlapping(2);

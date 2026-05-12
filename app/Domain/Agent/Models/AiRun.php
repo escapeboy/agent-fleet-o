@@ -35,6 +35,7 @@ class AiRun extends Model
         'cost_credits',
         'latency_ms',
         'status',
+        'error_metadata',
         'reasoning_chain',
         'has_reasoning',
         'classified_complexity',
@@ -57,6 +58,7 @@ class AiRun extends Model
             'latency_ms' => 'integer',
             'reasoning_chain' => 'array',
             'has_reasoning' => 'boolean',
+            'error_metadata' => 'array',
         ];
     }
 

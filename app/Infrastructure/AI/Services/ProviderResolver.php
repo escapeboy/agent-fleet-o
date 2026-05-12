@@ -705,7 +705,7 @@ class ProviderResolver
      * Also returns true when the platform has a global API key for the provider,
      * since the team can use it as a fallback.
      */
-    private function teamHasProvider(?Team $team, string $provider): bool
+    protected function teamHasProvider(?Team $team, string $provider): bool
     {
         // Platform-level API key (available to all teams)
         if (config("services.platform_api_keys.{$provider}")) {

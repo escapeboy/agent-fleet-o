@@ -4,14 +4,18 @@ namespace App\Domain\Project\Jobs;
 
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Project\Services\ProjectScheduler;
+use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\ApplyTenantTracer;
+use App\Jobs\Middleware\HasSentryContext;
+use App\Jobs\Middleware\SentryContextJobMiddleware;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class ExecuteProjectRunJob implements ShouldQueue
+class ExecuteProjectRunJob implements HasSentryContext, ShouldQueue
 {
     use Dispatchable, Queueable;
 
@@ -26,9 +30,21 @@ class ExecuteProjectRunJob implements ShouldQueue
         $this->onQueue('experiments');
     }
 
+    public function sentryContext(): array
+    {
+        return [
+            'sub_program' => 'project.run',
+            'team_id' => $this->teamId(),
+            'project_id' => $this->projectId,
+        ];
+    }
+
     public function middleware(): array
     {
-        return [new ApplyTenantTracer];
+        return [
+            new ApplyTenantTracer,
+            app(SentryContextJobMiddleware::class),
+        ];
     }
 
     /** Used by ApplyTenantTracer middleware to route spans to the right team's OTLP backend. */
@@ -71,5 +87,42 @@ class ExecuteProjectRunJob implements ShouldQueue
         if ($this->trigger === 'schedule' && $project->schedule) {
             app(ProjectScheduler::class)->advanceSchedule($project);
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $captured = app(SentryEventCapturer::class)->capture($exception, [
+            'context' => $this->sentryContext(),
+        ]);
+
+        // If a ProjectRun was created before the failure, persist event_id on it
+        // so the Project detail page can surface the deep link.
+        try {
+            $latestRun = ProjectRun::where('project_id', $this->projectId)
+                ->where('trigger', $this->trigger)
+                ->latest('created_at')
+                ->first();
+
+            if ($latestRun) {
+                $latestRun->update([
+                    'error_metadata' => array_replace(
+                        is_array($latestRun->error_metadata) ? $latestRun->error_metadata : [],
+                        $captured->toMetadata($exception),
+                    ),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('ExecuteProjectRunJob: failed to persist error_metadata on ProjectRun', [
+                'project_id' => $this->projectId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        Log::error('ExecuteProjectRunJob failed', [
+            'project_id' => $this->projectId,
+            'trigger' => $this->trigger,
+            'error' => $exception->getMessage(),
+            'sentry_event_id' => $captured->eventId,
+        ]);
     }
 }
