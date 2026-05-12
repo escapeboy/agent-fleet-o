@@ -52,6 +52,22 @@ class RegisterBridgeConnection
                 ->first();
         }
 
+        // Defend the global UNIQUE constraint on session_id. The same bridge daemon
+        // serving multiple teams (e.g. harbormaster routing to several FleetQ teams)
+        // can emit the SAME session_id for different team contexts. Without this
+        // pre-step the UPDATE below would die with
+        // `bridge_connections_session_id_unique` violations every heartbeat (~30s)
+        // for every team beyond the first. Null out conflicting rows first; their
+        // owning bridge will re-register on its next heartbeat with a fresh row.
+        BridgeConnection::withoutGlobalScopes()
+            ->where('session_id', $sessionId)
+            ->when($existing, fn ($q) => $q->where('id', '!=', $existing->id))
+            ->update([
+                'session_id' => null,
+                'status' => BridgeConnectionStatus::Disconnected->value,
+                'disconnected_at' => now(),
+            ]);
+
         if ($existing) {
             $existing->update([
                 'session_id' => $sessionId,
