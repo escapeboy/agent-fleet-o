@@ -38,8 +38,76 @@ class ProviderResolver
     ): array {
         $resolved = $this->resolveHierarchy($skill, $agent, $team, $purpose);
         $resolved = $this->enforceAllowedModels($resolved, $team);
+        $resolved = $this->enforceAvailability($resolved, $team);
 
         return $this->enforceDataClassification($resolved, $agent, $team);
+    }
+
+    /**
+     * Sanity-check that the resolved provider is actually reachable.
+     *
+     * Bug class this guards against: a stale `GlobalSetting::default_llm_provider`
+     * (e.g. left pointing at `bridge_agent` after the team's bridge agents
+     * deregistered) would otherwise be returned as-is by `resolveHierarchy()`,
+     * and the AI gateway would hang for the full timeout (e.g. 90s) trying to
+     * reach a non-existent endpoint. Production incident 2026-05-12: Finance
+     * sub-program OCR timed out because the GlobalSetting pointed at a bridge
+     * with 0 active agents.
+     *
+     * Strategy: if the resolved provider is NOT in `availableProviders($team)`,
+     * fall back to the first listed available provider (and its first listed
+     * model). When no providers are available at all, return the original
+     * resolution so the caller can fail loudly downstream with a clear error.
+     *
+     * @param  array{provider: string, model: string}  $resolved
+     * @return array{provider: string, model: string}
+     */
+    private function enforceAvailability(array $resolved, ?Team $team): array
+    {
+        if ($team === null) {
+            return $resolved;
+        }
+
+        try {
+            $available = $this->availableProviders($team);
+        } catch (\Throwable) {
+            // Availability check itself failed (DB / config issue) — don't poison
+            // the resolution path; return the original and let the caller fail
+            // with whatever error the underlying gateway produces.
+            return $resolved;
+        }
+
+        if (isset($available[$resolved['provider']])) {
+            return $resolved;
+        }
+
+        if ($available === []) {
+            // No providers configured for this team at all. Let the gateway
+            // surface the InsufficientProvidersException downstream.
+            return $resolved;
+        }
+
+        $firstProvider = array_key_first($available);
+        $firstModel = array_key_first($available[$firstProvider]['models'] ?? []);
+
+        if ($firstModel === null) {
+            $firstModel = (string) config(
+                "llm_pricing.default_models.{$firstProvider}",
+                config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            );
+        }
+
+        \Illuminate\Support\Facades\Log::warning('ProviderResolver: resolved provider is not available for team — falling back', [
+            'team_id' => $team->id,
+            'resolved' => $resolved,
+            'fallback' => ['provider' => $firstProvider, 'model' => $firstModel],
+            'available' => array_keys($available),
+        ]);
+
+        return [
+            'provider' => $firstProvider,
+            'model' => (string) $firstModel,
+        ];
     }
 
     /**

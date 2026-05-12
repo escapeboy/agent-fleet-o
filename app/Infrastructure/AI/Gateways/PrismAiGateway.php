@@ -80,7 +80,7 @@ class PrismAiGateway implements AiGatewayInterface
 
             $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
             $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
-            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens()); // method, not property
             $span->setAttribute('llm.latency_ms', $response->latencyMs);
             $span->setStatus(StatusCode::STATUS_OK);
 
@@ -137,7 +137,7 @@ class PrismAiGateway implements AiGatewayInterface
 
             $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
             $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
-            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens()); // method, not property
             $span->setAttribute('llm.latency_ms', $response->latencyMs);
             $span->setStatus(StatusCode::STATUS_OK);
 
