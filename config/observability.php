@@ -88,6 +88,11 @@ return [
         // Prometheus HTTP API base used by CheckAlertRulesCommand. Empty disables
         // Laravel-side evaluation (only Grafana alerting will fire).
         'prometheus_api_url' => env('PROMETHEUS_API_URL', ''),
+
+        // Ignore open circuit breakers whose last_failure_at is older than this.
+        // Zombie breakers (agent failed once, never ran again) would otherwise
+        // re-fire the alert every cooldown window forever.
+        'breaker_stale_after_seconds' => (int) env('ALERT_BREAKER_STALE_AFTER_SECONDS', 3600),
     ],
 
     'health' => [
