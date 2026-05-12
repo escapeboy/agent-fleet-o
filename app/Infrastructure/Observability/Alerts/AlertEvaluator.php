@@ -135,8 +135,11 @@ final class AlertEvaluator
 
     private function circuitBreakersOpen(): int
     {
+        $staleAfter = (int) $this->config->get('observability.alerts.breaker_stale_after_seconds', 3600);
+
         return CircuitBreakerState::withoutGlobalScopes()
             ->where('state', 'open')
+            ->where('last_failure_at', '>=', now()->subSeconds($staleAfter))
             ->count();
     }
 
