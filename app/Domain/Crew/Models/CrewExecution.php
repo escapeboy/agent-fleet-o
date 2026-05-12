@@ -30,6 +30,7 @@ class CrewExecution extends Model
         'total_cost_credits',
         'duration_ms',
         'error_message',
+        'error_metadata',
         'delegation_depth',
         'started_at',
         'completed_at',
@@ -51,6 +52,7 @@ class CrewExecution extends Model
             'delegation_depth' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'error_metadata' => 'array',
         ];
     }
 

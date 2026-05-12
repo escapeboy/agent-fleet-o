@@ -209,6 +209,7 @@ use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Evolution\SkillEvolveTool;
 use App\Mcp\Tools\Evolution\SkillMutationApplyTool;
 use App\Mcp\Tools\Evolution\SkillMutationListTool;
+use App\Mcp\Tools\Experiment\ExperimentCompleteBuildingTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
@@ -459,6 +460,7 @@ use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\System\SystemRecentErrorsTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\BrowserHarnessRunTool;
@@ -780,6 +782,7 @@ class AgentFleetServer extends Server
         ExperimentResumeFromCheckpointTool::class,
         ExperimentStageTelemetryTool::class,
         ExperimentKillTool::class,
+        ExperimentCompleteBuildingTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
         ExperimentStepsTool::class,
@@ -1184,9 +1187,10 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (11)
+        // System (12)
         DashboardKpisTool::class,
         SystemHealthTool::class,
+        SystemRecentErrorsTool::class,
         SystemVersionCheckTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,

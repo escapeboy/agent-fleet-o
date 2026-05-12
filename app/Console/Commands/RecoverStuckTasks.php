@@ -6,6 +6,7 @@ use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Models\Experiment;
@@ -330,10 +331,17 @@ class RecoverStuckTasks extends Command
             $timeoutSeconds = $timeouts[$state->value] ?? 900; // Default 15 min
             $cutoff = now()->subSeconds($timeoutSeconds);
 
-            $stuckExperiments = Experiment::withoutGlobalScopes()
+            $query = Experiment::withoutGlobalScopes()
                 ->where('status', $state)
-                ->where('updated_at', '<', $cutoff)
-                ->get();
+                ->where('updated_at', '<', $cutoff);
+
+            // Debug-track building experiments run bridge agents for up to 90 min;
+            // exclude them from the standard 15-min timeout and handle separately below.
+            if ($state === ExperimentStatus::Building) {
+                $query->where('track', '!=', ExperimentTrack::Debug->value);
+            }
+
+            $stuckExperiments = $query->get();
 
             foreach ($stuckExperiments as $experiment) {
                 $recovered += $this->handleStuckExperiment(
@@ -344,6 +352,25 @@ class RecoverStuckTasks extends Command
                     $pauseAfter,
                 );
             }
+        }
+
+        // Debug-track building experiments: fail after 90 min if the bridge agent
+        // never called experiment_complete_building.
+        $debugBuildingCutoff = now()->subMinutes(90);
+        $stuckDebugBuilding = Experiment::withoutGlobalScopes()
+            ->where('status', ExperimentStatus::Building)
+            ->where('track', ExperimentTrack::Debug->value)
+            ->where('updated_at', '<', $debugBuildingCutoff)
+            ->get();
+
+        foreach ($stuckDebugBuilding as $experiment) {
+            $this->transitionExperiment(
+                $experiment->id,
+                ExperimentStatus::Building,
+                ExperimentStatus::BuildingFailed,
+                'Debug-track agent timed out after 90 minutes without signaling completion',
+            );
+            $recovered++;
         }
 
         return $recovered;

@@ -139,8 +139,13 @@
                             @php
                                 $failedStep = $block['steps']->firstWhere('status', 'failed');
                                 $errorMsg = $failedStep?->error_message ?? ($stage->output_snapshot['error'] ?? null);
+                                $errorMeta = $stage->error_metadata ?? $failedStep?->error_metadata ?? null;
                             @endphp
-                            @if($errorMsg)
+                            @if($errorMeta)
+                                <div class="px-4 py-3">
+                                    <x-error-badge :metadata="$errorMeta" />
+                                </div>
+                            @elseif($errorMsg)
                                 <div class="bg-red-50 px-4 py-3">
                                     <p class="text-xs font-medium text-red-700">Error</p>
                                     <p class="mt-1 text-xs text-red-600">{{ $errorMsg }}</p>

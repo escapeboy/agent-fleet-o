@@ -13,6 +13,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Models\SemanticCacheEntry;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
+use App\Infrastructure\Observability\Health\HealthCheckRegistry;
 use App\Models\Connector;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Redis;
@@ -32,7 +33,48 @@ class HealthPage extends Component
             'localLlmStats' => $this->getLocalLlmStats(),
             'bashSidecarStatus' => $this->getBashSidecarStatus(),
             'cacheStats' => $this->getCacheStats(),
+            'spatieChecks' => $this->getSpatieChecks(),
         ])->layout('layouts.app', ['header' => 'System Health']);
+    }
+
+    /**
+     * Run the declarative spatie/laravel-health checks and shape them for the
+     * `livewire.health.health-page` Blade. Returns the empty array when the
+     * registry hasn't been booted (e.g. tests that skip ServiceProviders).
+     *
+     * @return array<int, array{name: string, status: string, message: ?string, meta: array<string, mixed>}>
+     */
+    private function getSpatieChecks(): array
+    {
+        try {
+            $registry = app(HealthCheckRegistry::class);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($registry->checks() as $check) {
+            try {
+                $result = $check->run();
+                $rows[] = [
+                    'name' => $check->getName(),
+                    'status' => $result->status->value,
+                    'message' => method_exists($result, 'getNotificationMessage')
+                        ? $result->getNotificationMessage()
+                        : ($result->shortSummary ?? null),
+                    'meta' => is_array($result->meta) ? $result->meta : [],
+                ];
+            } catch (\Throwable $e) {
+                $rows[] = [
+                    'name' => $check->getName(),
+                    'status' => 'crashed',
+                    'message' => $e->getMessage(),
+                    'meta' => [],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     public function retryExperiment(string $experimentId): void

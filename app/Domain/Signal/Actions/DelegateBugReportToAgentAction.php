@@ -138,6 +138,13 @@ class DelegateBugReportToAgentAction
             agentId: $agentId,
         );
 
+        // Append completion instruction with the concrete experiment ID so the bridge
+        // agent knows to call experiment_complete_building when done. Without this call
+        // the experiment stays stuck in building permanently.
+        $experiment->update([
+            'thesis' => $experiment->thesis."\n\n**When done:** Call the `experiment_complete_building` MCP tool with:\n- `experiment_id`: `{$experiment->id}`\n- `pr_urls`: list of any pull request URLs you opened\n- `summary`: one sentence describing what was fixed\n\nThis is required — without it the experiment stays stuck in building.",
+        ]);
+
         // Link signal to experiment and set status
         $signal->update(['experiment_id' => $experiment->id]);
 

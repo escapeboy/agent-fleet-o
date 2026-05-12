@@ -9,6 +9,15 @@
             'cosmetic' => 'bg-gray-100 text-gray-800',
         ];
         $statusColor = $signal->status?->color() ?? 'gray';
+        $reportedTypeLabels = [
+            'bug' => ['label' => 'Бъг', 'color' => 'bg-red-100 text-red-800'],
+            'feature_request' => ['label' => 'Промяна', 'color' => 'bg-blue-100 text-blue-800'],
+            'auto' => ['label' => 'Авто', 'color' => 'bg-gray-100 text-gray-600'],
+        ];
+        $suggestedTypeLabels = [
+            'bug' => 'bg-red-100 text-red-800',
+            'feature_request' => 'bg-blue-100 text-blue-800',
+        ];
     @endphp
 
     {{-- Header --}}
@@ -29,6 +38,23 @@
                 </span>
                 @if($signal->project_key)
                     <span class="text-xs text-gray-500">{{ $signal->project_key }}</span>
+                @endif
+                @if($signal->reported_type)
+                    @php $rt = $reportedTypeLabels[$signal->reported_type] ?? ['label' => $signal->reported_type, 'color' => 'bg-gray-100 text-gray-600']; @endphp
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium {{ $rt['color'] }}">
+                        <span class="opacity-60">Reporter:</span> {{ $rt['label'] }}
+                    </span>
+                @endif
+                @if($signal->suggested_type)
+                    @php
+                        $stColor = $suggestedTypeLabels[$signal->suggested_type] ?? 'bg-gray-100 text-gray-600';
+                        $stLabel = $signal->suggested_type === 'bug' ? 'Бъг' : 'Промяна';
+                        $stMuted = ($signal->suggested_type_confidence ?? 1.0) < 0.6;
+                    @endphp
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium {{ $stColor }} {{ $stMuted ? 'opacity-60 italic' : '' }}"
+                          title="Увереност: {{ (int) round(($signal->suggested_type_confidence ?? 0) * 100) }}%">
+                        <span class="opacity-60">Triage:</span> {{ $stLabel }}
+                    </span>
                 @endif
             </div>
         </div>

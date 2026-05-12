@@ -39,6 +39,7 @@ class ProjectRun extends Model
         'output_summary',
         'spend_credits',
         'error_message',
+        'error_metadata',
         'started_at',
         'completed_at',
         'delegation_depth',
@@ -54,6 +55,7 @@ class ProjectRun extends Model
             'delegation_depth' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'error_metadata' => 'array',
         ];
     }
 

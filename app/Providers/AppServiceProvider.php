@@ -92,6 +92,7 @@ use App\Domain\Signal\Events\SignalCommentAdded;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
 use App\Domain\Signal\Listeners\CloseBugReportOnPrMergeListener;
+use App\Domain\Signal\Listeners\DispatchAutoTriageOnSignalIngested;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
@@ -533,6 +534,7 @@ class AppServiceProvider extends ServiceProvider
         // Bug report signals: notify on critical severity + on status transitions
         Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
         Event::listen(SignalIngested::class, InferIncomingSignalIntent::class);
+        Event::listen(SignalIngested::class, DispatchAutoTriageOnSignalIngested::class);
         Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
         Event::listen(SignalAssigned::class, SendSignalAssignedNotification::class);
 

@@ -10,6 +10,8 @@ use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Jobs\Middleware\ApplyTenantTracer;
+use App\Jobs\Middleware\HasSentryContext;
+use App\Jobs\Middleware\SentryContextJobMiddleware;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,13 +26,25 @@ use Laravel\Ai\Streaming\Events\ToolResult;
 use Sentry\Severity;
 use Sentry\State\Scope;
 
-class ProcessAssistantMessageJob implements ShouldQueue
+class ProcessAssistantMessageJob implements HasSentryContext, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
 
     public int $timeout = 900;
+
+    public function sentryContext(): array
+    {
+        return [
+            'sub_program' => 'assistant.message',
+            'team_id' => $this->teamId,
+            'user_id' => $this->userId,
+            'provider' => $this->provider,
+            'model' => $this->model,
+            'conversation_id' => $this->conversationId,
+        ];
+    }
 
     public function __construct(
         public readonly string $conversationId,
@@ -48,7 +62,7 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [new ApplyTenantTracer];
+        return [new ApplyTenantTracer, app(SentryContextJobMiddleware::class)];
     }
 
     public function handle(SendAssistantMessageAction $action): void
@@ -125,18 +139,17 @@ class ProcessAssistantMessageJob implements ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
-            \Sentry\withScope(function (Scope $scope) use ($e): void {
-                $scope->setTag('provider', $this->provider ?? 'unknown');
-                $scope->setTag('model', $this->model ?? 'unknown');
-                $scope->setContext('bridge_debug', [
-                    'provider' => $this->provider,
-                    'model' => $this->model,
+            app(\App\Infrastructure\Telemetry\Sentry\SentryEventCapturer::class)->capture($e, [
+                'context' => [
+                    'sub_program' => 'assistant.message',
                     'team_id' => $this->teamId,
+                    'user_id' => $this->userId,
+                    'provider' => $this->provider ?? 'unknown',
+                    'model' => $this->model ?? 'unknown',
                     'conversation_id' => $this->conversationId,
                     'placeholder_id' => $this->placeholderMessageId,
-                ]);
-                \Sentry\captureException($e);
-            });
+                ],
+            ]);
 
             Log::error('ProcessAssistantMessageJob failed', [
                 'conversation_id' => $this->conversationId,
@@ -336,20 +349,19 @@ class ProcessAssistantMessageJob implements ShouldQueue
 
     public function failed(?\Throwable $e): void
     {
-        \Sentry\withScope(function (Scope $scope) use ($e): void {
-            $scope->setTag('provider', $this->provider ?? 'unknown');
-            $scope->setTag('model', $this->model ?? 'unknown');
-            $scope->setContext('bridge_debug', [
-                'provider' => $this->provider,
-                'model' => $this->model,
-                'team_id' => $this->teamId,
-                'conversation_id' => $this->conversationId,
-                'placeholder_id' => $this->placeholderMessageId,
+        if ($e !== null) {
+            app(\App\Infrastructure\Telemetry\Sentry\SentryEventCapturer::class)->capture($e, [
+                'context' => [
+                    'sub_program' => 'assistant.message',
+                    'team_id' => $this->teamId,
+                    'user_id' => $this->userId,
+                    'provider' => $this->provider ?? 'unknown',
+                    'model' => $this->model ?? 'unknown',
+                    'conversation_id' => $this->conversationId,
+                    'placeholder_id' => $this->placeholderMessageId,
+                ],
             ]);
-            if ($e) {
-                \Sentry\captureException($e);
-            }
-        });
+        }
 
         $placeholder = AssistantMessage::find($this->placeholderMessageId);
 
