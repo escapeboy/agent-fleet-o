@@ -15,6 +15,7 @@ use App\Infrastructure\AI\Exceptions\ModelNotAllowedException;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ProviderResolver
@@ -97,7 +98,7 @@ class ProviderResolver
             );
         }
 
-        \Illuminate\Support\Facades\Log::warning('ProviderResolver: resolved provider is not available for team — falling back', [
+        Log::warning('ProviderResolver: resolved provider is not available for team — falling back', [
             'team_id' => $team->id,
             'resolved' => $resolved,
             'fallback' => ['provider' => $firstProvider, 'model' => $firstModel],

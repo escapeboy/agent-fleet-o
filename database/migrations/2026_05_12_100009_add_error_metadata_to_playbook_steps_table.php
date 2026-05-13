@@ -15,10 +15,10 @@ return new class extends Migration
         });
 
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            \DB::statement(
+            DB::statement(
                 'CREATE INDEX IF NOT EXISTS playbook_steps_sentry_event_id_idx '
                 ."ON playbook_steps ((error_metadata->>'sentry_event_id')) "
-                .'WHERE error_metadata IS NOT NULL'
+                .'WHERE error_metadata IS NOT NULL',
             );
         }
     }
@@ -26,7 +26,7 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            \DB::statement('DROP INDEX IF EXISTS playbook_steps_sentry_event_id_idx');
+            DB::statement('DROP INDEX IF EXISTS playbook_steps_sentry_event_id_idx');
         }
 
         Schema::table('playbook_steps', function (Blueprint $table): void {
