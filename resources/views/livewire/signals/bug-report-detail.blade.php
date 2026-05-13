@@ -361,7 +361,7 @@
                                         <span class="text-xs text-gray-400">{{ $comment->created_at?->diffForHumans() }}</span>
                                     </div>
                                     @if($comment->body !== '')
-                                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $comment->body }}</p>
+                                        <div class="prose prose-sm max-w-none text-gray-700">{!! Str::markdown($comment->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
                                     @endif
                                     @php $attachments = $comment->getMedia('attachments'); @endphp
                                     @if($attachments->isNotEmpty())
