@@ -2,6 +2,7 @@
 
 namespace App\Domain\Trigger\Jobs;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Trigger\Actions\EvaluateTriggerRulesAction;
 use App\Domain\Trigger\Actions\ExecuteTriggerRuleAction;
@@ -39,6 +40,22 @@ class EvaluateTriggerRulesJob implements ShouldQueue
         // Skip platform-generated signals to prevent feedback loops
         if (str_starts_with((string) $signal->source_native_id, 'platform:')) {
             return;
+        }
+
+        // Relevance threshold gate: skip evaluation when score is set and below threshold
+        if ($signal->team_id !== null && $signal->relevance_score !== null) {
+            $team = Team::withoutGlobalScopes()->find($signal->team_id);
+
+            if ($team && $team->signal_relevance_threshold !== null &&
+                $signal->relevance_score < $team->signal_relevance_threshold) {
+                Log::info('EvaluateTriggerRulesJob: skipping low-relevance signal', [
+                    'signal_id' => $signal->id,
+                    'relevance_score' => $signal->relevance_score,
+                    'threshold' => $team->signal_relevance_threshold,
+                ]);
+
+                return;
+            }
         }
 
         $matchingRules = $evaluateAction->execute($signal);

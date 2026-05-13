@@ -66,6 +66,7 @@ class Team extends Model
         'dashboard_config',
         'git_webhook_secret',
         'default_bug_fix_workflow_id',
+        'signal_relevance_threshold',
     ];
 
     protected $hidden = [
@@ -83,6 +84,7 @@ class Team extends Model
             'allowed_models' => 'array',
             'dashboard_config' => 'array',
             'credential_key' => 'encrypted',
+            'signal_relevance_threshold' => 'float',
         ];
     }
 

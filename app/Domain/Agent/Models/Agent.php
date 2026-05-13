@@ -6,6 +6,7 @@ use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentReasoningStrategy;
 use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Agent\Enums\ToolPermissionLevel;
 use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -111,6 +112,8 @@ class Agent extends Model
         'chat_protocol_secret',
         'tool_deny_list',
         'default_workflow_id',
+        'strict_mode',
+        'tool_permission_default',
     ];
 
     protected function casts(): array
@@ -149,6 +152,8 @@ class Agent extends Model
             'scope' => AgentScope::class,
             'environment' => AgentEnvironment::class,
             'tool_deny_list' => 'array',
+            'strict_mode' => 'boolean',
+            'tool_permission_default' => ToolPermissionLevel::class,
         ];
     }
 

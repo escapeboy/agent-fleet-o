@@ -34,6 +34,7 @@ use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
+use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
@@ -437,6 +438,7 @@ class AppServiceProvider extends ServiceProvider
 
         // /team-graph live activity firehose — broadcast normalized TeamActivity events
         Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
+        Event::listen(AgentExecuted::class, CompressAndStoreExecutionMemoryListener::class);
         Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
 
         // AgentSession event log — funnel existing experiment transitions into the session log

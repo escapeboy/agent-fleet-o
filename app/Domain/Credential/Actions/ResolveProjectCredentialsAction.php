@@ -87,6 +87,19 @@ class ResolveProjectCredentialsAction
 
                 $env[$envKey] = (string) $value;
             }
+
+            try {
+                app(LogCredentialAccessAction::class)->execute(
+                    credential: $credential,
+                    resolvedFor: 'env_map',
+                    agentId: $agent->id,
+                );
+            } catch (\Throwable $e) {
+                Log::debug('ResolveProjectCredentialsAction: failed to log access', [
+                    'credential_id' => $credential->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $env;

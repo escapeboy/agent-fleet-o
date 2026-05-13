@@ -30,6 +30,7 @@ use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentDryRunTool;
 use App\Mcp\Tools\Agent\AgentEquivocationResetTool;
 use App\Mcp\Tools\Agent\AgentEquivocationStatusTool;
+use App\Mcp\Tools\Agent\AgentExecutionMemoriesTool;
 use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
@@ -43,15 +44,18 @@ use App\Mcp\Tools\Agent\AgentHookListTool;
 use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
+use App\Mcp\Tools\Agent\AgentResponseAuditListTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
 use App\Mcp\Tools\Agent\AgentSetReasoningStrategyTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
+use App\Mcp\Tools\Agent\AgentStrictModeSetTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolDenySetTool;
+use App\Mcp\Tools\Agent\AgentToolPermissionSetTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
@@ -152,6 +156,7 @@ use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
 use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
 use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
+use App\Mcp\Tools\Credential\CredentialAccessLogTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialDeleteTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
@@ -161,6 +166,7 @@ use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
 use App\Mcp\Tools\Credential\CredentialOAuthInitiateTool;
 use App\Mcp\Tools\Credential\CredentialRollbackTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
+use App\Mcp\Tools\Credential\CredentialSetDomainAllowlistTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewBeliefTrajectoryTool;
@@ -422,7 +428,9 @@ use App\Mcp\Tools\Signal\SignalAssignTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalIntentReclassifyTool;
+use App\Mcp\Tools\Signal\SignalListByRelevanceTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SignalSetRelevanceThresholdTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SourceMapUploadTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
@@ -735,6 +743,10 @@ class AgentFleetServer extends Server
         AgentToolApprovalConfigureTool::class,
         AgentWorkspaceExportTool::class,
         AgentWorkspaceImportTool::class,
+        AgentExecutionMemoriesTool::class,
+        AgentStrictModeSetTool::class,
+        AgentResponseAuditListTool::class,
+        AgentToolPermissionSetTool::class,
         AgentCloneTool::class,
         AgentExecutionsListTool::class,
         AgentCostsTool::class,
@@ -867,7 +879,7 @@ class AgentFleetServer extends Server
         ToolsetUpdateTool::class,
         ToolsetDeleteTool::class,
 
-        // Credential (10)
+        // Credential (12)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
@@ -878,6 +890,8 @@ class AgentFleetServer extends Server
         CredentialOAuthFinalizeTool::class,
         CredentialListVersionsTool::class,
         CredentialRollbackTool::class,
+        CredentialSetDomainAllowlistTool::class,
+        CredentialAccessLogTool::class,
 
         // Release (5) — versioned artifact bundles
         ReleaseListTool::class,
@@ -957,12 +971,14 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (22)
+        // Signal (24)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
         SignalAssignTool::class,
         SignalIntentReclassifyTool::class,
+        SignalSetRelevanceThresholdTool::class,
+        SignalListByRelevanceTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
         SlackConnectorTool::class,

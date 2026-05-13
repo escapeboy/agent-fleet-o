@@ -8,6 +8,7 @@ use App\Domain\Signal\Events\SignalIngesting;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
 use App\Domain\Signal\Jobs\ProcessSignalMediaJob;
 use App\Domain\Signal\Jobs\RecalculateIntentScoreJob;
+use App\Domain\Signal\Jobs\ScoreSignalRelevanceJob;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\ConnectorBindingGate;
 use App\Domain\Trigger\Jobs\EvaluateTriggerRulesJob;
@@ -161,6 +162,9 @@ class IngestSignalAction
 
         // Dispatch entity extraction for new signals
         ExtractSignalEntitiesJob::dispatch($signal->id);
+
+        // Score signal relevance asynchronously (AI-powered 0.0–1.0 quality score)
+        ScoreSignalRelevanceJob::dispatch($signal->id);
 
         // Evaluate trigger rules asynchronously (zero overhead to HTTP response)
         EvaluateTriggerRulesJob::dispatch($signal->id);

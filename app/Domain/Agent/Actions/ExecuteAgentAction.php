@@ -14,8 +14,10 @@ use App\Domain\Agent\Exceptions\ToolLoopSemanticException;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AgentFeedback;
+use App\Domain\Agent\Models\AgentResponseAudit;
 use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Agent\Pipeline\Middleware\DetectClarificationNeeded;
+use App\Domain\Agent\Pipeline\Middleware\EnforceStrictProtocol;
 use App\Domain\Agent\Pipeline\Middleware\InjectKnowledgeGraphContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectMemoryContext;
 use App\Domain\Agent\Pipeline\Middleware\InjectRepoMapContext;
@@ -72,6 +74,7 @@ class ExecuteAgentAction
         private readonly InjectRepoMapContext $injectRepoMapContext,
         private readonly SummarizeContext $summarizeContext,
         private readonly DetectClarificationNeeded $detectClarification,
+        private readonly EnforceStrictProtocol $enforceStrictProtocol,
         private readonly ResolveTierConfigAction $resolveTierConfig,
         private readonly AgentRuntimeStateService $runtimeStateService,
         private readonly AgentHookExecutor $hookExecutor,
@@ -241,6 +244,7 @@ class ExecuteAgentAction
                 $this->injectRepoMapContext,
                 $this->summarizeContext,
                 $this->detectClarification,
+                $this->enforceStrictProtocol,
             ])
             ->thenReturn();
 
@@ -330,6 +334,18 @@ class ExecuteAgentAction
         // Apply output transform if hook modified the output
         if (isset($postHookContext['output']) && $postHookContext['output'] !== '' && is_array($result['output'])) {
             $result['output']['response'] = $postHookContext['output'];
+        }
+
+        // Strict protocol audit: record response audit when strict_mode is enabled
+        if ($agent->strict_mode && $result['execution'] instanceof AgentExecution) {
+            try {
+                $this->createResponseAudit($agent, $result['execution'], $input);
+            } catch (\Throwable $e) {
+                Log::warning('ExecuteAgentAction: failed to create response audit', [
+                    'agent_id' => $agent->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Plugin hook: notify plugins of execution result
@@ -1154,5 +1170,47 @@ class ExecuteAgentAction
             'execution' => $execution,
             'output' => null,
         ];
+    }
+
+    private function createResponseAudit(Agent $agent, AgentExecution $execution, array $input): void
+    {
+        $promptHash = hash('sha256', json_encode($input));
+        $responseText = is_array($execution->output)
+            ? ($execution->output['result'] ?? json_encode($execution->output))
+            : (string) $execution->output;
+
+        $toolsCalled = array_map(
+            fn ($t) => is_array($t) ? ($t['tool'] ?? $t['name'] ?? 'unknown') : (string) $t,
+            $execution->tools_used ?? [],
+        );
+
+        // Single query — load all pivot-registered tool names for this agent
+        $allowedToolNames = $agent->tools()
+            ->withoutGlobalScopes()
+            ->pluck('tools.name')
+            ->toArray();
+
+        $violations = [];
+        foreach ($toolsCalled as $calledName) {
+            if (! empty($allowedToolNames) && ! in_array($calledName, $allowedToolNames, true)) {
+                $violations[] = "Tool '{$calledName}' not in agent's allowed tool list";
+            }
+        }
+
+        $schemaValid = ! empty($agent->output_schema)
+            ? $execution->output !== null
+            : null;
+
+        AgentResponseAudit::create([
+            'agent_id' => $agent->id,
+            'team_id' => $agent->team_id,
+            'execution_id' => $execution->id,
+            'step_index' => $execution->llm_steps_count ?? 0,
+            'prompt_hash' => $promptHash,
+            'response_text' => mb_strimwidth($responseText, 0, 8000, '…'),
+            'tools_called' => $toolsCalled ?: null,
+            'schema_valid' => $schemaValid,
+            'violations' => ! empty($violations) ? $violations : null,
+        ]);
     }
 }

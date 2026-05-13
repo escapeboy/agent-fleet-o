@@ -53,6 +53,8 @@ class Signal extends Model implements HasMedia
         'last_received_at',
         'assigned_user_id',
         'assigned_at',
+        'relevance_score',
+        'relevance_scored_at',
     ];
 
     protected function casts(): array
@@ -70,6 +72,8 @@ class Signal extends Model implements HasMedia
             'duplicate_count' => 'integer',
             'last_received_at' => 'datetime',
             'assigned_at' => 'datetime',
+            'relevance_score' => 'float',
+            'relevance_scored_at' => 'datetime',
         ];
     }
 
