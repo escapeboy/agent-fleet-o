@@ -12,6 +12,7 @@ use App\Domain\Crew\Actions\SendAgentMessageAction;
 use App\Domain\Crew\Actions\SynthesizeResultAction;
 use App\Domain\Crew\Actions\ValidateTaskOutputAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewExecutionTrustMode;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Events\CrewExecuted;
@@ -706,6 +707,7 @@ class CrewOrchestrator
             $execution->update([
                 'quality_score' => $finalQa['score'],
                 'status' => CrewExecutionStatus::Completed,
+                'trust_mode' => $this->resolveTrustMode($execution),
                 'completed_at' => now(),
                 'duration_ms' => $execution->started_at
                     ? (int) $execution->started_at->diffInMilliseconds(now())
@@ -829,6 +831,36 @@ class CrewOrchestrator
     private function invalidateTaskCache(CrewExecution $execution): void
     {
         unset($this->taskCache[$execution]);
+    }
+
+    private function resolveTrustMode(CrewExecution $execution): CrewExecutionTrustMode
+    {
+        $config = $execution->config_snapshot ?? [];
+        $processType = CrewProcessType::tryFrom($config['process_type'] ?? '') ?? CrewProcessType::Parallel;
+
+        if ($processType === CrewProcessType::Adversarial) {
+            return CrewExecutionTrustMode::LlmJudge;
+        }
+
+        $hasWorkers = ! empty($config['workers']);
+        if (! $hasWorkers) {
+            return CrewExecutionTrustMode::SingleAgent;
+        }
+
+        $tasks = $execution->taskExecutions()->get();
+        if ($tasks->isEmpty()) {
+            return CrewExecutionTrustMode::SingleAgent;
+        }
+
+        $firstPassCount = $tasks->filter(
+            fn ($t) => ($t->attempt_number ?? 1) <= 1 && $t->status === CrewTaskStatus::Validated->value,
+        )->count();
+
+        if ($firstPassCount === $tasks->count()) {
+            return CrewExecutionTrustMode::FullConsensus;
+        }
+
+        return CrewExecutionTrustMode::MajorityConsensus;
     }
 
     private function failExecution(CrewExecution $execution, string $error): void

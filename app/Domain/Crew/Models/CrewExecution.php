@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Models;
 
 use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewExecutionTrustMode;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -35,6 +36,7 @@ class CrewExecution extends Model
         'started_at',
         'completed_at',
         'quality_dimensions',
+        'trust_mode',
     ];
 
     protected function casts(): array
@@ -53,6 +55,7 @@ class CrewExecution extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'error_metadata' => 'array',
+            'trust_mode' => CrewExecutionTrustMode::class,
         ];
     }
 

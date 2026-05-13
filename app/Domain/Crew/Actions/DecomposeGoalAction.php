@@ -32,6 +32,11 @@ class DecomposeGoalAction
             throw new MaxDelegationDepthExceededException($execution->delegation_depth, $maxDepth);
         }
 
+        $crew = $execution->crew;
+        if ($crew && (bool) ($crew->settings['union_contributions'] ?? false)) {
+            return $this->executeUnion($execution);
+        }
+
         try {
             $enrichment = app(PlanWithKnowledgeAction::class)->execute($execution->goal, $execution->team_id);
             $knowledgeContext = "\n\nRelevant context from past experience and domain knowledge:\n".$enrichment['enriched_context'];
@@ -157,6 +162,179 @@ class DecomposeGoalAction
         // Second pass: remap sort_order integer dependencies to UUID strings.
         // DependencyGraph::autoUnblock() uses whereJsonContains('depends_on', uuid), so
         // depends_on must store task UUIDs, not sort_order integers.
+        foreach ($taskExecutions as $taskExecution) {
+            $sortOrderDeps = $taskExecution->depends_on ?? [];
+            if (! empty($sortOrderDeps)) {
+                $uuidDeps = [];
+                foreach ($sortOrderDeps as $depIndex) {
+                    if (isset($taskExecutions[(int) $depIndex])) {
+                        $uuidDeps[] = $taskExecutions[(int) $depIndex]->id;
+                    }
+                }
+                $taskExecution->update(['depends_on' => $uuidDeps]);
+            }
+        }
+
+        return $taskExecutions;
+    }
+
+    /**
+     * Union contribution mode: each worker independently proposes tasks, then
+     * the coordinator orders the deduplicated union. Prevents GroupThink by
+     * ensuring no worker sees another's proposal during the contribution phase.
+     *
+     * @return array<CrewTaskExecution>
+     */
+    private function executeUnion(CrewExecution $execution): array
+    {
+        $config = $execution->config_snapshot;
+        $workers = $config['workers'] ?? [];
+
+        if (empty($workers)) {
+            return $this->execute($execution);
+        }
+
+        $workerPrompt = "You are %s. %s\n\nIndependently propose tasks to accomplish this goal.\n"
+            ."Goal: {$execution->goal}\n\n"
+            .'Output a JSON array of tasks: [{"title": string, "description": string, "expected_output": string}]';
+
+        $allProposals = [];
+
+        foreach ($workers as $workerConfig) {
+            $agent = Agent::withoutGlobalScopes()
+                ->where('team_id', $execution->team_id)
+                ->find($workerConfig['id'] ?? null);
+
+            if (! $agent) {
+                continue;
+            }
+
+            $member = CrewMember::forAgentInCrew($agent->id, $execution->crew_id);
+            $resolved = $member
+                ? $this->providerResolver->forCrewRole($member)
+                : $this->providerResolver->resolve(agent: $agent);
+
+            $request = new AiRequestDTO(
+                provider: $resolved['provider'],
+                model: $resolved['model'],
+                systemPrompt: sprintf($workerPrompt, $workerConfig['name'], $workerConfig['goal'] ?? ''),
+                userPrompt: "Propose tasks for: {$execution->goal}",
+                maxTokens: 2048,
+                userId: $execution->resolveUserId(),
+                teamId: $execution->team_id,
+                agentId: $agent->id,
+                purpose: 'crew.union_contribute',
+                temperature: 0.4,
+            );
+
+            try {
+                $response = $this->gateway->complete($request);
+                $proposed = $this->parseTaskPlan($response->content, $config);
+                foreach ($proposed as $task) {
+                    $task['_contributor'] = $workerConfig['name'];
+                    $allProposals[] = $task;
+                }
+                $execution->increment('total_cost_credits', $response->usage->costCredits);
+            } catch (\Throwable) {
+                // Skip failed contributors — union of remaining workers still valid
+            }
+        }
+
+        if (empty($allProposals)) {
+            return $this->execute($execution);
+        }
+
+        // Deduplicate proposals by title similarity (case-insensitive normalized compare)
+        $seen = [];
+        $unique = [];
+        foreach ($allProposals as $proposal) {
+            $key = strtolower(preg_replace('/\W+/', '', $proposal['title'] ?? ''));
+            if ($key && ! isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $proposal;
+            }
+        }
+
+        // Coordinator orders the union (does NOT filter — only assigns sequence and dependencies)
+        $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
+        if (! $coordinator || $coordinator->team_id !== $execution->team_id) {
+            throw new \RuntimeException('Coordinator agent not found.');
+        }
+
+        $coordinatorMember = CrewMember::forAgentInCrew($coordinator->id, $execution->crew_id);
+        $resolved = $coordinatorMember
+            ? $this->providerResolver->forCrewRole($coordinatorMember)
+            : $this->providerResolver->resolve(agent: $coordinator);
+
+        $unionJson = json_encode($unique, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $orderRequest = new AiRequestDTO(
+            provider: $resolved['provider'],
+            model: $resolved['model'],
+            systemPrompt: "You are {$coordinator->role}. {$coordinator->goal}\n\n"
+                .'Order and prioritize the following tasks contributed by the team. '
+                ."Do NOT remove tasks — only re-order and add dependencies where needed.\n"
+                .'Output a JSON array with the same tasks in optimal execution order. '
+                .'Each task: {"title": string, "description": string, "expected_output": string, "depends_on": [sort_order_int]}',
+            userPrompt: "Order these tasks:\n{$unionJson}",
+            maxTokens: 4096,
+            userId: $execution->resolveUserId(),
+            teamId: $execution->team_id,
+            agentId: $coordinator->id,
+            purpose: 'crew.union_order',
+            temperature: 0.2,
+        );
+
+        $orderResponse = $this->gateway->complete($orderRequest);
+        $orderedTasks = $this->parseTaskPlan($orderResponse->content, $config);
+        $execution->increment('total_cost_credits', $orderResponse->usage->costCredits);
+
+        $execution->update(['task_plan' => $orderedTasks]);
+
+        return $this->createTaskExecutions($execution, $orderedTasks, $config);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $tasks
+     * @return array<CrewTaskExecution>
+     */
+    private function createTaskExecutions(CrewExecution $execution, array $tasks, array $config): array
+    {
+        $workerMap = collect($config['workers'] ?? [])->keyBy('name');
+        $taskExecutions = [];
+
+        foreach ($tasks as $index => $task) {
+            $assignedTo = $task['assigned_to'] ?? null;
+            $assignedAgent = $assignedTo && isset($workerMap[$assignedTo])
+                ? Agent::withoutGlobalScopes()
+                    ->where('team_id', $execution->team_id)
+                    ->find($workerMap[$assignedTo]['id'] ?? null)
+                : null;
+
+            $dependencies = array_filter(
+                is_array($task['depends_on'] ?? null) ? $task['depends_on'] : [],
+                fn ($d) => is_int($d) && $d < $index,
+            );
+
+            $taskExecution = CrewTaskExecution::create([
+                'crew_execution_id' => $execution->id,
+                'team_id' => $execution->team_id,
+                'agent_id' => $assignedAgent?->id,
+                'title' => $task['title'] ?? 'Task '.($index + 1),
+                'description' => $task['description'] ?? '',
+                'status' => ! empty($dependencies) ? CrewTaskStatus::Blocked : CrewTaskStatus::Pending,
+                'input_context' => array_filter([
+                    'expected_output' => $task['expected_output'] ?? null,
+                    'assigned_to' => $assignedTo,
+                ]),
+                'depends_on' => $dependencies,
+                'attempt_number' => 1,
+                'max_attempts' => $config['max_task_iterations'] ?? 3,
+                'sort_order' => $index,
+            ]);
+
+            $taskExecutions[] = $taskExecution;
+        }
+
         foreach ($taskExecutions as $taskExecution) {
             $sortOrderDeps = $taskExecution->depends_on ?? [];
             if (! empty($sortOrderDeps)) {

@@ -101,6 +101,101 @@ class ValidateTaskOutputAction
     }
 
     /**
+     * Parallel commit-reveal validation: run QA agent N times independently and aggregate.
+     * Each pass is isolated — the agent cannot see prior assessments (commit phase).
+     * Results are aggregated by majority vote on pass/fail and mean score (reveal phase).
+     *
+     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores?: array<string, float>, parallel_rounds?: int, agreement_ratio?: float}
+     */
+    public function executeParallel(CrewTaskExecution $taskExecution, CrewExecution $execution, int $rounds = 3): array
+    {
+        $config = $execution->config_snapshot;
+        $qaAgent = Agent::withoutGlobalScopes()->find($config['qa_agent']['id']);
+
+        if (! $qaAgent) {
+            throw new \RuntimeException('QA agent not found.');
+        }
+
+        $qaMember = CrewMember::forAgentInCrew($qaAgent->id, $execution->crew_id);
+        $resolved = $qaMember
+            ? $this->providerResolver->forCrewRole($qaMember)
+            : $this->providerResolver->resolve(agent: $qaAgent);
+
+        $rubric = $this->resolveRubric($taskExecution, $config);
+        $qualityThreshold = $rubric['min_score'] ?? $config['quality_threshold'] ?? 0.70;
+
+        $systemPrompt = "You are {$qaAgent->role}. {$qaAgent->goal}\n\n"
+            ."Evaluate the output of a completed task independently.\n"
+            .$this->buildRubricSection($rubric)
+            ."The quality threshold is {$qualityThreshold} (0.0-1.0).\n\n"
+            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "criterion_scores": {"criterion_name": float} }';
+
+        $expectedOutput = $taskExecution->input_context['expected_output'] ?? 'No specific format expected';
+        $userPrompt = "Task: {$taskExecution->title}\n"
+            ."Description: {$taskExecution->description}\n"
+            ."Expected output: {$expectedOutput}\n\n"
+            ."Actual output:\n".json_encode($taskExecution->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)."\n\n"
+            .'Evaluate this output.';
+
+        // Commit phase: collect independent assessments
+        $assessments = [];
+        $totalCost = 0;
+
+        for ($i = 0; $i < $rounds; $i++) {
+            $request = new AiRequestDTO(
+                provider: $resolved['provider'],
+                model: $resolved['model'],
+                systemPrompt: $systemPrompt,
+                userPrompt: $userPrompt,
+                maxTokens: 2048,
+                userId: $execution->resolveUserId(),
+                teamId: $execution->team_id,
+                agentId: $qaAgent->id,
+                purpose: 'crew.validate_task.parallel',
+                temperature: 0.5,
+            );
+
+            try {
+                $response = $this->gateway->complete($request);
+                $assessments[] = $this->parseValidation($response->content);
+                $totalCost += $response->usage->costCredits;
+            } catch (\Throwable) {
+                // Skip failed rounds — don't let one failure abort the whole process
+            }
+        }
+
+        if (empty($assessments)) {
+            return $this->execute($taskExecution, $execution);
+        }
+
+        // Reveal phase: aggregate by majority vote on pass/fail, mean on score
+        $passCount = count(array_filter($assessments, fn ($a) => $a['passed']));
+        $majorityPassed = $passCount > count($assessments) / 2;
+        $meanScore = array_sum(array_column($assessments, 'score')) / count($assessments);
+        $agreementRatio = max($passCount, count($assessments) - $passCount) / count($assessments);
+
+        $merged = [
+            'passed' => $majorityPassed && $meanScore >= $qualityThreshold,
+            'score' => round($meanScore, 4),
+            'feedback' => $assessments[0]['feedback'],
+            'issues' => array_values(array_unique(array_merge(...array_column($assessments, 'issues')))),
+            'criterion_scores' => $assessments[0]['criterion_scores'] ?? [],
+            'parallel_rounds' => count($assessments),
+            'agreement_ratio' => round($agreementRatio, 4),
+        ];
+
+        $taskExecution->update([
+            'qa_feedback' => $merged,
+            'qa_score' => $merged['score'],
+            'status' => $merged['passed'] ? CrewTaskStatus::Validated : CrewTaskStatus::NeedsRevision,
+        ]);
+
+        $execution->increment('total_cost_credits', $totalCost);
+
+        return $merged;
+    }
+
+    /**
      * Resolve the rubric for the task from crew config, matching by keyword in task title/description.
      * Falls back to the "default" rubric, then to an empty array (generic evaluation).
      *
