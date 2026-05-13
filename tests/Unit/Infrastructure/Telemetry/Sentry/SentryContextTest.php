@@ -6,6 +6,7 @@ namespace Tests\Unit\Infrastructure\Telemetry\Sentry;
 
 use App\Infrastructure\Telemetry\Sentry\SentryContext;
 use PHPUnit\Framework\Attributes\Test;
+use Sentry\Event;
 use Sentry\State\Scope;
 use Tests\TestCase;
 
@@ -25,7 +26,7 @@ class SentryContextTest extends TestCase
             'experiment_stage' => 'building',
         ]);
 
-        $event = \Sentry\Event::createEvent();
+        $event = Event::createEvent();
         $scope->applyToEvent($event);
 
         $tags = $event->getTags();
@@ -49,7 +50,7 @@ class SentryContextTest extends TestCase
             'project_run_id' => [],
         ]);
 
-        $event = \Sentry\Event::createEvent();
+        $event = Event::createEvent();
         $scope->applyToEvent($event);
 
         $tags = $event->getTags();
@@ -88,7 +89,7 @@ class SentryContextTest extends TestCase
             'experiment_id' => 'exp-uuid',
         ]);
 
-        $event = \Sentry\Event::createEvent();
+        $event = Event::createEvent();
         $scope->applyToEvent($event);
 
         $tags = $event->getTags();

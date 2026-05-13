@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Observability\Health;
 
+use Laravel\Horizon\Horizon;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -72,7 +73,7 @@ final class HealthCheckRegistry
         ];
 
         // Optional: HorizonCheck only if Horizon facade is bound.
-        if (class_exists(\Laravel\Horizon\Horizon::class)) {
+        if (class_exists(Horizon::class)) {
             $checks[] = HorizonCheck::new()->name('horizon');
         }
 

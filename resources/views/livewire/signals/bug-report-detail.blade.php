@@ -59,20 +59,24 @@
             </div>
         </div>
 
-        {{-- Status actions --}}
-        @if(count($allowedTransitions) > 0 && ! $signal->status?->isTerminal())
-            <div class="flex items-center gap-2">
-                @foreach($allowedTransitions as $transition)
-                    <button
-                        wire:click="updateStatus('{{ $transition->value }}')"
-                        wire:confirm="Change status to {{ $transition->label() }}?"
-                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                        {{ $transition->label() }}
-                    </button>
-                @endforeach
-            </div>
-        @endif
+        {{-- Header actions: Edit + Status transitions --}}
+        <div class="flex items-center gap-2 flex-wrap">
+            <button
+                wire:click="openEditModal"
+                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+                Edit
+            </button>
+            @foreach($allowedTransitions as $transition)
+                <button
+                    wire:click="updateStatus('{{ $transition->value }}')"
+                    wire:confirm="Change status to {{ $transition->label() }}?"
+                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 {{ in_array($transition->value, ['triaged']) && $signal->status?->isTerminal() ? 'border-blue-300 text-blue-700 hover:bg-blue-50' : '' }}"
+                >
+                    {{ $signal->status?->isTerminal() && $transition->value === 'triaged' ? 'Reopen' : $transition->label() }}
+                </button>
+            @endforeach
+        </div>
     </div>
 
     <div class="grid grid-cols-3 gap-6">
@@ -519,7 +523,9 @@
                     </div>
                     <div>
                         <dt class="text-gray-500">Reported</dt>
-                        <dd class="text-gray-800">{{ $signal->created_at?->diffForHumans() }}</dd>
+                        <dd class="text-gray-800" title="{{ $signal->created_at?->diffForHumans() }}">
+                            {{ $signal->created_at?->format('Y-m-d H:i') }}
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-gray-500">Assignee</dt>
@@ -630,6 +636,64 @@
             @endif
         </div>
     </div>
+
+    {{-- Edit Modal --}}
+    @if($showEditModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" wire:click.self="$set('showEditModal', false)">
+            <div class="w-full max-w-xl rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900">Edit Report</h3>
+                    <button wire:click="$set('showEditModal', false)" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <x-form-input
+                        wire:model="editTitle"
+                        label="Title"
+                        :error="$errors->first('editTitle')"
+                    />
+                    <x-form-textarea
+                        wire:model="editDescription"
+                        label="Description"
+                        rows="5"
+                        :error="$errors->first('editDescription')"
+                    />
+                    <div>
+                        <p class="block text-sm font-medium text-gray-700 mb-1">Replace Screenshot</p>
+                        <input
+                            type="file"
+                            wire:model="editAttachment"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            class="text-sm text-gray-600"
+                        >
+                        @error('editAttachment')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                        @if($mediaFiles->isNotEmpty())
+                            <p class="text-xs text-gray-400 mt-1">Uploading a new image will replace the existing attachment.</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end gap-2">
+                    <button
+                        wire:click="$set('showEditModal', false)"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        wire:click="saveEdit"
+                        wire:loading.attr="disabled"
+                        class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                    >
+                        <span wire:loading.remove wire:target="saveEdit">Save Changes</span>
+                        <span wire:loading wire:target="saveEdit">Saving…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Assign Modal --}}
     @if($showAssignModal)

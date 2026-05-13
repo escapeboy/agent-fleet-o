@@ -9,6 +9,7 @@ use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Budget\Services\CostCalculator;
+use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Jobs\Middleware\HasSentryContext;
 use App\Jobs\Middleware\SentryContextJobMiddleware;
@@ -139,7 +140,7 @@ class ProcessAssistantMessageJob implements HasSentryContext, ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
-            app(\App\Infrastructure\Telemetry\Sentry\SentryEventCapturer::class)->capture($e, [
+            app(SentryEventCapturer::class)->capture($e, [
                 'context' => [
                     'sub_program' => 'assistant.message',
                     'team_id' => $this->teamId,
@@ -350,7 +351,7 @@ class ProcessAssistantMessageJob implements HasSentryContext, ShouldQueue
     public function failed(?\Throwable $e): void
     {
         if ($e !== null) {
-            app(\App\Infrastructure\Telemetry\Sentry\SentryEventCapturer::class)->capture($e, [
+            app(SentryEventCapturer::class)->capture($e, [
                 'context' => [
                     'sub_program' => 'assistant.message',
                     'team_id' => $this->teamId,

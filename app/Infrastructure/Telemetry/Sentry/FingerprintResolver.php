@@ -29,7 +29,7 @@ final class FingerprintResolver
      * Resolve a fingerprint for the given exception and context.
      *
      * @param  array<string, mixed>  $context
-     * @return array<int, string>           Fingerprint tokens. Empty array means "use Sentry default".
+     * @return array<int, string> Fingerprint tokens. Empty array means "use Sentry default".
      */
     public function resolve(Throwable $exception, array $context): array
     {

@@ -53,13 +53,17 @@ class SignalStatusTransitionMap
             // attempt landed in Review without resolving the bug.
             SignalStatus::DelegatedToAgent->value,
         ],
-        SignalStatus::Resolved->value => [],
-        SignalStatus::Dismissed->value => [],
+        SignalStatus::Resolved->value => [
+            SignalStatus::Triaged->value,   // reopen
+        ],
+        SignalStatus::Dismissed->value => [
+            SignalStatus::Triaged->value,   // reopen
+        ],
     ];
 
     public function canTransition(SignalStatus $from, SignalStatus $to): bool
     {
-        return in_array($to->value, self::TRANSITIONS[$from->value] ?? [], true);
+        return in_array($to->value, self::TRANSITIONS[$from->value], true);
     }
 
     /** @return SignalStatus[] */
@@ -67,7 +71,7 @@ class SignalStatusTransitionMap
     {
         return array_map(
             fn (string $v) => SignalStatus::from($v),
-            self::TRANSITIONS[$status->value] ?? [],
+            self::TRANSITIONS[$status->value],
         );
     }
 }

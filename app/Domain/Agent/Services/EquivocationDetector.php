@@ -61,7 +61,7 @@ class EquivocationDetector
         $agent->increment('equivocation_count');
         $agent->update(['last_equivocated_at' => now()]);
 
-        $newCount = $agent->fresh()?->equivocation_count ?? self::EQUIVOCATION_THRESHOLD;
+        $newCount = $agent->fresh()->equivocation_count ?? self::EQUIVOCATION_THRESHOLD;
 
         Log::warning('Agent equivocation detected', [
             'agent_id' => $agent->id,

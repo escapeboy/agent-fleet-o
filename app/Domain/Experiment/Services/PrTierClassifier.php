@@ -57,11 +57,11 @@ class PrTierClassifier
      */
     public function __invoke(array $diff): array
     {
-        $files = $diff['files_changed'] ?? [];
-        $linesAdded = (int) ($diff['lines_added'] ?? 0);
-        $linesRemoved = (int) ($diff['lines_removed'] ?? 0);
-        $targetBranch = (string) ($diff['target_branch'] ?? '');
-        $promoteBranch = (string) ($diff['promote_branch'] ?? '');
+        $files = $diff['files_changed'];
+        $linesAdded = $diff['lines_added'];
+        $linesRemoved = $diff['lines_removed'];
+        $targetBranch = $diff['target_branch'];
+        $promoteBranch = $diff['promote_branch'];
         $composerChanged = (bool) ($diff['composer_json_changed'] ?? false);
 
         if (empty($files)) {
