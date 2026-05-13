@@ -39,9 +39,14 @@
 
             @if($experiment->status->isPausable())
                 <form class="inline" onsubmit="return false" toolname="pause_experiment" tooldescription="Pause this running experiment">
-                <button type="button" wire:click="pauseExperiment"
+                <button type="button"
+                    x-data="{ pending: false }"
+                    wire:click="pauseExperiment"
+                    @click="pending = true"
+                    wire:loading.attr="disabled"
                     class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-100">
-                    Pause
+                    <span wire:loading wire:target="pauseExperiment"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="pauseExperiment">Pause</span>
                 </button>
                 </form>
 
@@ -62,9 +67,14 @@
 
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
                 <form class="inline" onsubmit="return false" toolname="resume_experiment" tooldescription="Resume this paused experiment">
-                <button type="button" wire:click="resumeExperiment"
+                <button type="button"
+                    x-data="{ pending: false }"
+                    wire:click="resumeExperiment"
+                    @click="pending = true"
+                    wire:loading.attr="disabled"
                     class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
-                    Resume
+                    <span wire:loading wire:target="resumeExperiment"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="resumeExperiment">Resume</span>
                 </button>
                 </form>
             @endif

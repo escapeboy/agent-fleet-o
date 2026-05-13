@@ -635,8 +635,8 @@ class ExecuteAgentAction
             // Use streaming when we have a step ID (enables real-time output in UI)
             if ($stepId) {
                 $broadcaster = app(StepOutputBroadcaster::class);
-                $response = $this->gateway->stream($request, function (string $chunk) use ($broadcaster, $stepId) {
-                    $broadcaster->broadcastChunk($stepId, $chunk);
+                $response = $this->gateway->stream($request, function (string $chunk) use ($broadcaster, $stepId, $experimentId) {
+                    $broadcaster->broadcastChunk($stepId, $chunk, $experimentId);
                 });
             } else {
                 $response = $this->gateway->complete($request);

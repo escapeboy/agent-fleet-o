@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Services;
 
 use App\Domain\Experiment\Models\PlaybookStep;
+use App\Events\StepOutputChunk;
 use App\Events\WorkflowNodeUpdated;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -18,11 +19,19 @@ class StepOutputBroadcaster
     /**
      * Append a chunk of streaming output for a step.
      */
-    public function broadcastChunk(string $stepId, string $chunk): void
+    public function broadcastChunk(string $stepId, string $chunk, ?string $experimentId = null): void
     {
         $key = self::KEY_PREFIX.$stepId;
         Redis::append($key, $chunk);
         Redis::expire($key, self::TTL);
+
+        if ($experimentId !== null) {
+            try {
+                event(new StepOutputChunk($experimentId, $stepId, $chunk));
+            } catch (\Throwable) {
+                // Reverb unavailable — wire:poll fallback handles recovery
+            }
+        }
     }
 
     /**

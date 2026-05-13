@@ -9,6 +9,7 @@ use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\CitationExtractor;
 use App\Domain\Assistant\Services\ConversationManager;
 use App\Domain\Budget\Services\CostCalculator;
+use App\Events\AssistantMessageChunk;
 use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Jobs\Middleware\HasSentryContext;
@@ -227,6 +228,16 @@ class ProcessAssistantMessageJob implements HasSentryContext, ShouldQueue
                             'tool_calls_in_progress' => $toolCallNames,
                         ]),
                     ]);
+                    try {
+                        event(new AssistantMessageChunk(
+                            conversationId: $this->conversationId,
+                            placeholderId: $this->placeholderMessageId,
+                            content: $streamedContent,
+                            toolCallsInProgress: $toolCallNames,
+                        ));
+                    } catch (\Throwable) {
+                        // Reverb unavailable — poll fallback handles recovery
+                    }
                     $lastFlush = $now;
                 }
             } elseif ($event instanceof ToolCall) {

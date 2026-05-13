@@ -293,6 +293,25 @@ class AssistantPanel extends Component
         $this->loadRecentConversations();
     }
 
+    #[On('echo-private:assistant.{conversationId},AssistantMessageChunk')]
+    public function receiveStreamChunk(array $event): void
+    {
+        if ($this->pendingMessageId === '' || ($event['placeholderId'] ?? '') !== $this->pendingMessageId) {
+            return;
+        }
+
+        $lastIndex = array_key_last($this->messages);
+        if ($lastIndex !== null) {
+            $this->messages[$lastIndex] = [
+                'role' => 'assistant',
+                'content' => $event['content'] ?: null,
+                'pending' => true,
+                'streaming' => true,
+                'tool_calls_in_progress' => $event['toolCallsInProgress'] ?? [],
+            ];
+        }
+    }
+
     /**
      * Called by wire:poll — checks if the pending placeholder has been filled.
      * Handles three states: pending (thinking), streaming (partial content), completed/failed.

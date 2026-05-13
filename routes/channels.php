@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Experiment\Models\Experiment;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -43,4 +44,13 @@ Broadcast::channel('experiment.{experimentId}', function ($user, string $experim
     }
 
     return ['id' => $user->id, 'team_id' => $experiment->team_id];
+});
+
+// Assistant streaming — one private channel per conversation.
+// Auth: any team member whose current team owns the conversation.
+Broadcast::channel('assistant.{conversationId}', function ($user, string $conversationId) {
+    return AssistantConversation::withoutGlobalScopes()
+        ->where('id', $conversationId)
+        ->where('team_id', $user->current_team_id)
+        ->exists();
 });

@@ -117,9 +117,15 @@
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Skill">
                     <i class="fa-solid fa-pen text-base"></i>
                 </button>
-                <button wire:click="toggleStatus"
-                    class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $skill->status === \App\Domain\Skill\Enums\SkillStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
-                    {{ $skill->status === \App\Domain\Skill\Enums\SkillStatus::Active ? 'Disable' : 'Enable' }}
+                <button
+                    x-data="{ active: @js($skill->status === \App\Domain\Skill\Enums\SkillStatus::Active) }"
+                    wire:click="toggleStatus"
+                    @click="active = !active"
+                    wire:loading.attr="disabled"
+                    :class="active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50'"
+                    class="rounded-lg border px-3 py-1.5 text-sm font-medium">
+                    <span wire:loading wire:target="toggleStatus"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="toggleStatus" x-text="active ? 'Disable' : 'Enable'"></span>
                 </button>
             </div>
         </div>

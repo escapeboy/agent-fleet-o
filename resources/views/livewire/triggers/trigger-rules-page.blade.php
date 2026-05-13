@@ -132,9 +132,16 @@
                                         class="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100">
                                         Edit
                                     </button>
-                                    <button wire:click="toggleStatus('{{ $rule->id }}')"
+                                    <button
+                                        x-data="{ active: @js($rule->status->isActive()) }"
+                                        wire:click="toggleStatus('{{ $rule->id }}')"
+                                        @click="active = !active"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50"
+                                        wire:target="toggleStatus('{{ $rule->id }}')"
                                         class="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100">
-                                        {{ $rule->status->isActive() ? 'Pause' : 'Activate' }}
+                                        <span wire:loading wire:target="toggleStatus('{{ $rule->id }}')"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                                        <span wire:loading.remove wire:target="toggleStatus('{{ $rule->id }}')" x-text="active ? 'Pause' : 'Activate'"></span>
                                     </button>
                                     <button wire:click="delete('{{ $rule->id }}')"
                                         wire:confirm="Delete this trigger rule?"

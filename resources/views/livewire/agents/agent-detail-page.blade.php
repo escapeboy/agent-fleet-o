@@ -455,9 +455,15 @@
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Agent">
                     <i class="fa-solid fa-pen text-base"></i>
                 </button>
-                <button wire:click="toggleStatus"
-                    class="rounded-lg border px-3 py-1.5 text-sm font-medium {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50' }}">
-                    {{ $agent->status === \App\Domain\Agent\Enums\AgentStatus::Active ? 'Disable' : 'Enable' }}
+                <button
+                    x-data="{ active: @js($agent->status === \App\Domain\Agent\Enums\AgentStatus::Active) }"
+                    wire:click="toggleStatus"
+                    @click="active = !active"
+                    wire:loading.attr="disabled"
+                    :class="active ? 'border-red-300 text-red-700 hover:bg-red-50' : 'border-green-300 text-green-700 hover:bg-green-50'"
+                    class="rounded-lg border px-3 py-1.5 text-sm font-medium">
+                    <span wire:loading wire:target="toggleStatus"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="toggleStatus" x-text="active ? 'Disable' : 'Enable'"></span>
                 </button>
                 <x-send-to-assistant-button
                     :message="'How should I configure this agent? Name: ' . $agent->name . ($agent->role ? '. Role: ' . $agent->role : '') . ($agent->goal ? '. Goal: ' . $agent->goal : '')"
