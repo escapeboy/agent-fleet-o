@@ -30,9 +30,7 @@ class AgentResponseAuditListTool extends Tool
                 ->description('The agent UUID')
                 ->required(),
             'limit' => $schema->integer()
-                ->description('Maximum records to return (default: 50)')
-                ->minimum(1)
-                ->maximum(200),
+                ->description('Maximum records to return (default: 50, max: 200)'),
             'violations_only' => $schema->boolean()
                 ->description('Only return records with violations'),
         ];

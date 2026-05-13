@@ -30,9 +30,7 @@ class AgentExecutionMemoriesTool extends Tool
                 ->description('The agent UUID')
                 ->required(),
             'limit' => $schema->integer()
-                ->description('Maximum number of memories to return (default: 20)')
-                ->minimum(1)
-                ->maximum(100),
+                ->description('Maximum number of memories to return (default: 20, max: 100)'),
         ];
     }
 

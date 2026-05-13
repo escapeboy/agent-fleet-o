@@ -27,13 +27,9 @@ class SignalListByRelevanceTool extends Tool
     {
         return [
             'min_score' => $schema->number()
-                ->description('Minimum relevance score filter (0.0–1.0)')
-                ->minimum(0.0)
-                ->maximum(1.0),
+                ->description('Minimum relevance score filter (0.0–1.0)'),
             'limit' => $schema->integer()
-                ->description('Maximum signals to return (default: 20)')
-                ->minimum(1)
-                ->maximum(100),
+                ->description('Maximum signals to return (default: 20, max: 100)'),
         ];
     }
 

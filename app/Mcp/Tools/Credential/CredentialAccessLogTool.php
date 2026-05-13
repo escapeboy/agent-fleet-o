@@ -31,9 +31,7 @@ class CredentialAccessLogTool extends Tool
                 ->description('The credential UUID')
                 ->required(),
             'limit' => $schema->integer()
-                ->description('Maximum entries to return (default: 50)')
-                ->minimum(1)
-                ->maximum(200),
+                ->description('Maximum entries to return (default: 50, max: 200)'),
         ];
     }
 

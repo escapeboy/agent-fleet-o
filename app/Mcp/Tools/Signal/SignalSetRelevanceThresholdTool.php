@@ -23,9 +23,7 @@ class SignalSetRelevanceThresholdTool extends Tool
     {
         return [
             'threshold' => $schema->number()
-                ->description('Minimum relevance score (0.0–1.0). Null disables filtering.')
-                ->minimum(0.0)
-                ->maximum(1.0),
+                ->description('Minimum relevance score (0.0–1.0). Null disables filtering.'),
         ];
     }
 
