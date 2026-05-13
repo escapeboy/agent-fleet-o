@@ -53,8 +53,12 @@ class SignalStatusTransitionMap
             // attempt landed in Review without resolving the bug.
             SignalStatus::DelegatedToAgent->value,
         ],
-        SignalStatus::Resolved->value => [],
-        SignalStatus::Dismissed->value => [],
+        SignalStatus::Resolved->value => [
+            SignalStatus::Triaged->value,   // reopen
+        ],
+        SignalStatus::Dismissed->value => [
+            SignalStatus::Triaged->value,   // reopen
+        ],
     ];
 
     public function canTransition(SignalStatus $from, SignalStatus $to): bool
