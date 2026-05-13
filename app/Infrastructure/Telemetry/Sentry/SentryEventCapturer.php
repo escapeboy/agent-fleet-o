@@ -43,8 +43,8 @@ final class SentryEventCapturer
      * containing the Sentry event_id (or null if Sentry is disabled).
      *
      * @param  array<string, mixed>  $options  Supported keys:
-     *     - context: array of FleetQ context fields (see SentryContext::TAG_KEYS)
-     *     - fingerprint: explicit override (skips FingerprintResolver)
+     *                                         - context: array of FleetQ context fields (see SentryContext::TAG_KEYS)
+     *                                         - fingerprint: explicit override (skips FingerprintResolver)
      */
     public function capture(Throwable $exception, array $options = []): CapturedEvent
     {

@@ -61,7 +61,12 @@ class ValidateCrewTaskJob implements ShouldQueue
         }
 
         try {
-            $validation = $validateAction->execute($taskExecution, $execution);
+            $crew = $execution->crew;
+            $parallelValidation = (bool) ($crew?->settings['parallel_validation'] ?? false);
+
+            $validation = $parallelValidation
+                ? $validateAction->executeParallel($taskExecution, $execution)
+                : $validateAction->execute($taskExecution, $execution);
 
             // Refresh after update
             $taskExecution->refresh();

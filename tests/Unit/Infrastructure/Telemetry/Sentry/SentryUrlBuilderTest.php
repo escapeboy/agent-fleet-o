@@ -17,7 +17,7 @@ class SentryUrlBuilderTest extends TestCase
         config()->set('observability.sentry.project_slug', 'platform');
         config()->set(
             'observability.sentry.event_url_template',
-            'https://sentry.io/organizations/{org}/projects/{project}/events/{event_id}/'
+            'https://sentry.io/organizations/{org}/projects/{project}/events/{event_id}/',
         );
 
         $builder = app(SentryUrlBuilder::class);
@@ -40,7 +40,7 @@ class SentryUrlBuilderTest extends TestCase
         config()->set('observability.sentry.project_slug', 'platform');
         config()->set(
             'observability.sentry.issue_search_url_template',
-            'https://sentry.io/organizations/{org}/issues/?query={query}'
+            'https://sentry.io/organizations/{org}/issues/?query={query}',
         );
 
         $builder = app(SentryUrlBuilder::class);
@@ -88,7 +88,7 @@ class SentryUrlBuilderTest extends TestCase
         config()->set('observability.sentry.project_slug', '');
         config()->set(
             'observability.sentry.issue_search_url_template',
-            'https://sentry.io/organizations/{org}/issues/?query={query}'
+            'https://sentry.io/organizations/{org}/issues/?query={query}',
         );
 
         $builder = app(SentryUrlBuilder::class);

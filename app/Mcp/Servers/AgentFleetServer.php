@@ -28,6 +28,8 @@ use App\Mcp\Tools\Agent\AgentCostsTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentDryRunTool;
+use App\Mcp\Tools\Agent\AgentEquivocationResetTool;
+use App\Mcp\Tools\Agent\AgentEquivocationStatusTool;
 use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
@@ -171,6 +173,7 @@ use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
 use App\Mcp\Tools\Crew\CrewExecutionResumeTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewExecutionTrustModeTool;
 use App\Mcp\Tools\Crew\CrewGenerateFromPromptTool;
 use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
@@ -371,6 +374,7 @@ use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamGraphGetTool;
 use App\Mcp\Tools\Shared\TeamInviteMemberTool;
+use App\Mcp\Tools\Shared\TeamKeyEscrowTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
 use App\Mcp\Tools\Shared\TeamObservabilityGetTool;
@@ -702,6 +706,8 @@ class AgentFleetServer extends Server
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
+        AgentEquivocationStatusTool::class,
+        AgentEquivocationResetTool::class,
         AgentSetReasoningStrategyTool::class,
         AgentTemplatesListTool::class,
         AgentConstraintTemplatesTool::class,
@@ -752,6 +758,7 @@ class AgentFleetServer extends Server
         CrewUpdateTool::class,
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
+        CrewExecutionTrustModeTool::class,
         CrewExecutionPauseTool::class,
         CrewExecutionResumeTool::class,
         CrewExecutionsListTool::class,
@@ -1116,6 +1123,7 @@ class AgentFleetServer extends Server
         TeamGetTool::class,
         TeamGraphGetTool::class,
         TeamUpdateTool::class,
+        TeamKeyEscrowTool::class,
         TeamMembersTool::class,
         TeamAiFeaturesGetTool::class,
         TeamAiFeaturesUpdateTool::class,

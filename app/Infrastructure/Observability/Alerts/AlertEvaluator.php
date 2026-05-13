@@ -6,7 +6,6 @@ namespace App\Infrastructure\Observability\Alerts;
 
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
-use App\Infrastructure\Observability\Prometheus\MetricEmitter;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
