@@ -176,7 +176,7 @@
                                         <span x-text="showTerminal ? 'Hide Terminal' : 'Show Terminal'"></span>
                                     </button>
                                     <div x-show="showTerminal" x-cloak class="mt-2">
-                                        <livewire:experiments.step-terminal-panel :step-id="$task->id" :key="'term-'.$task->id" />
+                                        <livewire:experiments.step-terminal-panel :step-id="$task->id" :experiment-id="$experiment->id" :key="'term-'.$task->id" />
                                     </div>
                                 </div>
                             @endif
