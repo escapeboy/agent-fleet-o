@@ -3,6 +3,7 @@
 namespace App\Domain\Shared\Models;
 
 use App\Domain\Email\Models\EmailTheme;
+use App\Domain\Shared\Actions\InitializeTeamKeyEscrowAction;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\User;
@@ -37,6 +38,10 @@ class Team extends Model
             if (! $team->widget_public_key) {
                 $team->widget_public_key = 'wk_'.Str::random(40);
             }
+        });
+
+        static::created(function (self $team) {
+            app(InitializeTeamKeyEscrowAction::class)->execute($team);
         });
 
         static::deleting(function (self $team) {

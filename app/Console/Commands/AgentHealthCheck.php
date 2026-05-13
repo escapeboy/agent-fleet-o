@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\HealthCheckAction;
 use App\Domain\Agent\Actions\UpdateAgentRiskProfileAction;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Services\EquivocationDetector;
 use Illuminate\Console\Command;
 
 class AgentHealthCheck extends Command
@@ -14,8 +15,11 @@ class AgentHealthCheck extends Command
 
     protected $description = 'Run health checks against all active AI agents';
 
-    public function handle(HealthCheckAction $action, UpdateAgentRiskProfileAction $riskAction): int
-    {
+    public function handle(
+        HealthCheckAction $action,
+        UpdateAgentRiskProfileAction $riskAction,
+        EquivocationDetector $equivocationDetector,
+    ): int {
         $agents = Agent::withoutGlobalScopes()->whereIn('status', [AgentStatus::Active, AgentStatus::Degraded])->get();
 
         if ($agents->isEmpty()) {
@@ -26,6 +30,7 @@ class AgentHealthCheck extends Command
 
         $passed = 0;
         $failed = 0;
+        $equivocators = 0;
 
         foreach ($agents as $agent) {
             $result = $action->execute($agent);
@@ -38,6 +43,13 @@ class AgentHealthCheck extends Command
                 $this->warn("  [FAIL] {$agent->name} ({$agent->provider}/{$agent->model})");
             }
 
+            // Report equivocation status
+            $count = $agent->fresh()->equivocation_count ?? 0;
+            if ($count > 0) {
+                $equivocators++;
+                $this->warn("  [EQUIVOC] {$agent->name} has {$count} equivocation(s) in the last 24h");
+            }
+
             // Compute risk profile for every checked agent
             try {
                 $riskAction->execute($agent->fresh());
@@ -46,7 +58,7 @@ class AgentHealthCheck extends Command
             }
         }
 
-        $this->info("Health check complete: {$passed} passed, {$failed} failed.");
+        $this->info("Health check complete: {$passed} passed, {$failed} failed, {$equivocators} equivocating.");
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
