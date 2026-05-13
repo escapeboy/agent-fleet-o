@@ -9,15 +9,12 @@ use Illuminate\Support\Facades\Log;
 class InitializeTeamKeyEscrowAction
 {
     /**
-     * Create a 2-of-2 escrow for the team's credential key.
+     * Store an encrypted backup of the team's credential key in team_key_escrows.
      *
-     * The team holds its credential_key (owner's copy).
-     * We store an XOR-masked backup in team_key_escrows:
-     *   mask = random_bytes(32)
-     *   platform_share = credential_key_bytes XOR mask
-     *
-     * Recovery requires both shares. The checksum allows verifying
-     * integrity without exposing the key.
+     * The key is encrypted with the application APP_KEY via Laravel's encrypt(),
+     * giving AES-256-CBC + HMAC envelope encryption at rest.
+     * The checksum (HMAC-SHA-256 keyed on APP_KEY) allows integrity verification
+     * without exposing the raw key, and is not brute-forceable without APP_KEY.
      */
     public function execute(Team $team): ?TeamKeyEscrow
     {
@@ -32,28 +29,19 @@ class InitializeTeamKeyEscrowAction
                 return null;
             }
 
-            // Generate random mask for XOR split
-            $mask = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
-
-            // platform_share = key XOR mask
-            $platformShare = $keyBytes ^ $mask;
-
-            // Encrypt the platform share with the application key
-            $encryptedShare = encrypt(base64_encode($platformShare));
+            $encryptedShare = encrypt($team->credential_key);
+            $checksum = hash_hmac('sha256', $keyBytes, config('app.key'));
 
             $escrow = TeamKeyEscrow::updateOrCreate(
                 ['team_id' => $team->id],
                 [
                     'encrypted_share' => $encryptedShare,
-                    'share_checksum' => hash('sha256', $keyBytes),
+                    'share_checksum' => $checksum,
                     'share_version' => 1,
                 ],
             );
 
-            // Wipe sensitive data from memory
             sodium_memzero($keyBytes);
-            sodium_memzero($mask);
-            sodium_memzero($platformShare);
 
             return $escrow;
         } catch (\Throwable $e) {

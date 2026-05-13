@@ -248,7 +248,7 @@ class DecomposeGoalAction
         $seen = [];
         $unique = [];
         foreach ($allProposals as $proposal) {
-            $key = strtolower(preg_replace('/\W+/', '', $proposal['title'] ?? ''));
+            $key = trim(strtolower(preg_replace('/\s+/', ' ', $proposal['title'] ?? '')));
             if ($key && ! isset($seen[$key])) {
                 $seen[$key] = true;
                 $unique[] = $proposal;

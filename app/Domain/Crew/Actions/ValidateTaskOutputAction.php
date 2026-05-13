@@ -190,6 +190,20 @@ class ValidateTaskOutputAction
             'status' => $merged['passed'] ? CrewTaskStatus::Validated : CrewTaskStatus::NeedsRevision,
         ]);
 
+        $qaScore = $merged['score'];
+        $stance = round(($qaScore - 0.5) * 2, 4);
+        $confidence = round($qaScore, 4);
+        $attemptRatio = max(0, round(1 - (($taskExecution->attempt_number - 1) / max($taskExecution->max_attempts, 1)), 4));
+
+        $taskExecution->update([
+            'belief_state' => [
+                'stance' => $stance,
+                'confidence' => $confidence,
+                'attempt_ratio' => $attemptRatio,
+                'updated_at' => now()->toIso8601String(),
+            ],
+        ]);
+
         $execution->increment('total_cost_credits', $totalCost);
 
         return $merged;

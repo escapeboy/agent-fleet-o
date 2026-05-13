@@ -25,13 +25,12 @@ class EquivocationDetector
         $responseHash = hash('sha256', $response);
         $cacheKey = "agent_equivoc:{$agent->id}:{$promptHash}";
 
-        $stored = Cache::store('default')->get($cacheKey);
-
-        if ($stored === null) {
-            Cache::store('default')->put($cacheKey, $responseHash, self::TTL_SECONDS);
-
+        // add() is atomic — returns false only if the key already exists
+        if (Cache::store('default')->add($cacheKey, $responseHash, self::TTL_SECONDS)) {
             return false;
         }
+
+        $stored = Cache::store('default')->get($cacheKey);
 
         if ($stored === $responseHash) {
             return false;
@@ -40,7 +39,7 @@ class EquivocationDetector
         // Different response for same prompt — equivocation detected
         $this->handleEquivocation($agent, $promptHash);
 
-        // Update stored hash to latest
+        // Overwrite with latest response hash for future comparisons
         Cache::store('default')->put($cacheKey, $responseHash, self::TTL_SECONDS);
 
         return true;
@@ -59,12 +58,10 @@ class EquivocationDetector
 
     private function handleEquivocation(Agent $agent, string $promptHash): void
     {
-        $newCount = ($agent->equivocation_count ?? 0) + 1;
+        $agent->increment('equivocation_count');
+        $agent->update(['last_equivocated_at' => now()]);
 
-        $agent->update([
-            'equivocation_count' => $newCount,
-            'last_equivocated_at' => now(),
-        ]);
+        $newCount = $agent->fresh()?->equivocation_count ?? self::EQUIVOCATION_THRESHOLD;
 
         Log::warning('Agent equivocation detected', [
             'agent_id' => $agent->id,

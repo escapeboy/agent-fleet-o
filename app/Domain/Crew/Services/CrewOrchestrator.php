@@ -856,7 +856,11 @@ class CrewOrchestrator
             fn ($t) => ($t->attempt_number ?? 1) <= 1 && $t->status === CrewTaskStatus::Validated->value,
         )->count();
 
-        if ($firstPassCount === $tasks->count()) {
+        $nonSkippedCount = $tasks->filter(
+            fn ($t) => $t->status !== CrewTaskStatus::Skipped->value,
+        )->count();
+
+        if ($nonSkippedCount > 0 && $firstPassCount === $nonSkippedCount) {
             return CrewExecutionTrustMode::FullConsensus;
         }
 
