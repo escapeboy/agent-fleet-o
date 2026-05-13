@@ -14,6 +14,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Domain\Signal\Services\SignalStatusTransitionMap;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Livewire\Attributes\Validate;
@@ -85,6 +86,8 @@ class BugReportDetailPage extends Component
 
     public function saveEdit(): void
     {
+        Gate::authorize('edit-content');
+
         $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
 
         $this->validate([
