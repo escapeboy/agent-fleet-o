@@ -2347,6 +2347,12 @@ parameters:
 			path: app/Domain/Credential/Actions/RefreshRedditTokenAction.php
 
 		-
+			message: '#^Argument of an invalid type string supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: app/Domain/Credential/Models/Credential.php
+
+		-
 			message: '#^Offset ''max_task_iterations'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -5311,6 +5317,18 @@ parameters:
 			path: app/Domain/Memory/Jobs/AutoSaveConversationMemoryJob.php
 
 		-
+			message: '#^Call to function is_string\(\) with non\-empty\-array will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Memory/Jobs/CompressAndStoreExecutionMemoryJob.php
+
+		-
+			message: '#^Variable \$existing in empty\(\) always exists and is not falsy\.$#'
+			identifier: empty.variable
+			count: 1
+			path: app/Domain/Memory/Jobs/CompressAndStoreExecutionMemoryJob.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$experiment_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -7045,6 +7063,12 @@ parameters:
 			path: app/Domain/Signal/Jobs/RegisterSubscriptionWebhookJob.php
 
 		-
+			message: '#^Call to function is_string\(\) with array\<string, mixed\> will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Signal/Jobs/ScoreSignalRelevanceJob.php
+
+		-
 			message: '#^Offset ''metadata'' on array\{title\: string, description\: string, priority\: string, tags\: array\<string\>, source_type\: string, metadata\: array\<string, mixed\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -8669,6 +8693,12 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Trigger/Actions/ExecuteTriggerRuleAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Trigger/Jobs/EvaluateTriggerRulesJob.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -14029,24 +14059,6 @@ parameters:
 			path: app/Livewire/Assistant/AssistantPanel.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
-			message: '#^Offset ''audit_log'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
-			message: '#^Offset ''llm_calls'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
 			message: '#^Access to an undefined property App\\Domain\\Chatbot\\Models\\ChatbotMessage\:\:\$avg_confidence\.$#'
 			identifier: property.notFound
 			count: 1
@@ -15529,6 +15541,18 @@ parameters:
 			path: app/Mcp/Tools/Agent/AgentEquivocationStatusTool.php
 
 		-
+			message: '#^Offset ''auto_captured'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentExecutionMemoriesTool.php
+
+		-
+			message: '#^Offset ''compressed'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentExecutionMemoriesTool.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -15635,6 +15659,24 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Agent/AgentListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\AgentResponseAudit\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -15839,36 +15881,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Assistant/AssistantSendMessageTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,FleetQ\\BorunaAudit\\Models\\BundleVerification\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleListDecisionsTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,FleetQ\\BorunaAudit\\Models\\AuditableDecision\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleListDecisionsTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -16247,6 +16259,24 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 1
 			path: app/Mcp/Tools/Chatbot/ChatbotTokenCreateTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Credential\\Models\\CredentialAccessLog\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -18263,6 +18293,36 @@ parameters:
 			identifier: unset.offset
 			count: 1
 			path: app/Mcp/Tools/Signal/SignalIntentReclassifyTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Signal\\Models\\Signal\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
 
 		-
 			message: '#^Call to an undefined method App\\Mcp\\Tools\\Signal\\WebclawCrawlTool\:\:internalError\(\)\.$#'
