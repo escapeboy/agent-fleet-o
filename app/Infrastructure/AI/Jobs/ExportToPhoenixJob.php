@@ -7,19 +7,28 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Contrib\Otlp\OtlpHttpTransportFactory;
+use OpenTelemetry\Contrib\Otlp\SpanExporter;
+use OpenTelemetry\SDK\Common\Attribute\Attributes;
+use OpenTelemetry\SDK\Resource\ResourceInfo;
+use OpenTelemetry\SDK\Resource\ResourceInfoFactory;
+use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
+use OpenTelemetry\SDK\Trace\TracerProvider;
 
 /**
- * Fire-and-forget OTLP exporter for Phoenix.
+ * Fire-and-forget OTLP/protobuf exporter for Phoenix.
  *
- * POSTs an `ExportTraceServiceRequest`-shaped JSON document to
- * `{endpoint}/v1/traces` (Phoenix's OTLP HTTP endpoint). Failure never affects
- * the originating AI request — exceptions are caught and logged.
+ * Uses the OTel PHP SDK to serialize a single span to OTLP-protobuf and POST
+ * it to `{endpoint}/v1/traces`. Phoenix's OTLP HTTP receiver rejects JSON
+ * (415 Unsupported Media Type) so protobuf is mandatory.
  *
- * Docker-internal endpoints (e.g. `http://phoenix:6006`) are allowed only when
- * `PHOENIX_ALLOW_HTTP=true`. Public endpoints MUST be HTTPS — anything else
- * gets a warning + skip.
+ * Docker-internal endpoints (e.g. `http://phoenix:6006`) are allowed only
+ * when `PHOENIX_ALLOW_HTTP=true`. Public endpoints MUST be HTTPS.
+ *
+ * Failure never affects the originating AI request — exceptions are caught
+ * and logged.
  */
 class ExportToPhoenixJob implements ShouldQueue
 {
@@ -30,12 +39,16 @@ class ExportToPhoenixJob implements ShouldQueue
     public int $timeout = 10;
 
     /**
-     * @param  array<string, mixed>  $payload  OTLP ExportTraceServiceRequest JSON shape
+     * @param  array<string, scalar|null>  $attributes  flat OpenInference attribute map
      */
     public function __construct(
-        private readonly array $payload,
         private readonly string $endpoint,
+        private readonly string $spanName,
+        private readonly array $attributes,
+        private readonly int $startNanos,
+        private readonly int $endNanos,
         private readonly string $apiKey = '',
+        private readonly string $project = 'fleetq',
     ) {
         $this->onQueue('metrics');
     }
@@ -46,9 +59,8 @@ class ExportToPhoenixJob implements ShouldQueue
             return;
         }
 
-        $url = rtrim($this->endpoint, '/').'/v1/traces';
+        $tracesUrl = rtrim($this->endpoint, '/').'/v1/traces';
         $scheme = parse_url($this->endpoint, PHP_URL_SCHEME);
-
         $allowHttp = (bool) config('llmops.phoenix.allow_http', false);
 
         if ($scheme !== 'https' && ! $allowHttp) {
@@ -59,19 +71,57 @@ class ExportToPhoenixJob implements ShouldQueue
             return;
         }
 
-        // SSRF guard for public endpoints only — docker-internal sidecars use
-        // RFC1918 / docker-bridge IPs that the guard would otherwise block.
         if ($scheme === 'https') {
-            $ssrfGuard->assertPublicUrl($url);
+            $ssrfGuard->assertPublicUrl($tracesUrl);
         }
 
-        $request = Http::timeout(5)->asJson();
+        $headers = $this->apiKey !== ''
+            ? ['Authorization' => 'Bearer '.$this->apiKey]
+            : [];
 
-        if ($this->apiKey !== '') {
-            $request = $request->withHeaders(['Authorization' => 'Bearer '.$this->apiKey]);
+        $transport = (new OtlpHttpTransportFactory)->create(
+            $tracesUrl,
+            'application/x-protobuf',
+            $headers,
+        );
+
+        $exporter = new SpanExporter($transport);
+
+        $resource = ResourceInfoFactory::defaultResource()->merge(
+            ResourceInfo::create(Attributes::create([
+                'service.name' => $this->project,
+                'service.namespace' => 'fleetq',
+            ])),
+        );
+
+        $tracerProvider = new TracerProvider(
+            new SimpleSpanProcessor($exporter),
+            null,
+            $resource,
+        );
+
+        try {
+            $tracer = $tracerProvider->getTracer('fleetq.ai-gateway');
+
+            $span = $tracer->spanBuilder($this->spanName)
+                ->setSpanKind(SpanKind::KIND_CLIENT)
+                ->setStartTimestamp($this->startNanos)
+                ->startSpan();
+
+            foreach ($this->attributes as $key => $value) {
+                if ($value === null) {
+                    continue;
+                }
+                $span->setAttribute($key, $value);
+            }
+
+            $span->end($this->endNanos);
+        } finally {
+            // Forces span flush through the SimpleSpanProcessor → SpanExporter
+            // → transport → Phoenix. Without shutdown() the span sits in the
+            // processor buffer and the worker exits before flushing.
+            $tracerProvider->shutdown();
         }
-
-        $request->post($url, $this->payload);
     }
 
     public function failed(\Throwable $e): void
@@ -79,6 +129,7 @@ class ExportToPhoenixJob implements ShouldQueue
         Log::warning('ExportToPhoenixJob: export failed', [
             'error' => $e->getMessage(),
             'endpoint' => $this->endpoint,
+            'span' => $this->spanName,
         ]);
     }
 }

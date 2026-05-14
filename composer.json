@@ -68,6 +68,7 @@
         "nikic/php-parser": "^5.0",
         "open-telemetry/exporter-otlp": "^1.4",
         "open-telemetry/sdk": "^1.14",
+        "php-http/guzzle7-adapter": "^1.0",
         "phpseclib/phpseclib": "^3.0",
         "predis/predis": "^3.3",
         "prism-php/prism": "^0.100.0",
