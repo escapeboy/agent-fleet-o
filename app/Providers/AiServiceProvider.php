@@ -16,6 +16,7 @@ use App\Infrastructure\AI\Middleware\BudgetPressureRouting;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
+use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
@@ -79,6 +80,8 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(UsageTracking::class),
                 // Always registered — handles its own enabled check via GlobalSetting / env
                 $app->make(LangfuseExportMiddleware::class),
+                // Same pattern as Langfuse — opt-in via PHOENIX_OTLP_ENDPOINT, no-op when empty.
+                $app->make(PhoenixExportMiddleware::class),
             ];
 
             return $gateway->withMiddleware($middleware);
