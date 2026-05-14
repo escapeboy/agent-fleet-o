@@ -45,7 +45,7 @@ class AgentStrictModeSetTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return $this->notFound('Agent', $validated['agent_id']);
+            return $this->notFoundError('Agent', $validated['agent_id']);
         }
 
         $agent->update(['strict_mode' => $validated['strict_mode']]);

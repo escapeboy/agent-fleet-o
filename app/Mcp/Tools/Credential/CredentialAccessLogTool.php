@@ -49,7 +49,7 @@ class CredentialAccessLogTool extends Tool
             ->find($validated['credential_id']);
 
         if (! $credential) {
-            return $this->notFound('Credential', $validated['credential_id']);
+            return $this->notFoundError('Credential', $validated['credential_id']);
         }
 
         $limit = $validated['limit'] ?? 50;
@@ -64,7 +64,7 @@ class CredentialAccessLogTool extends Tool
             'credential_id' => $validated['credential_id'],
             'credential_name' => $credential->name,
             'count' => $logs->count(),
-            'logs' => $logs->map(fn ($l) => [
+            'logs' => $logs->map(fn (CredentialAccessLog $l) => [
                 'id' => $l->id,
                 'resolved_for' => $l->resolved_for,
                 'agent_id' => $l->agent_id,

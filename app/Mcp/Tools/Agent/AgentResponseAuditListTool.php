@@ -62,13 +62,13 @@ class AgentResponseAuditListTool extends Tool
         return Response::text(json_encode([
             'agent_id' => $validated['agent_id'],
             'count' => $records->count(),
-            'records' => $records->map(fn ($r) => [
+            'records' => $records->map(fn (AgentResponseAudit $r) => [
                 'id' => $r->id,
                 'execution_id' => $r->execution_id,
                 'step_index' => $r->step_index,
                 'schema_valid' => $r->schema_valid,
                 'violations' => $r->violations,
-                'tools_called_count' => is_array($r->tools_called) ? count($r->tools_called) : 0,
+                'tools_called_count' => count($r->tools_called ?? []),
                 'created_at' => $r->created_at?->toIso8601String(),
             ])->values()->toArray(),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));

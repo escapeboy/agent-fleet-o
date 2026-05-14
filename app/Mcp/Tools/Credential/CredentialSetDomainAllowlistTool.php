@@ -47,7 +47,7 @@ class CredentialSetDomainAllowlistTool extends Tool
             ->find($validated['credential_id']);
 
         if (! $credential) {
-            return $this->notFound('Credential', $validated['credential_id']);
+            return $this->notFoundError('Credential', $validated['credential_id']);
         }
 
         $domains = array_values(array_filter(array_map('trim', $validated['domains'])));

@@ -51,7 +51,7 @@ class AgentToolPermissionSetTool extends Tool
             ->find($validated['agent_id']);
 
         if (! $agent) {
-            return $this->notFound('Agent', $validated['agent_id']);
+            return $this->notFoundError('Agent', $validated['agent_id']);
         }
 
         $toolBelongsToTeam = DB::table('tools')
@@ -62,7 +62,7 @@ class AgentToolPermissionSetTool extends Tool
             ->exists();
 
         if (! $toolBelongsToTeam) {
-            return $this->notFound('Tool', $validated['tool_id']);
+            return $this->notFoundError('Tool', $validated['tool_id']);
         }
 
         $updated = DB::table('agent_tool')
@@ -71,7 +71,7 @@ class AgentToolPermissionSetTool extends Tool
             ->update(['permission_level' => $validated['permission_level']]);
 
         if (! $updated) {
-            return $this->error('Tool not assigned to this agent', 404);
+            return $this->notFoundError('tool assignment');
         }
 
         return Response::text(json_encode([

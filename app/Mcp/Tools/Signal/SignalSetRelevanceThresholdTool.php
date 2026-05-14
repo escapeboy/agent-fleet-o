@@ -38,7 +38,7 @@ class SignalSetRelevanceThresholdTool extends Tool
         $team = Team::withoutGlobalScopes()->find($teamId);
 
         if (! $team) {
-            return $this->error('Team not found', 404);
+            return $this->notFoundError('Team', (string) $teamId);
         }
 
         $threshold = isset($validated['threshold']) ? (float) $validated['threshold'] : null;
