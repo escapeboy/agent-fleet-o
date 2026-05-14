@@ -26,6 +26,11 @@ Thumbs.db
 /.serena
 /plans
 /.claude
+
+# Per-developer Claude Code overrides (Claudify-style convention).
+# Drop personal context here — gitignored, never shipped.
+CLAUDE.local.md
+.claude/local/
 /*.png
 /*.jpg
 

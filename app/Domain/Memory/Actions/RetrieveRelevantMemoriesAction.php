@@ -71,6 +71,8 @@ class RetrieveRelevantMemoriesAction
                 ])
                 ->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
                 ->where('confidence', '>=', $minConfidence)
+                // Exclude rejected proposals — keep NULL (legacy) and approved.
+                ->where(fn ($q) => $q->whereNull('proposal_status')->orWhere('proposal_status', '!=', 'rejected'))
                 ->orderByDesc('composite_score');
 
             // Topic namespace pre-filter: narrows the candidate set before the pgvector scan.
