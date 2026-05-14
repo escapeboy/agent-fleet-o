@@ -21,6 +21,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class DashboardPage extends Component
@@ -63,6 +64,8 @@ class DashboardPage extends Component
 
     public function setPersona(string $persona): void
     {
+        Gate::authorize('edit-content');
+
         if (! in_array($persona, self::VALID_PERSONAS, true)) {
             return;
         }
