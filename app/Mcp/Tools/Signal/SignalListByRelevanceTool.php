@@ -55,7 +55,7 @@ class SignalListByRelevanceTool extends Tool
         return Response::text(json_encode([
             'count' => $signals->count(),
             'min_score_filter' => $minScore,
-            'signals' => $signals->map(fn ($s) => [
+            'signals' => $signals->map(fn (Signal $s) => [
                 'id' => $s->id,
                 'source_type' => $s->source_type,
                 'source_identifier' => $s->source_identifier,
