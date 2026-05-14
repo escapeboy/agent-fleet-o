@@ -228,6 +228,7 @@ use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
+use App\Mcp\Tools\Experiment\ExperimentProvenanceTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
@@ -804,6 +805,7 @@ class AgentFleetServer extends Server
         ExperimentCompleteBuildingTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
+        ExperimentProvenanceTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
         ExperimentSearchHistoryTool::class,
