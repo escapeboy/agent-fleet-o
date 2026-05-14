@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[AssistantTool('write')]
+#[IsDestructive]
 class AgentToolPermissionSetTool extends Tool
 {
     use HasStructuredErrors;
