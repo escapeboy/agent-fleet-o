@@ -50,6 +50,7 @@ class MemoryListProposalsTool extends Tool
 
         $query = Memory::query()
             ->where('tier', MemoryTier::Proposed->value)
+            ->whereNull('proposal_status')
             ->orderBy('created_at', 'desc');
 
         if (! empty($validated['agent_id'])) {

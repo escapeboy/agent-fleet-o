@@ -73,6 +73,7 @@ class MemoryContextInjector
             $lessons = Memory::withoutGlobalScopes()
                 ->where('team_id', $teamId)
                 ->where('tier', MemoryTier::Failures)
+                ->where(fn ($q) => $q->whereNull('proposal_status')->orWhere('proposal_status', '!=', 'rejected'))
                 ->orderByDesc('importance')
                 ->orderByDesc('created_at')
                 ->limit(3)

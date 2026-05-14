@@ -147,9 +147,43 @@ class MemoryBrowserPage extends Component
             return;
         }
 
-        Memory::where('id', $memoryId)->update(['tier' => $tier->value]);
+        Memory::where('id', $memoryId)->update([
+            'tier' => $tier->value,
+            'proposal_status' => 'approved',
+            'reviewed_at' => now(),
+            'reviewed_by' => 'user:'.(auth()->user()?->email ?? 'anonymous'),
+        ]);
 
         session()->flash('message', "Memory promoted to {$tier->value}.");
+    }
+
+    /**
+     * Reject a Proposed-tier memory. Records the reason and stops it from
+     * surfacing in retrieval. Used to dismiss noisy or duplicate proposals.
+     */
+    public function rejectProposal(string $memoryId, string $reason): void
+    {
+        Gate::authorize('edit-content');
+
+        $reason = trim($reason);
+        if ($reason === '') {
+            session()->flash('error', 'A rejection reason is required.');
+
+            return;
+        }
+
+        Memory::where('id', $memoryId)->update([
+            'proposal_status' => 'rejected',
+            'reviewed_at' => now(),
+            'rejection_reason' => mb_substr($reason, 0, 1000),
+            'reviewed_by' => 'user:'.(auth()->user()?->email ?? 'anonymous'),
+        ]);
+
+        if ($this->expandedId === $memoryId) {
+            $this->expandedId = null;
+        }
+
+        session()->flash('message', 'Proposal rejected.');
     }
 
     public function render(): View

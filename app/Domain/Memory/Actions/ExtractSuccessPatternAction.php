@@ -102,6 +102,20 @@ PROMPT;
                 return;
             }
 
+            $proposalWorkflow = (bool) config('memory.proposal_workflow.extractors_enabled', false);
+
+            $metadata = [
+                'experiment_id' => $experimentId,
+                'experiment_title' => $experiment->title,
+                'final_status' => $experiment->status?->value,
+                'key_technique' => $keyTechnique,
+                'extracted_at' => now()->toIso8601String(),
+            ];
+
+            if ($proposalWorkflow) {
+                $metadata['target_tier'] = MemoryTier::Successes->value;
+            }
+
             $this->storeMemory->execute(
                 teamId: $teamId,
                 agentId: $agentId,
@@ -109,16 +123,10 @@ PROMPT;
                 sourceType: 'experiment',
                 projectId: null,
                 sourceId: $experimentId,
-                metadata: [
-                    'experiment_id' => $experimentId,
-                    'experiment_title' => $experiment->title,
-                    'final_status' => $experiment->status?->value,
-                    'key_technique' => $keyTechnique,
-                    'extracted_at' => now()->toIso8601String(),
-                ],
+                metadata: $metadata,
                 confidence: $confidence,
                 tags: $tags,
-                tier: MemoryTier::Successes,
+                tier: $proposalWorkflow ? MemoryTier::Proposed : MemoryTier::Successes,
                 category: MemoryCategory::Behavior,
                 proposedBy: 'system:success_extractor',
             );

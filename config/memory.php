@@ -197,4 +197,25 @@ return [
         'auto_promote_min_importance' => 0.7,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Proposal Workflow (Knowledge Nominations)
+    |--------------------------------------------------------------------------
+    |
+    | When extractors_enabled is true, ExtractSuccessPattern/FailureLesson
+    | route through the Proposed tier instead of writing directly to the
+    | curated tier. A heuristic auditor (AuditMemoryProposalsAction) then
+    | auto-approves obvious wins, auto-rejects obvious noise, and queues the
+    | rest for human review.
+    |
+    | Existing installs keep extractors_enabled=false → no behavior change.
+    |
+    */
+    'proposal_workflow' => [
+        'extractors_enabled' => (bool) env('MEMORY_PROPOSAL_WORKFLOW', false),
+        'auto_approve_threshold' => (float) env('MEMORY_PROPOSAL_AUTO_APPROVE', 0.85),
+        'min_content_length' => (int) env('MEMORY_PROPOSAL_MIN_LENGTH', 30),
+        'min_confidence' => (float) env('MEMORY_PROPOSAL_MIN_CONFIDENCE', 0.3),
+    ],
+
 ];

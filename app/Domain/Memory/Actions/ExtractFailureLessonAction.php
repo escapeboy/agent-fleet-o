@@ -99,6 +99,24 @@ PROMPT;
                 return;
             }
 
+            $proposalWorkflow = (bool) config('memory.proposal_workflow.extractors_enabled', false);
+
+            $metadata = [
+                'experiment_id' => $experimentId,
+                'experiment_title' => $experiment->title,
+                'final_status' => $experiment->status?->value,
+                'root_cause' => $rootCause,
+                'extracted_at' => now()->toIso8601String(),
+            ];
+
+            if ($proposalWorkflow) {
+                $metadata['target_tier'] = MemoryTier::Failures->value;
+            }
+
+            // When proposal_workflow is off (default), write directly to the
+            // Failures tier so the curated (+0.10) retrieval boost applies
+            // immediately. When on, the lesson routes through Proposed and the
+            // heuristic auditor decides whether to promote.
             $this->storeMemory->execute(
                 teamId: $teamId,
                 agentId: $agentId,
@@ -106,19 +124,10 @@ PROMPT;
                 sourceType: 'experiment',
                 projectId: null,
                 sourceId: $experimentId,
-                metadata: [
-                    'experiment_id' => $experimentId,
-                    'experiment_title' => $experiment->title,
-                    'final_status' => $experiment->status?->value,
-                    'root_cause' => $rootCause,
-                    'extracted_at' => now()->toIso8601String(),
-                ],
+                metadata: $metadata,
                 confidence: $confidence,
                 tags: $tags,
-                // Store directly in Failures tier so the curated (+0.10) retrieval
-                // boost applies immediately. Lessons are surfaced in MemoryContextInjector
-                // and shown in the ExperimentDetailPage "Lessons Learned" tab.
-                tier: MemoryTier::Failures,
+                tier: $proposalWorkflow ? MemoryTier::Proposed : MemoryTier::Failures,
                 proposedBy: 'system:failure_extractor',
             );
 
