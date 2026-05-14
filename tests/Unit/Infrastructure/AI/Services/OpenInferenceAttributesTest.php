@@ -80,40 +80,16 @@ class OpenInferenceAttributesTest extends TestCase
         $this->assertArrayNotHasKey('metadata.experiment_id', $attrs);
     }
 
-    public function test_to_otlp_attributes_wraps_ints_as_int_value(): void
+    public function test_for_llm_call_values_are_scalar(): void
     {
-        $out = $this->attrs->toOtlpAttributes([
-            'llm.token_count.prompt' => 245,
-            'llm.model_name' => 'claude-haiku-4-5',
-        ]);
+        $attrs = $this->attrs->forLlmCall($this->request(), $this->response());
 
-        $byKey = collect($out)->keyBy('key')->toArray();
-        $this->assertSame(['intValue' => '245'], $byKey['llm.token_count.prompt']['value']);
-        $this->assertSame(['stringValue' => 'claude-haiku-4-5'], $byKey['llm.model_name']['value']);
-    }
-
-    public function test_to_otlp_attributes_skips_null_values(): void
-    {
-        $out = $this->attrs->toOtlpAttributes([
-            'a' => 'x',
-            'b' => null,
-            'c' => 1,
-        ]);
-
-        $keys = collect($out)->pluck('key')->toArray();
-        $this->assertSame(['a', 'c'], $keys);
-    }
-
-    public function test_to_otlp_attributes_handles_bools_and_floats(): void
-    {
-        $out = $this->attrs->toOtlpAttributes([
-            'b' => true,
-            'f' => 1.5,
-        ]);
-
-        $byKey = collect($out)->keyBy('key')->toArray();
-        $this->assertSame(['boolValue' => true], $byKey['b']['value']);
-        $this->assertSame(['doubleValue' => 1.5], $byKey['f']['value']);
+        foreach ($attrs as $key => $value) {
+            $this->assertTrue(
+                is_scalar($value),
+                "Attribute '{$key}' must be scalar (OTel SDK setAttribute requires scalar/array of scalars); got ".gettype($value),
+            );
+        }
     }
 
     private function request(): AiRequestDTO

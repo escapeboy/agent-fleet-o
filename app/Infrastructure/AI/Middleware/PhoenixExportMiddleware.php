@@ -11,14 +11,15 @@ use Closure;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Optional last-in-pipeline middleware that exports every LLM call to an Arize
- * Phoenix instance as an OpenInference-shaped OTLP trace.
+ * Optional last-in-pipeline middleware that exports every LLM call to an
+ * Arize Phoenix instance as an OpenInference-shaped OTLP/protobuf span.
  *
  * Only active when `PHOENIX_OTLP_ENDPOINT` is configured. Fire-and-forget:
- * dispatches a queued job to the `metrics` queue, never blocks or fails the
- * gateway request. Cached responses are not re-exported (avoid duplicates).
+ * dispatches a queued `ExportToPhoenixJob` (which uses the OTel PHP SDK to
+ * serialize protobuf). Never blocks or fails the gateway request. Cached
+ * responses are not re-exported.
  *
- * Mirrors the existing `LangfuseExportMiddleware` pattern — the two can be
+ * Mirrors the existing `LangfuseExportMiddleware` pattern — both can be
  * wired in the pipeline simultaneously.
  */
 class PhoenixExportMiddleware implements AiMiddlewareInterface
@@ -41,61 +42,26 @@ class PhoenixExportMiddleware implements AiMiddlewareInterface
         }
 
         try {
-            $traceId = $this->randomHex(32);
-            $spanId = $this->randomHex(16);
-
-            // Times in nanoseconds — OTLP standard.
-            $endNs = (int) (microtime(true) * 1_000_000_000);
-            $startNs = $endNs - ($response->latencyMs * 1_000_000);
-
-            $payload = [
-                'resourceSpans' => [[
-                    'resource' => [
-                        'attributes' => $this->attributes->toOtlpAttributes([
-                            'service.name' => (string) config('llmops.phoenix.project', 'fleetq'),
-                            'service.version' => (string) config('app.version', '1.0.0'),
-                        ]),
-                    ],
-                    'scopeSpans' => [[
-                        'scope' => ['name' => 'fleetq.ai-gateway'],
-                        'spans' => [[
-                            'traceId' => $traceId,
-                            'spanId' => $spanId,
-                            'name' => $request->purpose ?? 'llm-call',
-                            'kind' => 3, // SPAN_KIND_CLIENT
-                            'startTimeUnixNano' => (string) $startNs,
-                            'endTimeUnixNano' => (string) $endNs,
-                            'attributes' => $this->attributes->toOtlpAttributes(
-                                $this->attributes->forLlmCall($request, $response),
-                            ),
-                            'status' => ['code' => 1], // STATUS_CODE_OK
-                        ]],
-                    ]],
-                ]],
-            ];
+            // Timestamps in ns. End = now; start = end - measured latency.
+            $endNanos = (int) (microtime(true) * 1_000_000_000);
+            $startNanos = $endNanos - ($response->latencyMs * 1_000_000);
 
             ExportToPhoenixJob::dispatch(
-                payload: $payload,
                 endpoint: $endpoint,
+                spanName: $request->purpose ?? 'llm-call',
+                attributes: $this->attributes->forLlmCall($request, $response),
+                startNanos: $startNanos,
+                endNanos: $endNanos,
                 apiKey: (string) config('llmops.phoenix.api_key', ''),
+                project: (string) config('llmops.phoenix.project', 'fleetq'),
             );
         } catch (\Throwable $e) {
-            Log::warning('PhoenixExportMiddleware: failed to build span, swallowing', [
+            Log::warning('PhoenixExportMiddleware: failed to enqueue export, swallowing', [
                 'error' => $e->getMessage(),
                 'purpose' => $request->purpose,
             ]);
         }
 
         return $response;
-    }
-
-    /**
-     * Generate `$length` lowercase hex chars (no dashes — OTLP traceId/spanId format).
-     */
-    private function randomHex(int $length): string
-    {
-        $bytes = (int) ceil($length / 2);
-
-        return substr(bin2hex(random_bytes($bytes)), 0, $length);
     }
 }

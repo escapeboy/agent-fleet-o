@@ -53,39 +53,40 @@ class PhoenixExportMiddlewareTest extends TestCase
         Bus::assertNotDispatched(ExportToPhoenixJob::class);
     }
 
-    public function test_dispatches_export_job_when_enabled_and_fresh(): void
+    public function test_dispatches_export_job_with_expected_args(): void
     {
         config([
             'llmops.phoenix.enabled' => true,
             'llmops.phoenix.endpoint' => 'http://phoenix:6006',
             'llmops.phoenix.api_key' => 'secret',
+            'llmops.phoenix.project' => 'fleetq-test',
         ]);
         Bus::fake();
 
         $this->middleware->handle($this->request(), fn () => $this->response());
 
         Bus::assertDispatched(ExportToPhoenixJob::class, function (ExportToPhoenixJob $job) {
-            // Inspect via reflection — the constructor args are readonly private.
             $reflection = new \ReflectionClass($job);
-            $endpoint = $reflection->getProperty('endpoint');
-            $apiKey = $reflection->getProperty('apiKey');
-            $payload = $reflection->getProperty('payload');
+            $get = fn (string $name) => $reflection->getProperty($name)->getValue($job);
 
-            return $endpoint->getValue($job) === 'http://phoenix:6006'
-                && $apiKey->getValue($job) === 'secret'
-                && isset($payload->getValue($job)['resourceSpans']);
+            return $get('endpoint') === 'http://phoenix:6006'
+                && $get('apiKey') === 'secret'
+                && $get('project') === 'fleetq-test'
+                && $get('spanName') === 'unit-test'
+                && is_array($get('attributes'))
+                && $get('attributes')['llm.model_name'] === 'claude-haiku-4-5'
+                && $get('endNanos') > $get('startNanos')
+                && ($get('endNanos') - $get('startNanos')) >= 100 * 1_000_000; // ≥100ms (we set latencyMs=100)
         });
     }
 
-    public function test_swallows_span_building_errors(): void
+    public function test_swallows_attribute_building_errors(): void
     {
-        // Verify the try/catch by injecting a mock attribute builder that throws.
-        // The middleware must still return the response and not dispatch the job.
         config(['llmops.phoenix.enabled' => true, 'llmops.phoenix.endpoint' => 'http://phoenix:6006']);
         Bus::fake();
 
         $brokenAttrs = Mockery::mock(OpenInferenceAttributes::class);
-        $brokenAttrs->shouldReceive('toOtlpAttributes')->andThrow(new \RuntimeException('boom'));
+        $brokenAttrs->shouldReceive('forLlmCall')->andThrow(new \RuntimeException('boom'));
 
         $middleware = new PhoenixExportMiddleware($brokenAttrs);
         $response = $this->response();
