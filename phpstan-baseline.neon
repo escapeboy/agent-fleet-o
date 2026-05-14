@@ -229,6 +229,30 @@ parameters:
 			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$provider\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>provider" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:notify\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -703,8 +727,38 @@ parameters:
 			path: app/Domain/Approval/Actions/CreateActionProposalAction.php
 
 		-
+			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Call to function is_numeric\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Offset ''confidence'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
 
@@ -5251,6 +5305,18 @@ parameters:
 			path: app/Domain/Marketplace/Models/MarketplaceListing.php
 
 		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Memory/Actions/AuditMemoryProposalsAction.php
+
+		-
+			message: '#^Offset ''target_tier'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Memory/Actions/AuditMemoryProposalsAction.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Memory\\Models\\Memory\:\:\$embedding\.$#'
 			identifier: property.notFound
 			count: 2
@@ -6997,6 +7063,36 @@ parameters:
 			path: app/Domain/Signal/Connectors/ApiPollingConnector.php
 
 		-
+			message: '#^Call to static method read\(\) on an unknown class Sabre\\VObject\\Reader\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/CalendarConnector.php
+
+		-
+			message: '#^Call to method first\(\) on an unknown class Webklex\\PHPIMAP\\Attribute\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Class Webklex\\PHPIMAP\\Attribute not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Domain/Signal/Connectors/ImapConnector.php
+
+		-
 			message: '#^Method App\\Domain\\Signal\\Connectors\\ImapConnector\:\:resolveCredentials\(\) never returns array so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -7211,6 +7307,12 @@ parameters:
 			identifier: nullCoalesce.property
 			count: 1
 			path: app/Domain/Signal/Services/AutoBugReportClassifier.php
+
+		-
+			message: '#^Offset 1 on array\{list\<string\>, list\<''c''\|''cpp''\|''cs''\|''go''\|''h''\|''java''\|''js''\|''jsx''\|''kt''\|''m''\|''mm''\|''php''\|''py''\|''rb''\|''rs''\|''swift''\|''ts''\|''tsx''\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Signal/Services/CodeOwnershipResolver.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -9509,6 +9611,36 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Domain\\Workflow\\Services\\ArtifactProvenanceFormatter\:\:compactJson\(\) expects array\<string, mixed\>, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between int and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -13111,6 +13243,12 @@ parameters:
 			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
 
 		-
+			message: '#^Property App\\Infrastructure\\AI\\Jobs\\ExportToPhoenixJob\:\:\$spanId is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Infrastructure/AI/Jobs/ExportToPhoenixJob.php
+
+		-
 			message: '#^Access to an undefined property App\\Infrastructure\\AI\\Models\\LlmRequestLog\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -13337,6 +13475,12 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Infrastructure/AI/Services/LocalAgentDiscovery.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between array\{trace\: string, span\: string, name\: string, start_nanos\: int, attributes\: array\<string, bool\|float\|int\|string\|null\>, emit\: bool\} and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Infrastructure/AI/Services/PhoenixTraceContext.php
 
 		-
 			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Domain\\Shared\\Enums\\DataClassification\:\:Confidential, App\\Domain\\Shared\\Enums\\DataClassification\:\:Restricted\} and true will always evaluate to false\.$#'
@@ -14215,8 +14359,26 @@ parameters:
 			path: app/Livewire/Dashboard/DashboardPage.php
 
 		-
+			message: '#^Call to function in_array\(\) with arguments \*NEVER\*, array\{''sre'', ''cto''\} and true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Offset ''persona'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Dashboard/DashboardPage.php
 
@@ -14229,6 +14391,12 @@ parameters:
 		-
 			message: '#^Parameter \#3 \$second of static method Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\Experiment\>\:\:whereColumn\(\) expects string\|null, Illuminate\\Contracts\\Database\\Query\\Expression given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Livewire/Dashboard/DashboardPage.php
 
@@ -14609,6 +14777,12 @@ parameters:
 			identifier: match.unhandled
 			count: 1
 			path: app/Livewire/Marketplace/PublishForm.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Livewire/Memory/MemoryBrowserPage.php
 
 		-
 			message: '#^Offset ''default_priority'' on array\{\}\|string on left side of \?\? does not exist\.$#'
@@ -15061,6 +15235,18 @@ parameters:
 			path: app/Livewire/Signals/SignalConnectorsPage.php
 
 		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Livewire/Signals/SignalConnectorsPage.php
+
+		-
 			message: '#^Empty array passed to foreach\.$#'
 			identifier: foreach.emptyArray
 			count: 1
@@ -15473,6 +15659,30 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Services/McpAppRegistry.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Dead catch \- ReflectionException is never thrown in the try block\.$#'
+			identifier: catch.neverThrown
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
@@ -17155,6 +17365,18 @@ parameters:
 			path: app/Mcp/Tools/Memory/MemoryPromoteTool.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryPromoteTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryRejectProposalTool.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -17225,6 +17447,12 @@ parameters:
 			identifier: method.nonObject
 			count: 2
 			path: app/Mcp/Tools/Migration/MigrationStatusTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Phoenix\\PhoenixTraceGetTool\:\:notFoundError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Phoenix/PhoenixTraceGetTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
@@ -17893,12 +18121,6 @@ parameters:
 			path: app/Mcp/Tools/Shared/TeamInviteMemberTool.php
 
 		-
-			message: '#^Access to an undefined property Cloud\\Domain\\Shared\\Models\\TeamInvitation\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Mcp/Tools/Shared/TeamInviteMemberTool.php
-
-		-
 			message: '#^Access to an undefined property Cloud\\Domain\\Shared\\Models\\TeamInvitation\:\:\$role\.$#'
 			identifier: property.notFound
 			count: 2
@@ -18155,6 +18377,18 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Signal/HttpMonitorTool.php
+
+		-
+			message: '#^Call to method make\(\) on an unknown class Webklex\\PHPIMAP\\ClientManager\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
+
+		-
+			message: '#^Instantiated class Webklex\\PHPIMAP\\ClientManager not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Mcp/Tools/Signal/ImapMailboxTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'

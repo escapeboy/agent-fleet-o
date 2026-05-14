@@ -83,6 +83,9 @@ return [
             'p95_llm_latency_ms' => (int) env('ALERT_P95_LATENCY_MS', 60_000),
             'stuck_experiments' => (int) env('ALERT_STUCK_EXPERIMENTS', 10),
             'circuit_breaker_open' => (int) env('ALERT_CIRCUIT_BREAKER_OPEN', 1),
+            // Phoenix sidecar down → exports silently dropped. 5/min is the
+            // floor where it's worth waking someone up (10x normal noise).
+            'phoenix_export_failures_per_minute' => (int) env('ALERT_PHOENIX_EXPORT_FAILURES_PER_MINUTE', 5),
         ],
 
         // Prometheus HTTP API base used by CheckAlertRulesCommand. Empty disables

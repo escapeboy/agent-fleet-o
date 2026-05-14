@@ -106,8 +106,14 @@ final class AlertEvaluator
             'circuit_breaker_open' => $this->circuitBreakersOpen(),
             'error_rate_per_minute' => $this->errorRatePerMinute(),
             'p95_llm_latency_ms' => $this->p95LlmLatencyMs(),
+            'phoenix_export_failures_per_minute' => $this->phoenixExportFailuresPerMinute(),
             default => null,
         };
+    }
+
+    private function phoenixExportFailuresPerMinute(): int|float|null
+    {
+        return $this->promQuery('sum(rate(fleetq_phoenix_export_total{outcome="failure"}[1m])) * 60');
     }
 
     private function totalQueueDepth(): int

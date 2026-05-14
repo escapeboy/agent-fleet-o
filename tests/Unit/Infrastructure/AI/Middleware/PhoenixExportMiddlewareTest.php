@@ -8,6 +8,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
 use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
 use App\Infrastructure\AI\Services\OpenInferenceAttributes;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use Illuminate\Support\Facades\Bus;
 use Mockery;
 use Tests\TestCase;
@@ -19,7 +20,10 @@ class PhoenixExportMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes);
+        $this->middleware = new PhoenixExportMiddleware(
+            new OpenInferenceAttributes,
+            new PhoenixTraceContext,
+        );
     }
 
     public function test_does_not_dispatch_when_endpoint_empty(): void
@@ -60,6 +64,7 @@ class PhoenixExportMiddlewareTest extends TestCase
             'llmops.phoenix.endpoint' => 'http://phoenix:6006',
             'llmops.phoenix.api_key' => 'secret',
             'llmops.phoenix.project' => 'fleetq-test',
+            'llmops.phoenix.sample_rate' => 1.0,
         ]);
         Bus::fake();
 
@@ -73,10 +78,14 @@ class PhoenixExportMiddlewareTest extends TestCase
                 && $get('apiKey') === 'secret'
                 && $get('project') === 'fleetq-test'
                 && $get('spanName') === 'unit-test'
+                && is_string($get('traceId'))
+                && strlen((string) $get('traceId')) === 32
+                && strlen((string) $get('spanId')) === 16
+                && $get('parentSpanId') === null
                 && is_array($get('attributes'))
                 && $get('attributes')['llm.model_name'] === 'claude-haiku-4-5'
                 && $get('endNanos') > $get('startNanos')
-                && ($get('endNanos') - $get('startNanos')) >= 100 * 1_000_000; // ≥100ms (we set latencyMs=100)
+                && ($get('endNanos') - $get('startNanos')) >= 100 * 1_000_000;
         });
     }
 
@@ -88,13 +97,89 @@ class PhoenixExportMiddlewareTest extends TestCase
         $brokenAttrs = Mockery::mock(OpenInferenceAttributes::class);
         $brokenAttrs->shouldReceive('forLlmCall')->andThrow(new \RuntimeException('boom'));
 
-        $middleware = new PhoenixExportMiddleware($brokenAttrs);
+        $middleware = new PhoenixExportMiddleware($brokenAttrs, new PhoenixTraceContext);
         $response = $this->response();
 
         $result = $middleware->handle($this->request(), fn () => $response);
 
         $this->assertSame($response, $result);
         Bus::assertNotDispatched(ExportToPhoenixJob::class);
+    }
+
+    public function test_skips_dispatch_when_sample_rate_is_zero(): void
+    {
+        config([
+            'llmops.phoenix.enabled' => true,
+            'llmops.phoenix.endpoint' => 'http://phoenix:6006',
+            'llmops.phoenix.sample_rate' => 0.0,
+        ]);
+        Bus::fake();
+
+        $this->middleware->handle($this->request(), fn () => $this->response());
+
+        Bus::assertNotDispatched(ExportToPhoenixJob::class);
+    }
+
+    public function test_force_sample_when_parent_context_is_set(): void
+    {
+        config([
+            'llmops.phoenix.enabled' => true,
+            'llmops.phoenix.endpoint' => 'http://phoenix:6006',
+            'llmops.phoenix.sample_rate' => 0.0, // would otherwise drop
+        ]);
+        Bus::fake();
+
+        $traceCtx = new PhoenixTraceContext;
+        // Force a parent context via push (without the dispatch side-effect we
+        // only care about the IDs here).
+        $traceCtx->push('test.root', ['metadata.test' => 'parent']);
+
+        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx);
+        $middleware->handle($this->request(), fn () => $this->response());
+
+        $traceCtx->reset();
+
+        Bus::assertDispatched(ExportToPhoenixJob::class, function (ExportToPhoenixJob $job) {
+            $reflection = new \ReflectionClass($job);
+            $parentSpan = $reflection->getProperty('parentSpanId')->getValue($job);
+
+            return is_string($parentSpan) && strlen($parentSpan) === 16;
+        });
+    }
+
+    public function test_dto_parent_ids_take_precedence_over_trace_context(): void
+    {
+        config([
+            'llmops.phoenix.enabled' => true,
+            'llmops.phoenix.endpoint' => 'http://phoenix:6006',
+        ]);
+        Bus::fake();
+
+        $traceCtx = new PhoenixTraceContext;
+        $traceCtx->push('ignored.root', []);
+
+        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx);
+
+        $request = new AiRequestDTO(
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5',
+            systemPrompt: 's',
+            userPrompt: 'u',
+            purpose: 'with-explicit-parent',
+            parentTraceId: str_repeat('a', 32),
+            parentSpanId: str_repeat('b', 16),
+        );
+
+        $middleware->handle($request, fn () => $this->response());
+        $traceCtx->reset();
+
+        Bus::assertDispatched(ExportToPhoenixJob::class, function (ExportToPhoenixJob $job) {
+            $reflection = new \ReflectionClass($job);
+            $get = fn (string $name) => $reflection->getProperty($name)->getValue($job);
+
+            return $get('traceId') === str_repeat('a', 32)
+                && $get('parentSpanId') === str_repeat('b', 16);
+        });
     }
 
     private function request(): AiRequestDTO

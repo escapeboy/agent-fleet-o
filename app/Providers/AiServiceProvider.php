@@ -27,6 +27,7 @@ use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use Illuminate\Support\ServiceProvider;
@@ -44,6 +45,11 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(LocalAgentDiscovery::class);
         $this->app->singleton(LocalLlmDiscovery::class);
         $this->app->singleton(LocalLlmUrlValidator::class);
+        // Request/worker-scoped — holds the active root-span stack so nested
+        // LLM calls land under the right parent. Resets between requests in
+        // HTTP context; persists across jobs in a queue worker (the stack
+        // drains via array_pop on every withRoot() exit).
+        $this->app->singleton(PhoenixTraceContext::class);
 
         // Portkey gateway — instantiated per-team via PortkeyGateway constructor.
         // Named binding for direct resolution when a Portkey credential is available.

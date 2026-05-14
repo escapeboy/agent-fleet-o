@@ -57,6 +57,10 @@ final class AlertRules
                 'severity' => 'critical',
                 'description' => 'AI provider circuit breaker open — calls being rejected.',
             ],
+            'phoenix_export_failures_per_minute' => [
+                'severity' => 'warning',
+                'description' => 'Phoenix OTLP export failure rate above threshold — sidecar likely down. Traces silently dropped.',
+            ],
         ];
 
         $rules = [];

@@ -330,6 +330,10 @@ use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Outbound\NtfySendTool;
+use App\Mcp\Tools\Phoenix\PhoenixProjectListTool;
+use App\Mcp\Tools\Phoenix\PhoenixSpanSearchTool;
+use App\Mcp\Tools\Phoenix\PhoenixTraceGetTool;
+use App\Mcp\Tools\Phoenix\PhoenixTraceListTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
@@ -1115,6 +1119,10 @@ class AgentFleetServer extends Server
         MemoryListProposalsTool::class,
         MemoryRejectProposalTool::class,
         MemoryAuditProposalsTool::class,
+        PhoenixProjectListTool::class,
+        PhoenixTraceListTool::class,
+        PhoenixTraceGetTool::class,
+        PhoenixSpanSearchTool::class,
         MemoryUpdateTool::class,
         MemoryExportTool::class,
         MemoryGetTool::class,
