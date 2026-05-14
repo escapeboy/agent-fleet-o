@@ -11,6 +11,7 @@ use App\Mcp\Resources\DashboardResource;
 use App\Mcp\Resources\ExperimentDetailResource;
 use App\Mcp\Resources\WorkflowDagResource;
 use App\Mcp\Services\ConnectorMcpRegistrar;
+use App\Mcp\Services\ToolAutoDiscoverer;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
@@ -642,6 +643,24 @@ class AgentFleetServer extends Server
     protected function boot(): void
     {
         $this->bootstrapMcpAuth();
+
+        // Auto-discover Tool classes from `app/Mcp/Tools/**`. Catches files added
+        // to the filesystem but missing from the curated $tools array — the array
+        // is now redundant for correctness and kept only as documentation of the
+        // intended tool taxonomy. Discovery is wrapped in a try/catch so a
+        // reflection failure on one tool can't break the whole server boot.
+        try {
+            $discovered = app(ToolAutoDiscoverer::class)->discover();
+            $existing = array_flip(array_filter($this->tools, 'is_string'));
+            foreach ($discovered as $toolClass) {
+                if (! isset($existing[$toolClass])) {
+                    $this->tools[] = $toolClass;
+                    $existing[$toolClass] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('AgentFleetServer: tool auto-discovery skipped', ['error' => $e->getMessage()]);
+        }
 
         // Append plugin-contributed MCP tools (registered via FleetPluginServiceProvider::$mcpTools)
         foreach (app('fleet.mcp.tool_classes') as $toolClass) {
