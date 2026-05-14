@@ -3,12 +3,17 @@
 namespace App\Infrastructure\AI\Jobs;
 
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Infrastructure\Observability\Prometheus\MetricEmitter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use OpenTelemetry\API\Trace\Span;
+use OpenTelemetry\API\Trace\SpanContext;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\TraceFlags;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\Contrib\Otlp\OtlpHttpTransportFactory;
 use OpenTelemetry\Contrib\Otlp\SpanExporter;
 use OpenTelemetry\SDK\Common\Attribute\Attributes;
@@ -20,15 +25,13 @@ use OpenTelemetry\SDK\Trace\TracerProvider;
 /**
  * Fire-and-forget OTLP/protobuf exporter for Phoenix.
  *
- * Uses the OTel PHP SDK to serialize a single span to OTLP-protobuf and POST
- * it to `{endpoint}/v1/traces`. Phoenix's OTLP HTTP receiver rejects JSON
- * (415 Unsupported Media Type) so protobuf is mandatory.
+ * Builds one span with explicit traceId/spanId/parentSpanId and POSTs it via
+ * the OTel PHP SDK. Phoenix's OTLP HTTP receiver is protobuf-only (returns
+ * 415 for application/json) — see `feedback/phoenix-otlp-http-is-protobuf-only`.
  *
- * Docker-internal endpoints (e.g. `http://phoenix:6006`) are allowed only
- * when `PHOENIX_ALLOW_HTTP=true`. Public endpoints MUST be HTTPS.
- *
- * Failure never affects the originating AI request — exceptions are caught
- * and logged.
+ * Failure never affects the originating request — exceptions caught + logged.
+ * Metrics emitted via the MetricEmitter facade (success/failure counter +
+ * latency histogram) so Grafana can plot export health.
  */
 class ExportToPhoenixJob implements ShouldQueue
 {
@@ -40,6 +43,9 @@ class ExportToPhoenixJob implements ShouldQueue
 
     /**
      * @param  array<string, scalar|null>  $attributes  flat OpenInference attribute map
+     * @param  string  $traceId  32-hex
+     * @param  string  $spanId  16-hex
+     * @param  string|null  $parentSpanId  16-hex when nesting under a parent span
      */
     public function __construct(
         private readonly string $endpoint,
@@ -49,6 +55,9 @@ class ExportToPhoenixJob implements ShouldQueue
         private readonly int $endNanos,
         private readonly string $apiKey = '',
         private readonly string $project = 'fleetq',
+        private readonly ?string $traceId = null,
+        private readonly ?string $spanId = null,
+        private readonly ?string $parentSpanId = null,
     ) {
         $this->onQueue('metrics');
     }
@@ -100,13 +109,32 @@ class ExportToPhoenixJob implements ShouldQueue
             $resource,
         );
 
+        $startedAt = microtime(true);
+
         try {
             $tracer = $tracerProvider->getTracer('fleetq.ai-gateway');
 
-            $span = $tracer->spanBuilder($this->spanName)
+            $builder = $tracer->spanBuilder($this->spanName)
                 ->setSpanKind(SpanKind::KIND_CLIENT)
-                ->setStartTimestamp($this->startNanos)
-                ->startSpan();
+                ->setStartTimestamp($this->startNanos);
+
+            // When a parent span is supplied, seed a SpanContext as the parent
+            // so OTel's trace propagation links this span to the correct trace.
+            // Otherwise the SDK auto-generates a fresh trace.
+            if ($this->traceId !== null && $this->parentSpanId !== null) {
+                $parentContext = SpanContext::create(
+                    $this->traceId,
+                    $this->parentSpanId,
+                    TraceFlags::SAMPLED,
+                );
+
+                $contextWithParent = Span::wrap($parentContext)
+                    ->storeInContext(Context::getCurrent());
+
+                $builder = $builder->setParent($contextWithParent);
+            }
+
+            $span = $builder->startSpan();
 
             foreach ($this->attributes as $key => $value) {
                 if ($value === null) {
@@ -116,10 +144,12 @@ class ExportToPhoenixJob implements ShouldQueue
             }
 
             $span->end($this->endNanos);
+
+            $this->recordMetric('success', microtime(true) - $startedAt);
+        } catch (\Throwable $e) {
+            $this->recordMetric('failure', microtime(true) - $startedAt);
+            throw $e;
         } finally {
-            // Forces span flush through the SimpleSpanProcessor → SpanExporter
-            // → transport → Phoenix. Without shutdown() the span sits in the
-            // processor buffer and the worker exits before flushing.
             $tracerProvider->shutdown();
         }
     }
@@ -131,5 +161,17 @@ class ExportToPhoenixJob implements ShouldQueue
             'endpoint' => $this->endpoint,
             'span' => $this->spanName,
         ]);
+    }
+
+    private function recordMetric(string $outcome, float $latencySeconds): void
+    {
+        // Lazy resolve so the job stays unit-testable without bootstrapping
+        // the Prometheus stack (which the metrics façade boots lazily anyway).
+        try {
+            app(MetricEmitter::class)
+                ->phoenixExportCompleted($outcome, $latencySeconds * 1000.0);
+        } catch (\Throwable) {
+            // MetricEmitter not bound (tests, install wizard) — skip.
+        }
     }
 }

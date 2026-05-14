@@ -44,6 +44,12 @@ return [
         'api_key' => env('PHOENIX_API_KEY', ''),
         'allow_http' => (bool) env('PHOENIX_ALLOW_HTTP', false),
         'project' => env('PHOENIX_PROJECT_NAME', 'fleetq'),
+        // Head sampling for root spans (0.0..1.0). Children of a sampled-in
+        // root always emit so trace hierarchies stay intact.
+        'sample_rate' => (float) env('PHOENIX_SAMPLE_RATE', 1.0),
+        // Replace prompt + response content with [REDACTED] before export.
+        // Token counts, model, provider, metadata stay.
+        'mask_content' => (bool) env('PHOENIX_MASK_CONTENT', false),
     ],
 
 ];

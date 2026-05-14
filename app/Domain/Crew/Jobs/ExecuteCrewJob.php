@@ -5,6 +5,7 @@ namespace App\Domain\Crew\Jobs;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
@@ -54,7 +55,7 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
         ];
     }
 
-    public function handle(CrewOrchestrator $orchestrator): void
+    public function handle(CrewOrchestrator $orchestrator, PhoenixTraceContext $trace): void
     {
         $execution = CrewExecution::withoutGlobalScopes()->find($this->crewExecutionId);
 
@@ -73,7 +74,12 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
             return;
         }
 
-        $orchestrator->run($execution);
+        $trace->withRoot('crew.execute', [
+            'metadata.crew_execution_id' => $this->crewExecutionId,
+            'metadata.team_id' => $this->teamId,
+        ], function () use ($orchestrator, $execution) {
+            $orchestrator->run($execution);
+        });
     }
 
     public function failed(\Throwable $exception): void

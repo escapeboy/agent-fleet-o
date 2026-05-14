@@ -51,6 +51,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -173,6 +174,45 @@ class ExecuteAgentAction
      * @param  int|null  $maxStepsOverride  Per-member max tool-call steps override from CrewMember config.
      */
     public function execute(
+        Agent $agent,
+        array $input,
+        string $teamId,
+        string $userId,
+        ?string $experimentId = null,
+        ?Project $project = null,
+        ?string $stepId = null,
+        ?array $allowedToolIds = null,
+        ?int $maxStepsOverride = null,
+    ): array {
+        // Phoenix root span for the whole agent.execute call. push()/pop()
+        // (not withRoot()) because the body below has too many early returns
+        // to cleanly wrap in a closure. Always paired in try/finally.
+        $traceCtx = app(PhoenixTraceContext::class);
+        $traceCtx->push('agent.execute', array_filter([
+            'metadata.agent_id' => $agent->id,
+            'metadata.team_id' => $teamId,
+            'metadata.user_id' => $userId,
+            'metadata.experiment_id' => $experimentId,
+            'metadata.step_id' => $stepId,
+        ], fn ($v) => $v !== null));
+
+        try {
+            return $this->executeInner(
+                $agent, $input, $teamId, $userId,
+                $experimentId, $project, $stepId, $allowedToolIds, $maxStepsOverride,
+            );
+        } finally {
+            $traceCtx->pop();
+        }
+    }
+
+    /**
+     * Existing body — kept intact for minimal diff. Wrapped by `execute()` so
+     * the Phoenix root span covers the whole call.
+     *
+     * @param  string[]|null  $allowedToolIds
+     */
+    private function executeInner(
         Agent $agent,
         array $input,
         string $teamId,

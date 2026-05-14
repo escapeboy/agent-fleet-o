@@ -271,6 +271,38 @@ final class MetricEmitter
         }
     }
 
+    /**
+     * Counter + histogram for Phoenix trace exports.
+     * Labels: outcome=success|failure. Latency in ms.
+     */
+    public function phoenixExportCompleted(string $outcome, float $latencyMs): void
+    {
+        if (! $this->isEnabled()) {
+            return;
+        }
+
+        try {
+            $registry = $this->registry->registry();
+
+            $registry->getOrRegisterCounter(
+                self::NAMESPACE,
+                'phoenix_export_total',
+                'Count of Phoenix OTLP span exports grouped by outcome.',
+                ['outcome'],
+            )->inc([$outcome]);
+
+            $registry->getOrRegisterHistogram(
+                self::NAMESPACE,
+                'phoenix_export_latency_ms',
+                'Phoenix OTLP span export latency in milliseconds.',
+                ['outcome'],
+                (array) $this->config->get('observability.prometheus.phoenix_export_latency_buckets_ms', [10, 25, 50, 100, 250, 500, 1000, 2500, 5000]),
+            )->observe($latencyMs, [$outcome]);
+        } catch (Throwable $e) {
+            $this->logFailure('phoenixExportCompleted', $e);
+        }
+    }
+
     private function shortClass(string $fqcn): string
     {
         $pos = strrpos($fqcn, '\\');

@@ -61,6 +61,16 @@ final readonly class AiRequestDTO
         public ?string $providerCredentialOverride = null,
         /** Reorder fallback chain by 24h-rolling provider metric — 'cost' | 'latency' | null (off, default). */
         public ?string $gatewaySort = null,
+        /**
+         * Phoenix-trace parent span context. Populated by callers that wrap a
+         * higher-level unit of work (agent.execute, playbook.step, crew.execute)
+         * so child LLM spans nest under it.
+         *
+         * 32-hex traceId, 16-hex spanId per OTel spec. When null, the export
+         * middleware creates a stand-alone span.
+         */
+        public ?string $parentTraceId = null,
+        public ?string $parentSpanId = null,
     ) {}
 
     public function isStructured(): bool

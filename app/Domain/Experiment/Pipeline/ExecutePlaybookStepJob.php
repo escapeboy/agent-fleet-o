@@ -15,6 +15,7 @@ use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Models\WorkflowNodeEvent;
 use App\Domain\Workflow\Services\WorkflowEventRecorder;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
@@ -84,6 +85,22 @@ class ExecutePlaybookStepJob implements HasSentryContext, ShouldQueue
     }
 
     public function handle(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void
+    {
+        $traceCtx = app(PhoenixTraceContext::class);
+        $traceCtx->push('playbook.step', array_filter([
+            'metadata.step_id' => $this->stepId,
+            'metadata.experiment_id' => $this->experimentId,
+            'metadata.team_id' => $this->teamId,
+        ], fn ($v) => $v !== null));
+
+        try {
+            $this->handleInner($executeAgent, $executeSkill);
+        } finally {
+            $traceCtx->pop();
+        }
+    }
+
+    private function handleInner(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void
     {
         $checkpointManager = app(CheckpointManager::class);
 
