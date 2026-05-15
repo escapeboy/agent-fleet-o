@@ -18,7 +18,7 @@ class RebuildWorldModelsCommand extends Command
     {
         $teamId = $this->option('team');
 
-        $query = Team::withoutGlobalScopes()->query();
+        $query = Team::query()->withoutGlobalScopes();
         if ($teamId) {
             $query->where('id', $teamId);
         }

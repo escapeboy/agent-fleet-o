@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -120,3 +120,13 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json($response, $status);
         });
     })->create();
+
+// Flush Sentry structured logs buffer on request/job termination.
+// Gated on enable_logs so it is a no-op until the feature is explicitly enabled.
+$app->terminating(function () use ($app): void {
+    if ($app->make('config')->get('sentry.enable_logs') && function_exists('\Sentry\logger')) {
+        \Sentry\logger()->flush();
+    }
+});
+
+return $app;

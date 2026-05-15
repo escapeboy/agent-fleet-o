@@ -4,6 +4,7 @@ use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Sentry\Monolog\Handler;
 
 return [
 
@@ -125,6 +126,20 @@ return [
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
+        ],
+
+        // Sentry structured logs channel — ships warning+ records to Sentry's Logs product.
+        // Add 'sentry_logs' to LOG_STACK (or LOG_CHANNEL) to activate.
+        // Requires SENTRY_ENABLE_LOGS=true in config/sentry.php to actually ingest.
+        // Verify self-hosted sentry.karlovo.net v26.2.1 ingests logs before enabling in prod.
+        'sentry_logs' => [
+            'driver' => 'monolog',
+            'level' => env('SENTRY_LOGS_LEVEL', 'warning'),
+            'handler' => Handler::class,
+            'handler_with' => [
+                'level' => env('SENTRY_LOGS_LEVEL', 'warning'),
+                'bubble' => false,
+            ],
         ],
 
     ],
