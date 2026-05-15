@@ -24,7 +24,6 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use Sentry\SentrySdk;
 use Sentry\State\HubInterface;
 
 /**
@@ -50,14 +49,13 @@ final class ObservabilityServiceProvider extends ServiceProvider
             return new SentryUrlBuilder($app->make('config'));
         });
 
-        // Bind Sentry HubInterface to the active hub. sentry-laravel registers
-        // its own hub via its ServiceProvider, so we just resolve it lazily —
-        // this lets us boot in environments without SENTRY_LARAVEL_DSN (Hub
-        // returns a no-op when DSN is absent).
-        $this->app->singleton(HubInterface::class, function (): HubInterface {
-            return SentrySdk::getCurrentHub();
-        });
-
+        // SentryEventCapturer resolves HubInterface lazily through Sentry's own
+        // ServiceProvider, which is where `Sentry\init()` actually fires. We MUST
+        // NOT shadow that binding ourselves — doing so registers a singleton that
+        // returns `SentrySdk::getCurrentHub()` before init() has run, leaving the
+        // hub permanently client-less and Sentry stuck at "NOT CONFIGURED".
+        // sentry-laravel handles the no-DSN case itself (its binding returns a
+        // no-op hub when SENTRY_LARAVEL_DSN is absent).
         $this->app->singleton(SentryEventCapturer::class, function ($app): SentryEventCapturer {
             return new SentryEventCapturer(
                 context: $app->make(SentryContext::class),
