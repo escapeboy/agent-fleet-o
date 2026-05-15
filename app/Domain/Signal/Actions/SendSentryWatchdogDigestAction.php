@@ -28,6 +28,10 @@ class SendSentryWatchdogDigestAction
             $body .= "\n\n".e($summary);
         }
 
-        return $this->notifier->sendToDigestChannel($run->team_id, $body);
+        return $this->notifier->sendToDigestChannel(
+            $run->team_id,
+            $body,
+            'FleetQ Sentry Watchdog — '.$project,
+        );
     }
 }

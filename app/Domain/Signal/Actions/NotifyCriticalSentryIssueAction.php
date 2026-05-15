@@ -38,6 +38,10 @@ class NotifyCriticalSentryIssueAction
             $body .= "\n".e($permalink);
         }
 
-        return $this->notifier->sendToDigestChannel($signal->team_id, $body);
+        return $this->notifier->sendToDigestChannel(
+            $signal->team_id,
+            $body,
+            'FleetQ — critical Sentry issue',
+        );
     }
 }
