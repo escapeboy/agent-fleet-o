@@ -41,10 +41,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | digest_channel — outbound channel for the 2x/day digest and for
-    |   immediate critical-issue alerts.
+    |   immediate critical-issue alerts. Supported: 'email', 'telegram'.
+    |   Defaults to 'email' (uses the platform mailer — no extra setup).
+    |   Switch to 'telegram' once a Telegram bot is configured for the team.
+    | digest_email — explicit recipient for the email channel. When null,
+    |   the digest goes to the team owner's email.
     |
     */
 
-    'digest_channel' => env('SENTRY_WATCHDOG_DIGEST_CHANNEL', 'telegram'),
+    'digest_channel' => env('SENTRY_WATCHDOG_DIGEST_CHANNEL', 'email'),
+
+    'digest_email' => env('SENTRY_WATCHDOG_DIGEST_EMAIL'),
 
 ];
