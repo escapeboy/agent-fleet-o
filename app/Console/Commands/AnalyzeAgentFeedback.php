@@ -22,7 +22,7 @@ class AnalyzeAgentFeedback extends Command
             ->where('created_at', '>=', now()->subDays(30))
             ->selectRaw('agent_id, count(*) as negative_count, avg(score) as avg_score')
             ->groupBy('agent_id')
-            ->having('negative_count', '>=', 5)
+            ->havingRaw('count(*) >= ?', [5])
             ->pluck('agent_id');
 
         if ($candidateAgentIds->isEmpty()) {
