@@ -432,6 +432,8 @@ use App\Mcp\Tools\Signal\KgSuggestMergesTool;
 use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
+use App\Mcp\Tools\Signal\SentryWatchdogRunTool;
+use App\Mcp\Tools\Signal\SentryWatchdogStatusTool;
 use App\Mcp\Tools\Signal\SignalAssignTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
@@ -1006,6 +1008,8 @@ class AgentFleetServer extends Server
         SignalIntentReclassifyTool::class,
         SignalSetRelevanceThresholdTool::class,
         SignalListByRelevanceTool::class,
+        SentryWatchdogStatusTool::class,
+        SentryWatchdogRunTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
         SlackConnectorTool::class,
