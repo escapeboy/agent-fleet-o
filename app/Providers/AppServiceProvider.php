@@ -93,6 +93,7 @@ use App\Domain\Signal\Events\SignalCommentAdded;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
 use App\Domain\Signal\Listeners\CloseBugReportOnPrMergeListener;
+use App\Domain\Signal\Listeners\CloseSentryIssueOnPrMergeListener;
 use App\Domain\Signal\Listeners\DispatchAutoTriageOnSignalIngested;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
@@ -549,6 +550,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Bitbucket PR merged → close the originating bug-report Signal.
         Event::listen(SignalIngested::class, CloseBugReportOnPrMergeListener::class);
+
+        // GitHub PR merged → resolve the Sentry issue an autonomous fix closed.
+        Event::listen(SignalIngested::class, CloseSentryIssueOnPrMergeListener::class);
 
         // Team member removal: revoke tokens + pause active experiments
         Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);

@@ -127,3 +127,9 @@ Schedule::command('agents:clean-locks')->everyFiveMinutes()->withoutOverlapping(
 
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();
+
+// Sentry Watchdog — triage new Sentry issues for each enabled integration twice daily
+Schedule::command('sentry:watchdog')
+    ->twiceDaily(9, 18)
+    ->withoutOverlapping(60)
+    ->sentryMonitor('sentry-watchdog', failureIssueThreshold: 4, checkInMargin: 5);
