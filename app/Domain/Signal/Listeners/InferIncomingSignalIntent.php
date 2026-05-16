@@ -12,8 +12,9 @@ class InferIncomingSignalIntent
         $signal = $event->signal;
 
         // Skip obviously low-signal sources — bug reports have their own structured
-        // extraction flow, manual signals are already user-classified.
-        if (in_array($signal->source_type, ['bug_report', 'manual'], true)) {
+        // extraction flow, manual signals are already user-classified, and Sentry
+        // issues are always blockers (LLM intent classification adds nothing).
+        if (in_array($signal->source_type, ['bug_report', 'manual', 'sentry'], true)) {
             return;
         }
 
