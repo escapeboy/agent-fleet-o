@@ -7,8 +7,10 @@ use App\Domain\Integration\Drivers\Sentry\SentryIntegrationDriver;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Models\Signal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
@@ -67,5 +69,27 @@ class SentryIntegrationDriverPollTest extends TestCase
         (new SentryIntegrationDriver)->poll($this->makeIntegration([]));
 
         Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), 'is:unresolved'));
+    }
+
+    public function test_repeated_polls_dedup_the_same_sentry_issue(): void
+    {
+        Queue::fake();
+
+        $issue = ['id' => '90909', 'title' => 'TypeError in checkout', 'level' => 'error', 'count' => '3'];
+        // Two polls of the same issue — second has a changed event count, the
+        // kind of volatile field that defeats content_hash dedup.
+        Http::fakeSequence()
+            ->push([$issue], 200)
+            ->push([array_merge($issue, ['count' => '11'])], 200);
+
+        $this->makeIntegration([]);
+
+        $this->artisan('integrations:poll', ['--driver' => 'sentry'])->assertExitCode(0);
+        $this->artisan('integrations:poll', ['--driver' => 'sentry'])->assertExitCode(0);
+
+        $signals = Signal::withoutGlobalScopes()->where('source_identifier', 'sentry')->get();
+        $this->assertCount(1, $signals, 'The same Sentry issue dedups to one signal across polls.');
+        $this->assertSame('sentry:90909', $signals->first()->source_native_id);
+        $this->assertSame(1, $signals->first()->duplicate_count);
     }
 }
