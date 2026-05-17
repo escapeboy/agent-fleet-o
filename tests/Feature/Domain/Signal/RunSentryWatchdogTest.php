@@ -219,6 +219,47 @@ class RunSentryWatchdogTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_command_dispatches_one_job_per_team(): void
+    {
+        Queue::fake();
+
+        // Two enabled Sentry integrations on the same team. The job triages
+        // every Sentry signal for a team, so only one job must be dispatched.
+        $this->seedSentryIntegration(['watchdog_enabled' => true], 'Sentry fleetq');
+        $this->seedSentryIntegration(['watchdog_enabled' => true], 'Sentry signalio-backend');
+
+        $this->artisan('sentry:watchdog')->assertExitCode(RunSentryWatchdog::SUCCESS);
+
+        Queue::assertPushed(RunSentryWatchdogJob::class, 1);
+    }
+
+    public function test_run_caps_triage_at_max_signals_per_run(): void
+    {
+        config(['sentry_watchdog.max_signals_per_run' => 3]);
+        $integration = $this->seedSentryIntegration();
+
+        foreach (['I1', 'I2', 'I3', 'I4', 'I5'] as $issueId) {
+            $this->seedSentrySignal($issueId);
+        }
+
+        $triageCalls = 0;
+        $this->mockTriage(function (Signal $signal) use (&$triageCalls) {
+            $triageCalls++;
+
+            return $this->investigateResult($signal->id);
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame(3, $triageCalls, 'A run triages at most max_signals_per_run signals.');
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+        $this->assertSame(3, $run->signals_triaged);
+    }
+
     private function runJob(string $integrationId): void
     {
         app()->call([new RunSentryWatchdogJob($integrationId), 'handle']);

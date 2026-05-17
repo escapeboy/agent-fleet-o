@@ -67,6 +67,7 @@ class RunSentryWatchdogJob implements ShouldQueue
             ->whereNotIn('status', [SignalStatus::Resolved->value, SignalStatus::Dismissed->value])
             ->whereNull('payload->sentry_watchdog_triaged_at')
             ->orderBy('created_at')
+            ->limit((int) config('sentry_watchdog.max_signals_per_run', 15))
             ->get();
 
         // Group by Sentry issue id so a re-ingested issue is triaged once.

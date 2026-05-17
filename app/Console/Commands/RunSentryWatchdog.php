@@ -37,7 +37,15 @@ class RunSentryWatchdog extends Command
             return self::SUCCESS;
         }
 
+        // The job triages every Sentry signal for a team, so dispatch one job
+        // per team — a second job for the same team would double-triage the
+        // same signals (the two jobs race and re-spend LLM calls).
+        $dispatchedTeams = [];
         foreach ($integrations as $integration) {
+            if (in_array($integration->team_id, $dispatchedTeams, true)) {
+                continue;
+            }
+            $dispatchedTeams[] = $integration->team_id;
             RunSentryWatchdogJob::dispatch($integration->id);
             $this->info("Dispatched Sentry Watchdog for: {$integration->name}");
         }

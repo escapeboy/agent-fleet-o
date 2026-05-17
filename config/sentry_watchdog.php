@@ -37,6 +37,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Batch size
+    |--------------------------------------------------------------------------
+    |
+    | max_signals_per_run — cap on Sentry signals triaged in a single watchdog
+    |   run. Each triage is a ~30s LLM call, so an uncapped run over a large
+    |   backlog would exceed the job timeout. Remaining signals carry over to
+    |   the next run.
+    |
+    */
+
+    'max_signals_per_run' => (int) env('SENTRY_WATCHDOG_MAX_SIGNALS_PER_RUN', 15),
+
+    /*
+    |--------------------------------------------------------------------------
     | Notifications
     |--------------------------------------------------------------------------
     |
