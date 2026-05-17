@@ -59,6 +59,29 @@ class ClassifySignalIntentTest extends TestCase
         $this->assertNotEmpty($fresh->metadata['inferred_intent_at']);
     }
 
+    public function test_classification_uses_ai_classification_config_when_set(): void
+    {
+        config([
+            'ai.classification.provider' => 'groq',
+            'ai.classification.model' => 'llama-3.3-70b-versatile',
+        ]);
+
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'source_type' => 'webhook',
+            'payload' => ['subject' => 'hello'],
+        ]);
+
+        $this->bindGateway('neutral', 'routine');
+
+        app(ClassifySignalIntentAction::class)->execute($signal);
+
+        $this->assertSame(
+            'groq/llama-3.3-70b-versatile',
+            $signal->fresh()->metadata['inferred_intent_classifier'],
+        );
+    }
+
     public function test_classification_uses_team_resolved_provider(): void
     {
         $signal = Signal::factory()->create([

@@ -53,9 +53,15 @@ final class ClassifySignalIntentAction
             requiredFields: ['intent', 'reasoning'],
         );
 
-        $resolved = $this->resolver->resolve(team: Team::find($signal->team_id));
-        $provider = $resolved['provider'];
-        $model = $resolved['model'];
+        // Internal classification runs on a dedicated platform key when set
+        // (config/ai.php classification), else per-team provider resolution.
+        $provider = (string) config('ai.classification.provider');
+        $model = (string) config('ai.classification.model');
+        if ($provider === '' || $model === '') {
+            $resolved = $this->resolver->resolve(team: Team::find($signal->team_id));
+            $provider = $resolved['provider'];
+            $model = $resolved['model'];
+        }
 
         try {
             $response = $this->gateway->complete(new AiRequestDTO(

@@ -185,11 +185,19 @@ class TriageSentryIssueAction
         ];
 
         try {
-            $resolved = $this->providerResolver->resolve(team: $team, purpose: 'sentry-triage');
+            // Watchdog triage runs on the dedicated platform classification
+            // key when set (config/ai.php classification), else per-team resolution.
+            $provider = (string) config('ai.classification.provider');
+            $model = (string) config('ai.classification.model');
+            if ($provider === '' || $model === '') {
+                $resolved = $this->providerResolver->resolve(team: $team, purpose: 'sentry-triage');
+                $provider = $resolved['provider'];
+                $model = $resolved['model'];
+            }
 
             $request = new AiRequestDTO(
-                provider: $resolved['provider'],
-                model: $resolved['model'],
+                provider: $provider,
+                model: $model,
                 systemPrompt: $this->systemPrompt(),
                 userPrompt: $this->userPrompt($payload),
                 maxTokens: 1024,

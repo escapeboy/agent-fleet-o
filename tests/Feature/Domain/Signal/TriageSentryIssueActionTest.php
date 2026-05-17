@@ -127,6 +127,37 @@ class TriageSentryIssueActionTest extends TestCase
         ], $overrides));
     }
 
+    public function test_triage_uses_ai_classification_config_when_set(): void
+    {
+        config([
+            'sentry_watchdog.mode' => 'phase0',
+            'ai.classification.provider' => 'groq',
+            'ai.classification.model' => 'llama-3.3-70b-versatile',
+        ]);
+
+        $captured = null;
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturnUsing(function ($dto) use (&$captured) {
+            $captured = $dto;
+
+            return new AiResponseDTO(
+                content: $this->triageJson([]),
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 100, completionTokens: 50, costCredits: 1),
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                latencyMs: 80,
+            );
+        });
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        app(TriageSentryIssueAction::class)->execute($this->makeSentrySignal());
+
+        $this->assertNotNull($captured);
+        $this->assertSame('groq', $captured->provider);
+        $this->assertSame('llama-3.3-70b-versatile', $captured->model);
+    }
+
     public function test_tc11_phase0_investigates_only_and_creates_no_experiment(): void
     {
         config(['sentry_watchdog.mode' => 'phase0']);
