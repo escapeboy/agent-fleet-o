@@ -91,6 +91,19 @@ return [
         'fireworks' => env('FIREWORKS_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sub-Program AI API Keys
+    |--------------------------------------------------------------------------
+    | Dedicated platform keys for sub-program teams (finance, etc.) so their
+    | LLM spend is isolated from the main platform key. A request from a
+    | sub-program team uses the key here; everything else uses platform_api_keys.
+    | Falls back to the platform key per-provider when unset.
+    */
+    'sub_program_api_keys' => [
+        'anthropic' => env('SUB_PROGRAM_ANTHROPIC_API_KEY'),
+    ],
+
     'mjml' => [
         'url' => env('MJML_SERVER_URL'),
     ],

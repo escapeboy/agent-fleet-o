@@ -691,10 +691,16 @@ class PrismAiGateway implements AiGatewayInterface
             );
         }
 
-        // Explicitly restore the original platform API key to clear any
-        // BYOK key set by a prior Horizon job.
+        // Explicitly restore the platform API key to clear any BYOK key set by
+        // a prior Horizon job. Sub-program teams (finance, etc.) use a dedicated
+        // sub-program key — kept separate so their LLM spend is isolated from,
+        // and never billed against, the main platform key.
         if ($configKey) {
-            $platformKey = config("services.platform_api_keys.{$request->provider}");
+            $isSubProgram = ($team->sub_program_slug ?? 'cloud') !== 'cloud';
+            $platformKey = $isSubProgram
+                ? (config("services.sub_program_api_keys.{$request->provider}")
+                    ?: config("services.platform_api_keys.{$request->provider}"))
+                : config("services.platform_api_keys.{$request->provider}");
             config([$configKey => $platformKey]);
         }
 
