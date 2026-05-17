@@ -54,7 +54,10 @@ class TriageSentryIssueAction
             return SentryTriageResult::failed($signal->id, 'Signal has no resolvable team.');
         }
 
-        $payload = $signal->payload ?? [];
+        // Sentry signals arrive through the integration poller, which wraps the
+        // driver item — the actual Sentry issue lives under payload['payload'].
+        $raw = $signal->payload ?? [];
+        $payload = (isset($raw['payload']) && is_array($raw['payload'])) ? $raw['payload'] : $raw;
         $investigation = $this->investigate($payload, $team);
         $tier = $this->classifier->classify(
             $investigation['suspect_files'],

@@ -135,7 +135,7 @@ class RunSentryWatchdogTest extends TestCase
 
         $processed = 0;
         $this->mockTriage(function (Signal $signal) use (&$processed) {
-            if (($signal->payload['id'] ?? null) === 'ISSUE-BOOM') {
+            if (($signal->payload['payload']['id'] ?? null) === 'ISSUE-BOOM') {
                 throw new \RuntimeException('triage exploded');
             }
             $processed++;
@@ -273,12 +273,17 @@ class RunSentryWatchdogTest extends TestCase
         return Signal::create([
             'team_id' => $this->team->id,
             'experiment_id' => null,
-            'source_type' => 'sentry',
-            'source_identifier' => 'sentry:fleetq:'.$sentryIssueId.':'.bin2hex(random_bytes(4)),
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
             'status' => SignalStatus::Received,
             'payload' => [
-                'id' => $sentryIssueId,
-                'title' => 'NullPointer in checkout',
+                'source_type' => 'sentry',
+                'source_id' => 'sentry:'.$sentryIssueId,
+                'tags' => ['sentry', 'issue'],
+                'payload' => [
+                    'id' => $sentryIssueId,
+                    'title' => 'NullPointer in checkout',
+                ],
             ],
             'content_hash' => md5('sentry-'.bin2hex(random_bytes(6))),
             'tags' => ['sentry', 'issue'],

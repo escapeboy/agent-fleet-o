@@ -105,18 +105,22 @@ class TriageSentryIssueActionTest extends TestCase
     {
         return Signal::create(array_merge([
             'team_id' => $this->team->id,
-            'source_type' => 'sentry',
-            'source_identifier' => 'sentry:fleetq:'.bin2hex(random_bytes(4)),
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
             'project_key' => 'fleetq',
-            'payload' => array_merge([
-                'id' => 'sentry-issue-42',
-                'title' => 'TypeError: Cannot read property of null',
-                'culprit' => 'App\\Http\\Controllers\\OrderController::show',
-                'level' => 'error',
-                'count' => 7,
-                'permalink' => 'https://sentry.example.com/issues/42/',
-                'metadata' => ['type' => 'TypeError', 'value' => 'Cannot read property of null'],
-            ], $payload),
+            'payload' => [
+                'source_type' => 'sentry',
+                'source_id' => 'sentry:'.bin2hex(random_bytes(4)),
+                'payload' => array_merge([
+                    'id' => 'sentry-issue-42',
+                    'title' => 'TypeError: Cannot read property of null',
+                    'culprit' => 'App\\Http\\Controllers\\OrderController::show',
+                    'level' => 'error',
+                    'count' => 7,
+                    'permalink' => 'https://sentry.example.com/issues/42/',
+                    'metadata' => ['type' => 'TypeError', 'value' => 'Cannot read property of null'],
+                ], $payload),
+            ],
             'content_hash' => hash('sha256', uniqid('sentry-', true)),
             'received_at' => now(),
             'status' => SignalStatus::Received,

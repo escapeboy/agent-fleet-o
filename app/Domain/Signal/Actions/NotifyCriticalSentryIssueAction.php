@@ -24,7 +24,9 @@ class NotifyCriticalSentryIssueAction
             return false;
         }
 
-        $payload = $signal->payload ?? [];
+        // Integration signals wrap the driver item — unwrap to the Sentry issue.
+        $raw = $signal->payload ?? [];
+        $payload = (isset($raw['payload']) && is_array($raw['payload'])) ? $raw['payload'] : $raw;
         $title = (string) ($payload['title'] ?? 'Untitled Sentry issue');
         $level = (string) ($payload['level'] ?? 'error');
         $events = (string) ($payload['count'] ?? '?');

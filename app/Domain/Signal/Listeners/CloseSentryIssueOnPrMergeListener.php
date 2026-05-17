@@ -172,7 +172,7 @@ class CloseSentryIssueOnPrMergeListener
             if ($experiment !== null) {
                 $signal = Signal::withoutGlobalScopes()
                     ->where('experiment_id', $experiment->id)
-                    ->where('source_type', 'sentry')
+                    ->where('source_identifier', 'sentry')
                     ->first();
 
                 if ($signal !== null) {
@@ -197,7 +197,7 @@ class CloseSentryIssueOnPrMergeListener
 
         return Signal::withoutGlobalScopes()
             ->where('id', $commentRow->signal_id)
-            ->where('source_type', 'sentry')
+            ->where('source_identifier', 'sentry')
             ->first();
     }
 

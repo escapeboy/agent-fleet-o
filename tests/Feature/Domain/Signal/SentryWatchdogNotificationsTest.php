@@ -143,17 +143,21 @@ class SentryWatchdogNotificationsTest extends TestCase
     {
         return Signal::create([
             'team_id' => $team->id,
-            'source_type' => 'sentry',
-            'source_identifier' => 'sentry:fleetq:SENTRY-CRIT-1',
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
             'project_key' => 'fleetq',
             'status' => SignalStatus::Received,
             'content_hash' => md5('sentry-crit-'.bin2hex(random_bytes(6))),
             'received_at' => now(),
             'payload' => [
-                'title' => 'NullPointer in checkout',
-                'level' => 'fatal',
-                'count' => '128',
-                'permalink' => 'https://sentry.karlovo.net/sentry/fleetq/issues/SENTRY-CRIT-1/',
+                'source_type' => 'sentry',
+                'source_id' => 'sentry:SENTRY-CRIT-1',
+                'payload' => [
+                    'title' => 'NullPointer in checkout',
+                    'level' => 'fatal',
+                    'count' => '128',
+                    'permalink' => 'https://sentry.karlovo.net/sentry/fleetq/issues/SENTRY-CRIT-1/',
+                ],
             ],
             'tags' => ['sentry', 'issue', 'critical'],
         ]);

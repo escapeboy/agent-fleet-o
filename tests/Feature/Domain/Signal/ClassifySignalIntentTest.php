@@ -101,8 +101,9 @@ class ClassifySignalIntentTest extends TestCase
         Queue::fake();
         $signal = Signal::factory()->create([
             'team_id' => $this->team->id,
-            'source_type' => 'sentry',
-            'payload' => ['title' => 'TypeError in production'],
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'payload' => ['payload' => ['title' => 'TypeError in production']],
         ]);
 
         (new InferIncomingSignalIntent)->handle(new SignalIngested($signal));

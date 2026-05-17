@@ -146,8 +146,8 @@ class CloseSentryIssueOnPrMergeListenerTest extends TestCase
         return Signal::create([
             'team_id' => $team->id,
             'experiment_id' => $experiment->id,
-            'source_type' => 'sentry',
-            'source_identifier' => 'sentry:fleetq:'.$sentryIssueId,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
             'project_key' => 'fleetq',
             'status' => SignalStatus::DelegatedToAgent,
             'content_hash' => md5('sentry-'.bin2hex(random_bytes(6))),

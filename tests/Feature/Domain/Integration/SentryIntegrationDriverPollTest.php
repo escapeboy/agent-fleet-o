@@ -59,4 +59,13 @@ class SentryIntegrationDriverPollTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), '/organizations/acme/issues/')
             && ! str_contains($request->url(), 'project='));
     }
+
+    public function test_poll_filters_to_unresolved_issues_only(): void
+    {
+        Http::fake(['*' => Http::response([], 200)]);
+
+        (new SentryIntegrationDriver)->poll($this->makeIntegration([]));
+
+        Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), 'is:unresolved'));
+    }
 }

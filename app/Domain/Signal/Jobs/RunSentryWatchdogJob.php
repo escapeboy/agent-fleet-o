@@ -62,7 +62,7 @@ class RunSentryWatchdogJob implements ShouldQueue
         // therefore never drops signals — they stay pending for the next run.
         $signals = Signal::withoutGlobalScopes()
             ->where('team_id', $integration->team_id)
-            ->where('source_type', 'sentry')
+            ->where('source_identifier', 'sentry')
             ->whereNull('experiment_id')
             ->whereNotIn('status', [SignalStatus::Resolved->value, SignalStatus::Dismissed->value])
             ->whereNull('payload->sentry_watchdog_triaged_at')
@@ -70,7 +70,8 @@ class RunSentryWatchdogJob implements ShouldQueue
             ->get();
 
         // Group by Sentry issue id so a re-ingested issue is triaged once.
-        $groups = $signals->groupBy(fn (Signal $signal) => $signal->payload['id'] ?? $signal->id);
+        // Integration signals wrap the driver item: the stable id is payload.source_id.
+        $groups = $signals->groupBy(fn (Signal $signal) => $signal->payload['source_id'] ?? $signal->id);
 
         $triaged = 0;
         $prsOpened = 0;
