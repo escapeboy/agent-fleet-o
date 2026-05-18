@@ -23,6 +23,21 @@
         </button>
     </div>
 
+    {{-- Format & Brand Guide --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Format &amp; Brand Guide</h2>
+        <p class="mb-4 text-sm text-gray-500">
+            Free-text house style — colours, typography, tone, writing rules. It is injected into
+            every prompt that generates content (email templates, workflows, crews, websites) so
+            generated output follows your brand.
+        </p>
+        <x-form-textarea wire:model="formatGuide" label="Guide" mono rows="10"
+            placeholder="## Colours&#10;- Primary: #FF4F18&#10;&#10;## Writing&#10;- Sentence case headings. Active voice. No filler." />
+        <button wire:click="saveFormatGuide" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save
+        </button>
+    </div>
+
     {{-- AI Provider Credentials (BYOK) --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-4 text-lg font-semibold text-gray-900">AI Provider Keys</h2>

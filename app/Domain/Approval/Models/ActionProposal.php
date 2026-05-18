@@ -25,6 +25,8 @@ class ActionProposal extends Model
         'payload',
         'lineage',
         'risk_level',
+        'rubric_score',
+        'rubric_breakdown',
         'status',
         'expires_at',
         'decided_by_user_id',
@@ -40,6 +42,8 @@ class ActionProposal extends Model
         return [
             'payload' => 'array',
             'lineage' => 'array',
+            'rubric_score' => 'integer',
+            'rubric_breakdown' => 'array',
             'execution_result' => 'array',
             'status' => ActionProposalStatus::class,
             'expires_at' => 'datetime',

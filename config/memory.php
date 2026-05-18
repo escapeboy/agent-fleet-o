@@ -134,6 +134,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Event Distillation
+    |--------------------------------------------------------------------------
+    |
+    | Nightly job (`memory:distill-events`) that reads each team's recent
+    | audit-entry stream and distils it into a few durable, high-signal
+    | facts stored as `events_digest` memories — borrowed from CraftBot's
+    | EVENT_UNPROCESSED.md -> MEMORY.md pass. Runs before consolidation so
+    | fresh digests get merged the same night.
+    |
+    */
+    'distillation' => [
+        'enabled' => (bool) env('MEMORY_DISTILLATION_ENABLED', true),
+        'window_hours' => 24,
+        'max_events' => 200,
+        'provider' => 'anthropic',
+        'model' => 'claude-haiku-4-5',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Importance-Weighted Pruning
     |--------------------------------------------------------------------------
     |
