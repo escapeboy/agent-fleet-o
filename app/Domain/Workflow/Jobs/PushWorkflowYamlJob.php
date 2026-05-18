@@ -13,6 +13,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
@@ -31,6 +32,17 @@ class PushWorkflowYamlJob implements ShouldQueue
     public array $backoff = [10, 30, 90];
 
     public function __construct(public readonly string $syncId) {}
+
+    /**
+     * Serialize pushes per sync — two concurrent YAML pushes to the same
+     * branch would race the remote and clobber each other's commit.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping($this->syncId))->releaseAfter(30)->expireAfter(600)];
+    }
 
     public function handle(ExportWorkflowAction $exporter, GitOperationRouter $router): void
     {

@@ -4,7 +4,7 @@
         request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
         request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'audit-console.*', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
-        request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'profile', 'notifications.*') => 'settings',
+        request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'settings.git-sync', 'profile', 'notifications.*') => 'settings',
         default => null,
     };
     $pendingCount = \App\Domain\Approval\Models\ApprovalRequest::where('status', 'pending')->count();
@@ -210,6 +210,7 @@
                 <x-sidebar-link href="{{ route('credentials.index') }}" :active="request()->routeIs('credentials.*')" icon="key">Credentials</x-sidebar-link>
                 <x-sidebar-link href="{{ route('integrations.index') }}" :active="request()->routeIs('integrations.*')" icon="link">Integrations</x-sidebar-link>
                 <x-sidebar-link href="{{ route('git-repositories.index') }}" :active="request()->routeIs('git-repositories.*')" icon="code-branch">Git Repos</x-sidebar-link>
+                <x-sidebar-link href="{{ route('settings.git-sync') }}" :active="request()->routeIs('settings.git-sync')" icon="arrow-path">Git Sync</x-sidebar-link>
                 <x-sidebar-link href="{{ route('team.settings') }}" :active="request()->routeIs('team.*')" icon="user-group">Team</x-sidebar-link>
                 <x-sidebar-link href="{{ route('settings') }}" :active="request()->routeIs('settings')" icon="cog">Global Settings</x-sidebar-link>
                 @if(Route::has('profile'))

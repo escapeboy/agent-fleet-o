@@ -39,6 +39,30 @@ class SandboxedWorkspaceTest extends TestCase
         $this->assertDirectoryExists($root.'/tmp');
     }
 
+    public function test_teardown_removes_symlinks_without_following_them_to_host_files(): void
+    {
+        $ws = $this->makeWorkspace();
+
+        // Host file + directory outside the sandbox, with symlinks planted
+        // inside the sandbox pointing at them — as a malicious agent could.
+        $outsideDir = sys_get_temp_dir().'/sandbox_outside_'.uniqid();
+        mkdir($outsideDir, 0700, true);
+        $outsideFile = $outsideDir.'/keep.txt';
+        file_put_contents($outsideFile, 'host data');
+
+        symlink($outsideFile, $ws->outputsDir().'/link.txt');
+        symlink($outsideDir, $ws->outputsDir().'/linkdir');
+
+        $ws->teardown();
+
+        $this->assertDirectoryDoesNotExist($ws->root());
+        $this->assertFileExists($outsideFile);     // symlink target untouched
+        $this->assertDirectoryExists($outsideDir); // linked directory untouched
+
+        unlink($outsideFile);
+        rmdir($outsideDir);
+    }
+
     public function test_resolve_returns_absolute_path_within_sandbox(): void
     {
         $ws = $this->makeWorkspace();
