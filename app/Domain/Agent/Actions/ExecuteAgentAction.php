@@ -29,6 +29,7 @@ use App\Domain\Agent\Services\AgentHookExecutor;
 use App\Domain\Agent\Services\AgentPromptCompiler;
 use App\Domain\Agent\Services\AgentRuntimeStateService;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Agent\Services\SandboxFileActivityCollector;
 use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
 use App\Domain\Agent\Services\WorkspaceContractWriter;
 use App\Domain\Approval\Enums\ApprovalStatus;
@@ -357,7 +358,24 @@ class ExecuteAgentAction
                         app(BashSidecarClient::class)->destroySession($sidecarSessionId);
                     }
                     if ($agent->team_id) {
-                        (new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id))->teardown();
+                        $workspace = new SandboxedWorkspace($sandboxId, $agent->id, $agent->team_id);
+                        // Capture the files the agent produced before the sandbox is
+                        // destroyed — best-effort, never breaks the execution.
+                        try {
+                            app(SandboxFileActivityCollector::class)->collect($workspace, [
+                                'team_id' => $agent->team_id,
+                                'agent_id' => $agent->id,
+                                'experiment_id' => $experimentId,
+                                'sandbox_id' => $sandboxId,
+                            ]);
+                        } catch (\Throwable $e) {
+                            Log::warning('Sandbox file activity capture failed', [
+                                'sandbox_id' => $sandboxId,
+                                'agent_id' => $agent->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                        $workspace->teardown();
                     }
                 }
             } else {

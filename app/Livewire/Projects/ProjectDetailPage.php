@@ -4,8 +4,10 @@ namespace App\Livewire\Projects;
 
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Project\Actions\ArchiveProjectAction;
+use App\Domain\Project\Actions\CreateProjectSnapshotAction;
 use App\Domain\Project\Actions\PauseProjectAction;
 use App\Domain\Project\Actions\RestartProjectAction;
+use App\Domain\Project\Actions\RestoreProjectSnapshotAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\ProjectStatus;
@@ -14,6 +16,7 @@ use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Project\Models\ProjectSnapshot;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,6 +27,10 @@ class ProjectDetailPage extends Component
     public Project $project;
 
     public string $activeTab = 'activity';
+
+    public string $snapshotLabel = '';
+
+    public ?string $confirmingRestoreId = null;
 
     public function mount(Project $project): void
     {
@@ -111,6 +118,47 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'New run triggered.');
     }
 
+    public function createSnapshot(): void
+    {
+        Gate::authorize('edit-content');
+
+        app(CreateProjectSnapshotAction::class)->execute(
+            project: $this->project,
+            label: $this->snapshotLabel ?: null,
+            createdBy: auth()->id(),
+        );
+
+        $this->snapshotLabel = '';
+        session()->flash('message', 'Snapshot created.');
+    }
+
+    public function confirmRestore(string $snapshotId): void
+    {
+        $this->confirmingRestoreId = $snapshotId;
+    }
+
+    public function cancelRestore(): void
+    {
+        $this->confirmingRestoreId = null;
+    }
+
+    public function restoreSnapshot(string $snapshotId): void
+    {
+        Gate::authorize('edit-content');
+
+        $snapshot = ProjectSnapshot::where('project_id', $this->project->id)
+            ->findOrFail($snapshotId);
+
+        $result = app(RestoreProjectSnapshotAction::class)->execute($snapshot, auth()->id());
+
+        $this->confirmingRestoreId = null;
+        $this->project->refresh();
+
+        session()->flash('message', $result['restored']
+            ? 'Project configuration restored from snapshot.'
+            : $result['reason']);
+    }
+
     public function render()
     {
         $this->project->load('schedule');
@@ -145,6 +193,16 @@ class ProjectDetailPage extends Component
             ? Credential::withoutGlobalScopes()->whereIn('id', $this->project->allowed_credential_ids)->get()
             : collect();
 
+        $snapshots = $this->activeTab === 'snapshots'
+            ? ProjectSnapshot::where('project_id', $this->project->id)
+                ->with('creator:id,name')
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get()
+            : collect();
+
+        $snapshotCount = ProjectSnapshot::where('project_id', $this->project->id)->count();
+
         return view('livewire.projects.project-detail-page', [
             'runs' => $runs,
             'milestones' => $milestones,
@@ -155,6 +213,8 @@ class ProjectDetailPage extends Component
             'downstreamDeps' => $downstreamDeps,
             'allowedTools' => $allowedTools,
             'allowedCredentials' => $allowedCredentials,
+            'snapshots' => $snapshots,
+            'snapshotCount' => $snapshotCount,
         ])->layout('layouts.app', ['header' => $this->project->title]);
     }
 }

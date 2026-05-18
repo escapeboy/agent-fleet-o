@@ -93,6 +93,7 @@ use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Releases\ReleaseDetailPage;
 use App\Livewire\Releases\ReleaseDiffPage;
 use App\Livewire\Releases\ReleaseListPage;
+use App\Livewire\Settings\GitSyncPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
@@ -449,6 +450,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit-console', AuditConsoleListPage::class)->name('audit-console.index');
     Route::get('/audit-console/{decision}', AuditConsoleDetailPage::class)->name('audit-console.show');
     Route::get('/settings/audit-console', AuditConsoleSettingsPage::class)->name('audit-console.settings');
+
+    // Git Sync — context filesystem + workflow YAML syncs (Kanwas-inspired sprint)
+    Route::get('/settings/git-sync', GitSyncPage::class)->name('settings.git-sync');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.
