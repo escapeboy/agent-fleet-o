@@ -5,7 +5,10 @@ namespace App\Domain\Memory\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Enums\MemoryPreferenceSubtype;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -45,6 +48,10 @@ Return ONLY valid JSON (no markdown fences):
       "fact": "concise, durable statement",
       "confidence": 0.85,
       "category": "knowledge",
+      "belief_type": "preference",
+      "preference_subtype": "style",
+      "why_it_matters": "actionable directive: how a future run should behave because of this fact",
+      "domain": "domain:code",
       "tags": ["capability"]
     }
   ]
@@ -57,6 +64,20 @@ Category must be exactly one of: preference, knowledge, context, behavior, goal
   - context: situational context, recent events, current state
   - behavior: working patterns, process preferences, habits
   - goal: objectives, targets, desired outcomes
+belief_type must be exactly one of: preference, decision, entity, relation, open_question
+  - preference: how the user/agent works and communicates
+  - decision: a commitment future runs must respect
+  - entity: a named thing in the user's world (a service, team, system)
+  - relation: a connection between entities (a dependency, ownership)
+  - open_question: something being worked through, not yet decided
+preference_subtype is OPTIONAL and only valid when belief_type is "preference":
+  - expertise: depth calibration — how much to explain
+  - style: communication tone, format, voice
+why_it_matters: a single actionable directive, not a restatement of the fact.
+  Write "shapes all code examples toward TypeScript strict mode" — not "uses TypeScript".
+domain: a scope tag so the belief only surfaces in matching sessions. Use
+  "domain:code", "domain:writing", "domain:ops", etc., or "user:universal" when
+  the fact applies everywhere. Omit if unsure.
 Tags must be one or more of: capability, constraint, preference, pattern, domain, tooling
 PROMPT;
 
@@ -145,6 +166,19 @@ PROMPT;
                 $categoryValue = $item['category'] ?? null;
                 $category = $categoryValue ? MemoryCategory::tryFrom($categoryValue) : null;
 
+                $beliefType = isset($item['belief_type']) && is_string($item['belief_type'])
+                    ? MemoryBeliefType::tryFrom($item['belief_type'])
+                    : null;
+                $preferenceSubtype = isset($item['preference_subtype']) && is_string($item['preference_subtype'])
+                    ? MemoryPreferenceSubtype::tryFrom($item['preference_subtype'])
+                    : null;
+                $whyItMatters = isset($item['why_it_matters']) && is_string($item['why_it_matters'])
+                    ? trim($item['why_it_matters'])
+                    : null;
+                $domain = isset($item['domain']) && is_string($item['domain']) && $item['domain'] !== ''
+                    ? $item['domain']
+                    : null;
+
                 if ($fact === '' || $confidence < self::MIN_CONFIDENCE) {
                     continue;
                 }
@@ -162,6 +196,13 @@ PROMPT;
                     tier: MemoryTier::Proposed,
                     proposedBy: "agent:{$agentId}",
                     category: $category,
+                    beliefType: $beliefType,
+                    preferenceSubtype: $preferenceSubtype,
+                    whyItMatters: $whyItMatters !== '' ? $whyItMatters : null,
+                    // Extracted facts are derived, not explicitly stated — they
+                    // await confirmation before becoming active beliefs.
+                    beliefStatus: MemoryBeliefStatus::Inferred,
+                    domain: $domain,
                 );
 
                 $stored++;

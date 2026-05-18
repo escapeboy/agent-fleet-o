@@ -3,7 +3,10 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\Memory\Actions\StoreMemoryAction;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Enums\MemoryPreferenceSubtype;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -44,6 +47,20 @@ class MemoryAddTool extends Tool
                 ->description('Named topic context, e.g. "auth_migration". Auto-classified via Haiku if omitted.'),
             'category' => $schema->string()
                 ->description('Memory category: facts|events|discoveries|preferences|advice|knowledge|context|behavior|goal'),
+            'belief_type' => $schema->string()
+                ->description('Structured belief type: preference|decision|entity|relation|open_question')
+                ->enum(['preference', 'decision', 'entity', 'relation', 'open_question']),
+            'preference_subtype' => $schema->string()
+                ->description('Only valid when belief_type=preference: expertise (depth calibration) or style (tone/format)')
+                ->enum(['expertise', 'style']),
+            'why_it_matters' => $schema->string()
+                ->description('A single actionable directive describing how a future run should behave because of this fact.'),
+            'belief_status' => $schema->string()
+                ->description('Belief lifecycle: active (default, explicitly stated), inferred (derived, awaits confirmation), exploratory (being considered), superseded (replaced, never injected)')
+                ->enum(['active', 'inferred', 'exploratory', 'superseded'])
+                ->default('active'),
+            'domain' => $schema->string()
+                ->description('Scope tag so the belief only surfaces in matching sessions, e.g. "domain:code", "domain:writing", or "user:universal" for everywhere.'),
         ];
     }
 
@@ -65,12 +82,29 @@ class MemoryAddTool extends Tool
             'metadata' => 'nullable|array',
             'topic' => 'nullable|string|max:100',
             'category' => 'nullable|string',
+            'belief_type' => 'nullable|string|in:preference,decision,entity,relation,open_question',
+            'preference_subtype' => 'nullable|string|in:expertise,style',
+            'why_it_matters' => 'nullable|string|max:2000',
+            'belief_status' => 'nullable|string|in:active,inferred,exploratory,superseded',
+            'domain' => 'nullable|string|max:64',
         ]);
 
         $topic = isset($validated['topic']) && $validated['topic'] !== '' ? $validated['topic'] : null;
         $category = isset($validated['category'])
             ? MemoryCategory::tryFrom($validated['category'])
             : null;
+        $beliefType = isset($validated['belief_type'])
+            ? MemoryBeliefType::tryFrom($validated['belief_type'])
+            : null;
+        $preferenceSubtype = isset($validated['preference_subtype'])
+            ? MemoryPreferenceSubtype::tryFrom($validated['preference_subtype'])
+            : null;
+        $beliefStatus = isset($validated['belief_status'])
+            ? (MemoryBeliefStatus::tryFrom($validated['belief_status']) ?? MemoryBeliefStatus::Active)
+            : MemoryBeliefStatus::Active;
+        $whyItMatters = isset($validated['why_it_matters']) && $validated['why_it_matters'] !== ''
+            ? $validated['why_it_matters'] : null;
+        $domain = isset($validated['domain']) && $validated['domain'] !== '' ? $validated['domain'] : null;
 
         $stored = app(StoreMemoryAction::class)->execute(
             teamId: $teamId,
@@ -83,6 +117,11 @@ class MemoryAddTool extends Tool
             tags: $validated['tags'] ?? [],
             category: $category,
             topic: $topic,
+            beliefType: $beliefType,
+            preferenceSubtype: $preferenceSubtype,
+            whyItMatters: $whyItMatters,
+            beliefStatus: $beliefStatus,
+            domain: $domain,
         );
 
         $memory = $stored[0] ?? null;
@@ -95,6 +134,10 @@ class MemoryAddTool extends Tool
             'tags' => $validated['tags'] ?? [],
             'topic' => $topic,
             'category' => $category?->value,
+            'belief_type' => $beliefType?->value,
+            'preference_subtype' => $preferenceSubtype?->value,
+            'belief_status' => $beliefStatus->value,
+            'domain' => $domain,
             'confidence' => $validated['confidence'] ?? 1.0,
         ]));
     }

@@ -2,7 +2,10 @@
 
 namespace App\Domain\Memory\Actions;
 
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Enums\MemoryPreferenceSubtype;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Enums\WriteGateDecision;
@@ -55,6 +58,11 @@ PROMPT;
         ?MemoryCategory $category = null,
         ?string $topic = null,
         ?string $documentContext = null,
+        ?MemoryBeliefType $beliefType = null,
+        ?MemoryPreferenceSubtype $preferenceSubtype = null,
+        ?string $whyItMatters = null,
+        MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
+        ?string $domain = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -76,6 +84,7 @@ PROMPT;
                     $teamId, $agentId, $chunk, $sourceType,
                     $projectId, $sourceId, $metadata, $confidence,
                     $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
+                    $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
                 );
 
                 if ($memory) {
@@ -121,6 +130,11 @@ PROMPT;
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
         ?string $topic = null,
+        ?MemoryBeliefType $beliefType = null,
+        ?MemoryPreferenceSubtype $preferenceSubtype = null,
+        ?string $whyItMatters = null,
+        MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
+        ?string $domain = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
         $embedding = $this->generateEmbedding($chunk, $teamId);
@@ -150,6 +164,7 @@ PROMPT;
                 $teamId, $agentId, $chunk, $embedding, $contentHash,
                 $sourceType, $projectId, $sourceId, $metadata,
                 $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
+                $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
             ),
         };
     }
@@ -297,7 +312,17 @@ PROMPT;
         ?string $proposedBy = null,
         ?MemoryCategory $category = null,
         ?string $topic = null,
+        ?MemoryBeliefType $beliefType = null,
+        ?MemoryPreferenceSubtype $preferenceSubtype = null,
+        ?string $whyItMatters = null,
+        MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
+        ?string $domain = null,
     ): Memory {
+        // A preference subtype only applies to Preference beliefs — drop it otherwise.
+        if ($beliefType?->acceptsPreferenceSubtype() !== true) {
+            $preferenceSubtype = null;
+        }
+
         return Memory::create([
             'team_id' => $teamId,
             'agent_id' => $agentId,
@@ -316,6 +341,11 @@ PROMPT;
             'category' => $category,
             'topic' => $topic,
             'proposed_by' => $proposedBy,
+            'belief_type' => $beliefType,
+            'preference_subtype' => $preferenceSubtype,
+            'why_it_matters' => $whyItMatters,
+            'belief_status' => $beliefStatus,
+            'domain' => $domain,
         ]);
     }
 
