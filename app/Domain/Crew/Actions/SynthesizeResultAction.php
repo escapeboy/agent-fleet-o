@@ -7,6 +7,7 @@ use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Models\CrewAgentMessage;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
+use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -16,6 +17,7 @@ class SynthesizeResultAction
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly ProviderResolver $providerResolver,
+        private readonly FormatGuidePromptInjector $formatGuide,
     ) {}
 
     /**
@@ -90,7 +92,7 @@ class SynthesizeResultAction
         $request = new AiRequestDTO(
             provider: $resolved['provider'],
             model: $resolved['model'],
-            systemPrompt: $systemPrompt,
+            systemPrompt: $this->formatGuide->inject($systemPrompt, $execution->team_id),
             userPrompt: $userPrompt,
             maxTokens: 4096,
             userId: $userId,
