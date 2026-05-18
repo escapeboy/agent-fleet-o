@@ -75,7 +75,8 @@ Schedule::command('contacts:score-health')->dailyAt('03:30')->withoutOverlapping
 // Auto-skill generation from recurring experiment patterns (weekly)
 Schedule::command('skills:auto-generate')->weeklyOn(0, '02:00')->withoutOverlapping(120);
 
-// Agent memory consolidation & pruning (consolidate BEFORE prune)
+// Agent memory consolidation & pruning (distil events BEFORE consolidate BEFORE prune)
+Schedule::command('memory:distill-events')->dailyAt('01:30')->withoutOverlapping(60)->onOneServer();
 Schedule::command('memories:consolidate')->dailyAt('02:30')->withoutOverlapping(90)->onOneServer();
 Schedule::command('memories:prune')->dailyAt('03:00');
 Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);

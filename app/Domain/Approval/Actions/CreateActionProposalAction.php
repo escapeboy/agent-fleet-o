@@ -2,7 +2,10 @@
 
 namespace App\Domain\Approval\Actions;
 
+use App\Domain\Approval\Enums\ActionProposalStatus;
+use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
+use App\Domain\Approval\Services\DecisionRubric;
 use App\Domain\Assistant\Models\AssistantConversation;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
@@ -34,7 +37,7 @@ class CreateActionProposalAction
             $lineage = $this->captureLineage($conversation);
         }
 
-        return ActionProposal::create([
+        $proposal = ActionProposal::create([
             'team_id' => $teamId,
             'actor_user_id' => $userId,
             'actor_agent_id' => $agentId,
@@ -47,6 +50,46 @@ class CreateActionProposalAction
             'status' => 'pending',
             'expires_at' => $expiresAt,
         ]);
+
+        return $this->applyDecisionRubric($proposal);
+    }
+
+    /**
+     * Score the fresh proposal against the decision rubric and route it.
+     * Scoring is always recorded; auto-execute / auto-reject only fire when
+     * enabled in config (both ship off). Anything not auto-routed stays
+     * pending for human review.
+     */
+    private function applyDecisionRubric(ActionProposal $proposal): ActionProposal
+    {
+        if (! config('decision_rubric.enabled', true)) {
+            return $proposal;
+        }
+
+        $rubric = app(DecisionRubric::class);
+        $score = $rubric->evaluate($proposal);
+
+        $proposal->update([
+            'rubric_score' => $score->total,
+            'rubric_breakdown' => $score->toArray(),
+        ]);
+
+        if ($score->recommendation === DecisionRubric::AUTO_EXECUTE) {
+            $proposal->update([
+                'status' => ActionProposalStatus::Approved,
+                'decided_at' => now(),
+                'decision_reason' => "Auto-approved by decision rubric (score {$score->total}/25).",
+            ]);
+            ActionProposalApproved::dispatch($proposal->refresh());
+        } elseif ($score->recommendation === DecisionRubric::AUTO_REJECT) {
+            $proposal->update([
+                'status' => ActionProposalStatus::Rejected,
+                'decided_at' => now(),
+                'decision_reason' => "Auto-rejected by decision rubric (score {$score->total}/25).",
+            ]);
+        }
+
+        return $proposal->refresh();
     }
 
     /**

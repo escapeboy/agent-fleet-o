@@ -60,6 +60,9 @@ class TeamSettingsPage extends Component
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
 
+    // Format & brand guide — injected into content-generation prompts
+    public string $formatGuide = '';
+
     // Chatbot feature toggle
     public bool $chatbotEnabled = false;
 
@@ -169,6 +172,7 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+        $this->formatGuide = (string) ($settings['format_guide'] ?? '');
 
         // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
         if (Schema::hasColumn('teams', 'max_credits_per_call')) {
@@ -249,6 +253,22 @@ class TeamSettingsPage extends Component
         ]);
 
         session()->flash('message', 'Settings saved.');
+    }
+
+    public function saveFormatGuide(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $this->validate([
+            'formatGuide' => 'nullable|string|max:8000',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['format_guide'] = trim($this->formatGuide);
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Format & brand guide saved.');
     }
 
     public function saveLlmDefaults(): void
