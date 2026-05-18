@@ -24,7 +24,7 @@
         ],
         [
             'question' => 'What is MCP integration?',
-            'answer' => 'FleetQ includes a Model Context Protocol (MCP) server with 350+ tools across 40 domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
+            'answer' => 'FleetQ includes a Model Context Protocol (MCP) server with 560+ tools across 50+ domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
         ],
         [
             'question' => 'Is my data secure?',
