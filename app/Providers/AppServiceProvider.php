@@ -33,6 +33,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\GitRepository\Listeners\QueueContextGitPush;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
@@ -40,6 +41,7 @@ use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
+use App\Domain\Memory\Models\Memory;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
@@ -135,6 +137,7 @@ use App\Mcp\DeadlineContext;
 use App\Mcp\ErrorClassifier;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Mcp\Services\ConnectorMcpRegistrar;
+use App\Models\ArtifactVersion;
 use App\Models\User;
 use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
@@ -460,6 +463,22 @@ class AppServiceProvider extends ServiceProvider
             WorkflowSaved::class,
             QueueWorkflowYamlPush::class,
         );
+
+        // Kanwas-inspired sprint: queue a context push when artifacts or memory
+        // change for a team with a configured context Git sync. QueueContextGitPush
+        // debounces (60s/team) and self-skips when no sync exists, so this is cheap.
+        ArtifactVersion::created(function (ArtifactVersion $version): void {
+            $teamId = $version->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
+            }
+        });
+        Memory::created(function (Memory $memory): void {
+            $teamId = $memory->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
+            }
+        });
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);

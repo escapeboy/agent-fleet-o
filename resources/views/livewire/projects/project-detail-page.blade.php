@@ -241,12 +241,14 @@
     {{-- Tabs --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-            @foreach(['activity' => 'Activity', 'milestones' => 'Milestones', 'runs' => 'Runs'] as $tab => $label)
+            @foreach(['activity' => 'Activity', 'milestones' => 'Milestones', 'runs' => 'Runs', 'snapshots' => 'Snapshots'] as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
                     class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                     {{ $label }}
                     @if($tab === 'milestones')
                         <span class="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $milestones->count() }}</span>
+                    @elseif($tab === 'snapshots')
+                        <span class="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ $snapshotCount }}</span>
                     @endif
                 </button>
             @endforeach
@@ -296,6 +298,68 @@
 
     @elseif($activeTab === 'runs')
         <livewire:projects.project-runs-table :project="$project" :key="'runs-' . $project->id" />
+
+    @elseif($activeTab === 'snapshots')
+        <div class="space-y-4">
+            {{-- Create snapshot --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div class="flex-1">
+                        <label class="mb-1 block text-xs font-medium text-gray-600">Snapshot label</label>
+                        <input type="text" wire:model="snapshotLabel" maxlength="120"
+                            placeholder="e.g. Before budget change"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500">
+                    </div>
+                    <button wire:click="createSnapshot" wire:loading.attr="disabled"
+                        class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                        <i class="fa-solid fa-camera mr-1"></i> Capture snapshot
+                    </button>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">Captures the project's configuration, schedule and milestones. Runtime state and run history are not included.</p>
+            </div>
+
+            {{-- Snapshot list --}}
+            @forelse($snapshots as $snapshot)
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="font-medium text-gray-900">{{ $snapshot->label }}</div>
+                            <div class="mt-0.5 text-xs text-gray-500">
+                                {{ $snapshot->created_at->diffForHumans() }}
+                                @if($snapshot->creator) · by {{ $snapshot->creator->name }} @endif
+                                @if($snapshot->restored_at)
+                                    · <span class="text-amber-600">restored {{ $snapshot->restored_at->diffForHumans() }}</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="shrink-0">
+                            @if($confirmingRestoreId === $snapshot->id)
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500">Overwrite current config?</span>
+                                    <button wire:click="restoreSnapshot('{{ $snapshot->id }}')" wire:loading.attr="disabled"
+                                        class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700">
+                                        Confirm restore
+                                    </button>
+                                    <button wire:click="cancelRestore"
+                                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                                        Cancel
+                                    </button>
+                                </div>
+                            @else
+                                <button wire:click="confirmRestore('{{ $snapshot->id }}')"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Restore
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-400">
+                    No snapshots yet. Capture one before making risky configuration changes.
+                </div>
+            @endforelse
+        </div>
     @endif
 
     {{-- AI Expansion Panel --}}

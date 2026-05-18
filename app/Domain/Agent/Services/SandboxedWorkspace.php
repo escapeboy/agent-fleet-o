@@ -121,13 +121,24 @@ final class SandboxedWorkspace
 
     private function deleteDirectory(string $dir): void
     {
-        $items = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
-        );
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
 
-        foreach ($items as $item) {
-            $item->isDir() ? rmdir($item->getRealPath()) : unlink($item->getRealPath());
+            $path = $dir.DIRECTORY_SEPARATOR.$entry;
+
+            // is_link() MUST be checked before is_dir(): a symlink to a
+            // directory satisfies both. Removing the link (never following it)
+            // stops a symlink planted by a sandboxed agent from making teardown
+            // delete host files or an unrelated directory tree.
+            if (is_link($path)) {
+                unlink($path);
+            } elseif (is_dir($path)) {
+                $this->deleteDirectory($path);
+            } else {
+                unlink($path);
+            }
         }
 
         rmdir($dir);
