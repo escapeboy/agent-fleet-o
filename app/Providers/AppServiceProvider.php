@@ -468,13 +468,15 @@ class AppServiceProvider extends ServiceProvider
         // change for a team with a configured context Git sync. QueueContextGitPush
         // debounces (60s/team) and self-skips when no sync exists, so this is cheap.
         ArtifactVersion::created(function (ArtifactVersion $version): void {
-            if ($version->team_id) {
-                app(QueueContextGitPush::class)->handle($version->team_id);
+            $teamId = $version->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
             }
         });
         Memory::created(function (Memory $memory): void {
-            if ($memory->team_id) {
-                app(QueueContextGitPush::class)->handle($memory->team_id);
+            $teamId = $memory->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
             }
         });
 
