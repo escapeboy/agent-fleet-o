@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<string, mixed> $payload
+ */
 class ActionProposal extends Model
 {
     use BelongsToTeam, HasUuids;
