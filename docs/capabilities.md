@@ -160,17 +160,19 @@ Multi-step pipelines with branching, loops, and human approval gates.
 
 ## Projects
 
-Scheduled or on-demand execution wrappers with budget caps.
+Scheduled or on-demand execution wrappers with budget caps. **Snapshots** capture
+and restore a project's full configuration (settings, schedule, milestones) —
+restore is refused while a run is active.
 
-**MCP tools**: `project_list`, `project_create`, `project_activate`, `project_trigger_run`
+**MCP tools**: `project_list`, `project_create`, `project_activate`, `project_trigger_run`, `project_snapshot_create`, `project_snapshot_list`, `project_snapshot_restore`
 
 ---
 
 ## Experiments
 
-Core pipeline with 20-state machine (Draft → Scoring → Planning → Building → Executing → Completed).
+Core pipeline with 20-state machine (Draft → Scoring → Planning → Building → Executing → Completed). The **Activity** tab shows a unified human + agent timeline — state transitions, AI runs, approvals and sandbox file activity merged chronologically.
 
-**MCP tools**: `experiment_list`, `experiment_create`, `experiment_start`, `experiment_retry`, `experiment_kill`, `experiment_steps`
+**MCP tools**: `experiment_list`, `experiment_create`, `experiment_start`, `experiment_retry`, `experiment_kill`, `experiment_steps`, `experiment_activity_timeline`, `experiment_sandbox_files`
 
 ---
 
@@ -278,6 +280,18 @@ Event-driven rules that automatically launch experiments when signal conditions 
 Connect git repos for code-aware agent execution.
 
 **MCP tools**: `git_repo_list`, `git_commit`, `git_diff`, `git_branch_list`, `git_pr_create`
+
+---
+
+## Git Sync — Context Filesystem
+
+One-way sync of a team's accumulated context to a Git repository as versioned
+markdown — artifacts and memory become `.md` files with YAML frontmatter ("your
+files, your repo"). Configured per team at `/settings/git-sync`, which also
+manages the per-workflow YAML syncs. Pushes are debounced and run via a
+retrying queue job.
+
+**MCP tools**: `context_git_sync_configure`, `context_git_sync_status`, `context_git_export_now`
 
 ---
 
