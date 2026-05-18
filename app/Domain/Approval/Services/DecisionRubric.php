@@ -21,10 +21,12 @@ class DecisionRubric
 
     public function evaluate(ActionProposal $proposal): RubricScore
     {
-        $impact = $this->hintScore($proposal->payload['impact'] ?? null);
+        $payload = $proposal->payload;
+
+        $impact = $this->hintScore($payload['impact'] ?? null);
         $risk = $this->riskScore((string) $proposal->risk_level);
-        $cost = $this->costScore($proposal);
-        $urgency = $this->hintScore($proposal->payload['urgency'] ?? null);
+        $cost = $this->costScore($payload);
+        $urgency = $this->hintScore($payload['urgency'] ?? null);
         $confidence = $this->confidenceScore($proposal);
 
         $total = $impact + $risk + $cost + $urgency + $confidence;
@@ -73,10 +75,12 @@ class DecisionRubric
     /**
      * Cost from payload.estimated_credits, bucketed; falls back to the
      * configured default when no estimate is supplied.
+     *
+     * @param  array<string, mixed>  $payload
      */
-    private function costScore(ActionProposal $proposal): int
+    private function costScore(array $payload): int
     {
-        $estimate = $proposal->payload['estimated_credits'] ?? null;
+        $estimate = $payload['estimated_credits'] ?? null;
 
         if (! is_numeric($estimate)) {
             return (int) config('decision_rubric.cost_default', 3);
