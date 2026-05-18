@@ -8,6 +8,7 @@ use App\Domain\Memory\Models\Memory;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Yaml\Yaml;
 
 class ContextMarkdownRendererTest extends TestCase
 {
@@ -37,7 +38,7 @@ class ContextMarkdownRendererTest extends TestCase
 
         $this->assertNotNull($result);
         $this->assertSame('artifacts/landing-page/spring-campaign-019e0000.md', $result['path']);
-        $this->assertStringContainsString('name: Spring Campaign', $result['content']);
+        $this->assertStringContainsString('name: "Spring Campaign"', $result['content']);
         $this->assertStringContainsString('version: 2', $result['content']);
         $this->assertStringContainsString('Hello body', $result['content']);
         $this->assertStringNotContainsString('old draft', $result['content']);
@@ -68,8 +69,31 @@ class ContextMarkdownRendererTest extends TestCase
         $result = $this->renderer->memory($memory, 'memory/');
 
         $this->assertStringStartsWith('memory/'.MemoryTier::Canonical->value.'/', $result['path']);
-        $this->assertStringContainsString('tier: '.MemoryTier::Canonical->value, $result['content']);
+        $this->assertStringContainsString('tier: "'.MemoryTier::Canonical->value.'"', $result['content']);
         $this->assertStringContainsString('Always verify webhook signatures', $result['content']);
-        $this->assertStringContainsString('[security, webhooks]', $result['content']);
+        $this->assertStringContainsString('["security", "webhooks"]', $result['content']);
+    }
+
+    public function test_frontmatter_stays_valid_yaml_with_a_hostile_topic_and_tags(): void
+    {
+        $memory = new Memory([
+            'content' => 'body',
+            'tier' => MemoryTier::Canonical,
+            'topic' => "- injected: true\n#evil &anchor",
+            'confidence' => 0.5,
+            'tags' => ['a, b: c', ']'],
+        ]);
+        $memory->id = '019e0000-0000-7000-8000-0000000000aa';
+
+        $result = $this->renderer->memory($memory, 'memory/');
+
+        // The frontmatter block must round-trip through a real YAML parser
+        // unchanged — no break-out from the attacker-controlled values.
+        $this->assertSame(1, preg_match('/^---\n(.*?)\n---\n/s', $result['content'], $m));
+        $parsed = Yaml::parse($m[1]);
+
+        $this->assertSame("- injected: true\n#evil &anchor", $parsed['topic']);
+        $this->assertSame(['a, b: c', ']'], $parsed['tags']);
+        $this->assertSame(MemoryTier::Canonical->value, $parsed['tier']);
     }
 }

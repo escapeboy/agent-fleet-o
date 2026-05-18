@@ -106,8 +106,8 @@ class ContextMarkdownRenderer
             }
 
             if (is_array($value)) {
-                $value = '['.implode(', ', array_map(fn ($v) => (string) $v, $value)).']';
-                $lines[] = $key.': '.$value;
+                $items = array_map(fn ($v) => $this->quote((string) $v), $value);
+                $lines[] = $key.': ['.implode(', ', $items).']';
 
                 continue;
             }
@@ -126,13 +126,26 @@ class ContextMarkdownRenderer
             return $value ? 'true' : 'false';
         }
 
-        $str = (string) $value;
-
-        // Quote values containing YAML-significant characters.
-        if (preg_match('/[:#\[\]{}\n]/', $str) === 1) {
-            return '"'.str_replace(['\\', '"', "\n"], ['\\\\', '\\"', ' '], $str).'"';
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
         }
 
-        return $str;
+        // Everything else is emitted as a double-quoted string. Unconditional
+        // quoting is the only safe option — a character allowlist cannot cover
+        // every YAML-significant construct (anchors, tags, block indicators).
+        return $this->quote((string) $value);
+    }
+
+    /**
+     * Wrap a string in a YAML double-quoted scalar, escaping the few
+     * characters that are significant inside double quotes.
+     */
+    private function quote(string $str): string
+    {
+        return '"'.str_replace(
+            ['\\', '"', "\n", "\r", "\t"],
+            ['\\\\', '\\"', '\\n', '\\r', '\\t'],
+            $str,
+        ).'"';
     }
 }

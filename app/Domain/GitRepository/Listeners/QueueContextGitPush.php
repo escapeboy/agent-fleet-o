@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Cache;
  * Queues a context push when a team's artifacts or memory change.
  * Kanwas-inspired sprint.
  *
- * Debounce: at most one push per team per 60s. The debounce key is set before
- * the sync lookup so teams without a configured sync incur at most one DB
- * query per minute regardless of write volume.
+ * Debounce: at most one push per team per 60s. The sync lookup runs first (an
+ * indexed point query on the unique team_id) so a sync configured during an
+ * active debounce window is not skipped.
  */
 class QueueContextGitPush
 {
@@ -22,12 +22,6 @@ class QueueContextGitPush
             return;
         }
 
-        $debounceKey = "ctx-git-sync-debounce:{$teamId}";
-        if (Cache::has($debounceKey)) {
-            return;
-        }
-        Cache::put($debounceKey, true, now()->addSeconds(60));
-
         $sync = ContextGitSync::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->first();
@@ -35,6 +29,12 @@ class QueueContextGitPush
         if (! $sync) {
             return;
         }
+
+        $debounceKey = "ctx-git-sync-debounce:{$teamId}";
+        if (Cache::has($debounceKey)) {
+            return;
+        }
+        Cache::put($debounceKey, true, now()->addSeconds(60));
 
         PushContextToGitJob::dispatch($sync->id);
     }

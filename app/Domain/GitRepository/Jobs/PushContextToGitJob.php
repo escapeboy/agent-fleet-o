@@ -14,6 +14,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
@@ -39,6 +40,17 @@ class PushContextToGitJob implements ShouldQueue
     private const MEMORY_CAP = 1000;
 
     public function __construct(public readonly string $syncId) {}
+
+    /**
+     * Serialize pushes per sync — two concurrent full-tree exports to the same
+     * branch would race the remote and overwrite each other's commit SHA.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping($this->syncId))->releaseAfter(30)->expireAfter(600)];
+    }
 
     public function handle(GitOperationRouter $router, ContextMarkdownRenderer $renderer): void
     {

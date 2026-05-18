@@ -85,4 +85,28 @@ class SandboxFileActivityCollectorTest extends TestCase
 
         $ws->teardown();
     }
+
+    public function test_skips_symlinks_pointing_outside_the_sandbox(): void
+    {
+        $ws = $this->workspace();
+        file_put_contents($ws->outputsDir().'/real.txt', 'ok');
+
+        // A symlink a malicious agent could plant pointing at the host.
+        $outside = sys_get_temp_dir().'/sbtest-outside-'.uniqid().'.txt';
+        file_put_contents($outside, 'secret');
+        symlink($outside, $ws->outputsDir().'/escape.txt');
+
+        $count = (new SandboxFileActivityCollector)->collect($ws, ['team_id' => $this->team->id]);
+
+        $this->assertSame(1, $count);
+        $this->assertDatabaseHas('sandbox_file_activities', [
+            'team_id' => $this->team->id,
+            'path' => 'real.txt',
+        ]);
+        $this->assertDatabaseMissing('sandbox_file_activities', ['path' => 'escape.txt']);
+
+        @unlink($ws->outputsDir().'/escape.txt');
+        $ws->teardown();
+        @unlink($outside);
+    }
 }
