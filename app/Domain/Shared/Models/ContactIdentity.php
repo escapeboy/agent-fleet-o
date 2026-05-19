@@ -4,13 +4,20 @@ namespace App\Domain\Shared\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Signal\Models\Signal;
+use Database\Factories\Domain\Shared\ContactIdentityFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContactIdentity extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasFactory, HasUuids;
+
+    protected static function newFactory(): ContactIdentityFactory
+    {
+        return ContactIdentityFactory::new();
+    }
 
     protected $fillable = [
         'team_id',

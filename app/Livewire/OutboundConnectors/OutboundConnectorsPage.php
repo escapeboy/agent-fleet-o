@@ -9,6 +9,12 @@ use Livewire\Component;
 
 class OutboundConnectorsPage extends Component
 {
+    // Email provider: smtp | resend
+    public string $provider = 'smtp';
+
+    // Resend
+    public string $apiKey = '';
+
     // SMTP server
     public string $host = '';
 
@@ -51,6 +57,7 @@ class OutboundConnectorsPage extends Component
 
         if ($config) {
             $creds = $config->credentials ?? [];
+            $this->provider = $creds['provider'] ?? 'smtp';
             $this->host = $creds['host'] ?? '';
             $this->port = (string) ($creds['port'] ?? '587');
             $this->encryption = $creds['encryption'] ?? 'tls';
@@ -69,15 +76,21 @@ class OutboundConnectorsPage extends Component
     {
         Gate::authorize('manage-team');
 
-        $this->validate([
-            'host' => 'required|string|max:255',
-            'port' => 'required|integer|between:1,65535',
-            'encryption' => 'required|in:tls,ssl,none',
+        $rules = [
+            'provider' => 'required|in:smtp,resend',
             'fromAddress' => 'required|email|max:255',
             'fromName' => 'nullable|string|max:255',
             'defaultRecipient' => 'nullable|email|max:255',
             'defaultTemplateId' => 'nullable|uuid',
-        ]);
+        ];
+
+        if ($this->provider === 'smtp') {
+            $rules['host'] = 'required|string|max:255';
+            $rules['port'] = 'required|integer|between:1,65535';
+            $rules['encryption'] = 'required|in:tls,ssl,none';
+        }
+
+        $this->validate($rules);
 
         $team = auth()->user()->currentTeam;
 
@@ -86,6 +99,7 @@ class OutboundConnectorsPage extends Component
             ->first();
 
         $credentials = [
+            'provider' => $this->provider,
             'host' => $this->host,
             'port' => (int) $this->port,
             'encryption' => $this->encryption,
@@ -105,12 +119,22 @@ class OutboundConnectorsPage extends Component
             $credentials['password'] = '';
         }
 
+        // Preserve existing Resend API key if field is left blank
+        if ($this->apiKey) {
+            $credentials['api_key'] = $this->apiKey;
+        } elseif ($existing) {
+            $credentials['api_key'] = $existing->credentials['api_key'] ?? '';
+        } else {
+            $credentials['api_key'] = '';
+        }
+
         OutboundConnectorConfig::updateOrCreate(
             ['team_id' => $team->id, 'channel' => 'email'],
             ['credentials' => $credentials, 'is_active' => $this->isActive],
         );
 
         $this->password = '';
+        $this->apiKey = '';
         $this->testMessage = null;
         $this->testError = null;
 

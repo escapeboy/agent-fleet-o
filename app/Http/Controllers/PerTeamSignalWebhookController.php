@@ -8,6 +8,7 @@ use App\Domain\Signal\Connectors\GitHubWebhookConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
 use App\Domain\Signal\Connectors\LinearConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
+use App\Domain\Signal\Connectors\ResendWebhookConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
 use App\Domain\Signal\Connectors\SlackWebhookConnector;
 use App\Domain\Signal\Connectors\WebhookConnector;
@@ -84,6 +85,12 @@ class PerTeamSignalWebhookController extends Controller
             'header' => 'X-Slack-Signature',
             'prefix' => '',
             'connector' => SlackWebhookConnector::class,
+        ],
+        // Resend uses Svix signing (v1,<base64sig> over {id}.{timestamp}.{body}), handled separately
+        'resend' => [
+            'header' => 'svix-signature',
+            'prefix' => '',
+            'connector' => ResendWebhookConnector::class,
         ],
     ];
 
@@ -201,6 +208,14 @@ class PerTeamSignalWebhookController extends Controller
             ),
             // Datadog sends the secret verbatim in a header (equality, not HMAC)
             'datadog' => hash_equals($secret, $request->header('X-Datadog-Webhook-Secret', '')),
+            // Resend uses Svix signing across three headers
+            'resend' => ResendWebhookConnector::validateSignature(
+                $rawBody,
+                $request->header('svix-id', ''),
+                $request->header('svix-timestamp', ''),
+                $request->header('svix-signature', ''),
+                $secret,
+            ),
             // GitHub/Jira: strip prefix before comparison
             'github' => GitHubWebhookConnector::validateSignature(
                 $rawBody,

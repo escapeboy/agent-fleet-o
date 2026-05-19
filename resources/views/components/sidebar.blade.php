@@ -2,7 +2,7 @@
     $activeRailGroup = match(true) {
         request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
         request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
-        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'health', 'audit', 'audit-console.*', 'metrics.*') => 'monitor',
+        request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'email.*', 'outbound.*', 'audiences.*', 'broadcasts.*', 'health', 'audit', 'audit-console.*', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'settings.git-sync', 'profile', 'notifications.*') => 'settings',
         default => null,
@@ -173,6 +173,7 @@
                 <x-sidebar-link href="{{ route('outbound.webhooks') }}" :active="request()->routeIs('outbound.webhooks')" icon="link">Webhooks</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.notifications') }}" :active="request()->routeIs('outbound.notifications')" icon="bell">Notifications</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.whatsapp') }}" :active="request()->routeIs('outbound.whatsapp')" icon="chat-bubble-left-right">WhatsApp</x-sidebar-link>
+                <x-sidebar-link href="{{ route('audiences.index') }}" :active="request()->routeIs('audiences.*', 'broadcasts.*')" icon="identification">Audiences</x-sidebar-link>
                 <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">Health</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">Audit Log</x-sidebar-link>
                 @if(config('boruna_audit.enabled', false))

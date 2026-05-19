@@ -32,11 +32,14 @@ use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
+use App\Livewire\Audiences\AudienceDetailPage;
+use App\Livewire\Audiences\AudienceListPage;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\AuditConsole\AuditConsoleDetailPage;
 use App\Livewire\AuditConsole\AuditConsoleListPage;
 use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Auth\AcceptTermsPage;
+use App\Livewire\Broadcast\BroadcastDetailPage;
 use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Chatbots\ChatbotAnalyticsPage;
 use App\Livewire\Chatbots\ChatbotConversationListPage;
@@ -422,6 +425,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/webhooks', WebhookOutboundPage::class)->name('outbound.webhooks');
     Route::get('/outbound/notifications', NotificationOutboundPage::class)->name('outbound.notifications');
     Route::get('/outbound/whatsapp', WhatsAppOutboundPage::class)->name('outbound.whatsapp');
+
+    // Audiences & broadcasts
+    Route::get('/audiences', AudienceListPage::class)->name('audiences.index');
+    Route::get('/audiences/{audience}', AudienceDetailPage::class)->name('audiences.show');
+    Route::get('/broadcasts/{broadcast}', BroadcastDetailPage::class)->name('broadcasts.show');
 
     // Email themes
     Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
