@@ -3,9 +3,9 @@
 namespace App\Domain\Outbound\Managers;
 
 use App\Domain\Outbound\Connectors\DummyConnector;
+use App\Domain\Outbound\Connectors\EmailConnectorDispatcher;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\NtfyConnector;
-use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
@@ -30,7 +30,8 @@ class OutboundConnectorManager extends Manager
 
     protected function createEmailDriver(): OutboundConnectorInterface
     {
-        return $this->container->make(SmtpEmailConnector::class);
+        // The email channel dispatches to SMTP or Resend per the team's config.
+        return $this->container->make(EmailConnectorDispatcher::class);
     }
 
     protected function createWebhookDriver(): OutboundConnectorInterface

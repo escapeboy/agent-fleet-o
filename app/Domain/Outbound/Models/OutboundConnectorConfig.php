@@ -53,6 +53,7 @@ class OutboundConnectorConfig extends Model
         $value = $creds['bot_token']
             ?? $creds['webhook_url']
             ?? $creds['access_token']
+            ?? $creds['api_key']
             ?? $creds['password']
             ?? $creds['secret']
             ?? $creds['default_url']
