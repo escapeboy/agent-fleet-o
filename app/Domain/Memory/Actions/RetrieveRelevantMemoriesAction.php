@@ -33,6 +33,7 @@ class RetrieveRelevantMemoriesAction
         float $minConfidence = 0.3,
         ?array $tags = null,
         ?string $topic = null,
+        ?string $domain = null,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -73,12 +74,21 @@ class RetrieveRelevantMemoriesAction
                 ->where('confidence', '>=', $minConfidence)
                 // Exclude rejected proposals — keep NULL (legacy) and approved.
                 ->where(fn ($q) => $q->whereNull('proposal_status')->orWhere('proposal_status', '!=', 'rejected'))
+                // Superseded beliefs are retained for audit but never injected.
+                ->where(fn ($q) => $q->whereNull('belief_status')->orWhere('belief_status', '!=', 'superseded'))
                 ->orderByDesc('composite_score');
 
             // Topic namespace pre-filter: narrows the candidate set before the pgvector scan.
             // Skipped when topic is null to preserve backwards-compatible behaviour.
             if ($topic !== null) {
                 $builder->where('topic', $topic);
+            }
+
+            // Domain scope: a hard filter applied after scoring. A belief scoped
+            // to one domain (e.g. domain:code) never surfaces in another domain's
+            // session. NULL-domain beliefs are universal and always eligible.
+            if ($domain !== null) {
+                $builder->where(fn ($q) => $q->where('domain', $domain)->orWhereNull('domain'));
             }
 
             // Tag-based filtering (opt-in: only applied when tags are passed)

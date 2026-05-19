@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Memory\Actions\StoreMemoryAction;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
+use App\Domain\Memory\Enums\MemoryPreferenceSubtype;
 use App\Domain\Memory\Models\Memory;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\MemoryResource;
@@ -25,6 +28,9 @@ class MemoryController extends Controller
                 AllowedFilter::exact('agent_id'),
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::exact('source_type'),
+                AllowedFilter::exact('belief_type'),
+                AllowedFilter::exact('belief_status'),
+                AllowedFilter::exact('domain'),
                 AllowedFilter::partial('content'),
             )
             ->allowedSorts('created_at', 'confidence')
@@ -51,6 +57,7 @@ class MemoryController extends Controller
             'top_k' => ['sometimes', 'integer', 'min:1', 'max:50'],
             'threshold' => ['sometimes', 'numeric', 'min:0', 'max:1'],
             'scope' => ['sometimes', 'in:agent,team,project'],
+            'domain' => ['sometimes', 'nullable', 'string', 'max:64'],
         ]);
 
         $memories = $action->execute(
@@ -61,6 +68,7 @@ class MemoryController extends Controller
             threshold: $request->input('threshold'),
             scope: $request->input('scope', $request->has('agent_id') ? 'agent' : 'team'),
             teamId: $request->user()->current_team_id,
+            domain: $request->input('domain'),
         );
 
         return response()->json([
@@ -108,6 +116,11 @@ class MemoryController extends Controller
             'metadata' => ['sometimes', 'array'],
             'tags' => ['sometimes', 'array'],
             'confidence' => ['sometimes', 'numeric', 'min:0', 'max:1'],
+            'belief_type' => ['sometimes', 'nullable', 'string', 'in:preference,decision,entity,relation,open_question'],
+            'preference_subtype' => ['sometimes', 'nullable', 'string', 'in:expertise,style'],
+            'why_it_matters' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'belief_status' => ['sometimes', 'string', 'in:active,inferred,exploratory,superseded'],
+            'domain' => ['sometimes', 'nullable', 'string', 'max:64'],
         ]);
 
         $memories = $action->execute(
@@ -120,6 +133,11 @@ class MemoryController extends Controller
             metadata: $request->input('metadata', []),
             confidence: (float) $request->input('confidence', 1.0),
             tags: $request->input('tags', []),
+            beliefType: MemoryBeliefType::tryFrom((string) $request->input('belief_type')),
+            preferenceSubtype: MemoryPreferenceSubtype::tryFrom((string) $request->input('preference_subtype')),
+            whyItMatters: $request->input('why_it_matters'),
+            beliefStatus: MemoryBeliefStatus::tryFrom((string) $request->input('belief_status', 'active')) ?? MemoryBeliefStatus::Active,
+            domain: $request->input('domain'),
         );
 
         return response()->json([

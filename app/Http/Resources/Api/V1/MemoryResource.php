@@ -19,6 +19,11 @@ class MemoryResource extends JsonResource
             'metadata' => $this->metadata,
             'tags' => $this->tags,
             'confidence' => $this->confidence,
+            'belief_type' => $this->belief_type?->value,
+            'preference_subtype' => $this->preference_subtype?->value,
+            'why_it_matters' => $this->why_it_matters,
+            'belief_status' => $this->belief_status?->value,
+            'domain' => $this->domain,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];
