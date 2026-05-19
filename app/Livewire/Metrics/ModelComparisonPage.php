@@ -16,6 +16,13 @@ class ModelComparisonPage extends Component
 
     public string $sortDir = 'desc';
 
+    /**
+     * Aggregation scope. 'team' (default) restricts the comparison to the
+     * current team's executions; 'platform' aggregates across every team and
+     * is honoured only for super-admins (enforced in {@see getModelStats()}).
+     */
+    public string $scope = 'team';
+
     public function updatedTimeWindow(): void
     {
         // Triggers re-render
@@ -47,13 +54,35 @@ class ModelComparisonPage extends Component
         ])->layout('layouts.app', ['header' => 'Model Comparison']);
     }
 
+    /**
+     * Whether platform-wide aggregation is in effect — true only when a
+     * super-admin viewer has explicitly switched the scope to 'platform'.
+     * Any other caller (including a crafted scope=platform request) is false.
+     */
+    private function platformScopeActive(): bool
+    {
+        return $this->scope === 'platform'
+            && (bool) (auth()->user()?->is_super_admin ?? false);
+    }
+
     private function getModelStats($cutoff): Collection
     {
+        // Team scoping. `withoutGlobalScopes()` is kept deliberately: re-applying
+        // TeamScope would emit an unqualified `team_id` that collides with the
+        // joined agents/skills tables. Instead the team filter is applied
+        // explicitly and table-qualified below. $teamId is null ONLY for a
+        // super-admin in platform scope — every other viewer is pinned to their
+        // own team, so a crafted scope=platform cannot widen the result set.
+        $teamId = $this->platformScopeActive()
+            ? null
+            : auth()->user()->currentTeam->id;
+
         // Gather stats from agent_executions (agent model is on the agent, not the execution)
         $agentStats = AgentExecution::withoutGlobalScopes()
             ->join('agents', 'agent_executions.agent_id', '=', 'agents.id')
             ->where('agent_executions.created_at', '>=', $cutoff)
             ->where('agent_executions.status', 'completed')
+            ->when($teamId, fn ($q) => $q->where('agent_executions.team_id', $teamId))
             ->select(
                 DB::raw("CONCAT(agents.provider, '/', agents.model) as model_key"),
                 DB::raw('COUNT(*) as exec_count'),
@@ -73,6 +102,7 @@ class ModelComparisonPage extends Component
             ->where('skill_executions.created_at', '>=', $cutoff)
             ->where('skill_executions.status', 'completed')
             ->whereNotNull('skills.configuration')
+            ->when($teamId, fn ($q) => $q->where('skill_executions.team_id', $teamId))
             ->select(
                 DB::raw("CONCAT(skills.configuration->>'provider', '/', skills.configuration->>'model') as model_key"),
                 DB::raw('COUNT(*) as exec_count'),
