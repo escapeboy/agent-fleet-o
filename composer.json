@@ -59,6 +59,7 @@
         "laravel/horizon": "^5.43",
         "laravel/mcp": "^0.7.0",
         "laravel/passport": "^13.6",
+        "laravel/pulse": "^1.7",
         "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.3",
         "laravel/socialite": "^5.25",

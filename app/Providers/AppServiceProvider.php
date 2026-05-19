@@ -404,6 +404,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('feature.security_policy', fn ($user) => $mode->isSelfHosted());
         Gate::define('feature.built_in_tools', fn ($user) => $mode->isSelfHosted());
 
+        // Laravel Pulse dashboard access. Cloud: super-admins only — the dashboard
+        // exposes cross-tenant slow queries/jobs/exceptions. Self-hosted: any
+        // authenticated user, since the community edition is single-tenant and
+        // has no super-admin tier. Overrides Pulse's default local-only gate.
+        Gate::define('viewPulse', function ($user) use ($mode): bool {
+            return $mode->isCloud()
+                ? (bool) ($user->is_super_admin ?? false)
+                : true;
+        });
+
         // Blade directives for deployment mode
         Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
         Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
