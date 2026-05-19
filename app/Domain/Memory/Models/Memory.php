@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Memory extends Model
 {
@@ -44,6 +45,11 @@ class Memory extends Model
         'why_it_matters',
         'belief_status',
         'domain',
+        'rejected_alternatives',
+        'supersedes_id',
+        'conflict_flag',
+        'conflict_with_id',
+        'conflict_detected_at',
         'topic',
         'proposed_by',
         'proposal_status',
@@ -60,6 +66,9 @@ class Memory extends Model
         return [
             'metadata' => 'array',
             'tags' => 'array',
+            'rejected_alternatives' => 'array',
+            'conflict_flag' => 'boolean',
+            'conflict_detected_at' => 'datetime',
             'confidence' => 'float',
             'importance' => 'float',
             'last_accessed_at' => 'datetime',
@@ -95,5 +104,32 @@ class Memory extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * The memory this one replaces (RoBrain temporal belief graph).
+     */
+    public function supersedes(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'supersedes_id');
+    }
+
+    /**
+     * Memories that replace this one. Plural because a fact can be
+     * superseded then re-superseded; the newest active row wins.
+     *
+     * @return HasMany<self, $this>
+     */
+    public function supersededBy(): HasMany
+    {
+        return $this->hasMany(self::class, 'supersedes_id');
+    }
+
+    /**
+     * The memory this one was flagged as contradicting.
+     */
+    public function conflictsWith(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'conflict_with_id');
     }
 }

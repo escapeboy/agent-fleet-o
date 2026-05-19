@@ -63,6 +63,8 @@ PROMPT;
         ?string $whyItMatters = null,
         MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
         ?string $domain = null,
+        array $rejectedAlternatives = [],
+        ?string $supersedesId = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -75,6 +77,8 @@ PROMPT;
         // Determine visibility from source type if not explicitly set
         $visibility ??= $this->resolveVisibility($sourceType);
 
+        $rejectedAlternatives = $this->normalizeRejectedAlternatives($rejectedAlternatives);
+
         $chunks = $this->chunkContent($content);
         $memories = [];
 
@@ -85,6 +89,7 @@ PROMPT;
                     $projectId, $sourceId, $metadata, $confidence,
                     $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
                     $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
+                    $rejectedAlternatives, $supersedesId,
                 );
 
                 if ($memory) {
@@ -108,7 +113,48 @@ PROMPT;
             }
         }
 
+        // RoBrain supersession: when this memory replaces an older one, mark
+        // the old belief Superseded so it stays queryable for audit but is
+        // never injected into future agent context again.
+        if ($supersedesId !== null && $memories !== []) {
+            Memory::withoutGlobalScopes()
+                ->where('id', $supersedesId)
+                ->where('team_id', $teamId)
+                ->update(['belief_status' => MemoryBeliefStatus::Superseded->value]);
+        }
+
         return $memories;
+    }
+
+    /**
+     * Coerce rejected-alternative entries to the {option, reason} shape and
+     * drop any without a usable option. LLM extractors emit loose arrays;
+     * this is the single funnel that cleans them.
+     *
+     * @param  array<int, mixed>  $raw
+     * @return array<int, array{option: string, reason: string}>
+     */
+    private function normalizeRejectedAlternatives(array $raw): array
+    {
+        $clean = [];
+
+        foreach ($raw as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $option = trim((string) ($entry['option'] ?? ''));
+            if ($option === '') {
+                continue;
+            }
+
+            $clean[] = [
+                'option' => mb_substr($option, 0, 200),
+                'reason' => mb_substr(trim((string) ($entry['reason'] ?? '')), 0, 500),
+            ];
+        }
+
+        return $clean;
     }
 
     /**
@@ -135,6 +181,8 @@ PROMPT;
         ?string $whyItMatters = null,
         MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
         ?string $domain = null,
+        array $rejectedAlternatives = [],
+        ?string $supersedesId = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
         $embedding = $this->generateEmbedding($chunk, $teamId);
@@ -165,6 +213,7 @@ PROMPT;
                 $sourceType, $projectId, $sourceId, $metadata,
                 $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
                 $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
+                $rejectedAlternatives, $supersedesId,
             ),
         };
     }
@@ -317,6 +366,8 @@ PROMPT;
         ?string $whyItMatters = null,
         MemoryBeliefStatus $beliefStatus = MemoryBeliefStatus::Active,
         ?string $domain = null,
+        array $rejectedAlternatives = [],
+        ?string $supersedesId = null,
     ): Memory {
         // A preference subtype only applies to Preference beliefs — drop it otherwise.
         if ($beliefType?->acceptsPreferenceSubtype() !== true) {
@@ -346,6 +397,8 @@ PROMPT;
             'why_it_matters' => $whyItMatters,
             'belief_status' => $beliefStatus,
             'domain' => $domain,
+            'rejected_alternatives' => $rejectedAlternatives,
+            'supersedes_id' => $supersedesId,
         ]);
     }
 

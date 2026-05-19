@@ -52,6 +52,7 @@ Return ONLY valid JSON (no markdown fences):
       "preference_subtype": "style",
       "why_it_matters": "actionable directive: how a future run should behave because of this fact",
       "domain": "domain:code",
+      "rejected_alternatives": [{"option": "approach that was ruled out", "reason": "why it was rejected"}],
       "tags": ["capability"]
     }
   ]
@@ -78,6 +79,10 @@ why_it_matters: a single actionable directive, not a restatement of the fact.
 domain: a scope tag so the belief only surfaces in matching sessions. Use
   "domain:code", "domain:writing", "domain:ops", etc., or "user:universal" when
   the fact applies everywhere. Omit if unsure.
+rejected_alternatives is OPTIONAL: options the agent considered and explicitly
+  ruled out. Capture these especially for "decision" beliefs so a future run
+  does not re-propose a vetoed approach. Each entry: {"option": "...", "reason": "..."}.
+  Omit entirely when nothing was ruled out.
 Tags must be one or more of: capability, constraint, preference, pattern, domain, tooling
 PROMPT;
 
@@ -178,6 +183,9 @@ PROMPT;
                 $domain = isset($item['domain']) && is_string($item['domain']) && $item['domain'] !== ''
                     ? $item['domain']
                     : null;
+                $rejectedAlternatives = isset($item['rejected_alternatives']) && is_array($item['rejected_alternatives'])
+                    ? $item['rejected_alternatives']
+                    : [];
 
                 if ($fact === '' || $confidence < self::MIN_CONFIDENCE) {
                     continue;
@@ -203,6 +211,7 @@ PROMPT;
                     // await confirmation before becoming active beliefs.
                     beliefStatus: MemoryBeliefStatus::Inferred,
                     domain: $domain,
+                    rejectedAlternatives: $rejectedAlternatives,
                 );
 
                 $stored++;

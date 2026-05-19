@@ -79,6 +79,7 @@ class UnifiedMemorySearchAction
                     'retrieval_count' => $item->retrieval_count ?? 0,
                     'created_at' => $item->created_at?->toIso8601String(),
                     'confidence' => $item->confidence,
+                    'rejected_alternatives' => $item->rejected_alternatives ?? null,
                     'metadata' => $item->metadata,
                 ],
             ]);
@@ -129,6 +130,7 @@ class UnifiedMemorySearchAction
                         'retrieval_count' => $item->retrieval_count ?? 0,
                         'created_at' => $item->created_at?->toIso8601String(),
                         'confidence' => $item->confidence,
+                        'rejected_alternatives' => $item->rejected_alternatives ?? null,
                         'metadata' => $item->metadata,
                     ],
                 ]);
@@ -384,6 +386,7 @@ class UnifiedMemorySearchAction
                 'retrieval_count' => $m->retrieval_count ?? 0,
                 'created_at' => $m->created_at?->toIso8601String(),
                 'confidence' => $m->confidence,
+                'rejected_alternatives' => $m->rejected_alternatives,
             ],
         ]);
     }
