@@ -3,6 +3,8 @@
 namespace App\Mcp\Tools\Memory;
 
 use App\Domain\KnowledgeGraph\Services\KnowledgeGraphTraversal;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Signal\Models\Entity;
@@ -48,6 +50,14 @@ class MemorySearchTool extends Tool
                 ->description('Filter by tags — only return memories containing ANY of these tags. E.g. ["barsy:client", "barsy:shared"]. Omit to return all memories regardless of tags.'),
             'topic' => $schema->string()
                 ->description('Namespace pre-filter by topic slug, e.g. "auth_migration". Narrows the search to a named context before the vector scan for higher precision.'),
+            'belief_type' => $schema->string()
+                ->description('Filter by structured belief type: preference, decision, entity, relation, open_question')
+                ->enum(['preference', 'decision', 'entity', 'relation', 'open_question']),
+            'belief_status' => $schema->string()
+                ->description('Filter by belief lifecycle status: active, inferred, exploratory, superseded')
+                ->enum(['active', 'inferred', 'exploratory', 'superseded']),
+            'domain' => $schema->string()
+                ->description('Hard scope filter by domain, e.g. "domain:code". Returns only beliefs in that domain plus universal (no-domain) beliefs.'),
         ];
     }
 
@@ -133,6 +143,24 @@ class MemorySearchTool extends Tool
             $query->where('topic', $topic);
         }
 
+        if ($beliefTypeValue = $request->get('belief_type')) {
+            $beliefType = MemoryBeliefType::tryFrom($beliefTypeValue);
+            if ($beliefType !== null) {
+                $query->where('belief_type', $beliefType->value);
+            }
+        }
+
+        if ($beliefStatusValue = $request->get('belief_status')) {
+            $beliefStatus = MemoryBeliefStatus::tryFrom($beliefStatusValue);
+            if ($beliefStatus !== null) {
+                $query->where('belief_status', $beliefStatus->value);
+            }
+        }
+
+        if ($domain = $request->get('domain')) {
+            $query->where(fn ($q) => $q->where('domain', $domain)->orWhereNull('domain'));
+        }
+
         return $query->limit(100)->get();
     }
 
@@ -188,6 +216,10 @@ class MemorySearchTool extends Tool
                 'content' => mb_substr($m->content, 0, 300),
                 'confidence' => $m->confidence,
                 'category' => $m->category?->value,
+                'belief_type' => $m->belief_type?->value,
+                'belief_status' => $m->belief_status?->value,
+                'why_it_matters' => $m->why_it_matters,
+                'domain' => $m->domain,
                 'tags' => $m->tags ?? [],
                 'created' => $m->created_at?->diffForHumans(),
             ])->values()->toArray(),

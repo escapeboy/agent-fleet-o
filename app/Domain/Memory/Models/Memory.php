@@ -3,7 +3,10 @@
 namespace App\Domain\Memory\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Enums\MemoryPreferenceSubtype;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Project\Models\Project;
@@ -36,6 +39,11 @@ class Memory extends Model
         'tags',
         'tier',
         'category',
+        'belief_type',
+        'preference_subtype',
+        'why_it_matters',
+        'belief_status',
+        'domain',
         'topic',
         'proposed_by',
         'proposal_status',
@@ -61,6 +69,9 @@ class Memory extends Model
             'visibility' => MemoryVisibility::class,
             'tier' => MemoryTier::class,
             'category' => MemoryCategory::class,
+            'belief_type' => MemoryBeliefType::class,
+            'preference_subtype' => MemoryPreferenceSubtype::class,
+            'belief_status' => MemoryBeliefStatus::class,
         ];
     }
 

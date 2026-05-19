@@ -71,6 +71,29 @@
                 @endforeach
             </x-form-select>
         @endif
+
+        <x-form-select wire:model.live="beliefTypeFilter">
+            <option value="">All Belief Types</option>
+            @foreach($beliefTypes as $bt)
+                <option value="{{ $bt->value }}">{{ Str::headline($bt->value) }}</option>
+            @endforeach
+        </x-form-select>
+
+        <x-form-select wire:model.live="beliefStatusFilter">
+            <option value="">All Belief Statuses</option>
+            @foreach($beliefStatuses as $bs)
+                <option value="{{ $bs->value }}">{{ ucfirst($bs->value) }}</option>
+            @endforeach
+        </x-form-select>
+
+        @if($domains->isNotEmpty())
+            <x-form-select wire:model.live="domainFilter">
+                <option value="">All Domains</option>
+                @foreach($domains as $domain)
+                    <option value="{{ $domain }}">{{ $domain }}</option>
+                @endforeach
+            </x-form-select>
+        @endif
     </div>
 
     {{-- Knowledge Upload --}}
@@ -92,6 +115,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Agent</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Content</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tier</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Belief</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Project</th>
                     <th wire:click="sortBy('created_at')" class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700">
@@ -128,6 +152,29 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm">
+                            @if($memory->belief_type)
+                                @php
+                                    $statusColors = [
+                                        'active'      => 'bg-green-100 text-green-800',
+                                        'inferred'    => 'bg-amber-100 text-amber-800',
+                                        'exploratory' => 'bg-sky-100 text-sky-800',
+                                        'superseded'  => 'bg-gray-200 text-gray-500 line-through',
+                                    ];
+                                    $statusValue = $memory->belief_status?->value ?? 'active';
+                                @endphp
+                                <div class="flex flex-col gap-1">
+                                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                                        {{ Str::headline($memory->belief_type->value) }}@if($memory->preference_subtype) · {{ ucfirst($memory->preference_subtype->value) }}@endif
+                                    </span>
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $statusColors[$statusValue] ?? 'bg-gray-100 text-gray-700' }}">
+                                        {{ ucfirst($statusValue) }}
+                                    </span>
+                                </div>
+                            @else
+                                <span class="text-xs text-gray-300">-</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-sm">
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
                                 {{ $memory->source_type }}
                             </span>
@@ -145,7 +192,7 @@
 
                     @if($expandedId === $memory->id)
                         <tr>
-                            <td colspan="7" class="bg-gray-50 px-6 py-4">
+                            <td colspan="8" class="bg-gray-50 px-6 py-4">
                                 <div class="space-y-3">
                                     {{-- Full content --}}
                                     <div>
@@ -156,12 +203,29 @@
                                     </div>
 
                                     {{-- Tier + proposed_by info --}}
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex flex-wrap items-center gap-3">
                                         <span class="text-xs text-gray-500">Tier: <strong>{{ ucfirst($memory->tier?->value ?? 'working') }}</strong></span>
                                         @if($memory->proposed_by)
                                             <span class="text-xs text-gray-500">Proposed by: <strong>{{ $memory->proposed_by }}</strong></span>
                                         @endif
+                                        @if($memory->belief_type)
+                                            <span class="text-xs text-gray-500">Belief: <strong>{{ Str::headline($memory->belief_type->value) }}</strong></span>
+                                        @endif
+                                        @if($memory->belief_status)
+                                            <span class="text-xs text-gray-500">Status: <strong>{{ ucfirst($memory->belief_status->value) }}</strong></span>
+                                        @endif
+                                        @if($memory->domain)
+                                            <span class="text-xs text-gray-500">Domain: <strong>{{ $memory->domain }}</strong></span>
+                                        @endif
                                     </div>
+
+                                    {{-- Why it matters --}}
+                                    @if($memory->why_it_matters)
+                                        <div>
+                                            <h4 class="text-xs font-medium uppercase text-gray-500">Why it matters</h4>
+                                            <p class="mt-1 text-sm text-gray-700">{{ $memory->why_it_matters }}</p>
+                                        </div>
+                                    @endif
 
                                     {{-- Tags editor --}}
                                     <div x-data="{ editing: false, tagInput: '{{ implode(', ', $memory->tags ?? []) }}' }" class="flex flex-wrap items-center gap-2">
@@ -227,7 +291,7 @@
                     @endif
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">
+                        <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-400">
                             No memories found. Agents will store memories as they execute tasks.
                         </td>
                     </tr>
