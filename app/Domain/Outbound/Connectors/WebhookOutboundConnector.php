@@ -85,7 +85,7 @@ class WebhookOutboundConnector implements OutboundConnectorInterface
             if ($response->successful()) {
                 $action->update([
                     'status' => OutboundActionStatus::Sent,
-                    'external_id' => $response->header('X-Request-Id', 'webhook-'.now()->timestamp),
+                    'external_id' => $response->header('X-Request-Id') ?: 'webhook-'.now()->timestamp,
                     'response' => $response->json() ?? ['body' => substr($response->body(), 0, 500)],
                     'sent_at' => now(),
                 ]);

@@ -7,12 +7,14 @@ use App\Domain\KnowledgeGraph\Actions\InvalidateKgFactAction;
 use App\Domain\KnowledgeGraph\Actions\UpdateKnowledgeFactAction;
 use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class KnowledgeGraphBrowserPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     #[Url]
@@ -101,6 +103,8 @@ class KnowledgeGraphBrowserPage extends Component
 
     public function deleteFact(string $id): void
     {
+        $this->authorize('edit-content');
+
         $edge = KgEdge::findOrFail($id);
         abort_unless($edge->team_id === auth()->user()->current_team_id, 403);
         $edge->delete();
@@ -110,6 +114,8 @@ class KnowledgeGraphBrowserPage extends Component
 
     public function addFact(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'sourceName' => ['required', 'string', 'max:255'],
             'sourceType' => ['required', EntityType::validationRule()],

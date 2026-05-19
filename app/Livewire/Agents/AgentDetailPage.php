@@ -224,6 +224,8 @@ class AgentDetailPage extends Component
 
     public function toggleStatus(): void
     {
+        $this->authorize('edit-content');
+
         $newStatus = $this->agent->status === AgentStatus::Active
             ? AgentStatus::Disabled
             : AgentStatus::Active;
@@ -317,6 +319,8 @@ class AgentDetailPage extends Component
 
     public function save(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'editName' => 'required|min:2|max:255',
             'editRole' => 'required|max:255',
@@ -490,6 +494,8 @@ class AgentDetailPage extends Component
 
     public function deleteAgent(): void
     {
+        $this->authorize('edit-content');
+
         $this->agent->delete();
 
         session()->flash('message', 'Agent deleted.');
@@ -500,6 +506,8 @@ class AgentDetailPage extends Component
 
     public function publishChatProtocol(string $visibility): void
     {
+        $this->authorize('edit-content');
+
         $enum = AgentChatVisibility::tryFrom($visibility);
         if ($enum === null) {
             session()->flash('error', 'Invalid visibility value.');
@@ -516,6 +524,8 @@ class AgentDetailPage extends Component
 
     public function revokeChatProtocol(): void
     {
+        $this->authorize('edit-content');
+
         app(RevokeAgentManifestAction::class)
             ->execute($this->agent);
 
@@ -525,6 +535,8 @@ class AgentDetailPage extends Component
 
     public function rotateChatProtocolSecret(): void
     {
+        $this->authorize('edit-content');
+
         $secret = app(RotateAgentChatSecretAction::class)
             ->execute($this->agent);
 
@@ -539,6 +551,8 @@ class AgentDetailPage extends Component
      */
     public function toggleHeartbeat(): void
     {
+        $this->authorize('edit-content');
+
         $current = $this->agent->heartbeat_definition ?? [];
         $current['enabled'] = ! ($current['enabled'] ?? false);
         $this->agent->update(['heartbeat_definition' => $current]);
@@ -550,6 +564,8 @@ class AgentDetailPage extends Component
      */
     public function runHeartbeatNow(): void
     {
+        $this->authorize('edit-content');
+
         $definition = $this->agent->heartbeat_definition ?? [];
 
         if (empty($definition['prompt'])) {
@@ -569,6 +585,8 @@ class AgentDetailPage extends Component
 
     public function saveHook(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'hookName' => 'required|string|max:255',
             'hookPosition' => 'required|string',
@@ -612,12 +630,16 @@ class AgentDetailPage extends Component
 
     public function toggleHook(string $hookId): void
     {
+        $this->authorize('edit-content');
+
         $hook = AgentHook::findOrFail($hookId);
         $hook->update(['enabled' => ! $hook->enabled]);
     }
 
     public function deleteHook(string $hookId): void
     {
+        $this->authorize('edit-content');
+
         AgentHook::where('id', $hookId)->delete();
     }
 
@@ -650,6 +672,8 @@ class AgentDetailPage extends Component
 
     public function saveIdentityTemplate(): void
     {
+        $this->authorize('edit-content');
+
         if (! $this->useStructuredTemplate) {
             $this->agent->update(['system_prompt_template' => null]);
             $this->dispatch('notify', message: 'Switched to classic mode', type: 'success');
@@ -701,6 +725,8 @@ class AgentDetailPage extends Component
 
     public function exportWorkspace(): StreamedResponse
     {
+        $this->authorize('edit-content');
+
         $action = app(ExportAgentWorkspaceAction::class);
         $path = $action->execute($this->agent, $this->exportFormat, $this->exportIncludeMemories);
 

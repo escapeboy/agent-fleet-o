@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Domain\Memory\Models\Memory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin Memory */
 class MemoryResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -22,7 +24,7 @@ class MemoryResource extends JsonResource
             'belief_type' => $this->belief_type?->value,
             'preference_subtype' => $this->preference_subtype?->value,
             'why_it_matters' => $this->why_it_matters,
-            'belief_status' => $this->belief_status?->value,
+            'belief_status' => $this->belief_status->value,
             'domain' => $this->domain,
             'rejected_alternatives' => $this->rejected_alternatives ?? [],
             'supersedes_id' => $this->supersedes_id,

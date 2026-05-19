@@ -10,6 +10,7 @@ use App\Domain\Chatbot\Jobs\IndexKnowledgeSourceJob;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -18,6 +19,7 @@ use Prism\Prism\Facades\Prism;
 
 class ChatbotKnowledgeBasePage extends Component
 {
+    use AuthorizesRequests;
     use WithFileUploads;
 
     public Chatbot $chatbot;
@@ -58,6 +60,8 @@ class ChatbotKnowledgeBasePage extends Component
 
     public function addSource(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'sourceName' => 'required|string|max:255',
             'sourceType' => 'required|in:url,sitemap,document,git_repository,website',
@@ -122,6 +126,8 @@ class ChatbotKnowledgeBasePage extends Component
 
     public function toggleSource(string $sourceId): void
     {
+        $this->authorize('edit-content');
+
         $source = ChatbotKnowledgeSource::where('id', $sourceId)
             ->where('chatbot_id', $this->chatbot->id)
             ->firstOrFail();
@@ -133,6 +139,8 @@ class ChatbotKnowledgeBasePage extends Component
 
     public function deleteSource(string $sourceId): void
     {
+        $this->authorize('edit-content');
+
         $source = ChatbotKnowledgeSource::where('id', $sourceId)
             ->where('chatbot_id', $this->chatbot->id)
             ->firstOrFail();

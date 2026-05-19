@@ -52,6 +52,11 @@ class MarketplaceController extends Controller
      */
     public function show(MarketplaceListing $listing): MarketplaceListingResource
     {
+        // Only published+public listings are exposed on this unauthenticated
+        // endpoint — mirrors download()/reviews(). Without this guard a
+        // draft / unlisted / team-private listing is readable by slug.
+        abort_unless($listing->isPublished(), 404);
+
         $listing->load('reviews');
 
         return new MarketplaceListingResource($listing);

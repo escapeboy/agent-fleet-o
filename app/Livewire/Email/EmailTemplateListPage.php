@@ -6,12 +6,14 @@ use App\Domain\Email\Actions\CreateEmailTemplateAction;
 use App\Domain\Email\Actions\DeleteEmailTemplateAction;
 use App\Domain\Email\Enums\EmailTemplateStatus;
 use App\Domain\Email\Models\EmailTemplate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class EmailTemplateListPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     #[Url]
@@ -42,6 +44,8 @@ class EmailTemplateListPage extends Component
 
     public function create(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate(['newName' => 'required|min:2|max:255']);
 
         $team = auth()->user()->currentTeam;
@@ -56,6 +60,8 @@ class EmailTemplateListPage extends Component
 
     public function delete(string $id): void
     {
+        $this->authorize('edit-content');
+
         $template = EmailTemplate::findOrFail($id);
 
         app(DeleteEmailTemplateAction::class)->execute($template);

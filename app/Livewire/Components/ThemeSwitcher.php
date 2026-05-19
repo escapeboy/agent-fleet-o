@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Components;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ThemeSwitcher extends Component
@@ -24,6 +25,8 @@ class ThemeSwitcher extends Component
 
     public function setTheme(string $theme): void
     {
+        Gate::authorize('update-self');
+
         // Validate theme key exists (accept both base name and variant)
         $allValid = $this->getAllThemeKeys();
         if (! in_array($theme, $allValid)) {

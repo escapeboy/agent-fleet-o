@@ -149,7 +149,7 @@ class MemoryAddTool extends Tool
             'preference_subtype' => $preferenceSubtype?->value,
             'belief_status' => $beliefStatus->value,
             'domain' => $domain,
-            'rejected_alternatives' => $memory?->rejected_alternatives ?? [],
+            'rejected_alternatives' => $memory->rejected_alternatives ?? [],
             'supersedes_id' => $validated['supersedes_id'] ?? null,
             'confidence' => $validated['confidence'] ?? 1.0,
         ]));

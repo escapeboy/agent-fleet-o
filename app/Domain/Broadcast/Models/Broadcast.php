@@ -11,12 +11,28 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * A one-time mass email sent to every subscribed member of an Audience.
  *
  * Carries its own approval state (requested_by / approved_by) rather than a
  * shared ApprovalRequest — see the sprint plan for why.
+ *
+ * @property string $id
+ * @property string $team_id
+ * @property string $audience_id
+ * @property string $name
+ * @property string $subject
+ * @property string $body
+ * @property BroadcastStatus $status
+ * @property string|null $requested_by
+ * @property string|null $approved_by
+ * @property Carbon|null $approved_at
+ * @property int $recipient_count
+ * @property Carbon|null $sent_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Broadcast extends Model
 {

@@ -34,7 +34,7 @@ class BroadcastMailer
         string $html,
         ?string $idempotencyKey = null,
     ): array {
-        $creds = $this->resolver->getDbConfig('email', $teamId)?->credentials ?? [];
+        $creds = $this->resolver->getDbConfig('email', $teamId)->credentials ?? [];
         $fromAddress = $creds['from_address'] ?? config('mail.from.address');
         $fromName = $creds['from_name'] ?? config('mail.from.name', '');
 

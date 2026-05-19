@@ -9,6 +9,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Domain\Signal\Models\Signal;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -49,6 +51,7 @@ use Illuminate\Support\Carbon;
  * @property int $nesting_depth
  * @property array|null $orchestration_config
  * @property array|null $meta
+ * @property-read ProjectRun|null $projectRun
  */
 class Experiment extends Model
 {
@@ -150,6 +153,18 @@ class Experiment extends Model
     public function outboundProposals(): HasMany
     {
         return $this->hasMany(OutboundProposal::class);
+    }
+
+    /**
+     * The project run that produced this experiment, if any.
+     * Inverse of ProjectRun::experiment(); an experiment is created by at
+     * most one run.
+     *
+     * @return HasOne<ProjectRun, $this>
+     */
+    public function projectRun(): HasOne
+    {
+        return $this->hasOne(ProjectRun::class);
     }
 
     public function metrics(): HasMany

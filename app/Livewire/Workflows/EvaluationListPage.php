@@ -7,11 +7,13 @@ use App\Domain\Evaluation\Actions\RunFlowEvaluationAction;
 use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Evaluation\Models\EvaluationRun;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class EvaluationListPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     public bool $showCreateForm = false;
@@ -28,6 +30,8 @@ class EvaluationListPage extends Component
 
     public function createDataset(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'datasetName' => ['required', 'string', 'max:255'],
             'datasetDescription' => ['nullable', 'string', 'max:1000'],
@@ -76,6 +80,8 @@ class EvaluationListPage extends Component
 
     public function deleteDataset(string $id): void
     {
+        $this->authorize('edit-content');
+
         $dataset = EvaluationDataset::findOrFail($id);
         abort_unless($dataset->team_id === auth()->user()->current_team_id, 403);
         $dataset->delete();

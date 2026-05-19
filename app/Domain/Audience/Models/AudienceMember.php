@@ -10,9 +10,21 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Membership of a ContactIdentity in an Audience, with subscription state.
+ *
+ * @property string $id
+ * @property string|null $team_id
+ * @property string $audience_id
+ * @property string $contact_identity_id
+ * @property AudienceMemberStatus $status
+ * @property Carbon|null $subscribed_at
+ * @property Carbon|null $unsubscribed_at
+ * @property string|null $unsubscribe_reason
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class AudienceMember extends Model
 {
@@ -47,6 +59,9 @@ class AudienceMember extends Model
         return $this->belongsTo(Audience::class);
     }
 
+    /**
+     * @return BelongsTo<ContactIdentity, $this>
+     */
     public function contactIdentity(): BelongsTo
     {
         return $this->belongsTo(ContactIdentity::class);

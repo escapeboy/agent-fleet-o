@@ -69,6 +69,8 @@ class ConnectorSubscriptionsPage extends Component
     public function save(
         CreateConnectorSubscriptionAction $createAction,
     ): void {
+        Gate::authorize('manage-team');
+
         $integration = Integration::findOrFail($this->integrationId);
         $driver = $integration->driver;
 
@@ -168,12 +170,16 @@ class ConnectorSubscriptionsPage extends Component
 
     public function toggleActive(string $id): void
     {
+        Gate::authorize('manage-team');
+
         $subscription = ConnectorSignalSubscription::findOrFail($id);
         $subscription->update(['is_active' => ! $subscription->is_active]);
     }
 
     public function delete(string $id, DeleteConnectorSubscriptionAction $deleteAction): void
     {
+        Gate::authorize('manage-team');
+
         $subscription = ConnectorSignalSubscription::findOrFail($id);
         $deleteAction->execute($subscription);
     }

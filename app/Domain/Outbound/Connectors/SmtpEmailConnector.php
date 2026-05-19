@@ -13,6 +13,7 @@ use App\Domain\Outbound\Mail\ExperimentSummaryMail;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
+use App\Domain\Project\Models\Project;
 use Symfony\Component\Mailer\Mailer as SymfonyMailer;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mime\Address;
@@ -92,9 +93,10 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 $html = $content['body'] ?? 'No content generated.';
 
                 // Apply email template: project-assigned first, then connector default
-                $project = $proposal->experiment?->projectRun?->project
-                    ?? $proposal->experiment?->project ?? null;
-                $template = app(EmailThemeResolver::class)->resolveForProject($project);
+                $project = $proposal->experiment?->projectRun?->project;
+                $template = app(EmailThemeResolver::class)->resolveForProject(
+                    $project instanceof Project ? $project : null,
+                );
 
                 if (! $template && ! empty($creds['default_template_id'])) {
                     $template = EmailTemplate::withoutGlobalScopes()
@@ -104,7 +106,7 @@ class SmtpEmailConnector implements OutboundConnectorInterface
                 }
 
                 if ($template) {
-                    $payload = array_merge($content, $target ?? []);
+                    $payload = array_merge($content, $target);
                     $html = app(EmailTemplateInterpolator::class)->interpolate($template->html_cache, $payload);
                     $subject = $template->subject ?: $subject;
                 } else {

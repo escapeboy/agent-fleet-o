@@ -321,6 +321,8 @@ class GlobalSettingsPage extends Component
 
     public function addBlacklistEntry(): void
     {
+        Gate::authorize('access-admin');
+
         $this->validate([
             'blacklistType' => 'required|in:email,domain,company,keyword',
             'blacklistValue' => 'required|string|max:255',
@@ -341,6 +343,8 @@ class GlobalSettingsPage extends Component
 
     public function removeBlacklistEntry(string $id): void
     {
+        Gate::authorize('access-admin');
+
         Blacklist::where('id', $id)->delete();
 
         session()->flash('message', 'Blacklist entry removed.');
@@ -469,6 +473,8 @@ class GlobalSettingsPage extends Component
 
     public function importSelectedServers(): void
     {
+        Gate::authorize('access-admin');
+
         if (empty($this->selectedServers)) {
             session()->flash('mcp-error', 'No servers selected for import.');
 
@@ -516,6 +522,8 @@ class GlobalSettingsPage extends Component
 
     public function toggleAgent(string $agentId): void
     {
+        Gate::authorize('access-admin');
+
         $agent = Agent::findOrFail($agentId);
 
         if ($agent->status === AgentStatus::Disabled) {
