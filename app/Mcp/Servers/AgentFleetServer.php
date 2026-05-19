@@ -108,6 +108,11 @@ use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
 use App\Mcp\Tools\Assistant\AssistantConversationListTool;
 use App\Mcp\Tools\Assistant\AssistantReviewConversationTool;
 use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
+use App\Mcp\Tools\Audience\AudienceAddMemberTool;
+use App\Mcp\Tools\Audience\AudienceCreateTool;
+use App\Mcp\Tools\Audience\AudienceGetTool;
+use App\Mcp\Tools\Audience\AudienceListTool;
+use App\Mcp\Tools\Audience\AudienceUnsubscribeTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleGetDecisionTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleListDecisionsTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleSettingsTool;
@@ -1165,6 +1170,13 @@ class AgentFleetServer extends Server
         ConnectorConfigDeleteTool::class,
         ConnectorConfigTestTool::class,
         NtfySendTool::class,
+
+        // Audiences (5)
+        AudienceListTool::class,
+        AudienceGetTool::class,
+        AudienceCreateTool::class,
+        AudienceAddMemberTool::class,
+        AudienceUnsubscribeTool::class,
 
         // Webhook (4)
         WebhookListTool::class,
