@@ -166,8 +166,10 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Events\SessionInitialized;
 use Laravel\Passport\Passport;
+use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Reverb\Events\MessageReceived;
 use Laravel\Sanctum\Sanctum;
+use Laravel\Sentinel\Http\Middleware\SentinelMiddleware;
 use Livewire\Livewire;
 use SocialiteProviders\Apple\Provider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -412,6 +414,22 @@ class AppServiceProvider extends ServiceProvider
             return $mode->isCloud()
                 ? (bool) ($user->is_super_admin ?? false)
                 : true;
+        });
+
+        // Pulse dashboard middleware: insert Laravel's `auth` ahead of Pulse's
+        // own Authorize gate so an unauthenticated visitor is redirected to
+        // login instead of getting a bare 403. Redefining the `pulse` group
+        // (rather than publishing config/pulse.php) sidesteps Pulse's
+        // mergeConfigFrom, which appends a duplicate web/Authorize in the wrong
+        // order. The booted() callback runs after PulseServiceProvider defines
+        // the group, so this definition wins.
+        $this->app->booted(function (): void {
+            \Illuminate\Support\Facades\Route::middlewareGroup('pulse', [
+                SentinelMiddleware::class.':pulse',
+                'web',
+                'auth',
+                Authorize::class,
+            ]);
         });
 
         // Blade directives for deployment mode
