@@ -48,6 +48,11 @@ class MemoryGetTool extends Tool
             'topic' => $memory->topic,
             'tags' => $memory->tags,
             'content_hash' => $memory->content_hash,
+            'belief_status' => $memory->belief_status?->value,
+            'rejected_alternatives' => $memory->rejected_alternatives ?? [],
+            'supersedes_id' => $memory->supersedes_id,
+            'conflict_flag' => (bool) $memory->conflict_flag,
+            'conflict_with_id' => $memory->conflict_with_id,
             'created_at' => $memory->created_at,
             'updated_at' => $memory->updated_at,
         ]));

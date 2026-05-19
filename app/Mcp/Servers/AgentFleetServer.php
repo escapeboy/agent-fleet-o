@@ -303,6 +303,7 @@ use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
 use App\Mcp\Tools\Memory\MemoryAuditProposalsTool;
 use App\Mcp\Tools\Memory\MemoryChunkReadTool;
+use App\Mcp\Tools\Memory\MemoryContradictionsTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryDriftStatusTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
@@ -1114,6 +1115,7 @@ class AgentFleetServer extends Server
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
         MemoryDriftStatusTool::class,
+        MemoryContradictionsTool::class,
         MemoryDeleteTool::class,
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,

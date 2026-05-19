@@ -30,6 +30,15 @@
                 @endif
             </button>
         @endforeach
+
+        @if($conflictCount > 0)
+            <button wire:click="$set('conflictFilter', '{{ $conflictFilter === '1' ? '' : '1' }}')"
+                class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition
+                    {{ $conflictFilter === '1' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100' }}">
+                <i class="fa-solid fa-triangle-exclamation"></i> Conflicts
+                <span class="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">{{ $conflictCount }}</span>
+            </button>
+        @endif
     </div>
 
     {{-- Filters --}}
@@ -131,6 +140,11 @@
                             {{ $memory->agent?->name ?? '-' }}
                         </td>
                         <td class="max-w-xs truncate px-6 py-4 text-sm text-gray-500">
+                            @if($memory->conflict_flag)
+                                <span class="mr-1 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>conflict
+                                </span>
+                            @endif
                             {{ Str::limit($memory->content, 80) }}
                         </td>
                         <td class="px-6 py-4 text-sm">
@@ -194,6 +208,34 @@
                         <tr>
                             <td colspan="8" class="bg-gray-50 px-6 py-4">
                                 <div class="space-y-3">
+                                    {{-- Contradiction warning --}}
+                                    @if($memory->conflict_flag)
+                                        <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+                                            <h4 class="flex items-center gap-1 text-xs font-semibold uppercase text-red-700">
+                                                <i class="fa-solid fa-triangle-exclamation"></i> Contradiction flagged
+                                            </h4>
+                                            <p class="mt-1 text-xs text-red-600">This belief was flagged as contradicting another. Review both and resolve.</p>
+                                            @if($memory->conflictsWith)
+                                                <div class="mt-2 rounded bg-white p-2 text-xs text-gray-700">
+                                                    <span class="font-medium text-gray-500">Conflicts with:</span>
+                                                    {{ Str::limit($memory->conflictsWith->content, 200) }}
+                                                </div>
+                                            @endif
+                                            <div class="mt-2 flex flex-wrap gap-2" @click.stop>
+                                                <button wire:click.stop="resolveConflict('{{ $memory->id }}', 'supersede')"
+                                                    wire:confirm="Keep this memory and mark the conflicting one superseded?"
+                                                    class="rounded bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-700">
+                                                    Keep this — supersede the other
+                                                </button>
+                                                <button wire:click.stop="resolveConflict('{{ $memory->id }}', 'dismiss')"
+                                                    wire:confirm="Dismiss this contradiction as a false positive?"
+                                                    class="rounded border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">
+                                                    Not a conflict — dismiss
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     {{-- Full content --}}
                                     <div>
                                         <h4 class="text-xs font-medium uppercase text-gray-500">Content</h4>
@@ -224,6 +266,40 @@
                                         <div>
                                             <h4 class="text-xs font-medium uppercase text-gray-500">Why it matters</h4>
                                             <p class="mt-1 text-sm text-gray-700">{{ $memory->why_it_matters }}</p>
+                                        </div>
+                                    @endif
+
+                                    {{-- Ruled-out alternatives --}}
+                                    @if(!empty($memory->rejected_alternatives))
+                                        <div>
+                                            <h4 class="text-xs font-medium uppercase text-gray-500">Ruled-out alternatives</h4>
+                                            <ul class="mt-1 space-y-1">
+                                                @foreach($memory->rejected_alternatives as $alt)
+                                                    <li class="text-sm text-gray-700">
+                                                        <span class="font-medium text-red-600">&#10007; {{ $alt['option'] ?? '' }}</span>
+                                                        @if(!empty($alt['reason']))
+                                                            <span class="text-gray-500">&mdash; {{ $alt['reason'] }}</span>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+
+                                    {{-- Decision lineage --}}
+                                    @if($memory->supersedes_id || $memory->belief_status?->value === 'superseded')
+                                        <div>
+                                            <h4 class="text-xs font-medium uppercase text-gray-500">Decision lineage</h4>
+                                            @if($memory->supersedes)
+                                                <p class="mt-1 text-xs text-gray-600">
+                                                    Supersedes: <span class="text-gray-800">{{ Str::limit($memory->supersedes->content, 160) }}</span>
+                                                </p>
+                                            @elseif($memory->supersedes_id)
+                                                <p class="mt-1 text-xs text-gray-400">Supersedes a memory that is no longer available.</p>
+                                            @endif
+                                            @if($memory->belief_status?->value === 'superseded')
+                                                <p class="mt-1 text-xs text-amber-600">This belief has been superseded and is no longer injected into agent context.</p>
+                                            @endif
                                         </div>
                                     @endif
 
