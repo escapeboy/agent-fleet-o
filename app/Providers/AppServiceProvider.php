@@ -416,6 +416,18 @@ class AppServiceProvider extends ServiceProvider
                 : true;
         });
 
+        // Platform-admin gate. Guards super-admin-only surfaces (the Admin/*
+        // pages, global settings, LLM pricing). Cloud: super-admins only.
+        // Self-hosted: any authenticated user — the community edition is
+        // single-tenant with no super-admin tier. Use this in every write
+        // method of a super-admin page so Livewire component updates (which
+        // bypass route middleware) are individually authorized.
+        Gate::define('access-admin', function ($user) use ($mode): bool {
+            return $mode->isCloud()
+                ? (bool) ($user->is_super_admin ?? false)
+                : true;
+        });
+
         // Pulse dashboard middleware: insert Laravel's `auth` ahead of Pulse's
         // own Authorize gate so an unauthenticated visitor is redirected to
         // login instead of getting a bare 403. Redefining the `pulse` group

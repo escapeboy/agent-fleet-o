@@ -4,6 +4,7 @@ namespace App\Livewire\Shared;
 
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Shared\Services\NotificationService;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -46,6 +47,8 @@ class NotificationInboxPage extends Component
 
     public function deleteNotification(string $id): void
     {
+        Gate::authorize('update-self');
+
         $notification = UserNotification::find($id);
         if ($notification && $notification->user_id === auth()->id()) {
             $notification->delete();

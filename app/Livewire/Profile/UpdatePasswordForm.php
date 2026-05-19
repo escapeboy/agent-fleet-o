@@ -3,6 +3,7 @@
 namespace App\Livewire\Profile;
 
 use App\Actions\Fortify\UpdateUserPassword;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
@@ -39,6 +40,8 @@ class UpdatePasswordForm extends Component
     /** Set a password for the first time (social-only accounts where password is null). */
     public function setInitialPassword(): void
     {
+        Gate::authorize('update-self');
+
         $data = Validator::make([
             'password' => $this->password,
             'password_confirmation' => $this->passwordConfirmation,

@@ -21,6 +21,7 @@ use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Tool;
@@ -526,6 +527,8 @@ class FixWithAssistant extends Component
      */
     public function executeRecoveryAction(string $toolName, array $params = []): void
     {
+        Gate::authorize('edit-content');
+
         if (! $this->eligible) {
             return;
         }

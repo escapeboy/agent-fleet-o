@@ -8,10 +8,13 @@ use App\Domain\Knowledge\Actions\DeleteKnowledgeBaseAction;
 use App\Domain\Knowledge\Actions\IngestDocumentAction;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 
 class KnowledgeSourcesPage extends Component
 {
+    use AuthorizesRequests;
+
     public bool $showCreateModal = false;
 
     public string $createName = '';
@@ -34,6 +37,8 @@ class KnowledgeSourcesPage extends Component
 
     public function create(CreateKnowledgeBaseAction $action): void
     {
+        $this->authorize('edit-content');
+
         $teamId = auth()->user()->current_team_id;
 
         $this->validate([
@@ -55,6 +60,8 @@ class KnowledgeSourcesPage extends Component
 
     public function delete(string $kbId, DeleteKnowledgeBaseAction $action): void
     {
+        $this->authorize('edit-content');
+
         $kb = KnowledgeBase::where('team_id', auth()->user()->current_team_id)
             ->findOrFail($kbId);
         $action->execute($kb);

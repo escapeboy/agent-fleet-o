@@ -5,6 +5,7 @@ namespace App\Livewire\Crews;
 use App\Domain\Crew\Actions\ExecuteCrewAction;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CrewExecutionPage extends Component
@@ -27,6 +28,8 @@ class CrewExecutionPage extends Component
 
     public function execute(ExecuteCrewAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         if ($this->crew->status !== CrewStatus::Active) {

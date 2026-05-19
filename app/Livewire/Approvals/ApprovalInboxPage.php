@@ -10,6 +10,7 @@ use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Models\ApprovalRequest;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -40,6 +41,8 @@ class ApprovalInboxPage extends Component
 
     public function approve(string $approvalId): void
     {
+        Gate::authorize('edit-content');
+
         $approval = ApprovalRequest::findOrFail($approvalId);
 
         $action = app(ApproveAction::class);
@@ -57,6 +60,8 @@ class ApprovalInboxPage extends Component
 
     public function approveWithEdit(string $approvalId): void
     {
+        Gate::authorize('edit-content');
+
         $approval = ApprovalRequest::findOrFail($approvalId);
         $approval->update(['edited_content' => $this->editedChatbotContent]);
 
@@ -111,6 +116,8 @@ class ApprovalInboxPage extends Component
 
     public function approveProposal(string $proposalId): void
     {
+        Gate::authorize('edit-content');
+
         $proposal = ActionProposal::findOrFail($proposalId);
         app(ApproveActionProposalAction::class)->execute($proposal, auth()->user());
         $this->expandedProposalId = null;

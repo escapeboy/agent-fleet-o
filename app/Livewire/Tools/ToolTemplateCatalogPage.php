@@ -6,6 +6,7 @@ use App\Domain\Tool\Actions\DeployToolTemplateAction;
 use App\Domain\Tool\Enums\ToolTemplateCategory;
 use App\Domain\Tool\Models\ToolTemplate;
 use App\Infrastructure\Compute\Services\ComputeCredentialResolver;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ToolTemplateCatalogPage extends Component
@@ -24,6 +25,8 @@ class ToolTemplateCatalogPage extends Component
 
     public function deploy(): void
     {
+        Gate::authorize('edit-content');
+
         $template = ToolTemplate::find($this->selectedTemplateId);
 
         if (! $template) {

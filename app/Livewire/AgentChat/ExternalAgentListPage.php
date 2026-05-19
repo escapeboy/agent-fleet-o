@@ -38,6 +38,8 @@ class ExternalAgentListPage extends Component
 
     public function register(RegisterExternalAgentAction $action): void
     {
+        $this->authorize('edit-content');
+
         $validated = $this->validate([
             'newName' => 'required|string|max:255',
             'newEndpointUrl' => 'required|url|max:2048',

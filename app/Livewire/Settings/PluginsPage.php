@@ -4,8 +4,8 @@ namespace App\Livewire\Settings;
 
 use App\Contracts\HasHealthCheck;
 use App\Domain\Shared\Models\PluginState;
-use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\PluginRegistry;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 /**
@@ -13,31 +13,25 @@ use Livewire\Component;
  */
 class PluginsPage extends Component
 {
+    /**
+     * Plugins are platform-wide state — toggling them affects every tenant.
+     * The `access-admin` gate restricts this to super-admins on cloud;
+     * community / single-tenant deployments retain "any authenticated user"
+     * because the gate resolves to true there (no super-admin role to gate
+     * against).
+     */
     public function mount(): void
     {
-        $this->guardSuperAdmin();
+        Gate::authorize('access-admin');
     }
 
     public function togglePlugin(string $pluginId): void
     {
-        $this->guardSuperAdmin();
+        Gate::authorize('access-admin');
 
         $state = PluginState::where('plugin_id', $pluginId)->first();
         if ($state) {
             $state->update(['enabled' => ! $state->enabled]);
-        }
-    }
-
-    /**
-     * Plugins are platform-wide state — toggling them affects every tenant.
-     * On cloud the action is restricted to super-admins; community/single-
-     * tenant deployments retain the historical "any authenticated user"
-     * behaviour because there is no super-admin role to gate against.
-     */
-    private function guardSuperAdmin(): void
-    {
-        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
-            abort(403, 'Super admin access required.');
         }
     }
 
