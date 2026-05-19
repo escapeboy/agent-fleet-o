@@ -8,7 +8,20 @@ use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string $channel
+ * @property array<string, mixed>|null $credentials
+ * @property bool $is_active
+ * @property Carbon|null $last_tested_at
+ * @property string|null $last_test_status
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read string|null $masked_key
+ */
 class OutboundConnectorConfig extends Model
 {
     use BelongsToTeam, HasUuids;

@@ -48,7 +48,7 @@ class MemoryGetTool extends Tool
             'topic' => $memory->topic,
             'tags' => $memory->tags,
             'content_hash' => $memory->content_hash,
-            'belief_status' => $memory->belief_status?->value,
+            'belief_status' => $memory->belief_status->value,
             'rejected_alternatives' => $memory->rejected_alternatives ?? [],
             'supersedes_id' => $memory->supersedes_id,
             'conflict_flag' => (bool) $memory->conflict_flag,

@@ -23,7 +23,7 @@ class EmailConnectorDispatcher implements OutboundConnectorInterface
 
     public function send(OutboundProposal $proposal): OutboundAction
     {
-        $creds = $this->resolver->getDbConfig('email', $proposal->team_id)?->credentials ?? [];
+        $creds = $this->resolver->getDbConfig('email', $proposal->team_id)->credentials ?? [];
         $provider = $creds['provider'] ?? 'smtp';
 
         $connector = $provider === 'resend'

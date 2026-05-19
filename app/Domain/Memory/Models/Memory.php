@@ -16,7 +16,52 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $agent_id
+ * @property string|null $project_id
+ * @property string $content
+ * @property string|null $embedding pgvector(1536) — stored via raw SQL
+ * @property string|null $embedding_at_creation pgvector(1536) — stored via raw SQL
+ * @property array<string, mixed>|null $metadata
+ * @property string $source_type
+ * @property string|null $source_id
+ * @property string|null $source_url
+ * @property float $confidence
+ * @property float $importance
+ * @property Carbon|null $last_accessed_at
+ * @property int $retrieval_count
+ * @property MemoryVisibility $visibility
+ * @property string|null $content_hash
+ * @property array<int, mixed>|null $tags
+ * @property MemoryTier $tier
+ * @property MemoryCategory|null $category
+ * @property MemoryBeliefType|null $belief_type
+ * @property MemoryPreferenceSubtype|null $preference_subtype
+ * @property string|null $why_it_matters
+ * @property MemoryBeliefStatus $belief_status
+ * @property string|null $domain
+ * @property array<string, mixed>|null $rejected_alternatives
+ * @property string|null $supersedes_id
+ * @property bool $conflict_flag
+ * @property string|null $conflict_with_id
+ * @property Carbon|null $conflict_detected_at
+ * @property string|null $topic
+ * @property string|null $proposed_by
+ * @property string|null $proposal_status
+ * @property Carbon|null $reviewed_at
+ * @property string|null $rejection_reason
+ * @property string|null $reviewed_by
+ * @property int $boost
+ * @property string|null $chunk_context
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read float $effective_importance
+ * @property-read float $similarity cosine-similarity alias from selectRaw() — only set on neighbour queries
+ */
 class Memory extends Model
 {
     use BelongsToTeam, HasUuids;

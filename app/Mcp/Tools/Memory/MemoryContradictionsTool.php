@@ -11,6 +11,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Cross-corpus contradiction detection (RoBrain Synthesis).
@@ -20,6 +21,7 @@ use Laravel\Mcp\Server\Tool;
  *  - resolve: settle a flagged pair (supersede the loser, or dismiss as a
  *    false positive).
  */
+#[IsDestructive]
 #[AssistantTool('write')]
 class MemoryContradictionsTool extends Tool
 {
@@ -57,10 +59,10 @@ class MemoryContradictionsTool extends Tool
             'resolution' => 'nullable|string|in:supersede,dismiss',
         ]);
 
-        return match ($validated['action']) {
+        return match ((string) $validated['action']) {
             'scan' => $this->scan($teamId),
             'list' => $this->list($teamId),
-            'resolve' => $this->resolve($teamId, $validated),
+            default => $this->resolve($teamId, $validated),
         };
     }
 
@@ -125,7 +127,7 @@ class MemoryContradictionsTool extends Tool
             'success' => true,
             'memory_id' => $kept->id,
             'resolution' => $validated['resolution'],
-            'belief_status' => $kept->belief_status?->value,
+            'belief_status' => $kept->belief_status->value,
             'supersedes_id' => $kept->supersedes_id,
         ]));
     }

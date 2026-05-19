@@ -14,6 +14,7 @@ use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use App\Domain\Outbound\Services\ResendApiClient;
+use App\Domain\Project\Models\Project;
 
 /**
  * Email connector that delivers through the Resend API (https://resend.com).
@@ -53,7 +54,7 @@ class ResendEmailConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $creds = $this->resolver->getDbConfig('email', $proposal->team_id)?->credentials ?? [];
+            $creds = $this->resolver->getDbConfig('email', $proposal->team_id)->credentials ?? [];
 
             $apiKey = $creds['api_key'] ?? null;
             if (! $apiKey) {
@@ -150,11 +151,13 @@ class ResendEmailConnector implements OutboundConnectorInterface
             return ["Experiment Summary: {$experiment->title}", (new ExperimentSummaryMail($experiment))->render(), ''];
         }
 
-        $subject = $content['subject'] ?? 'Experiment: '.($proposal->experiment?->title ?? 'update');
+        $subject = $content['subject'] ?? 'Experiment: '.($proposal->experiment->title ?? 'update');
 
         // Apply email template: project-assigned first, then connector default.
-        $project = $proposal->experiment?->projectRun?->project ?? $proposal->experiment?->project;
-        $template = app(EmailThemeResolver::class)->resolveForProject($project);
+        $project = $proposal->experiment?->projectRun?->project;
+        $template = app(EmailThemeResolver::class)->resolveForProject(
+            $project instanceof Project ? $project : null,
+        );
 
         if (! $template && ! empty($creds['default_template_id'])) {
             $template = EmailTemplate::withoutGlobalScopes()

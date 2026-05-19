@@ -14,7 +14,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $experiment_id
+ * @property OutboundChannel $channel
+ * @property mixed $target decoded JSON — recipient details (shape varies by channel)
+ * @property mixed $content decoded JSON — message payload (shape varies by channel)
+ * @property float $risk_score
+ * @property OutboundProposalStatus $status
+ * @property int $batch_index
+ * @property string|null $batch_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Experiment|null $experiment
+ */
 class OutboundProposal extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;

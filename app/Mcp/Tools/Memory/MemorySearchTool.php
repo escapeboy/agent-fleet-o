@@ -217,7 +217,7 @@ class MemorySearchTool extends Tool
                 'confidence' => $m->confidence,
                 'category' => $m->category?->value,
                 'belief_type' => $m->belief_type?->value,
-                'belief_status' => $m->belief_status?->value,
+                'belief_status' => $m->belief_status->value,
                 'why_it_matters' => $m->why_it_matters,
                 'domain' => $m->domain,
                 'tags' => $m->tags ?? [],

@@ -62,7 +62,7 @@ class ModelComparisonPage extends Component
     private function platformScopeActive(): bool
     {
         return $this->scope === 'platform'
-            && (bool) (auth()->user()?->is_super_admin ?? false);
+            && (bool) (auth()->user()->is_super_admin ?? false);
     }
 
     private function getModelStats($cutoff): Collection

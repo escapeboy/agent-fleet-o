@@ -18,7 +18,7 @@ class CheckBlacklistAction
         $content = $proposal->content;
 
         // Check email blacklist
-        $email = is_array($target) ? ($target['email'] ?? null) : (is_string($target) ? $target : null);
+        $email = $target['email'] ?? null;
         if ($email && Blacklist::where('type', 'email')->where('value', $email)->exists()) {
             return ['blocked' => true, 'reason' => "Email blacklisted: {$email}"];
         }
@@ -32,13 +32,13 @@ class CheckBlacklistAction
         }
 
         // Check company blacklist
-        $company = is_array($target) ? ($target['company'] ?? null) : null;
+        $company = $target['company'] ?? null;
         if ($company && Blacklist::where('type', 'company')->whereRaw('LOWER(value) = ?', [strtolower($company)])->exists()) {
             return ['blocked' => true, 'reason' => "Company blacklisted: {$company}"];
         }
 
         // Check keyword blacklist in content
-        $contentText = is_array($content) ? json_encode($content) : (string) $content;
+        $contentText = json_encode($content) ?: '';
         $keywords = Blacklist::where('type', 'keyword')->pluck('value');
 
         foreach ($keywords as $keyword) {
