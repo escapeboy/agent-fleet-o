@@ -138,6 +138,12 @@ use App\Mcp\Tools\Bridge\BridgeRenameTool;
 use App\Mcp\Tools\Bridge\BridgeSetRoutingTool;
 use App\Mcp\Tools\Bridge\BridgeStatusTool;
 use App\Mcp\Tools\Bridge\BridgeUpdateUrlTool;
+use App\Mcp\Tools\Broadcast\BroadcastApproveTool;
+use App\Mcp\Tools\Broadcast\BroadcastCancelTool;
+use App\Mcp\Tools\Broadcast\BroadcastCreateTool;
+use App\Mcp\Tools\Broadcast\BroadcastGetTool;
+use App\Mcp\Tools\Broadcast\BroadcastListTool;
+use App\Mcp\Tools\Broadcast\BroadcastRequestApprovalTool;
 use App\Mcp\Tools\Budget\BudgetAddCreditsTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetCostBreakdownTool;
@@ -1177,6 +1183,14 @@ class AgentFleetServer extends Server
         AudienceCreateTool::class,
         AudienceAddMemberTool::class,
         AudienceUnsubscribeTool::class,
+
+        // Broadcasts (6)
+        BroadcastListTool::class,
+        BroadcastGetTool::class,
+        BroadcastCreateTool::class,
+        BroadcastRequestApprovalTool::class,
+        BroadcastApproveTool::class,
+        BroadcastCancelTool::class,
 
         // Webhook (4)
         WebhookListTool::class,

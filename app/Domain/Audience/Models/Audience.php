@@ -3,6 +3,7 @@
 namespace App\Domain\Audience\Models;
 
 use App\Domain\Audience\Enums\AudienceMemberStatus;
+use App\Domain\Broadcast\Models\Broadcast;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Database\Factories\Domain\Audience\AudienceFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -43,5 +44,10 @@ class Audience extends Model
     {
         return $this->hasMany(AudienceMember::class)
             ->where('status', AudienceMemberStatus::Subscribed->value);
+    }
+
+    public function broadcasts(): HasMany
+    {
+        return $this->hasMany(Broadcast::class);
     }
 }

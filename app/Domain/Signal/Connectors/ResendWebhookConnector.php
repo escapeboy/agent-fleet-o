@@ -3,6 +3,8 @@
 namespace App\Domain\Signal\Connectors;
 
 use App\Domain\Audience\Actions\UnsubscribeContact;
+use App\Domain\Broadcast\Enums\BroadcastRecipientStatus;
+use App\Domain\Broadcast\Models\BroadcastRecipient;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Shared\Models\ContactIdentity;
@@ -73,6 +75,7 @@ class ResendWebhookConnector implements InputConnectorInterface
 
         if ($emailId !== null && $teamId !== null) {
             $this->reconcileOutboundAction($teamId, (string) $emailId, $type);
+            $this->reconcileBroadcastRecipient($teamId, (string) $emailId, $type);
         }
 
         if ($teamId !== null && in_array($type, self::SUPPRESSION_EVENTS, true)) {
@@ -170,6 +173,21 @@ class ResendWebhookConnector implements InputConnectorInterface
                 'resend_event_at' => now()->toIso8601String(),
             ]),
         ]);
+    }
+
+    /**
+     * Flip matching broadcast recipients to Bounced on a hard bounce/complaint.
+     */
+    private function reconcileBroadcastRecipient(string $teamId, string $emailId, string $type): void
+    {
+        if (! in_array($type, self::SUPPRESSION_EVENTS, true)) {
+            return;
+        }
+
+        BroadcastRecipient::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->where('message_id', $emailId)
+            ->update(['status' => BroadcastRecipientStatus::Bounced->value]);
     }
 
     /**

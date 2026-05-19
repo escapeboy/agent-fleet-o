@@ -6,6 +6,10 @@ use App\Domain\Audience\Actions\AddAudienceMember;
 use App\Domain\Audience\Enums\AudienceMemberStatus;
 use App\Domain\Audience\Models\Audience;
 use App\Domain\Audience\Models\AudienceMember;
+use App\Domain\Broadcast\Enums\BroadcastRecipientStatus;
+use App\Domain\Broadcast\Enums\BroadcastStatus;
+use App\Domain\Broadcast\Models\Broadcast;
+use App\Domain\Broadcast\Models\BroadcastRecipient;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
@@ -99,5 +103,36 @@ class ResendWebhookConnectorTest extends TestCase
             ->first();
         $this->assertSame(AudienceMemberStatus::Unsubscribed, $member->status);
         $this->assertSame('resend:bounced', $member->unsubscribe_reason);
+    }
+
+    public function test_bounce_event_reconciles_broadcast_recipient_by_message_id(): void
+    {
+        Queue::fake();
+        $team = Team::factory()->create();
+        $audience = Audience::factory()->create(['team_id' => $team->id]);
+        $broadcast = Broadcast::factory()->create([
+            'team_id' => $team->id,
+            'audience_id' => $audience->id,
+            'status' => BroadcastStatus::Sent,
+        ]);
+        $contact = ContactIdentity::factory()->create(['team_id' => $team->id]);
+        $recipient = BroadcastRecipient::create([
+            'team_id' => $team->id,
+            'broadcast_id' => $broadcast->id,
+            'contact_identity_id' => $contact->id,
+            'email' => $contact->email,
+            'status' => BroadcastRecipientStatus::Sent,
+            'message_id' => 're_bc_msg_1',
+        ]);
+
+        app(ResendWebhookConnector::class)->poll([
+            'team_id' => $team->id,
+            'payload' => [
+                'type' => 'email.bounced',
+                'data' => ['email_id' => 're_bc_msg_1', 'to' => [$contact->email]],
+            ],
+        ]);
+
+        $this->assertSame(BroadcastRecipientStatus::Bounced, $recipient->fresh()->status);
     }
 }
