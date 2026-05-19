@@ -9,6 +9,7 @@ use App\Domain\GitRepository\Models\CodeElement;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\PhpCodeParser;
+use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -18,13 +19,15 @@ use Illuminate\Support\Facades\Log;
  *
  * Change detection is hash-based: files whose content hasn't changed are skipped.
  * Full-text search vectors (tsvector) are updated in-place after each element insert.
- * Embedding generation is deferred — left null for a later phase.
+ * Each element is also embedded (BYOK via EmbeddingService) for semantic code
+ * search; teams without an embedding key degrade gracefully to keyword-only.
  */
 class IndexRepositoryAction
 {
     public function __construct(
         private readonly PhpCodeParser $phpParser,
         private readonly GitOperationRouter $router,
+        private readonly EmbeddingService $embeddings,
     ) {}
 
     public function execute(GitRepository $repository): void
@@ -144,6 +147,24 @@ class IndexRepositoryAction
                 );
             } catch (\Throwable) {
                 // SQLite or non-PostgreSQL environment — tsvector not supported.
+            }
+
+            // Embed the element for semantic code search. Additive and best-effort:
+            // a missing embedding key (BYOK), a provider error, or the absence of
+            // the pgvector column (SQLite) must never abort indexing.
+            try {
+                $vector = $this->embeddings->embedForTeam($text, $repository->team_id);
+                if ($vector !== null) {
+                    DB::statement(
+                        'UPDATE code_elements SET embedding = ? WHERE id = ?',
+                        [$this->embeddings->formatForPgvector($vector), $element->id],
+                    );
+                }
+            } catch (\Throwable $e) {
+                Log::debug('IndexRepositoryAction: embedding skipped', [
+                    'element_id' => $element->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }

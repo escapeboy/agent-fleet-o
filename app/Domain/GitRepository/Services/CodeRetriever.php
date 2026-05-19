@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\GitRepository\Services;
 
 use App\Domain\GitRepository\Models\CodeElement;
+use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\DB;
  */
 class CodeRetriever
 {
+    public function __construct(
+        private readonly EmbeddingService $embeddings,
+    ) {}
+
     /**
      * Search for code elements matching the given natural-language query.
      *
@@ -44,17 +49,39 @@ class CodeRetriever
         float $semanticWeight,
         float $keywordWeight,
     ): Collection {
-        // Elements without embeddings fall back to keyword scoring only.
-        // We use a CASE expression so both cases are handled in a single query.
         $tsQuery = $this->toTsQuery($query);
+        $queryEmbedding = $this->embeddings->embedForTeam($query, $teamId);
+
+        $bindings = [
+            'tsq2' => $tsQuery,
+            'kw' => $keywordWeight,
+            'team_id' => $teamId,
+            'repo_id' => $repositoryId,
+            'tsq3' => $tsQuery,
+            'lim' => $limit,
+        ];
+
+        // The semantic half scores cosine similarity of each element's embedding
+        // against the query embedding. It only contributes when a query embedding
+        // is available (BYOK) and the element itself was embedded at index time;
+        // otherwise ranking falls back to keyword ts_rank alone.
+        if ($queryEmbedding !== null) {
+            $semanticScore = '(1 - (embedding <=> :qemb)) * :sw';
+            $semanticWhere = ' OR embedding IS NOT NULL';
+            $bindings['qemb'] = $this->embeddings->formatForPgvector($queryEmbedding);
+            $bindings['sw'] = $semanticWeight;
+        } else {
+            $semanticScore = '0';
+            $semanticWhere = '';
+        }
 
         $results = DB::select(
-            <<<'SQL'
+            <<<SQL
             SELECT
                 id,
                 CASE
                     WHEN embedding IS NOT NULL
-                    THEN (1 - (embedding <=> embedding)) * :sw
+                    THEN {$semanticScore}
                     ELSE 0
                 END
                 + CASE
@@ -67,21 +94,12 @@ class CodeRetriever
               AND git_repository_id = :repo_id
               AND element_type != 'file'
               AND (
-                  search_vector @@ to_tsquery('english', :tsq3)
-                  OR embedding IS NOT NULL
+                  search_vector @@ to_tsquery('english', :tsq3){$semanticWhere}
               )
             ORDER BY score DESC
             LIMIT :lim
             SQL,
-            [
-                'sw' => $semanticWeight,
-                'tsq2' => $tsQuery,
-                'kw' => $keywordWeight,
-                'team_id' => $teamId,
-                'repo_id' => $repositoryId,
-                'tsq3' => $tsQuery,
-                'lim' => $limit,
-            ],
+            $bindings,
         );
 
         if (empty($results)) {
