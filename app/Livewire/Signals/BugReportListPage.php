@@ -6,6 +6,7 @@ use App\Domain\Signal\Actions\UpdateSignalStatusAction;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Exceptions\InvalidSignalTransitionException;
 use App\Domain\Signal\Models\Signal;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -13,6 +14,7 @@ use Livewire\WithPagination;
 
 class BugReportListPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     public string $projectFilter = '';
@@ -79,6 +81,8 @@ class BugReportListPage extends Component
 
     public function delete(string $id): void
     {
+        $this->authorize('edit-content');
+
         $report = Signal::query()
             ->where('source_type', 'bug_report')
             ->find($id);

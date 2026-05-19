@@ -4,12 +4,14 @@ namespace App\Livewire\Signals;
 
 use App\Domain\Signal\Enums\ConnectorBindingStatus;
 use App\Domain\Signal\Models\ConnectorBinding;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class ConnectorBindingsPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     public string $search = '';
@@ -35,6 +37,8 @@ class ConnectorBindingsPage extends Component
 
     public function approve(string $bindingId): void
     {
+        $this->authorize('edit-content');
+
         $binding = ConnectorBinding::findOrFail($bindingId);
 
         $binding->update([
@@ -59,6 +63,8 @@ class ConnectorBindingsPage extends Component
 
     public function delete(string $bindingId): void
     {
+        $this->authorize('edit-content');
+
         ConnectorBinding::findOrFail($bindingId)->delete();
 
         $this->dispatch('toast', message: 'Binding deleted.', type: 'success');

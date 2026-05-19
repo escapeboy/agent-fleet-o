@@ -4,6 +4,7 @@ namespace App\Livewire\Websites;
 
 use App\Domain\Website\Actions\CreateWebsiteAction;
 use App\Domain\Website\Actions\GenerateWebsiteFromPromptAction;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -55,6 +56,8 @@ class CreateWebsiteForm extends Component
 
     public function generate(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|max:255',
             'prompt' => 'required|max:2000',

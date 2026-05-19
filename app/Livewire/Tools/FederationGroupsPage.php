@@ -5,6 +5,7 @@ namespace App\Livewire\Tools;
 use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolFederationGroup;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class FederationGroupsPage extends Component
@@ -19,6 +20,8 @@ class FederationGroupsPage extends Component
 
     public function create(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|string|max:255',
         ]);
@@ -45,6 +48,8 @@ class FederationGroupsPage extends Component
 
     public function delete(string $groupId): void
     {
+        Gate::authorize('edit-content');
+
         ToolFederationGroup::where('team_id', current_team()->id)
             ->findOrFail($groupId)
             ->delete();

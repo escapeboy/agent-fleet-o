@@ -28,6 +28,7 @@ class LivewireAuthorizeCoverageTest extends TestCase
         'generate',
         'rotate', 'revoke', 'approve', 'reject',
         'add', 'remove',  // remove is borderline — see IGNORED below
+        'rename',
         'register', 'enable', 'disable',
         'trigger', 'execute', 'run',
         'set', 'unset',
@@ -86,12 +87,23 @@ class LivewireAuthorizeCoverageTest extends TestCase
         $allowlist = require __DIR__.'/livewire-authorize-allowlist.php';
         $missing = [];
 
-        $livewireRoot = base_path('app/Livewire');
-        if (! is_dir($livewireRoot)) {
-            $this->markTestSkipped('No app/Livewire directory.');
+        // Scan BOTH editions' Livewire roots — the base app and the cloud
+        // override layer. Livewire component-update requests bypass route
+        // middleware, so a missing in-method gate is exploitable in either.
+        $roots = array_filter([
+            base_path('app/Livewire'),                // base/app/Livewire
+            dirname(base_path()).'/cloud/Livewire',    // cloud override layer
+        ], 'is_dir');
+
+        if ($roots === []) {
+            $this->markTestSkipped('No Livewire directories.');
         }
 
-        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($livewireRoot));
+        $iterator = new \AppendIterator;
+        foreach ($roots as $root) {
+            $iterator->append(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root)));
+        }
+
         foreach ($iterator as $file) {
             if (! $file->isFile() || $file->getExtension() !== 'php') {
                 continue;

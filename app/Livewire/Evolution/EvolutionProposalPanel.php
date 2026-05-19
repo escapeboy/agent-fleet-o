@@ -8,6 +8,7 @@ use App\Domain\Evolution\Actions\AnalyzeExecutionForEvolutionAction;
 use App\Domain\Evolution\Actions\ApplyEvolutionProposalAction;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class EvolutionProposalPanel extends Component
@@ -42,6 +43,8 @@ class EvolutionProposalPanel extends Component
 
     public function approve(string $proposalId): void
     {
+        Gate::authorize('edit-content');
+
         $proposal = EvolutionProposal::findOrFail($proposalId);
         $proposal->update([
             'status' => EvolutionProposalStatus::Approved,
@@ -73,6 +76,8 @@ class EvolutionProposalPanel extends Component
 
     public function reject(string $proposalId): void
     {
+        Gate::authorize('edit-content');
+
         $proposal = EvolutionProposal::findOrFail($proposalId);
         $proposal->update([
             'status' => EvolutionProposalStatus::Rejected,

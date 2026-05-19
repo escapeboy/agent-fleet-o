@@ -124,6 +124,8 @@ class BugReportDetailPage extends Component
 
     public function addComment(): void
     {
+        Gate::authorize('edit-content');
+
         $maxAttachments = (int) config('signals.bug_report.widget_comment_max_attachments', 4);
         $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
 

@@ -253,6 +253,8 @@ class CredentialDetailPage extends Component
 
     public function deleteCredential(): void
     {
+        Gate::authorize('edit-content');
+
         app(DeleteCredentialAction::class)->execute($this->credential);
 
         session()->flash('message', 'Credential deleted.');

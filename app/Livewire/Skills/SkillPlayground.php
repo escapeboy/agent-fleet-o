@@ -11,6 +11,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillAnnotation;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -75,6 +76,8 @@ class SkillPlayground extends Component
      */
     public function run(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate(['testInput' => 'required|string|max:10000']);
 
         $this->errorMessage = null;
@@ -173,6 +176,8 @@ class SkillPlayground extends Component
      */
     public function generateImprovement(): void
     {
+        Gate::authorize('edit-content');
+
         $this->errorMessage = null;
         $this->successMessage = null;
 

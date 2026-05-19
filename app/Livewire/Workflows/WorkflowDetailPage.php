@@ -9,10 +9,13 @@ use App\Domain\Workflow\Actions\DeleteWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 
 class WorkflowDetailPage extends Component
 {
+    use AuthorizesRequests;
+
     public Workflow $workflow;
 
     public function mount(Workflow $workflow): void
@@ -22,6 +25,8 @@ class WorkflowDetailPage extends Component
 
     public function archive(): void
     {
+        $this->authorize('edit-content');
+
         app(DeleteWorkflowAction::class)->execute($this->workflow);
 
         session()->flash('success', 'Workflow archived.');

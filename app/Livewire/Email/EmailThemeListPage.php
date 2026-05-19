@@ -5,12 +5,14 @@ namespace App\Livewire\Email;
 use App\Domain\Email\Actions\CreateEmailThemeAction;
 use App\Domain\Email\Enums\EmailThemeStatus;
 use App\Domain\Email\Models\EmailTheme;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class EmailThemeListPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     #[Url]
@@ -41,6 +43,8 @@ class EmailThemeListPage extends Component
 
     public function create(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate(['newName' => 'required|min:2|max:255']);
 
         $team = auth()->user()->currentTeam;

@@ -5,6 +5,7 @@ namespace App\Livewire\Approvals;
 use App\Domain\Approval\Actions\CompleteHumanTaskAction;
 use App\Domain\Approval\Actions\RejectAction;
 use App\Domain\Approval\Models\ApprovalRequest;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class HumanTaskForm extends Component
@@ -42,6 +43,8 @@ class HumanTaskForm extends Component
 
     public function reject(): void
     {
+        Gate::authorize('edit-content');
+
         if (empty($this->rejectionReason)) {
             $this->addError('rejectionReason', 'A reason is required when rejecting.');
 

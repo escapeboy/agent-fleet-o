@@ -7,11 +7,13 @@ use App\Domain\Evaluation\Actions\CreateEvaluationDatasetAction;
 use App\Domain\Evaluation\Actions\RunStructuredEvaluationAction;
 use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Evaluation\Models\EvaluationRun;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class EvaluationPage extends Component
 {
+    use AuthorizesRequests;
     use WithPagination;
 
     public string $activeTab = 'runs';
@@ -52,6 +54,8 @@ class EvaluationPage extends Component
 
     public function runEvaluation(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'evalInput' => ['required', 'string'],
             'evalActualOutput' => ['required', 'string'],
@@ -85,6 +89,8 @@ class EvaluationPage extends Component
 
     public function createDataset(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate([
             'datasetName' => ['required', 'string', 'max:255'],
             'datasetDescription' => ['nullable', 'string', 'max:1000'],
@@ -107,6 +113,8 @@ class EvaluationPage extends Component
 
     public function deleteDataset(string $id): void
     {
+        $this->authorize('edit-content');
+
         $dataset = EvaluationDataset::findOrFail($id);
         abort_unless($dataset->team_id === auth()->user()->current_team_id, 403);
         $dataset->delete();

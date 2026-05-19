@@ -84,6 +84,8 @@ class DashboardPage extends Component
 
     public function toggleWidget(string $key): void
     {
+        Gate::authorize('edit-content');
+
         if (! array_key_exists($key, self::DEFAULT_WIDGETS)) {
             return;
         }

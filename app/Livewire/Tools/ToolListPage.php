@@ -9,6 +9,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -57,6 +58,8 @@ class ToolListPage extends Component
 
     public function toggleStatus(string $toolId): void
     {
+        Gate::authorize('edit-content');
+
         // TeamScope already includes platform records (team_id IS NULL), so
         // a normal scoped query covers both own-team and platform tools and
         // refuses cross-tenant IDs. The previous withoutGlobalScopes() call
