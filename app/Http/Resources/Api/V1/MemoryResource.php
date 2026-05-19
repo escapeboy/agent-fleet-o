@@ -24,6 +24,11 @@ class MemoryResource extends JsonResource
             'why_it_matters' => $this->why_it_matters,
             'belief_status' => $this->belief_status?->value,
             'domain' => $this->domain,
+            'rejected_alternatives' => $this->rejected_alternatives ?? [],
+            'supersedes_id' => $this->supersedes_id,
+            'conflict_flag' => (bool) $this->conflict_flag,
+            'conflict_with_id' => $this->conflict_with_id,
+            'conflict_detected_at' => $this->conflict_detected_at?->toISOString(),
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

@@ -159,7 +159,43 @@ class MemoryContextInjector
 
         $attribution = implode(' | ', $parts);
 
-        return "{$rank}. [{$attribution}]\n   {$item['content']}";
+        $line = "{$rank}. [{$attribution}]\n   {$item['content']}";
+
+        $vetoes = $this->formatRejectedAlternatives($meta['rejected_alternatives'] ?? []);
+        if ($vetoes !== null) {
+            $line .= "\n   Ruled out: {$vetoes}";
+        }
+
+        return $line;
+    }
+
+    /**
+     * Render structured rejected alternatives as a single inline veto string,
+     * so an agent sees "don't do that again" before re-proposing a ruled-out
+     * option. Returns null when there is nothing to show.
+     *
+     * @param  mixed  $rejected  Expected: array<int, array{option?: string, reason?: string}>
+     */
+    private function formatRejectedAlternatives(mixed $rejected): ?string
+    {
+        if (! is_array($rejected) || $rejected === []) {
+            return null;
+        }
+
+        $parts = [];
+        foreach ($rejected as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            $option = trim((string) ($entry['option'] ?? ''));
+            if ($option === '') {
+                continue;
+            }
+            $reason = trim((string) ($entry['reason'] ?? ''));
+            $parts[] = $reason !== '' ? "✗ {$option} — {$reason}" : "✗ {$option}";
+        }
+
+        return $parts === [] ? null : implode('; ', $parts);
     }
 
     /**
@@ -199,7 +235,14 @@ class MemoryContextInjector
             $attribution = implode(' | ', $parts);
             $rank = $i + 1;
 
-            return "{$rank}. [{$attribution}]\n   {$m->content}";
+            $line = "{$rank}. [{$attribution}]\n   {$m->content}";
+
+            $vetoes = $this->formatRejectedAlternatives($m->rejected_alternatives ?? []);
+            if ($vetoes !== null) {
+                $line .= "\n   Ruled out: {$vetoes}";
+            }
+
+            return $line;
         })->implode("\n\n");
 
         return "## Relevant Context\nEach item includes its source and reliability indicators.\n\n{$lines}";

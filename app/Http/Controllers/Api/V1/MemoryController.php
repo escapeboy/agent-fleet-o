@@ -121,6 +121,10 @@ class MemoryController extends Controller
             'why_it_matters' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'belief_status' => ['sometimes', 'string', 'in:active,inferred,exploratory,superseded'],
             'domain' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'rejected_alternatives' => ['sometimes', 'array'],
+            'rejected_alternatives.*.option' => ['required_with:rejected_alternatives', 'string', 'max:200'],
+            'rejected_alternatives.*.reason' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'supersedes_id' => ['sometimes', 'nullable', 'uuid', 'exists:memories,id,team_id,'.$request->user()->current_team_id],
         ]);
 
         $memories = $action->execute(
@@ -138,6 +142,8 @@ class MemoryController extends Controller
             whyItMatters: $request->input('why_it_matters'),
             beliefStatus: MemoryBeliefStatus::tryFrom((string) $request->input('belief_status', 'active')) ?? MemoryBeliefStatus::Active,
             domain: $request->input('domain'),
+            rejectedAlternatives: $request->input('rejected_alternatives', []),
+            supersedesId: $request->input('supersedes_id'),
         );
 
         return response()->json([

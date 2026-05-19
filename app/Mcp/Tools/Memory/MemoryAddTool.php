@@ -61,6 +61,11 @@ class MemoryAddTool extends Tool
                 ->default('active'),
             'domain' => $schema->string()
                 ->description('Scope tag so the belief only surfaces in matching sessions, e.g. "domain:code", "domain:writing", or "user:universal" for everywhere.'),
+            'rejected_alternatives' => $schema->array()
+                ->description('Options that were considered and ruled out. Each item is an object {"option": "...", "reason": "..."}. Stored as structured data and surfaced to future agents so they do not re-propose a vetoed approach.')
+                ->items($schema->object()),
+            'supersedes_id' => $schema->string()
+                ->description('UUID of an existing memory this one replaces. The superseded memory is kept for audit but its belief_status flips to "superseded" so it is never injected again.'),
         ];
     }
 
@@ -87,6 +92,10 @@ class MemoryAddTool extends Tool
             'why_it_matters' => 'nullable|string|max:2000',
             'belief_status' => 'nullable|string|in:active,inferred,exploratory,superseded',
             'domain' => 'nullable|string|max:64',
+            'rejected_alternatives' => 'nullable|array',
+            'rejected_alternatives.*.option' => 'required_with:rejected_alternatives|string|max:200',
+            'rejected_alternatives.*.reason' => 'nullable|string|max:500',
+            'supersedes_id' => "nullable|uuid|exists:memories,id,team_id,{$teamId}",
         ]);
 
         $topic = isset($validated['topic']) && $validated['topic'] !== '' ? $validated['topic'] : null;
@@ -122,6 +131,8 @@ class MemoryAddTool extends Tool
             whyItMatters: $whyItMatters,
             beliefStatus: $beliefStatus,
             domain: $domain,
+            rejectedAlternatives: $validated['rejected_alternatives'] ?? [],
+            supersedesId: $validated['supersedes_id'] ?? null,
         );
 
         $memory = $stored[0] ?? null;
@@ -138,6 +149,8 @@ class MemoryAddTool extends Tool
             'preference_subtype' => $preferenceSubtype?->value,
             'belief_status' => $beliefStatus->value,
             'domain' => $domain,
+            'rejected_alternatives' => $memory?->rejected_alternatives ?? [],
+            'supersedes_id' => $validated['supersedes_id'] ?? null,
             'confidence' => $validated['confidence'] ?? 1.0,
         ]));
     }
