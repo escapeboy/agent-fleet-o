@@ -114,6 +114,7 @@
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-gray-500">v{{ $skill->current_version }}</span>
+                <x-ask-ai context="skill-detail" :context-id="$skill->id" />
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Skill">
                     <i class="fa-solid fa-pen text-base"></i>
                 </button>
@@ -259,7 +260,17 @@
                     <tbody class="divide-y divide-gray-200">
                         @forelse($versions as $version)
                             <tr>
-                                <td class="px-6 py-4 font-mono text-sm">{{ $version->version }}</td>
+                                <td class="px-6 py-4 font-mono text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <span>{{ $version->version }}</span>
+                                        @if($loop->first && !empty($breakingChanges))
+                                            <span
+                                                class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
+                                                title="{{ collect($breakingChanges)->pluck('message')->implode('&#10;') }}"
+                                            >&#9888; Breaking</span>
+                                        @endif
+                                    </div>
+                                </td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $version->changelog ?? '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">{{ $version->created_at->diffForHumans() }}</td>
                             </tr>
