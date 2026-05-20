@@ -21,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
+// @mcp-cross-tenant marketplace-public-read
 class MarketplaceQualityReportTool extends Tool
 {
     protected string $name = 'marketplace_quality_report';

@@ -35,6 +35,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
+// @mcp-cross-tenant super-admin — gated by SuperAdmin middleware
 class SystemRecentErrorsTool extends Tool
 {
     protected string $name = 'system_recent_errors';

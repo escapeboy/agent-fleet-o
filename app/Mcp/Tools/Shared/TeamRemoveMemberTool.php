@@ -15,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('destructive')]
+// @mcp-cross-tenant team-self-lookup
 class TeamRemoveMemberTool extends Tool
 {
     use HasStructuredErrors;

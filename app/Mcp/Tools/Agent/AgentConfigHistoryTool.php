@@ -16,6 +16,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('write')]
+// @mcp-cross-tenant transitive-via-agent
 class AgentConfigHistoryTool extends Tool
 {
     use HasStructuredErrors;

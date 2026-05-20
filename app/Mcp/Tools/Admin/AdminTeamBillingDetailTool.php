@@ -14,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+// @mcp-cross-tenant super-admin — gated by SuperAdmin middleware
 class AdminTeamBillingDetailTool extends Tool
 {
     use HasStructuredErrors;

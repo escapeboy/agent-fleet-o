@@ -11,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+// @mcp-cross-tenant super-admin
 class FeedbackUpdateTool extends Tool
 {
     protected string $name = 'feedback_update';

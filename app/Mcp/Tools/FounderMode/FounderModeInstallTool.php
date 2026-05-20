@@ -19,6 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('destructive')]
+// @mcp-cross-tenant cross-tenant-discovery
 class FounderModeInstallTool extends Tool
 {
     use HasStructuredErrors;

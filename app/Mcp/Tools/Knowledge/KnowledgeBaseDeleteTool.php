@@ -30,7 +30,14 @@ class KnowledgeBaseDeleteTool extends Tool
     {
         $request->validate(['knowledge_base_id' => 'required|string']);
 
-        $kb = KnowledgeBase::withoutGlobalScopes()->find($request->get('knowledge_base_id'));
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        if (! $teamId) {
+            return Response::text(json_encode(['error' => 'No current team.']));
+        }
+
+        $kb = KnowledgeBase::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($request->get('knowledge_base_id'));
 
         if (! $kb) {
             return Response::text(json_encode(['error' => 'Knowledge base not found.']));

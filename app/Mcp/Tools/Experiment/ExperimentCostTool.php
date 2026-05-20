@@ -13,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+// @mcp-cross-tenant transitive-via-experiment
 class ExperimentCostTool extends Tool
 {
     protected string $name = 'experiment_cost';

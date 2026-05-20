@@ -17,6 +17,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant super-admin — gated by SuperAdmin middleware
 class TeamKeyEscrowTool extends Tool
 {
     use HasStructuredErrors;

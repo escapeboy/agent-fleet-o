@@ -16,6 +16,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 #[IsDestructive]
 #[IsIdempotent]
 #[AssistantTool('write')]
+// @mcp-cross-tenant marketplace-public-read
 class MarketplaceRescanRiskTool extends Tool
 {
     use HasStructuredErrors;

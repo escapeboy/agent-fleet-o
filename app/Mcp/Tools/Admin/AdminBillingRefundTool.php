@@ -13,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 use Stripe\StripeClient;
 
 #[IsDestructive]
+// @mcp-cross-tenant super-admin — gated by SuperAdmin middleware
 class AdminBillingRefundTool extends Tool
 {
     use HasStructuredErrors;

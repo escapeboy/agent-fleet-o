@@ -14,6 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+// @mcp-cross-tenant super-admin — gated by SuperAdmin middleware
 class AdminUserRevokeSessionsTool extends Tool
 {
     use HasStructuredErrors;

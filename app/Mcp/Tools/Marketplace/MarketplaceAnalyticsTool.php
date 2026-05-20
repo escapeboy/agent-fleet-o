@@ -16,6 +16,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
+// @mcp-cross-tenant marketplace-public-read
 class MarketplaceAnalyticsTool extends Tool
 {
     use HasStructuredErrors;
