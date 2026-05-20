@@ -197,6 +197,53 @@ class RunSentryWatchdogTest extends TestCase
         );
     }
 
+    public function test_run_collects_critical_signals_into_digest_summary(): void
+    {
+        $integration = $this->seedSentryIntegration();
+
+        $this->seedSentrySignal('ISSUE-CRIT-A', [
+            'title' => 'Auth boot crash',
+            'permalink' => 'https://sentry.karlovo.net/sentry/fleetq/issues/CRIT-A/',
+        ]);
+        $this->seedSentrySignal('ISSUE-CRIT-B', [
+            'title' => 'Migration deadlock',
+            'permalink' => 'https://sentry.karlovo.net/sentry/fleetq/issues/CRIT-B/',
+        ]);
+        $this->seedSentrySignal('ISSUE-NORMAL'); // non-critical baseline
+
+        $this->mockTriage(function (Signal $signal) {
+            $title = $signal->payload['payload']['title'] ?? '';
+            $isCritical = str_contains($title, 'Auth boot crash') || str_contains($title, 'Migration deadlock');
+
+            return new SentryTriageResult(
+                signalId: $signal->id,
+                outcome: SentryTriageOutcome::InvestigateOnly,
+                tier: FixTier::T4,
+                confidence: 0.4,
+                isCritical: $isCritical,
+                summary: $title ?: 'investigate-only',
+            );
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+
+        $this->assertSame(2, $run->critical_count);
+        $this->assertSame(3, $run->signals_triaged);
+
+        // Critical issues are surfaced as a header section at the top of the digest
+        // so they are the first thing the user sees in Telegram AND the watchdog UI.
+        $this->assertStringContainsString('Critical issues:', $run->digest_summary);
+        $this->assertStringContainsString('Auth boot crash', $run->digest_summary);
+        $this->assertStringContainsString('Migration deadlock', $run->digest_summary);
+        $this->assertStringContainsString('https://sentry.karlovo.net/sentry/fleetq/issues/CRIT-A/', $run->digest_summary);
+        $this->assertStringContainsString('https://sentry.karlovo.net/sentry/fleetq/issues/CRIT-B/', $run->digest_summary);
+    }
+
     public function test_tc29_command_exits_cleanly_with_no_active_sentry_integrations(): void
     {
         Queue::fake();
@@ -309,8 +356,16 @@ class RunSentryWatchdogTest extends TestCase
         ]);
     }
 
-    private function seedSentrySignal(string $sentryIssueId): Signal
+    /**
+     * @param  array<string, mixed>  $payloadOverrides  merged into the inner Sentry payload.
+     */
+    private function seedSentrySignal(string $sentryIssueId, array $payloadOverrides = []): Signal
     {
+        $innerPayload = array_merge([
+            'id' => $sentryIssueId,
+            'title' => 'NullPointer in checkout',
+        ], $payloadOverrides);
+
         return Signal::create([
             'team_id' => $this->team->id,
             'experiment_id' => null,
@@ -321,10 +376,7 @@ class RunSentryWatchdogTest extends TestCase
                 'source_type' => 'sentry',
                 'source_id' => 'sentry:'.$sentryIssueId,
                 'tags' => ['sentry', 'issue'],
-                'payload' => [
-                    'id' => $sentryIssueId,
-                    'title' => 'NullPointer in checkout',
-                ],
+                'payload' => $innerPayload,
             ],
             'content_hash' => md5('sentry-'.bin2hex(random_bytes(6))),
             'tags' => ['sentry', 'issue'],

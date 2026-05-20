@@ -23,6 +23,7 @@ use App\Http\Middleware\InternalNetworkOnly;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Admin\AiControlCenterPage;
+use App\Livewire\Admin\SentryWatchdogPage;
 use App\Livewire\AgentChat\AgentverseBrowsePage;
 use App\Livewire\AgentChat\ExternalAgentDetailPage;
 use App\Livewire\AgentChat\ExternalAgentListPage;
@@ -421,6 +422,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/admin/ai', AiControlCenterPage::class)->name('admin.ai');
+    Route::get('/admin/sentry-watchdog', SentryWatchdogPage::class)->name('admin.sentry-watchdog');
     Route::get('/insights', InsightsPage::class)->name('insights');
     Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
