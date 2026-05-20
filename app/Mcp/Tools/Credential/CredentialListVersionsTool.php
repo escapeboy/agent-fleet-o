@@ -19,6 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  */
 #[IsReadOnly]
 #[AssistantTool('read')]
+// @mcp-cross-tenant transitive-via-credential
 class CredentialListVersionsTool extends Tool
 {
     use HasStructuredErrors;

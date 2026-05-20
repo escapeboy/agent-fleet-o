@@ -21,6 +21,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
  */
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant transitive-via-credential
 class CredentialRollbackTool extends Tool
 {
     use HasStructuredErrors;
@@ -79,7 +80,6 @@ class CredentialRollbackTool extends Tool
                 'credential_id' => $credential->id,
                 'credential_name' => $credential->name,
                 'rolled_back_to_version' => $version->version_number,
-                // @phpstan-ignore method.nonObject
                 'last_rotated_at' => $credential->last_rotated_at?->toIso8601String(),
             ]));
         } catch (\Throwable $e) {

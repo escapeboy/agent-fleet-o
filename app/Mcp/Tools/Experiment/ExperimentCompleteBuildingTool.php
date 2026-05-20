@@ -16,6 +16,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+// @mcp-cross-tenant transitive-via-experiment
 class ExperimentCompleteBuildingTool extends Tool
 {
     use HasStructuredErrors;

@@ -15,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant transitive-via-agent — agent_id team-verified upstream
 class AgentToolApprovalConfigureTool extends McpTool
 {
     use HasStructuredErrors;

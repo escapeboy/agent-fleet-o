@@ -25,6 +25,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
+// @mcp-cross-tenant transitive-via-experiment
 class ExperimentDiagnoseTool extends Tool
 {
     use HasStructuredErrors;
