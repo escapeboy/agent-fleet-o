@@ -239,9 +239,13 @@ class TriageSentryIssueActionTest extends TestCase
         $this->assertSame(0, Experiment::query()->count());
     }
 
-    public function test_tc15_critical_issue_triggers_immediate_notification(): void
+    public function test_tc15_critical_issue_triggers_immediate_notification_when_flag_on(): void
     {
-        config(['sentry_watchdog.mode' => 'phase1']);
+        config([
+            'sentry_watchdog.mode' => 'phase1',
+            // Opt-in to the legacy per-signal alert behaviour.
+            'sentry_watchdog.critical_immediate' => true,
+        ]);
         $this->fakeGateway($this->triageJson([
             'is_critical' => true,
             'suspect_files' => ['base/app/Domain/Signal/Models/Signal.php'],
@@ -258,6 +262,28 @@ class TriageSentryIssueActionTest extends TestCase
 
         $result = app(TriageSentryIssueAction::class)->execute($signal);
 
+        $this->assertTrue($result->isCritical);
+    }
+
+    public function test_critical_issue_does_not_fire_immediate_notification_by_default(): void
+    {
+        // Default config has critical_immediate=false → per-signal alerts are
+        // suppressed and criticals get rolled up in the per-run digest instead.
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([
+            'is_critical' => true,
+            'suspect_files' => ['base/app/Domain/Signal/Models/Signal.php'],
+        ]));
+
+        $signal = $this->makeSentrySignal(['level' => 'fatal']);
+
+        $notify = Mockery::mock(NotifyCriticalSentryIssueAction::class);
+        $notify->shouldNotReceive('execute');
+        $this->app->instance(NotifyCriticalSentryIssueAction::class, $notify);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        // Critical flag is still set on the result — only the alert is suppressed.
         $this->assertTrue($result->isCritical);
     }
 

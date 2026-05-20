@@ -64,7 +64,11 @@ class TriageSentryIssueAction
             $investigation['estimated_diff_lines'],
         );
 
-        if ($investigation['is_critical']) {
+        // Per-signal critical alerts are off by default — a batch of 15 critical
+        // issues would otherwise send 15 Telegrams. The criticals are surfaced in
+        // the single per-run digest instead. Set sentry_watchdog.critical_immediate
+        // to true to restore the legacy alert-per-signal behaviour.
+        if ($investigation['is_critical'] && (bool) config('sentry_watchdog.critical_immediate', false)) {
             $this->notifyCritical->execute($signal);
         }
 
