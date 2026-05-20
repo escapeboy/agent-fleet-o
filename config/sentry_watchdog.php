@@ -82,4 +82,24 @@ return [
     */
     'critical_immediate' => (bool) env('SENTRY_WATCHDOG_CRITICAL_IMMEDIATE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Title filters — noise suppression
+    |--------------------------------------------------------------------------
+    |
+    | ignore_title_patterns — SQL ILIKE patterns. Signals whose Sentry issue
+    |   title matches any pattern are skipped at triage time and stay out of
+    |   the digest. Default suppresses "Cron failure:" boilerplate that Sentry
+    |   keeps emitting from server-side monitor configs even after
+    |   `->sentryMonitor()` was removed from the codebase (see Serena memory
+    |   features/sentry-cron-monitor-removed-2026-05-15). These signals
+    |   produce no useful triage — the LLM defaults to 0.0 confidence and
+    |   they pollute the channel.
+    |
+    */
+
+    'ignore_title_patterns' => [
+        'Cron failure:%',
+    ],
+
 ];
