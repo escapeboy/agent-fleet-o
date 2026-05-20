@@ -29,7 +29,7 @@ return [
     |
     */
 
-    'confidence_threshold' => (float) env('SENTRY_WATCHDOG_CONFIDENCE_THRESHOLD', 0.7),
+    'confidence_threshold' => (float) env('SENTRY_WATCHDOG_CONFIDENCE_THRESHOLD', 0.8),
 
     't1_max_diff_lines' => (int) env('SENTRY_WATCHDOG_T1_MAX_DIFF_LINES', 40),
 
@@ -101,5 +101,27 @@ return [
     'ignore_title_patterns' => [
         'Cron failure:%',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Phase 1 safety guards
+    |--------------------------------------------------------------------------
+    |
+    | max_prs_per_run — hard cap on the number of phase1 delegations per
+    |   watchdog run. Beyond this, eligible signals are downgraded to
+    |   investigate-only with a "PR-quota-reached" marker. Conservative
+    |   default of 3 keeps the human reviewer's PR queue manageable while
+    |   we learn how often quality holds.
+    | vps_invoke_cap_per_run — soft cap on claude-code-vps invocations
+    |   per watchdog run (across all PR attempts). Anthropic Max OAuth is
+    |   on FleetQ's bill, not the team's credit ledger, so a runaway agent
+    |   loop could bill us silently. Each fix typically does 3-5 invocations;
+    |   50 buys 10 fixes worth of slack.
+    |
+    */
+
+    'max_prs_per_run' => (int) env('SENTRY_WATCHDOG_MAX_PRS_PER_RUN', 3),
+
+    'vps_invoke_cap_per_run' => (int) env('SENTRY_WATCHDOG_VPS_INVOKE_CAP', 50),
 
 ];

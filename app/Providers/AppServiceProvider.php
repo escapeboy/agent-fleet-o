@@ -33,6 +33,7 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\Experiment\Listeners\SendSentryFixPrOpenedEmailListener;
 use App\Domain\GitRepository\Listeners\QueueContextGitPush;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
@@ -602,6 +603,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Bug report delegation: advance signal to review when agent experiment completes
         Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
+
+        // Sentry Watchdog phase 1: email the operator when the fixing agent's PR opens
+        // (debug-track + sentry-sourced experiment reaches CollectingMetrics).
+        Event::listen(ExperimentTransitioned::class, SendSentryFixPrOpenedEmailListener::class);
 
         // Reporter follow-up after a previous attempt landed in Review:
         // re-engage the agent loop with the new context.

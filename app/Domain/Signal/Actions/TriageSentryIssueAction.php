@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Triages a single Sentry-sourced Signal: investigates the root cause with an
  * LLM, classifies the fix risk tier, and — in phase 1 — delegates an autonomous
- * fix for actionable parent-repo issues. Critical issues are alerted immediately.
+ * fix for actionable issues. Suspect files are routed to a single target repo
+ * (parent or base submodule); mixed cases fall back to investigate-only.
+ * Critical issues are alerted immediately when the flag is on.
  *
  * Read-only in phase 0 (investigate + return for the digest). Never throws —
  * a failed investigation degrades to investigate-only.
@@ -31,6 +33,19 @@ class TriageSentryIssueAction
         SignalStatus::AgentFixing,
         SignalStatus::Resolved,
         SignalStatus::Dismissed,
+    ];
+
+    /**
+     * Map of repository kind → GitHub `owner/repo` full name.
+     *
+     * `parent` covers cloud-only suspect_files; `base` covers the open-core
+     * submodule (paths starting with `base/`). Phase 1 routes delegation to
+     * the resolved target so the fixing agent clones/opens PRs against the
+     * right repo.
+     */
+    private const TARGET_REPOSITORIES = [
+        'parent' => 'escapeboy/agent-fleet',
+        'base' => 'escapeboy/agent-fleet-o',
     ];
 
     public function __construct(
@@ -77,11 +92,25 @@ class TriageSentryIssueAction
             return $this->investigateOnlyResult($signal, $tier, $investigation);
         }
 
-        // Phase 1 — delegate an autonomous fix only for actionable, parent-repo,
-        // confident issues. base/ issues need the unbuilt submodule-aware merge.
+        // Phase 1 — delegate an autonomous fix only for actionable, confident
+        // issues. Suspect files are now bucketed into a single target repo:
+        // pure-parent → escapeboy/agent-fleet, pure-base → escapeboy/agent-fleet-o.
+        // Mixed (files in both repos) cannot be fixed in a single PR — drop to
+        // investigate-only with a "mixed" reason so the digest surfaces it.
         $threshold = (float) config('sentry_watchdog.confidence_threshold', 0.7);
-        $actionable = $investigation['suspect_files'] !== []
-            && ! $this->touchesBaseSubmodule($investigation['suspect_files'])
+        $target = $investigation['suspect_files'] !== []
+            ? $this->resolveTargetRepository($investigation['suspect_files'])
+            : null;
+
+        if ($investigation['suspect_files'] !== [] && $target === null) {
+            $mixedInvestigation = array_merge($investigation, [
+                'suspect_files' => ['mixed suspect_files span both repos; requires manual fix'],
+            ]);
+
+            return $this->investigateOnlyResult($signal, $tier, $mixedInvestigation);
+        }
+
+        $actionable = $target !== null
             && $tier !== FixTier::T4
             && $investigation['confidence'] >= $threshold;
 
@@ -112,6 +141,9 @@ class TriageSentryIssueAction
                 ),
                 'sentry_issue_id' => $payload['id'] ?? null,
                 'sentry_permalink' => $payload['permalink'] ?? null,
+                // target_repository is consumed by DelegateBugReportToAgentAction so
+                // the fixing agent's thesis knows which repo to clone / open the PR in.
+                'target_repository' => $target['full_name'],
             ]);
             $signal->save();
 
@@ -422,18 +454,40 @@ class TriageSentryIssueAction
     }
 
     /**
+     * Bucket suspect_files into a single target repository.
+     *
+     * `base/...` paths belong to the open-core submodule (`agent-fleet-o`);
+     * everything else belongs to the cloud parent (`agent-fleet`). A single
+     * PR cannot span both repos, so mixed lists return null and the caller
+     * falls back to investigate-only.
+     *
      * @param  list<string>  $files
+     * @return array{kind: 'base'|'parent', full_name: string}|null
      */
-    private function touchesBaseSubmodule(array $files): bool
+    private function resolveTargetRepository(array $files): ?array
     {
+        if ($files === []) {
+            return null;
+        }
+
+        $base = 0;
+        $parent = 0;
         foreach ($files as $file) {
             $lower = strtolower($file);
-            if (str_starts_with($lower, 'base/') || str_contains($lower, '/base/')) {
-                return true;
+            if (str_starts_with($lower, 'base/')) {
+                $base++;
+            } else {
+                $parent++;
             }
         }
 
-        return false;
+        if ($base > 0 && $parent > 0) {
+            return null;
+        }
+
+        $kind = $base > 0 ? 'base' : 'parent';
+
+        return ['kind' => $kind, 'full_name' => self::TARGET_REPOSITORIES[$kind]];
     }
 
     private function clampConfidence(mixed $value): float
