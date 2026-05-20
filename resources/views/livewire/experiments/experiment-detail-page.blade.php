@@ -28,6 +28,8 @@
 
         {{-- Actions --}}
         <div class="flex flex-wrap items-center gap-2">
+            <x-ask-ai context="experiment-detail" :context-id="$experiment->id" />
+
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Draft)
                 <form class="inline" onsubmit="return false" toolname="start_experiment" tooldescription="Start this experiment — transition from draft to scoring">
                 <button type="button" wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."

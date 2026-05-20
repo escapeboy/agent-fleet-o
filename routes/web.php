@@ -6,6 +6,7 @@ use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
+use App\Http\Controllers\LlmsTxtController;
 use App\Http\Controllers\MarketplacePageController;
 use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
@@ -174,6 +175,20 @@ Route::get('/.well-known/agents/{slug}', [AgentManifestController::class, 'show'
 Route::get('/.well-known/change-password', fn () => redirect(route('profile').'#security', 302))
     ->name('well-known.change-password')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class]);
+
+// llmstxt.org — agent-readable docs index. Lets coding agents (Claude, Cursor,
+// Codex) discover the platform with a single fetch. Spec: https://llmstxt.org
+// `/llms.txt` is the compact index; `/llms-full.txt` bundles the full
+// capabilities document so agents can pull the whole knowledge surface at once.
+Route::get('/llms.txt', [LlmsTxtController::class, 'compact'])
+    ->name('llms.compact')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/llms-full.txt', [LlmsTxtController::class, 'full'])
+    ->name('llms.full')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:30,1');
 
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
