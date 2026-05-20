@@ -22,10 +22,10 @@ class SecurityHeaders
         }
 
         // Vite HMR dev server origin — only when running locally.
-        // Must match VITE_DEV_SERVER_URL in vite.config.js (default http://localhost:5174).
-        $viteOrigin = app()->isLocal()
-            ? (env('VITE_DEV_SERVER_URL') ?: 'http://localhost:5174')
-            : '';
+        // Must match VITE_DEV_SERVER_URL in vite.config.js (default http://localhost:5174,
+        // which matches the docker-compose host mapping "5174:5173"). Users running Vite
+        // on a non-default port should adapt this middleware.
+        $viteOrigin = app()->isLocal() ? 'http://localhost:5174' : '';
 
         // Local dev WebSocket origins: Vite HMR + Reverb via nginx (REVERB_PORT, default 8080).
         // `:*` wildcards the port so any local dev port works.
