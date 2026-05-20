@@ -21,7 +21,6 @@ use Symfony\Component\Process\Process;
  */
 class InjectRepoMapContext
 {
-    /** @phpstan-ignore-next-line property.onlyWritten */
     public function __construct(
         private readonly RepoMapGenerator $generator,
     ) {}

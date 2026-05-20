@@ -47,7 +47,7 @@ class EmailTemplateController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id'],
+            'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id,team_id,'.$request->user()->current_team_id],
             'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
             'preview_text' => ['sometimes', 'nullable', 'string', 'max:255'],
             'design_json' => ['sometimes', 'array'],
@@ -71,7 +71,7 @@ class EmailTemplateController extends Controller
     {
         $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id'],
+            'email_theme_id' => ['sometimes', 'nullable', 'string', 'exists:email_themes,id,team_id,'.$request->user()->current_team_id],
             'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
             'preview_text' => ['sometimes', 'nullable', 'string', 'max:255'],
             'design_json' => ['sometimes', 'array'],

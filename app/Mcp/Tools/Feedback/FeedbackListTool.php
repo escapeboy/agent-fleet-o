@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+// @mcp-cross-tenant super-admin
 class FeedbackListTool extends Tool
 {
     protected string $name = 'feedback_list';

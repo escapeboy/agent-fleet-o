@@ -14,6 +14,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant platform-tool-activation
 class ToolDeactivateTool extends Tool
 {
     use HasStructuredErrors;

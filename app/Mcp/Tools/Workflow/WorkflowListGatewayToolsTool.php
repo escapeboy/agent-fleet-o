@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
+// @mcp-cross-tenant platform-discovery
 class WorkflowListGatewayToolsTool extends Tool
 {
     protected string $name = 'workflow_list_gateway_tools';

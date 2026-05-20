@@ -43,7 +43,7 @@ class NtfyConnector implements OutboundConnectorInterface
         }
 
         $action = OutboundAction::withoutGlobalScopes()->create([
-            'team_id' => $proposal->team_id, // @phpstan-ignore property.notFound
+            'team_id' => $proposal->team_id,
             'outbound_proposal_id' => $proposal->id,
             'status' => OutboundActionStatus::Sending,
             'idempotency_key' => $idempotencyKey,
@@ -53,8 +53,8 @@ class NtfyConnector implements OutboundConnectorInterface
         try {
             $resolver = app(OutboundCredentialResolver::class);
             /** @var array<string, mixed> $proposalTarget */
-            $proposalTarget = $proposal->target; // @phpstan-ignore property.notFound
-            $creds = $resolver->resolve('ntfy', $proposalTarget, $proposal->team_id); // @phpstan-ignore property.notFound
+            $proposalTarget = $proposal->target;
+            $creds = $resolver->resolve('ntfy', $proposalTarget, $proposal->team_id);
 
             $baseUrl = rtrim($creds['base_url'] ?? 'https://ntfy.sh', '/');
             $topic = $creds['topic'] ?? ($proposalTarget['topic'] ?? null);
@@ -69,7 +69,7 @@ class NtfyConnector implements OutboundConnectorInterface
             app(SsrfGuard::class)->assertPublicUrl($url);
 
             /** @var array<string, mixed> $content */
-            $content = $proposal->content; // @phpstan-ignore property.notFound
+            $content = $proposal->content;
             $body = $content['body'] ?? $content['text'] ?? 'No content generated.';
             $title = $content['title'] ?? ($proposalTarget['title'] ?? null);
 

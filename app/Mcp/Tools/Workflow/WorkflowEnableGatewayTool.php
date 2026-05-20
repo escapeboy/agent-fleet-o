@@ -11,6 +11,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
+// @mcp-cross-tenant platform-discovery
 class WorkflowEnableGatewayTool extends Tool
 {
     use HasStructuredErrors;

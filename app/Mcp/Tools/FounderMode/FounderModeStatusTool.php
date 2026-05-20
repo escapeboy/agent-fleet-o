@@ -19,6 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 #[IsIdempotent]
 #[AssistantTool('read')]
+// @mcp-cross-tenant cross-tenant-discovery
 class FounderModeStatusTool extends Tool
 {
     use HasStructuredErrors;

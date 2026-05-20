@@ -13,6 +13,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[AssistantTool('write')]
 #[IsDestructive]
+// @mcp-cross-tenant team-self-lookup
 class SignalSetRelevanceThresholdTool extends Tool
 {
     use HasStructuredErrors;
