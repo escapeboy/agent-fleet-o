@@ -67,4 +67,19 @@ return [
 
     'digest_email' => env('SENTRY_WATCHDOG_DIGEST_EMAIL'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Critical-issue alerting
+    |--------------------------------------------------------------------------
+    |
+    | critical_immediate — when true, every critical signal in a batch fires
+    |   its own Telegram/email alert the moment it is classified. When false,
+    |   critical issues are rolled up into the single per-run digest under a
+    |   "Critical issues" section. False by default: a noisy batch (e.g. 15
+    |   critical-flagged signals) used to send 15 separate notifications, one
+    |   per signal, which made the channel unusable.
+    |
+    */
+    'critical_immediate' => (bool) env('SENTRY_WATCHDOG_CRITICAL_IMMEDIATE', false),
+
 ];

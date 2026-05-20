@@ -79,6 +79,7 @@ class RunSentryWatchdogJob implements ShouldQueue
         $investigateOnly = 0;
         $criticalCount = 0;
         $lines = [];
+        $criticalLines = [];
 
         foreach ($groups as $group) {
             /** @var Signal $signal */
@@ -99,6 +100,7 @@ class RunSentryWatchdogJob implements ShouldQueue
 
             if ($result->isCritical) {
                 $criticalCount++;
+                $criticalLines[] = $this->formatCriticalLine($signal, $result->summary);
             }
 
             if ($result->outcome === SentryTriageOutcome::Delegated) {
@@ -122,10 +124,53 @@ class RunSentryWatchdogJob implements ShouldQueue
             'prs_opened' => $prsOpened,
             'investigate_only' => $investigateOnly,
             'critical_count' => $criticalCount,
-            'digest_summary' => mb_substr(implode("\n", $lines), 0, 3000),
+            'digest_summary' => mb_substr($this->composeDigestSummary($criticalLines, $lines), 0, 3000),
         ]);
 
         $run->refresh();
         $digest->execute($run);
+    }
+
+    /**
+     * Build the persistent digest text. Critical issues are rendered as a
+     * header section so they are the first thing both the Telegram message
+     * and the SentryWatchdogPage UI surface.
+     *
+     * @param  list<string>  $criticalLines
+     * @param  list<string>  $lines
+     */
+    private function composeDigestSummary(array $criticalLines, array $lines): string
+    {
+        $sections = [];
+
+        if ($criticalLines !== []) {
+            $sections[] = "\u{1F534} Critical issues:\n".implode("\n", $criticalLines);
+        }
+
+        if ($lines !== []) {
+            $sections[] = implode("\n", $lines);
+        }
+
+        return implode("\n\n", $sections);
+    }
+
+    /**
+     * One bullet for the critical-issues section. Pulls title + permalink from
+     * the wrapped Sentry payload (`payload.payload`) so the user can jump to
+     * the issue from Telegram or the watchdog UI.
+     */
+    private function formatCriticalLine(Signal $signal, ?string $summary): string
+    {
+        $raw = $signal->payload ?? [];
+        $payload = (isset($raw['payload']) && is_array($raw['payload'])) ? $raw['payload'] : $raw;
+        $title = trim((string) ($payload['title'] ?? $summary ?? 'Sentry issue'));
+        $permalink = trim((string) ($payload['permalink'] ?? ''));
+
+        $line = '🔴 '.$title;
+        if ($permalink !== '') {
+            $line .= ' — '.$permalink;
+        }
+
+        return $line;
     }
 }
