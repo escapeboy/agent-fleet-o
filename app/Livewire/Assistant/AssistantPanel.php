@@ -420,6 +420,20 @@ class AssistantPanel extends Component
     }
 
     /**
+     * Listener for `assistant-open-with-context` — the `<x-ask-ai>` Blade
+     * component dispatches this so any page can bind the assistant to a
+     * specific entity in one click. The panel itself is opened by the
+     * companion browser event `open-assistant` that the component fires
+     * alongside this Livewire dispatch.
+     */
+    #[On('assistant-open-with-context')]
+    public function openWithContext(string $context = '', ?string $contextId = null): void
+    {
+        $this->contextType = $context;
+        $this->contextId = $contextId ?? '';
+    }
+
+    /**
      * Listener for `assistant-set-selection` — any index page can dispatch
      *
      *     $this->dispatch('assistant-set-selection', kind: 'experiment', ids: [...]);
