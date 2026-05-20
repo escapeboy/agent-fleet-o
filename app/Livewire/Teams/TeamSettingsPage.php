@@ -16,6 +16,7 @@ use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Infrastructure\Telemetry\TenantTracerTester;
 use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -59,6 +60,9 @@ class TeamSettingsPage extends Component
 
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
+
+    // Format & brand guide — injected into content-generation prompts
+    public string $formatGuide = '';
 
     // Chatbot feature toggle
     public bool $chatbotEnabled = false;
@@ -169,6 +173,7 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+        $this->formatGuide = (string) ($settings['format_guide'] ?? '');
 
         // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
         if (Schema::hasColumn('teams', 'max_credits_per_call')) {
@@ -237,6 +242,8 @@ class TeamSettingsPage extends Component
 
     public function saveTeamSettings(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'teamName' => 'required|string|max:255',
             'teamSlug' => 'required|string|max:255|alpha_dash',
@@ -249,6 +256,22 @@ class TeamSettingsPage extends Component
         ]);
 
         session()->flash('message', 'Settings saved.');
+    }
+
+    public function saveFormatGuide(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $this->validate([
+            'formatGuide' => 'nullable|string|max:8000',
+        ]);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['format_guide'] = trim($this->formatGuide);
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Format & brand guide saved.');
     }
 
     public function saveLlmDefaults(): void
@@ -509,6 +532,8 @@ class TeamSettingsPage extends Component
 
     public function saveCreditMargin(): void
     {
+        Gate::authorize('access-admin');
+
         $user = auth()->user();
         if (! $user || ! ($user->is_super_admin ?? false)) {
             abort(403, 'Super-admin role required to change margin multiplier.');
@@ -542,6 +567,8 @@ class TeamSettingsPage extends Component
 
     public function saveApprovalSettings(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'approvalTimeoutHours' => 'required|integer|min:1',
         ]);
@@ -556,6 +583,8 @@ class TeamSettingsPage extends Component
 
     public function saveMcpToolPreferences(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $settings = $team->settings ?? [];
 
@@ -596,6 +625,8 @@ class TeamSettingsPage extends Component
 
     public function addProviderCredential(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'credProvider' => 'required|in:'.implode(',', static::BYOK_PROVIDERS),
             'credApiKey' => 'required|string|min:10',
@@ -615,6 +646,8 @@ class TeamSettingsPage extends Component
 
     public function removeProviderCredential(string $id): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         TeamProviderCredential::where('id', $id)
             ->where('team_id', auth()->user()->current_team_id)
             ->delete();
@@ -624,6 +657,8 @@ class TeamSettingsPage extends Component
 
     public function createApiToken(): void
     {
+        $this->authorize('update-self');
+
         $this->validate([
             'tokenName' => 'required|string|max:255',
         ]);
@@ -640,6 +675,8 @@ class TeamSettingsPage extends Component
 
     public function revokeApiToken(int $tokenId): void
     {
+        $this->authorize('update-self');
+
         $user = auth()->user();
         $user->sanctumTokens()->where('id', $tokenId)->delete();
 
@@ -718,6 +755,8 @@ class TeamSettingsPage extends Component
 
     public function savePortkeyConfig(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'portkeyApiKey' => 'required|string',
             'portkeyVirtualKey' => 'nullable|string',
@@ -736,6 +775,8 @@ class TeamSettingsPage extends Component
 
     public function removePortkeyConfig(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
             ->where('provider', 'portkey')
             ->delete();
@@ -777,6 +818,8 @@ class TeamSettingsPage extends Component
 
     public function saveOllamaCredential(LocalLlmUrlValidator $validator): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'ollamaBaseUrl' => 'required|url|max:255',
         ]);
@@ -806,6 +849,8 @@ class TeamSettingsPage extends Component
 
     public function removeOllamaCredential(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
             ->where('provider', 'ollama')
             ->delete();
@@ -815,6 +860,8 @@ class TeamSettingsPage extends Component
 
     public function saveOpenaiCompatibleCredential(LocalLlmUrlValidator $validator): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'openaiCompatibleBaseUrl' => 'required|url|max:255',
             'openaiCompatibleApiKey' => 'nullable|string|max:255',
@@ -850,6 +897,8 @@ class TeamSettingsPage extends Component
 
     public function removeOpenaiCompatibleCredential(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         TeamProviderCredential::where('team_id', auth()->user()->current_team_id)
             ->where('provider', 'openai_compatible')
             ->delete();
@@ -868,6 +917,8 @@ class TeamSettingsPage extends Component
 
     public function addCustomEndpoint(SsrfGuard $ssrfGuard): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'customEndpointName' => 'required|string|max:255|regex:/^[a-z0-9_-]+$/',
             'customEndpointBaseUrl' => 'required|url|max:500',
@@ -910,6 +961,8 @@ class TeamSettingsPage extends Component
 
     public function removeCustomEndpoint(string $id): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         TeamProviderCredential::where('id', $id)
             ->where('team_id', auth()->user()->current_team_id)
             ->where('provider', 'custom_endpoint')
@@ -920,6 +973,8 @@ class TeamSettingsPage extends Component
 
     public function toggleCustomEndpoint(string $id): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $cred = TeamProviderCredential::where('id', $id)
             ->where('team_id', auth()->user()->current_team_id)
             ->where('provider', 'custom_endpoint')
@@ -938,6 +993,8 @@ class TeamSettingsPage extends Component
 
     public function saveTelegramBot(RegisterTelegramBotAction $action): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'telegramBotToken' => 'required|string|min:20',
             'telegramRoutingMode' => 'required|in:assistant,project,trigger_rules',
@@ -957,6 +1014,8 @@ class TeamSettingsPage extends Component
 
     public function removeTelegramBot(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         TelegramBot::where('team_id', $team->id)->delete();
 
@@ -967,6 +1026,8 @@ class TeamSettingsPage extends Component
 
     public function disconnectBridge(string $id): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         $connection = BridgeConnection::where('team_id', $team->id)
             ->where('id', $id)
@@ -981,6 +1042,8 @@ class TeamSettingsPage extends Component
 
     public function disconnectAllBridges(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         BridgeConnection::where('team_id', $team->id)
             ->active()
@@ -992,6 +1055,8 @@ class TeamSettingsPage extends Component
 
     public function renameBridge(string $id, string $name): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $team = auth()->user()->currentTeam;
         BridgeConnection::where('team_id', $team->id)
             ->where('id', $id)
@@ -1000,6 +1065,8 @@ class TeamSettingsPage extends Component
 
     public function connectViaUrl(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'connectUrl' => 'required|url|max:500',
             'connectLabel' => 'nullable|string|max:100',
@@ -1087,6 +1154,8 @@ class TeamSettingsPage extends Component
 
     public function saveBridgeRouting(): void
     {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
         $this->validate([
             'bridgeRoutingMode' => 'required|in:auto,prefer,per_agent',
             'preferredBridgeId' => 'nullable|string|uuid',

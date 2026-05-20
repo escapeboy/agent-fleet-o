@@ -43,6 +43,9 @@ class Signal extends Model implements HasMedia
         'content_hash',
         'status',
         'project_key',
+        'reported_type',
+        'suggested_type',
+        'suggested_type_confidence',
         'tags',
         'received_at',
         'scored_at',
@@ -50,6 +53,8 @@ class Signal extends Model implements HasMedia
         'last_received_at',
         'assigned_user_id',
         'assigned_at',
+        'relevance_score',
+        'relevance_scored_at',
     ];
 
     protected function casts(): array
@@ -60,12 +65,15 @@ class Signal extends Model implements HasMedia
             'metadata' => 'array',
             'tags' => 'array',
             'score' => 'float',
+            'suggested_type_confidence' => 'float',
             'status' => SignalStatus::class,
             'received_at' => 'datetime',
             'scored_at' => 'datetime',
             'duplicate_count' => 'integer',
             'last_received_at' => 'datetime',
             'assigned_at' => 'datetime',
+            'relevance_score' => 'float',
+            'relevance_scored_at' => 'datetime',
         ];
     }
 

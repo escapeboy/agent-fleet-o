@@ -3,6 +3,7 @@
 namespace Tests\Feature\Domain\Crew;
 
 use App\Domain\Crew\Actions\GenerateCrewFromPromptAction;
+use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
@@ -71,7 +72,11 @@ class GenerateCrewFromPromptTest extends TestCase
             'model' => 'claude-haiku-4-5-20251001',
         ]);
 
-        return new GenerateCrewFromPromptAction($gateway, $providerResolver);
+        return new GenerateCrewFromPromptAction(
+            $gateway,
+            $providerResolver,
+            app(FormatGuidePromptInjector::class),
+        );
     }
 
     public function test_returns_structured_array_with_required_keys(): void

@@ -39,7 +39,7 @@
 
 Most agent frameworks give you a Python notebook. FleetQ gives you a **production platform**.
 
-- 🧩 **493+ MCP tools across 46 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically. New in 1.24: **`AutoRegistersAsMcpTool` contract** lets connectors auto-expose as MCP tools (no hand-written boilerplate); **A-RAG hierarchical retrieval** (`memory_keyword_search` + `memory_chunk_read`); **`browser_harness_run`** for self-healing CDP browser automation; **`workflow_export_yaml` / `workflow_import_yaml`** for Kestra-style workflow source-of-truth.
+- 🧩 **493+ MCP tools across 46 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically. New in 1.26: **MCP tool auto-discovery** (drop a tool class into `app/Mcp/Tools/` — no registry edit); **unified human + agent activity timeline**; **git-backed context filesystem** (`/settings/git-sync` mirrors artifacts + memory to a repo as versioned markdown); **project snapshots** (capture/restore project config); **Sentry Watchdog** for autonomous error triage.
 - 🔁 **Visual DAG workflows** with 8 node types (agent, conditional, human-task, switch, dynamic-fork, do-while) — no Python glue code.
 - 👥 **Multi-agent crews** with coordinator/worker/reviewer roles, weighted QA scoring, and cross-validation.
 - 🛡️ **Real-World Action governance** — assistant tool calls, integration writes, and git pushes route through a per-tier risk policy (auto / ask / reject for low / medium / high). Approvals auto-execute. Audit trail attached.

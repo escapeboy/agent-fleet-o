@@ -293,6 +293,25 @@ class AssistantPanel extends Component
         $this->loadRecentConversations();
     }
 
+    #[On('echo-private:assistant.{conversationId},AssistantMessageChunk')]
+    public function receiveStreamChunk(array $event): void
+    {
+        if ($this->pendingMessageId === '' || ($event['placeholderId'] ?? '') !== $this->pendingMessageId) {
+            return;
+        }
+
+        $lastIndex = array_key_last($this->messages);
+        if ($lastIndex !== null) {
+            $this->messages[$lastIndex] = [
+                'role' => 'assistant',
+                'content' => $event['content'] ?: null,
+                'pending' => true,
+                'streaming' => true,
+                'tool_calls_in_progress' => $event['toolCallsInProgress'] ?? [],
+            ];
+        }
+    }
+
     /**
      * Called by wire:poll — checks if the pending placeholder has been filled.
      * Handles three states: pending (thinking), streaming (partial content), completed/failed.
@@ -398,6 +417,20 @@ class AssistantPanel extends Component
     {
         $this->contextType = $type;
         $this->contextId = $id;
+    }
+
+    /**
+     * Listener for `assistant-open-with-context` — the `<x-ask-ai>` Blade
+     * component dispatches this so any page can bind the assistant to a
+     * specific entity in one click. The panel itself is opened by the
+     * companion browser event `open-assistant` that the component fires
+     * alongside this Livewire dispatch.
+     */
+    #[On('assistant-open-with-context')]
+    public function openWithContext(string $context = '', ?string $contextId = null): void
+    {
+        $this->contextType = $context;
+        $this->contextId = $contextId ?? '';
     }
 
     /**

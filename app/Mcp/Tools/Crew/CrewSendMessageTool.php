@@ -15,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant transitive-via-crew-execution
 class CrewSendMessageTool extends Tool
 {
     use HasStructuredErrors;

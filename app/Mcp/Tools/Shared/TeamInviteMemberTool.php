@@ -15,6 +15,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 #[IsDestructive]
 #[AssistantTool('write')]
+// @mcp-cross-tenant team-self-lookup
 class TeamInviteMemberTool extends Tool
 {
     use HasStructuredErrors;

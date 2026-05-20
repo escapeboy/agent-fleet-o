@@ -1,5 +1,67 @@
 <div wire:poll.5s.visible>
 
+    {{-- Persona switcher — borrowed from prilog.ai dual-positioning (CTO vs SRE) --}}
+    <div class="mb-4 flex items-center justify-between gap-3">
+        <div class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+            <button wire:click="setPersona('sre')"
+                    @class([
+                        'rounded-md px-3 py-1 text-xs font-medium transition',
+                        'bg-primary-600 text-white' => $persona === 'sre',
+                        'text-gray-600 hover:bg-gray-50' => $persona !== 'sre',
+                    ])>
+                Operator view
+            </button>
+            <button wire:click="setPersona('cto')"
+                    @class([
+                        'rounded-md px-3 py-1 text-xs font-medium transition',
+                        'bg-primary-600 text-white' => $persona === 'cto',
+                        'text-gray-600 hover:bg-gray-50' => $persona !== 'cto',
+                    ])>
+                Leadership view
+            </button>
+        </div>
+        <div></div>
+    </div>
+
+    @if ($persona === 'cto' && $ctoKpis)
+        {{-- Leadership-facing summary tile — debt reduction trend, auto-approvals, throughput. --}}
+        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-700">Audit-ready summary (last 30d)</h2>
+                <span class="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">Leadership</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div>
+                    <p class="text-xs text-gray-500">Experiments completed</p>
+                    <p class="mt-0.5 text-2xl font-semibold text-gray-900">{{ $ctoKpis['experimentsCompleted30d'] }}</p>
+                    @if ($ctoKpis['experimentsCompletedTrendPct'] != 0)
+                        <p @class([
+                            'text-xs',
+                            'text-emerald-600' => $ctoKpis['experimentsCompletedTrendPct'] > 0,
+                            'text-rose-600' => $ctoKpis['experimentsCompletedTrendPct'] < 0,
+                        ])>
+                            {{ $ctoKpis['experimentsCompletedTrendPct'] > 0 ? '+' : '' }}{{ $ctoKpis['experimentsCompletedTrendPct'] }}% vs prior 30d
+                        </p>
+                    @endif
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Auto-approved (trusted)</p>
+                    <p class="mt-0.5 text-2xl font-semibold text-gray-900">{{ $ctoKpis['approvalsAutoApproved30d'] }}</p>
+                    <p class="text-xs text-gray-400">skipped human gate</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">New experiments (7d)</p>
+                    <p class="mt-0.5 text-2xl font-semibold text-gray-900">{{ $ctoKpis['activeExperiments7d'] }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Total spend</p>
+                    <p class="mt-0.5 text-2xl font-semibold text-gray-900">{{ number_format($totalSpend, 0) }} cr</p>
+                    <p class="text-xs text-gray-400">all-time</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Widget Customization Controls --}}
     <div x-data="{ open: false }" class="mb-4 flex justify-end">
         <button @click="open = !open" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition">

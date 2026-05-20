@@ -1,0 +1,485 @@
+<?php
+
+namespace Tests\Feature\Domain\Signal;
+
+use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
+use App\Domain\Signal\Actions\NotifyCriticalSentryIssueAction;
+use App\Domain\Signal\Actions\TriageSentryIssueAction;
+use App\Domain\Signal\Enums\SentryTriageOutcome;
+use App\Domain\Signal\Enums\SignalStatus;
+use App\Domain\Signal\Models\Signal;
+use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
+use Mockery;
+use Tests\TestCase;
+
+/**
+ * Feature coverage for TriageSentryIssueAction — test plan §2 (TC-11..TC-18).
+ *
+ * The AI gateway is always faked: a Mockery double on AiGatewayInterface returns
+ * an AiResponseDTO whose `content` string carries the triage JSON the action
+ * parses. ProviderResolver is faked to return a fixed provider/model shape.
+ */
+class TriageSentryIssueActionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Team $team;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->team = Team::factory()->create(['owner_id' => $this->user->id]);
+        $this->user->update(['current_team_id' => $this->team->id]);
+        $this->team->users()->attach($this->user, ['role' => 'owner']);
+        $this->actingAs($this->user);
+
+        // Phase 1 delegation creates and transitions a real Experiment, which
+        // fires ExperimentTransitioned → listeners → queued stage jobs.
+        Queue::fake();
+
+        Cache::flush();
+
+        config(['sentry_watchdog.confidence_threshold' => 0.7]);
+    }
+
+    protected function tearDown(): void
+    {
+        Cache::flush();
+        parent::tearDown();
+    }
+
+    private function fakeGateway(string $content): void
+    {
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturn(new AiResponseDTO(
+            content: $content,
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 200, completionTokens: 80, costCredits: 1),
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            latencyMs: 120,
+        ));
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn([
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+        $this->app->instance(ProviderResolver::class, $resolver);
+    }
+
+    /**
+     * @param  array<string, mixed>  $investigation
+     */
+    private function triageJson(array $investigation): string
+    {
+        return json_encode(array_merge([
+            'root_cause' => 'Null dereference in the order summary renderer.',
+            'confidence' => 0.9,
+            'suspect_files' => ['app/Http/Controllers/OrderController.php'],
+            'estimated_diff_lines' => 12,
+            'is_critical' => false,
+            'summary' => 'Order summary crashes on missing line item.',
+        ], $investigation), JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $overrides
+     */
+    private function makeSentrySignal(array $payload = [], array $overrides = []): Signal
+    {
+        return Signal::create(array_merge([
+            'team_id' => $this->team->id,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'project_key' => 'fleetq',
+            'payload' => [
+                'source_type' => 'sentry',
+                'source_id' => 'sentry:'.bin2hex(random_bytes(4)),
+                'payload' => array_merge([
+                    'id' => 'sentry-issue-42',
+                    'title' => 'TypeError: Cannot read property of null',
+                    'culprit' => 'App\\Http\\Controllers\\OrderController::show',
+                    'level' => 'error',
+                    'count' => 7,
+                    'permalink' => 'https://sentry.example.com/issues/42/',
+                    'metadata' => ['type' => 'TypeError', 'value' => 'Cannot read property of null'],
+                ], $payload),
+            ],
+            'content_hash' => hash('sha256', uniqid('sentry-', true)),
+            'received_at' => now(),
+            'status' => SignalStatus::Received,
+        ], $overrides));
+    }
+
+    public function test_triage_uses_ai_classification_config_when_set(): void
+    {
+        config([
+            'sentry_watchdog.mode' => 'phase0',
+            'ai.classification.provider' => 'groq',
+            'ai.classification.model' => 'llama-3.3-70b-versatile',
+        ]);
+
+        $captured = null;
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturnUsing(function ($dto) use (&$captured) {
+            $captured = $dto;
+
+            return new AiResponseDTO(
+                content: $this->triageJson([]),
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 100, completionTokens: 50, costCredits: 1),
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                latencyMs: 80,
+            );
+        });
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        app(TriageSentryIssueAction::class)->execute($this->makeSentrySignal());
+
+        $this->assertNotNull($captured);
+        $this->assertSame('groq', $captured->provider);
+        $this->assertSame('llama-3.3-70b-versatile', $captured->model);
+    }
+
+    public function test_tc11_phase0_investigates_only_and_creates_no_experiment(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase0']);
+        $this->fakeGateway($this->triageJson([]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertNull($result->experimentId);
+        $this->assertSame(0, Experiment::query()->count());
+
+        $signal->refresh();
+        $this->assertNull($signal->experiment_id);
+        $this->assertSame(SignalStatus::Received, $signal->status);
+    }
+
+    public function test_tc12_phase1_actionable_parent_repo_issue_is_delegated(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => ['app/Http/Controllers/OrderController.php'],
+            'confidence' => 0.92,
+            'estimated_diff_lines' => 15,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::Delegated, $result->outcome);
+        $this->assertTrue($result->wasDelegated());
+        $this->assertNotNull($result->experimentId);
+
+        $signal->refresh();
+        $this->assertSame($result->experimentId, $signal->experiment_id);
+        $this->assertSame(SignalStatus::DelegatedToAgent, $signal->status);
+        $this->assertSame(1, Experiment::query()->count());
+    }
+
+    public function test_tc13_phase1_base_submodule_suspect_file_is_delegated_to_base_repo(): void
+    {
+        // Submodule-aware routing: pure-base suspect_files no longer block
+        // delegation — the fix is routed at the agent-fleet-o repo instead.
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => ['base/app/Domain/Agent/Models/Agent.php'],
+            'confidence' => 0.95,
+            'estimated_diff_lines' => 10,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::Delegated, $result->outcome);
+        $this->assertNotNull($result->experimentId);
+        $this->assertSame(1, Experiment::query()->count());
+
+        $signal->refresh();
+        $this->assertSame($result->experimentId, $signal->experiment_id);
+        $this->assertSame('escapeboy/agent-fleet-o', $signal->payload['target_repository']);
+    }
+
+    public function test_tc14_phase1_confidence_below_threshold_is_not_delegated(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+        config(['sentry_watchdog.confidence_threshold' => 0.7]);
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => ['app/Http/Controllers/OrderController.php'],
+            'confidence' => 0.4,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertNull($result->experimentId);
+        $this->assertSame(0.4, $result->confidence);
+        $this->assertSame(0, Experiment::query()->count());
+    }
+
+    public function test_tc15_critical_issue_triggers_immediate_notification_when_flag_on(): void
+    {
+        config([
+            'sentry_watchdog.mode' => 'phase1',
+            // Opt-in to the legacy per-signal alert behaviour.
+            'sentry_watchdog.critical_immediate' => true,
+        ]);
+        $this->fakeGateway($this->triageJson([
+            'is_critical' => true,
+            'suspect_files' => ['base/app/Domain/Signal/Models/Signal.php'],
+        ]));
+
+        $signal = $this->makeSentrySignal(['level' => 'fatal']);
+
+        $notify = Mockery::mock(NotifyCriticalSentryIssueAction::class);
+        $notify->shouldReceive('execute')
+            ->once()
+            ->with(Mockery::on(fn (Signal $s) => $s->id === $signal->id))
+            ->andReturnTrue();
+        $this->app->instance(NotifyCriticalSentryIssueAction::class, $notify);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertTrue($result->isCritical);
+    }
+
+    public function test_critical_issue_does_not_fire_immediate_notification_by_default(): void
+    {
+        // Default config has critical_immediate=false → per-signal alerts are
+        // suppressed and criticals get rolled up in the per-run digest instead.
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([
+            'is_critical' => true,
+            'suspect_files' => ['base/app/Domain/Signal/Models/Signal.php'],
+        ]));
+
+        $signal = $this->makeSentrySignal(['level' => 'fatal']);
+
+        $notify = Mockery::mock(NotifyCriticalSentryIssueAction::class);
+        $notify->shouldNotReceive('execute');
+        $this->app->instance(NotifyCriticalSentryIssueAction::class, $notify);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        // Critical flag is still set on the result — only the alert is suppressed.
+        $this->assertTrue($result->isCritical);
+    }
+
+    public function test_tc16_already_delegated_signal_is_skipped(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([]));
+
+        $signal = $this->makeSentrySignal([], ['status' => SignalStatus::DelegatedToAgent]);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::Skipped, $result->outcome);
+        $this->assertNull($result->experimentId);
+        $this->assertSame(0, Experiment::query()->count());
+    }
+
+    public function test_tc16_signal_with_existing_experiment_id_is_skipped(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway($this->triageJson([]));
+
+        $experiment = Experiment::factory()->create(['team_id' => $this->team->id]);
+        $signal = $this->makeSentrySignal([], [
+            'status' => SignalStatus::Received,
+            'experiment_id' => $experiment->id,
+        ]);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::Skipped, $result->outcome);
+        $this->assertSame(1, Experiment::query()->count());
+    }
+
+    public function test_tc17_json_wrapped_in_markdown_fences_is_parsed(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase0']);
+
+        $inner = $this->triageJson([
+            'root_cause' => 'Race condition in cache warm-up.',
+            'suspect_files' => ['app/Services/CacheWarmer.php', 'app/Jobs/WarmCacheJob.php'],
+            'confidence' => 0.81,
+        ]);
+        $this->fakeGateway("Here is my analysis:\n```json\n{$inner}\n```\nLet me know if you need more detail.");
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame('Race condition in cache warm-up.', $result->rootCause);
+        $this->assertSame(0.81, $result->confidence);
+        $this->assertSame(
+            ['app/Services/CacheWarmer.php', 'app/Jobs/WarmCacheJob.php'],
+            $result->suspectFiles,
+        );
+    }
+
+    public function test_tc17_unparseable_response_degrades_to_investigate_only(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway('the model returned no JSON at all, only prose');
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.0, $result->confidence);
+        $this->assertSame([], $result->suspectFiles);
+        $this->assertSame(0, Experiment::query()->count());
+    }
+
+    public function test_tc18_triage_succeeds_through_the_faked_gateway(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase0']);
+        $this->fakeGateway($this->triageJson([
+            'root_cause' => 'Unhandled timeout from the upstream pricing API.',
+            'confidence' => 0.77,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame('Unhandled timeout from the upstream pricing API.', $result->rootCause);
+        $this->assertSame(0.77, $result->confidence);
+        $this->assertSame($signal->id, $result->signalId);
+    }
+
+    public function test_unparseable_first_attempt_is_retried_with_stricter_prompt(): void
+    {
+        // First call returns prose; second call (after retry-prompt) returns valid JSON.
+        // The action must succeed and not record a triage error.
+        config(['sentry_watchdog.mode' => 'phase0']);
+
+        $calls = 0;
+        $secondPromptSawStrictReminder = false;
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturnUsing(function ($dto) use (&$calls, &$secondPromptSawStrictReminder) {
+            $calls++;
+            if ($calls === 1) {
+                return new AiResponseDTO(
+                    content: 'Sure, here is what I think happened — the cache layer went stale...',
+                    parsedOutput: null,
+                    usage: new AiUsageDTO(promptTokens: 200, completionTokens: 80, costCredits: 1),
+                    provider: 'groq',
+                    model: 'llama-3.3-70b-versatile',
+                    latencyMs: 80,
+                );
+            }
+            $secondPromptSawStrictReminder = str_contains($dto->systemPrompt, 'your previous reply could not be parsed');
+
+            return new AiResponseDTO(
+                content: $this->triageJson(['confidence' => 0.85, 'root_cause' => 'Stale cache layer.']),
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 230, completionTokens: 80, costCredits: 1),
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                latencyMs: 80,
+            );
+        });
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn(['provider' => 'groq', 'model' => 'llama-3.3-70b-versatile']);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(2, $calls, 'gateway should be invoked twice on first-attempt parse failure');
+        $this->assertTrue($secondPromptSawStrictReminder, 'retry must include the stricter JSON-only reminder');
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.85, $result->confidence);
+        $this->assertSame('Stale cache layer.', $result->rootCause);
+
+        $signal->refresh();
+        $this->assertArrayNotHasKey(
+            'sentry_watchdog_triage_error',
+            $signal->payload,
+            'successful retry must not record a triage error',
+        );
+    }
+
+    public function test_both_attempts_fail_records_structured_error_on_signal_payload(): void
+    {
+        // Both LLM calls return prose; the action must default AND persist a
+        // structured error blob on the signal so the failure is auditable.
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway('I cannot determine the root cause from this little context.');
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.0, $result->confidence);
+
+        $signal->refresh();
+        $this->assertArrayHasKey('sentry_watchdog_triage_error', $signal->payload);
+        $error = $signal->payload['sentry_watchdog_triage_error'];
+        $this->assertSame('parse_failure', $error['stage']);
+        $this->assertStringContainsString('I cannot determine the root cause', $error['raw_response']);
+        $this->assertSame('anthropic', $error['provider']);
+        $this->assertSame('claude-sonnet-4-5', $error['model']);
+        $this->assertNotEmpty($error['occurred_at']);
+    }
+
+    public function test_gateway_throwable_records_structured_error_on_signal_payload(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase0']);
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andThrow(new \RuntimeException('upstream timeout'));
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn(['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5']);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.0, $result->confidence);
+
+        $signal->refresh();
+        $this->assertArrayHasKey('sentry_watchdog_triage_error', $signal->payload);
+        $error = $signal->payload['sentry_watchdog_triage_error'];
+        $this->assertSame('gateway_exception', $error['stage']);
+        $this->assertStringContainsString('upstream timeout', $error['message']);
+    }
+}

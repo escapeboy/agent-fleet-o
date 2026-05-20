@@ -61,6 +61,7 @@ class BugReportWidgetController extends Controller
             'breadcrumbs' => ['nullable', 'string'],
             'failed_responses' => ['nullable', 'string'],
             'livewire_components' => ['nullable', 'string'],
+            'reported_type' => ['nullable', Rule::in(['auto', 'feature_request', 'bug'])],
         ]);
 
         $files = array_values(array_filter([
@@ -71,6 +72,7 @@ class BugReportWidgetController extends Controller
         $signals = $connector->poll([
             'team_id' => $team->id,
             'project_key' => $request->input('project'),
+            'reported_type' => $request->input('reported_type', 'auto'),
             'files' => $files,
             'payload' => [
                 'project' => $request->input('project'),

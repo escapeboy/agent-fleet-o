@@ -2,11 +2,12 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Enums\SignalInferredIntent;
 use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Models\GlobalSetting;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Schema\ObjectSchema;
 use Prism\Prism\Schema\StringSchema;
@@ -15,6 +16,7 @@ final class ClassifySignalIntentAction
 {
     public function __construct(
         private readonly AiGatewayInterface $gateway,
+        private readonly ProviderResolver $resolver,
     ) {}
 
     public function execute(Signal $signal): ?SignalInferredIntent
@@ -51,8 +53,15 @@ final class ClassifySignalIntentAction
             requiredFields: ['intent', 'reasoning'],
         );
 
-        $provider = GlobalSetting::get('default_llm_provider', 'anthropic');
-        $model = GlobalSetting::get('default_llm_model', 'claude-haiku-4-5-20251001');
+        // Internal classification runs on a dedicated platform key when set
+        // (config/ai.php classification), else per-team provider resolution.
+        $provider = (string) config('ai.classification.provider');
+        $model = (string) config('ai.classification.model');
+        if ($provider === '' || $model === '') {
+            $resolved = $this->resolver->resolve(team: Team::find($signal->team_id));
+            $provider = $resolved['provider'];
+            $model = $resolved['model'];
+        }
 
         try {
             $response = $this->gateway->complete(new AiRequestDTO(

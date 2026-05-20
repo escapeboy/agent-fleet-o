@@ -11,10 +11,13 @@ use App\Domain\Marketplace\Enums\ListingVisibility;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 
 class PublishForm extends Component
 {
+    use AuthorizesRequests;
+
     public string $itemType = 'skill';
 
     public string $itemId = '';
@@ -122,6 +125,8 @@ class PublishForm extends Component
 
     public function publish(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate();
 
         $user = auth()->user();

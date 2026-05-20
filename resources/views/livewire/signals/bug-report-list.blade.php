@@ -3,8 +3,8 @@
         <h1 class="text-2xl font-semibold text-gray-900">Bug Reports</h1>
     </div>
 
-    {{-- Filters --}}
-    <div class="flex flex-wrap gap-3 mb-6">
+    {{-- Filters row 1: existing dropdowns + reporter --}}
+    <div class="flex flex-wrap gap-3 mb-3">
         <x-form-select wire:model.live="projectFilter">
             <option value="">All Projects</option>
             @foreach($projects as $project)
@@ -33,6 +33,30 @@
         />
     </div>
 
+    {{-- Filters row 2: keyword search + date range --}}
+    <div class="flex flex-wrap gap-3 mb-6">
+        <div class="flex-1 min-w-48">
+            <x-form-input
+                wire:model.live.debounce.300ms="search"
+                type="text"
+                placeholder="Search title, description, URL…"
+            />
+        </div>
+        <div class="flex items-center gap-2">
+            <x-form-input
+                wire:model.live="dateFrom"
+                type="date"
+                placeholder="From"
+            />
+            <span class="text-gray-400 text-sm">–</span>
+            <x-form-input
+                wire:model.live="dateTo"
+                type="date"
+                placeholder="To"
+            />
+        </div>
+    </div>
+
     {{-- Table --}}
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
@@ -43,14 +67,62 @@
                             Date
                             @if($sortBy === 'created_at')
                                 <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
                             @endif
                         </button>
                     </th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button wire:click="sort('project_key')" class="flex items-center gap-1 hover:text-gray-900">
+                            Project
+                            @if($sortBy === 'project_key')
+                                <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
+                            @endif
+                        </button>
+                    </th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reporter</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button wire:click="sort('severity')" class="flex items-center gap-1 hover:text-gray-900">
+                            Severity
+                            @if($sortBy === 'severity')
+                                <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
+                            @endif
+                        </button>
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button wire:click="sort('status')" class="flex items-center gap-1 hover:text-gray-900">
+                            Status
+                            @if($sortBy === 'status')
+                                <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
+                            @endif
+                        </button>
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button wire:click="sort('reporter')" class="flex items-center gap-1 hover:text-gray-900">
+                            Reporter
+                            @if($sortBy === 'reporter')
+                                <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
+                            @endif
+                        </button>
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <button wire:click="sort('suggested_type')" class="flex items-center gap-1 hover:text-gray-900">
+                            Type
+                            @if($sortBy === 'suggested_type')
+                                <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
+                            @else
+                                <span class="text-gray-300">↕</span>
+                            @endif
+                        </button>
+                    </th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -65,6 +137,11 @@
                             'cosmetic' => 'bg-gray-100 text-gray-800',
                         ];
                         $statusColor = $report->status?->color() ?? 'gray';
+                        $suggestedTypeLabels = [
+                            'bug' => ['label' => 'Bug', 'class' => 'bg-red-100 text-red-800'],
+                            'feature_request' => ['label' => 'Feature', 'class' => 'bg-blue-100 text-blue-800'],
+                        ];
+                        $isReopenable = in_array($report->status?->value, ['resolved', 'dismissed'], true);
                     @endphp
                     <tr
                         wire:navigate
@@ -72,7 +149,9 @@
                         onclick="window.location='{{ route('bug-reports.show', $report) }}'"
                     >
                         <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                            {{ $report->created_at?->diffForHumans() }}
+                            <span title="{{ $report->created_at?->diffForHumans() }}">
+                                {{ $report->created_at?->format('Y-m-d H:i') }}
+                            </span>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-700">
                             {{ $report->project_key ?? '—' }}
@@ -93,7 +172,28 @@
                         <td class="px-4 py-3 text-sm text-gray-600">
                             {{ $report->payload['reporter_name'] ?? '—' }}
                         </td>
-                        <td class="px-4 py-3 text-right" onclick="event.stopPropagation()">
+                        <td class="px-4 py-3">
+                            @if($report->suggested_type && isset($suggestedTypeLabels[$report->suggested_type]))
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $suggestedTypeLabels[$report->suggested_type]['class'] }}">
+                                    {{ $suggestedTypeLabels[$report->suggested_type]['label'] }}
+                                </span>
+                            @else
+                                <span class="text-gray-300">—</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right whitespace-nowrap" onclick="event.stopPropagation()">
+                            @if($isReopenable)
+                                <button
+                                    wire:click.stop="reopen('{{ $report->id }}')"
+                                    wire:confirm="Reopen this bug report?"
+                                    class="text-gray-400 hover:text-blue-600 transition-colors mr-2"
+                                    title="Reopen"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                            @endif
                             <button
                                 wire:click.stop="delete('{{ $report->id }}')"
                                 wire:confirm="Delete this bug report?"
@@ -108,7 +208,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">
+                        <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500">
                             No bug reports found.
                         </td>
                     </tr>

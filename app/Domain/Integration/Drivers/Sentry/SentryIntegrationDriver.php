@@ -158,12 +158,20 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
 
         try {
             $apiBase = $this->apiBase($integration);
+
+            // Only unresolved issues — resolved issues are closed work and must
+            // not be re-ingested as fresh signals.
+            $query = ['query' => 'is:unresolved', 'limit' => 25];
+
+            // Scope to a single Sentry project when config['project_id'] is set
+            // (numeric Sentry project id); otherwise polls the whole org.
+            if (! empty($integration->config['project_id'])) {
+                $query['project'] = $integration->config['project_id'];
+            }
+
             $response = Http::withToken($token)
                 ->timeout(15)
-                ->get("{$apiBase}/organizations/{$orgSlug}/issues/", [
-                    'is_unhandled' => true,
-                    'limit' => 25,
-                ]);
+                ->get("{$apiBase}/organizations/{$orgSlug}/issues/", $query);
 
             if (! $response->successful()) {
                 return [];

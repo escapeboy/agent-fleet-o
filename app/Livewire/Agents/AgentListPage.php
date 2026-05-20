@@ -59,6 +59,8 @@ class AgentListPage extends Component
 
     public function importWorkspace(): void
     {
+        $this->authorize('edit-content');
+
         $this->validate(['importFile' => 'required|file|mimes:zip,yaml,yml|max:10240']);
 
         $action = app(ImportAgentWorkspaceAction::class);

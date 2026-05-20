@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+// @mcp-cross-tenant transitive-via-experiment
 class ExperimentStageTelemetryTool extends Tool
 {
     use HasStructuredErrors;

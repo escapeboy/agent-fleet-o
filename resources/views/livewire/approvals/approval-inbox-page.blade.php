@@ -79,7 +79,56 @@
                             @elseif($approval->isHumanTask())
                                 <span class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Human Task</span>
                             @endif
+                            @php $prTier = is_array($approval->metadata ?? null) ? ($approval->metadata['tier'] ?? null) : null; @endphp
+                            @if($prTier)
+                                @php
+                                    $tierColor = match($prTier) {
+                                        'T1' => 'bg-green-100 text-green-700',
+                                        'T2' => 'bg-yellow-100 text-yellow-700',
+                                        'T3' => 'bg-orange-100 text-orange-700',
+                                        'T4' => 'bg-red-100 text-red-700',
+                                        default => 'bg-gray-100 text-gray-700',
+                                    };
+                                @endphp
+                                <span class="rounded-full {{ $tierColor }} px-2 py-0.5 text-xs font-semibold">{{ $prTier }}</span>
+                            @endif
                         </div>
+
+                        @if($prTier)
+                            @php $meta = $approval->metadata; @endphp
+                            <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+                                @if(! empty($meta['reason']))
+                                    <div class="font-medium text-gray-700">{{ $meta['reason'] }}</div>
+                                @endif
+                                <div class="mt-1 flex flex-wrap items-center gap-3 text-gray-500">
+                                    @if(isset($meta['files_count']))
+                                        <span><span class="font-medium text-gray-700">{{ $meta['files_count'] }}</span> {{ $meta['files_count'] === 1 ? 'file' : 'files' }}</span>
+                                    @endif
+                                    @if(isset($meta['lines_changed']))
+                                        <span><span class="font-medium text-gray-700">{{ $meta['lines_changed'] }}</span> LOC</span>
+                                    @endif
+                                    @if(! empty($meta['target_branch']))
+                                        <span>target: <code class="rounded bg-white px-1 font-mono text-gray-700">{{ $meta['target_branch'] }}</code></span>
+                                    @endif
+                                    @if(! empty($meta['pr_url']))
+                                        <a href="{{ $meta['pr_url'] }}" target="_blank" rel="noopener" class="text-primary-600 hover:underline">PR #{{ basename($meta['pr_url']) }} ↗</a>
+                                    @endif
+                                </div>
+                                @if(! empty($meta['files_changed']) && is_array($meta['files_changed']))
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-gray-600 hover:text-gray-900">Files changed ({{ count($meta['files_changed']) }})</summary>
+                                        <ul class="mt-1 space-y-0.5 font-mono text-xs text-gray-600">
+                                            @foreach(array_slice($meta['files_changed'], 0, 20) as $file)
+                                                <li>{{ $file }}</li>
+                                            @endforeach
+                                            @if(count($meta['files_changed']) > 20)
+                                                <li class="text-gray-400">… +{{ count($meta['files_changed']) - 20 }} more</li>
+                                            @endif
+                                        </ul>
+                                    </details>
+                                @endif
+                            </div>
+                        @endif
 
                         @if($approval->outboundProposal)
                             <div class="mt-3 rounded-lg bg-gray-50 p-3">

@@ -130,6 +130,8 @@ class WhatsAppOutboundPage extends Component
             return;
         }
 
+        $response = null;
+
         try {
             $response = Http::timeout(10)
                 ->withToken($accessToken)
@@ -150,12 +152,12 @@ class WhatsAppOutboundPage extends Component
         $this->lastTestedAt = 'just now';
         $this->lastTestStatus = $status;
 
-        if ($status === 'success') {
+        if ($status === 'success' && $response !== null) {
             $phoneDisplay = $response->json('display_phone_number') ?? $phoneNumberId;
             $this->testMessage = "Connected successfully. Phone: {$phoneDisplay}";
             $this->testError = null;
         } else {
-            $errorMsg = $response->json('error.message') ?? 'Unknown error';
+            $errorMsg = $response?->json('error.message') ?? 'Unknown error';
             $this->testError = "Meta API error: {$errorMsg}";
             $this->testMessage = null;
         }

@@ -28,6 +28,8 @@
 
         {{-- Actions --}}
         <div class="flex flex-wrap items-center gap-2">
+            <x-ask-ai context="experiment-detail" :context-id="$experiment->id" />
+
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Draft)
                 <form class="inline" onsubmit="return false" toolname="start_experiment" tooldescription="Start this experiment — transition from draft to scoring">
                 <button type="button" wire:click="startExperiment" wire:confirm="Start this run? It will begin the scoring stage."
@@ -39,9 +41,14 @@
 
             @if($experiment->status->isPausable())
                 <form class="inline" onsubmit="return false" toolname="pause_experiment" tooldescription="Pause this running experiment">
-                <button type="button" wire:click="pauseExperiment"
+                <button type="button"
+                    x-data="{ pending: false }"
+                    wire:click="pauseExperiment"
+                    @click="pending = true"
+                    wire:loading.attr="disabled"
                     class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-100">
-                    Pause
+                    <span wire:loading wire:target="pauseExperiment"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="pauseExperiment">Pause</span>
                 </button>
                 </form>
 
@@ -62,9 +69,14 @@
 
             @if($experiment->status === \App\Domain\Experiment\Enums\ExperimentStatus::Paused)
                 <form class="inline" onsubmit="return false" toolname="resume_experiment" tooldescription="Resume this paused experiment">
-                <button type="button" wire:click="resumeExperiment"
+                <button type="button"
+                    x-data="{ pending: false }"
+                    wire:click="resumeExperiment"
+                    @click="pending = true"
+                    wire:loading.attr="disabled"
                     class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100">
-                    Resume
+                    <span wire:loading wire:target="resumeExperiment"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+                    <span wire:loading.remove wire:target="resumeExperiment">Resume</span>
                 </button>
                 </form>
             @endif
@@ -420,8 +432,8 @@
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
-                $workflowTabs = ['tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
-                $standardTabs = ['timeline' => 'Timeline', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                $workflowTabs = ['activity' => 'Activity', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                $standardTabs = ['timeline' => 'Timeline', 'activity' => 'Activity', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
                 if ($experiment->status->isFailed()) {
                     $workflowTabs['lessons'] = 'Lessons Learned';
                     $standardTabs['lessons'] = 'Lessons Learned';
@@ -461,6 +473,10 @@
     {{-- Tab Content --}}
     @if($activeTab === 'timeline')
         <livewire:experiments.experiment-timeline :experiment="$experiment" :key="'timeline-'.$experiment->id" />
+    @elseif($activeTab === 'activity')
+        <div @if(! $experiment->status->isTerminal()) wire:poll.30s @endif>
+            <livewire:experiments.unified-timeline :experiment="$experiment" :key="'activity-'.$experiment->id" />
+        </div>
     @elseif($activeTab === 'time-travel')
         <livewire:experiments.workflow-timeline :experimentId="$experiment->id" :key="'time-travel-'.$experiment->id" />
     @elseif($activeTab === 'tasks')

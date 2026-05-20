@@ -80,7 +80,7 @@ class PrismAiGateway implements AiGatewayInterface
 
             $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
             $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
-            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens()); // method, not property
             $span->setAttribute('llm.latency_ms', $response->latencyMs);
             $span->setStatus(StatusCode::STATUS_OK);
 
@@ -137,7 +137,7 @@ class PrismAiGateway implements AiGatewayInterface
 
             $span->setAttribute('llm.usage.input_tokens', $response->usage->promptTokens);
             $span->setAttribute('llm.usage.output_tokens', $response->usage->completionTokens);
-            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens);
+            $span->setAttribute('llm.usage.total_tokens', $response->usage->totalTokens()); // method, not property
             $span->setAttribute('llm.latency_ms', $response->latencyMs);
             $span->setStatus(StatusCode::STATUS_OK);
 
@@ -691,10 +691,17 @@ class PrismAiGateway implements AiGatewayInterface
             );
         }
 
-        // Explicitly restore the original platform API key to clear any
-        // BYOK key set by a prior Horizon job.
+        // Restore the platform API key, clearing any BYOK key set by a prior
+        // Horizon job. Sub-program teams (finance, etc.) resolve from a
+        // dedicated key so their LLM spend stays isolated from — and is never
+        // billed against — the main platform key; they fall back to the
+        // platform key per-provider when the sub-program key is unset.
         if ($configKey) {
-            $platformKey = config("services.platform_api_keys.{$request->provider}");
+            $isSubProgram = $team && ($team->sub_program_slug ?? 'cloud') !== 'cloud';
+            $platformKey = $isSubProgram
+                ? (config("services.sub_program_api_keys.{$request->provider}")
+                    ?: config("services.platform_api_keys.{$request->provider}"))
+                : config("services.platform_api_keys.{$request->provider}");
             config([$configKey => $platformKey]);
         }
 

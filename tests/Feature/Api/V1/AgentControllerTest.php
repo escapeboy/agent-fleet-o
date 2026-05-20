@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domain\Agent\Models\Agent;
+use App\Infrastructure\AI\Services\ProviderResolver;
 
 class AgentControllerTest extends ApiTestCase
 {
@@ -79,6 +80,29 @@ class AgentControllerTest extends ApiTestCase
             ->assertJsonPath('data.provider', 'openai');
 
         $this->assertDatabaseHas('agents', ['name' => 'New Agent']);
+    }
+
+    public function test_create_agent_without_provider_uses_resolved_default(): void
+    {
+        $this->actingAsApiUser();
+
+        $resolved = app(ProviderResolver::class)->resolve(team: $this->team);
+
+        $response = $this->postJson('/api/v1/agents', [
+            'name' => 'Defaulted Agent',
+            'role' => 'Analyst',
+            'goal' => 'Analyze data',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.provider', $resolved['provider'])
+            ->assertJsonPath('data.model', $resolved['model']);
+
+        $this->assertDatabaseHas('agents', [
+            'name' => 'Defaulted Agent',
+            'provider' => $resolved['provider'],
+            'model' => $resolved['model'],
+        ]);
     }
 
     public function test_can_update_agent(): void

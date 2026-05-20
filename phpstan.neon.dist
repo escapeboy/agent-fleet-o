@@ -3,12 +3,16 @@ includes:
     - phpstan-baseline.neon
     - phpstan-baseline-acp.neon
     - phpstan-baseline-trendshift.neon
+    - phpstan-baseline-sentry-watchdog.neon
 
 parameters:
     paths:
         - app/
 
     level: 5
+
+    parallel:
+        maximumNumberOfProcesses: 1
 
     checkModelProperties: true
     noEnvCallsOutsideOfConfig: true

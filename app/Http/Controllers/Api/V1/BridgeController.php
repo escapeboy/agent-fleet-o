@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @tags Bridge
@@ -286,25 +288,39 @@ class BridgeController extends Controller
     }
 
     /**
-     * Proxy an MCP tool call through the relay to a bridge-hosted MCP server.
+     * Proxy an MCP tool call to a bridge-hosted MCP server.
      *
-     * Uses the same Redis frame-based protocol as all bridge communication:
-     * RPUSH to bridge:req:{teamId} → relay binary → WebSocket → bridge daemon → MCP server.
+     * Two transport paths:
+     *  - HTTP-mode bridges (endpoint_url set): POST directly to
+     *    {endpoint_url}/mcp/{server} with the validated body and
+     *    return whatever the bridge returns (must be MCP JSON-RPC shape).
+     *  - Relay-binary bridges (default): RPUSH to bridge:req:{teamId} →
+     *    relay binary → WebSocket → bridge daemon → MCP server, response
+     *    streamed back via bridge:stream:{request_id}.
+     *
+     * Both paths use the same validated body shape, so callers don't have
+     * to know which transport is in play.
      *
      * @response 200 {"result": {"content": [{"type": "text", "text": "..."}]}}
      */
-    public function mcpCall(Request $request): JsonResponse
+    public function mcpCall(Request $request): Response
     {
         $validated = $request->validate([
             'server' => 'required|string|max:100',
             'method' => 'required|string|in:tools/call,tools/list',
             'params' => 'required|array',
             'timeout' => 'nullable|integer|min:1|max:300',
+            // When true, opens an SSE stream to the daemon and forwards
+            // bytes back to the caller verbatim (text/event-stream). Only
+            // honoured for HTTP-mode bridges; relay-mode bridges ignore
+            // it and return synchronous JSON as before.
+            'stream' => 'nullable|boolean',
         ]);
 
         $teamId = $this->resolveTeamId($request);
         $serverName = $validated['server'];
         $timeout = $validated['timeout'] ?? 60;
+        $stream = (bool) ($validated['stream'] ?? false);
         $requestId = Str::uuid()->toString();
 
         $bridge = app(BridgeRouter::class)->resolveForMcpServer($teamId, $serverName);
@@ -322,7 +338,43 @@ class BridgeController extends Controller
             'server' => $serverName,
             'method' => $validated['method'],
             'tool' => $validated['params']['name'] ?? null,
+            'transport' => $bridge->isHttpMode() ? 'http_direct' : 'relay',
         ]);
+
+        // HTTP-tunnel-mode bridges (Cloudflare Tunnel / Tailscale Funnel /
+        // ngrok / etc.): the daemon exposes an HTTP endpoint at endpoint_url.
+        // Skip the Redis+relay path entirely and POST directly. Synchronous
+        // request/response with no streaming for now — daemons that want
+        // chunked output can keep the relay path.
+        if ($bridge->isHttpMode()) {
+            if ($stream) {
+                return $this->mcpCallViaHttpStreaming(
+                    bridge: $bridge,
+                    serverName: $serverName,
+                    method: $validated['method'],
+                    params: $validated['params'],
+                    requestId: $requestId,
+                    timeout: $timeout,
+                );
+            }
+
+            return $this->mcpCallViaHttp(
+                bridge: $bridge,
+                serverName: $serverName,
+                method: $validated['method'],
+                params: $validated['params'],
+                requestId: $requestId,
+                timeout: $timeout,
+            );
+        }
+
+        if ($stream) {
+            return response()->json([
+                'error' => 'stream=true is only supported for HTTP-tunnel-mode bridges. '
+                    .'The relay-binary path uses Redis frames and does not currently '
+                    .'forward chunked output.',
+            ], 400);
+        }
 
         try {
             $registry = app(BridgeRequestRegistry::class);
@@ -372,6 +424,224 @@ class BridgeController extends Controller
                 'error' => "Bridge MCP call failed: {$e->getMessage()}",
             ], 502);
         }
+    }
+
+    /**
+     * HTTP-direct path of mcpCall: POST to {endpoint_url}/mcp/{server} on
+     * the bridge daemon and forward the response.
+     *
+     * Auth: Bearer {endpoint_secret} when present. Bridge daemons that
+     * configure no secret accept anonymous calls (loopback-only deployment).
+     *
+     * Failure modes:
+     *   - HTTP exception (DNS / connect / timeout) → 502
+     *   - 4xx response from the daemon → forward status + body verbatim so
+     *     callers see the original "tool not found" / "bad payload" error
+     *     instead of a generic 502 wrapping
+     *   - 5xx response from the daemon → 502 with status + body tail
+     *     (the daemon itself is broken)
+     *   - Successful 2xx → forward the parsed JSON body verbatim
+     */
+    private function mcpCallViaHttp(
+        BridgeConnection $bridge,
+        string $serverName,
+        string $method,
+        array $params,
+        string $requestId,
+        int $timeout,
+    ): JsonResponse {
+        $headers = ['Accept' => 'application/json'];
+        if (! empty($bridge->endpoint_secret)) {
+            $headers['Authorization'] = 'Bearer '.$bridge->endpoint_secret;
+        }
+
+        $url = rtrim($bridge->endpoint_url, '/').'/mcp/'.$serverName;
+        $body = [
+            'request_id' => $requestId,
+            'method' => $method,
+            'params' => $params,
+            'timeout' => $timeout,
+        ];
+
+        try {
+            // Add a small buffer over the per-call timeout so the HTTP layer
+            // doesn't fire before the daemon's own timeout check returns.
+            $response = Http::timeout($timeout + 5)
+                ->withHeaders($headers)
+                ->post($url, $body);
+        } catch (\Throwable $e) {
+            Log::error('BridgeController: HTTP-direct MCP call failed', [
+                'request_id' => $requestId,
+                'bridge_id' => $bridge->id,
+                'endpoint_url' => $bridge->endpoint_url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => "Bridge HTTP-direct call failed: {$e->getMessage()}",
+            ], 502);
+        }
+
+        if ($response->clientError()) {
+            // 4xx from the daemon: pass the daemon's status + body to the
+            // caller unchanged. The daemon already produced a meaningful
+            // error (e.g. 404 "tool not found", 400 "bad payload") and
+            // wrapping it as 502 obscures the real cause.
+            $payload = $response->json();
+            if (is_array($payload)) {
+                return response()->json($payload, $response->status());
+            }
+
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
+            ], $response->status());
+        }
+
+        if ($response->serverError()) {
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
+            ], 502);
+        }
+
+        // Touch last_seen_at so the connection's health stays fresh.
+        $bridge->update(['last_seen_at' => now()]);
+
+        $payload = $response->json();
+        if (! is_array($payload)) {
+            return response()->json([
+                'error' => 'Bridge returned non-JSON body for an HTTP-direct MCP call.',
+            ], 502);
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Streaming variant of mcpCallViaHttp: ask the daemon for an SSE
+     * response and forward the bytes verbatim to the FleetQ caller.
+     *
+     * Pre-stream failures (DNS / connect / 4xx / 5xx) are collapsed to
+     * the same JSON error shape mcpCallViaHttp uses, so a caller that
+     * sets stream=true gets either a fully-streamed text/event-stream
+     * response (200) or a single non-streamed JSON error (4xx/5xx). No
+     * mid-flight transport switch.
+     *
+     * Output buffering: the response sets `X-Accel-Buffering: no` so
+     * nginx forwards bytes as soon as flush() is called (without the
+     * default 64k buffer). PHP-FPM's own output buffering is disabled
+     * inside the stream callback via @ob_end_clean() before the first
+     * write — see comment there.
+     */
+    private function mcpCallViaHttpStreaming(
+        BridgeConnection $bridge,
+        string $serverName,
+        string $method,
+        array $params,
+        string $requestId,
+        int $timeout,
+    ): Response {
+        $headers = [
+            'Accept' => 'text/event-stream',
+        ];
+        if (! empty($bridge->endpoint_secret)) {
+            $headers['Authorization'] = 'Bearer '.$bridge->endpoint_secret;
+        }
+
+        $url = rtrim($bridge->endpoint_url, '/').'/mcp/'.$serverName;
+        $body = [
+            'request_id' => $requestId,
+            'method' => $method,
+            'params' => $params,
+            'timeout' => $timeout,
+        ];
+
+        try {
+            $response = Http::withOptions(['stream' => true])
+                ->timeout($timeout + 5)
+                ->withHeaders($headers)
+                ->post($url, $body);
+        } catch (\Throwable $e) {
+            Log::error('BridgeController: HTTP-direct streaming MCP call failed', [
+                'request_id' => $requestId,
+                'bridge_id' => $bridge->id,
+                'endpoint_url' => $bridge->endpoint_url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => "Bridge HTTP-direct streaming call failed: {$e->getMessage()}",
+            ], 502);
+        }
+
+        if ($response->clientError()) {
+            // Same 4xx pass-through as the synchronous path: the daemon
+            // already produced a meaningful client error and wrapping it
+            // as 502 would obscure the cause. Body is at most 500 chars
+            // here because we never started reading the stream body.
+            $bodyTail = substr((string) $response->body(), 0, 500);
+            $decoded = json_decode($bodyTail, true);
+            if (is_array($decoded)) {
+                return response()->json($decoded, $response->status());
+            }
+
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".$bodyTail,
+            ], $response->status());
+        }
+
+        if ($response->serverError()) {
+            return response()->json([
+                'error' => "Bridge HTTP {$response->status()}: ".substr((string) $response->body(), 0, 500),
+            ], 502);
+        }
+
+        $bridge->update(['last_seen_at' => now()]);
+
+        $psrStream = $response->toPsrResponse()->getBody();
+
+        return new StreamedResponse(
+            function () use ($psrStream): void {
+                // Production-only output-buffer handling. In tests Laravel's
+                // TestResponse wraps the streamedContent() invocation in its
+                // own ob_start with an output handler that captures into a
+                // string; dropping or flushing buffers from inside the
+                // callback collides with that wrapper and surfaces as
+                // "Failed to delete buffer. No buffer to delete" on the
+                // framework's own teardown. We rely on `X-Accel-Buffering:
+                // no` + Laravel's `cleanOutputBuffers` to do the right thing
+                // outside tests.
+                $inTests = app()->runningUnitTests();
+                if (! $inTests) {
+                    while (ob_get_level() > 0) {
+                        if (ob_get_clean() === false) {
+                            break;
+                        }
+                    }
+                }
+
+                while (! $psrStream->eof()) {
+                    $chunk = $psrStream->read(8192);
+                    if ($chunk === '') {
+                        // PSR-7 streams can return '' transiently while the
+                        // upstream is still producing — yield CPU briefly.
+                        usleep(10_000);
+
+                        continue;
+                    }
+                    echo $chunk;
+                    if (! $inTests) {
+                        flush();
+                    }
+                }
+            },
+            200,
+            [
+                'Content-Type' => 'text/event-stream',
+                'Cache-Control' => 'no-cache',
+                'Connection' => 'keep-alive',
+                'X-Accel-Buffering' => 'no',
+            ],
+        );
     }
 
     /**

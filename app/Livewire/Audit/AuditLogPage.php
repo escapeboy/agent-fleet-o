@@ -3,6 +3,7 @@
 namespace App\Livewire\Audit;
 
 use App\Domain\Audit\Models\AuditEntry;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -18,6 +19,14 @@ class AuditLogPage extends Component
     public string $eventFilter = '';
 
     public ?string $expandedEntryId = null;
+
+    public function mount(): void
+    {
+        // Audit entries are compliance data — restrict to admin/owner roles,
+        // mirroring the Audit Console. Queries are already team-isolated via
+        // AuditEntry's TeamScope; this is the explicit access guard on top.
+        abort_unless(auth()->check() && Gate::allows('manage-team'), 403);
+    }
 
     public function updatedSearch(): void
     {

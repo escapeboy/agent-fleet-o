@@ -3,6 +3,9 @@
 namespace App\Livewire\Memory;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Memory\Actions\ResolveMemoryConflictAction;
+use App\Domain\Memory\Enums\MemoryBeliefStatus;
+use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Project\Models\Project;
@@ -36,6 +39,22 @@ class MemoryBrowserPage extends Component
     /** Filter by tag. Empty string means all tags. */
     #[Url]
     public string $tagFilter = '';
+
+    /** Filter by structured belief type. Empty string means all types. */
+    #[Url]
+    public string $beliefTypeFilter = '';
+
+    /** Filter by belief lifecycle status. Empty string means all statuses. */
+    #[Url]
+    public string $beliefStatusFilter = '';
+
+    /** Filter by retrieval domain scope. Empty string means all domains. */
+    #[Url]
+    public string $domainFilter = '';
+
+    /** When '1', show only memories flagged as contradicting another belief. */
+    #[Url]
+    public string $conflictFilter = '';
 
     public string $sortField = 'created_at';
 
@@ -87,6 +106,49 @@ class MemoryBrowserPage extends Component
     public function updatedTagFilter(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedBeliefTypeFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedBeliefStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDomainFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedConflictFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Resolve a flagged contradiction: "supersede" marks the conflicting
+     * partner superseded; "dismiss" clears the flag as a false positive.
+     */
+    public function resolveConflict(string $memoryId, string $resolution): void
+    {
+        Gate::authorize('edit-content');
+
+        try {
+            app(ResolveMemoryConflictAction::class)->execute(
+                memoryId: $memoryId,
+                teamId: (string) auth()->user()->current_team_id,
+                resolution: $resolution,
+            );
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
+        session()->flash('message', 'Conflict resolved.');
     }
 
     /**
@@ -147,14 +209,48 @@ class MemoryBrowserPage extends Component
             return;
         }
 
-        Memory::where('id', $memoryId)->update(['tier' => $tier->value]);
+        Memory::where('id', $memoryId)->update([
+            'tier' => $tier->value,
+            'proposal_status' => 'approved',
+            'reviewed_at' => now(),
+            'reviewed_by' => 'user:'.(auth()->user()?->email ?? 'anonymous'),
+        ]);
 
         session()->flash('message', "Memory promoted to {$tier->value}.");
     }
 
+    /**
+     * Reject a Proposed-tier memory. Records the reason and stops it from
+     * surfacing in retrieval. Used to dismiss noisy or duplicate proposals.
+     */
+    public function rejectProposal(string $memoryId, string $reason): void
+    {
+        Gate::authorize('edit-content');
+
+        $reason = trim($reason);
+        if ($reason === '') {
+            session()->flash('error', 'A rejection reason is required.');
+
+            return;
+        }
+
+        Memory::where('id', $memoryId)->update([
+            'proposal_status' => 'rejected',
+            'reviewed_at' => now(),
+            'rejection_reason' => mb_substr($reason, 0, 1000),
+            'reviewed_by' => 'user:'.(auth()->user()?->email ?? 'anonymous'),
+        ]);
+
+        if ($this->expandedId === $memoryId) {
+            $this->expandedId = null;
+        }
+
+        session()->flash('message', 'Proposal rejected.');
+    }
+
     public function render(): View
     {
-        $query = Memory::query()->with(['agent', 'project']);
+        $query = Memory::query()->with(['agent', 'project', 'supersedes', 'conflictsWith']);
 
         if ($this->search) {
             $query->where('content', 'ilike', "%{$this->search}%");
@@ -176,6 +272,22 @@ class MemoryBrowserPage extends Component
             $query->where('tier', $this->tierFilter);
         }
 
+        if ($this->beliefTypeFilter) {
+            $query->where('belief_type', $this->beliefTypeFilter);
+        }
+
+        if ($this->beliefStatusFilter) {
+            $query->where('belief_status', $this->beliefStatusFilter);
+        }
+
+        if ($this->domainFilter) {
+            $query->where('domain', $this->domainFilter);
+        }
+
+        if ($this->conflictFilter === '1') {
+            $query->where('conflict_flag', true);
+        }
+
         if ($this->tagFilter) {
             if (config('database.default') === 'pgsql') {
                 $query->whereRaw('tags @> ?', [json_encode([$this->tagFilter])]);
@@ -192,6 +304,11 @@ class MemoryBrowserPage extends Component
         // Count unreviewed proposed memories for the badge
         $proposalCount = Memory::query()
             ->where('tier', MemoryTier::Proposed->value)
+            ->count();
+
+        // Count memories flagged as contradicting another belief.
+        $conflictCount = Memory::query()
+            ->where('conflict_flag', true)
             ->count();
 
         // Collect distinct tags across the current team's memories. The
@@ -220,7 +337,11 @@ class MemoryBrowserPage extends Component
             'projects' => Project::orderBy('title')->pluck('title', 'id'),
             'sourceTypes' => Memory::distinct()->pluck('source_type')->sort()->values(),
             'tiers' => MemoryTier::cases(),
+            'beliefTypes' => MemoryBeliefType::cases(),
+            'beliefStatuses' => MemoryBeliefStatus::cases(),
+            'domains' => Memory::query()->whereNotNull('domain')->distinct()->orderBy('domain')->pluck('domain'),
             'proposalCount' => $proposalCount,
+            'conflictCount' => $conflictCount,
             'availableTags' => $availableTags,
         ])->layout('layouts.app', ['header' => 'Memory Browser']);
     }

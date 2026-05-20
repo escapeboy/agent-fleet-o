@@ -68,10 +68,8 @@ class SupabaseRealtimeConnector implements OutboundConnectorInterface
                 return $action;
             }
 
-            // Decode content to send as structured payload
-            $payload = is_string($proposal->content)
-                ? (json_decode($proposal->content, true) ?? ['message' => $proposal->content])
-                : (array) $proposal->content;
+            // Structured payload from the proposal content.
+            $payload = $proposal->content;
 
             $payload['_experiment_id'] = $proposal->experiment_id;
             $payload['_proposal_id'] = $proposal->id;

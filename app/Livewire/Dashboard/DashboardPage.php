@@ -5,6 +5,7 @@ namespace App\Livewire\Dashboard;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AiRun;
+use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Budget\Services\SpendForecaster;
@@ -20,12 +21,22 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class DashboardPage extends Component
 {
     /** @var array<string, bool> */
     public array $widgets = [];
+
+    /**
+     * Dashboard persona — borrowed from prilog.ai's CTO/SRE dual-positioning.
+     * 'sre' shows the existing operator-focused view (experiments, agents, approvals).
+     * 'cto' adds a debt-reduction summary tile aimed at leadership reviews.
+     */
+    public string $persona = 'sre';
+
+    protected const VALID_PERSONAS = ['sre', 'cto'];
 
     /** Default widget visibility — all on by default */
     protected const DEFAULT_WIDGETS = [
@@ -44,10 +55,37 @@ class DashboardPage extends Component
         $team = auth()->user()->currentTeam;
         $saved = $team?->dashboard_config['widgets'] ?? [];
         $this->widgets = array_merge(self::DEFAULT_WIDGETS, $saved);
+
+        $savedPersona = $team?->dashboard_config['persona'] ?? null;
+        if (is_string($savedPersona) && in_array($savedPersona, self::VALID_PERSONAS, true)) {
+            $this->persona = $savedPersona;
+        }
+    }
+
+    public function setPersona(string $persona): void
+    {
+        Gate::authorize('edit-content');
+
+        if (! in_array($persona, self::VALID_PERSONAS, true)) {
+            return;
+        }
+
+        $this->persona = $persona;
+
+        $team = auth()->user()->currentTeam;
+        if (! $team) {
+            return;
+        }
+
+        $config = $team->dashboard_config ?? [];
+        $config['persona'] = $persona;
+        $team->update(['dashboard_config' => $config]);
     }
 
     public function toggleWidget(string $key): void
     {
+        Gate::authorize('edit-content');
+
         if (! array_key_exists($key, self::DEFAULT_WIDGETS)) {
             return;
         }
@@ -147,6 +185,10 @@ class DashboardPage extends Component
             ];
         });
 
+        $ctoKpis = $this->persona === 'cto'
+            ? $this->computeCtoKpis($teamId)
+            : null;
+
         return view('livewire.dashboard.dashboard-page', array_merge($kpis, [
             'activeExperiments' => $activeExperiments,
             'alerts' => $alerts,
@@ -154,7 +196,48 @@ class DashboardPage extends Component
             'chatbotKpis' => $chatbotKpis,
             'chatbotEnabled' => $chatbotEnabled,
             'aiRoutingStats' => $aiRoutingStats,
+            'persona' => $this->persona,
+            'ctoKpis' => $ctoKpis,
         ]))->layout('layouts.app', ['header' => 'Dashboard']);
+    }
+
+    /**
+     * CTO-facing KPIs — borrowed from prilog.ai's "audit-ready debt reduction"
+     * framing. Single tile that complements (does not replace) the SRE view.
+     *
+     * @return array<string, int|float>
+     */
+    private function computeCtoKpis(string $teamId): array
+    {
+        return Cache::remember("dashboard.cto_kpis:{$teamId}", 60, function () {
+            $thirtyDaysAgo = now()->subDays(30);
+            $sevenDaysAgo = now()->subDays(7);
+
+            $completedLast30 = Experiment::where('status', ExperimentStatus::Completed)
+                ->where('updated_at', '>=', $thirtyDaysAgo)
+                ->count();
+
+            $completedPrev30 = Experiment::where('status', ExperimentStatus::Completed)
+                ->where('updated_at', '>=', $thirtyDaysAgo->copy()->subDays(30))
+                ->where('updated_at', '<', $thirtyDaysAgo)
+                ->count();
+
+            $trend = $completedPrev30 > 0
+                ? round((($completedLast30 - $completedPrev30) / $completedPrev30) * 100, 1)
+                : 0.0;
+
+            $approvalsAutoApproved30d = ApprovalRequest::where('status', ApprovalStatus::Approved)
+                ->where('reviewed_at', '>=', $thirtyDaysAgo)
+                ->whereJsonContains('context->auto_approved', true)
+                ->count();
+
+            return [
+                'experimentsCompleted30d' => $completedLast30,
+                'experimentsCompletedTrendPct' => $trend,
+                'approvalsAutoApproved30d' => $approvalsAutoApproved30d,
+                'activeExperiments7d' => Experiment::where('created_at', '>=', $sevenDaysAgo)->count(),
+            ];
+        });
     }
 
     private function gatherAlerts(): array

@@ -5,6 +5,7 @@ namespace App\Livewire\Evolution;
 use App\Domain\Evolution\Actions\ApplyEvolutionProposalAction;
 use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Models\EvolutionProposal;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,6 +26,8 @@ class EvolutionListPage extends Component
 
     public function approve(string $proposalId): void
     {
+        Gate::authorize('edit-content');
+
         $proposal = EvolutionProposal::findOrFail($proposalId);
 
         $proposal->update([
@@ -39,6 +42,8 @@ class EvolutionListPage extends Component
 
     public function reject(string $proposalId): void
     {
+        Gate::authorize('edit-content');
+
         $proposal = EvolutionProposal::findOrFail($proposalId);
 
         $proposal->update([

@@ -57,7 +57,12 @@ class MemoryPromoteTool extends Tool
             ->findOrFail($validated['memory_id']);
         $previousTier = $memory->tier->value ?? 'working';
 
-        $memory->update(['tier' => $tier->value]);
+        $memory->update([
+            'tier' => $tier->value,
+            'proposal_status' => 'approved',
+            'reviewed_at' => now(),
+            'reviewed_by' => 'mcp:'.(auth()->user()?->email ?? 'anonymous'),
+        ]);
 
         return Response::text(json_encode([
             'success' => true,

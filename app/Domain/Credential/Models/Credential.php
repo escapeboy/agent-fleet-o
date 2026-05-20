@@ -50,6 +50,7 @@ class Credential extends Model
         'creator_source',
         'creator_type',
         'creator_id',
+        'allowed_domains',
     ];
 
     protected $hidden = ['secret_data'];
@@ -65,6 +66,7 @@ class Credential extends Model
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
             'last_rotated_at' => 'datetime',
+            'allowed_domains' => 'array',
         ];
     }
 
@@ -94,5 +96,44 @@ class Credential extends Model
     public function touchLastUsed(): void
     {
         $this->update(['last_used_at' => now()]);
+    }
+
+    /**
+     * Returns true when the given domain is permitted by the allowlist.
+     * An empty/null allowlist means all domains are allowed.
+     * Supports wildcard entries like *.example.com.
+     */
+    public function isDomainAllowed(string $domain): bool
+    {
+        $allowlist = $this->allowed_domains;
+
+        if (empty($allowlist)) {
+            return true;
+        }
+
+        // parse_url needs a scheme to correctly identify host vs path
+        $host = parse_url($domain, PHP_URL_HOST)
+            ?? parse_url('https://'.$domain, PHP_URL_HOST)
+            ?? $domain;
+
+        foreach ($allowlist as $entry) {
+            $entry = (string) $entry;
+
+            if (str_starts_with($entry, '*.')) {
+                $suffix = substr($entry, 2);
+                if ($host === $suffix || str_ends_with($host, '.'.$suffix)) {
+                    return true;
+                }
+            } elseif ($host === $entry) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function accessLogs(): HasMany
+    {
+        return $this->hasMany(CredentialAccessLog::class)->orderByDesc('created_at');
     }
 }

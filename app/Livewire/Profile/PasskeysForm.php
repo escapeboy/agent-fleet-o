@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Profile;
 
+use Illuminate\Support\Facades\Gate;
 use LaravelWebauthn\WebauthnServiceProvider;
 use Livewire\Component;
 
@@ -9,6 +10,8 @@ class PasskeysForm extends Component
 {
     public function deletePasskey(string $id): void
     {
+        Gate::authorize('update-self');
+
         auth()->user()->webauthnKeys()->where('id', $id)->delete();
 
         session()->flash('passkey_message', 'Passkey removed.');

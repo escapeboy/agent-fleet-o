@@ -33,6 +33,19 @@
                     } }}">
                     {{ $execution->status->label() }}
                 </span>
+                @if($execution->trust_mode)
+                    <span title="{{ $execution->trust_mode->description() }}"
+                        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                        {{ match($execution->trust_mode->value) {
+                            'full_consensus' => 'bg-green-50 text-green-700 ring-1 ring-green-200',
+                            'majority_consensus' => 'bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200',
+                            'single_agent' => 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+                            'llm_judge' => 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
+                            default => 'bg-gray-50 text-gray-700',
+                        } }}">
+                        {{ $execution->trust_mode->label() }}
+                    </span>
+                @endif
                 @if($execution->coordinator_iterations > 0)
                     <span class="text-xs text-gray-500">Iteration {{ $execution->coordinator_iterations }}</span>
                 @endif

@@ -3,8 +3,8 @@
 namespace Tests\Feature\Domain\Outbound;
 
 use App\Domain\Outbound\Connectors\DummyConnector;
+use App\Domain\Outbound\Connectors\EmailConnectorDispatcher;
 use App\Domain\Outbound\Connectors\NotificationConnector;
-use App\Domain\Outbound\Connectors\SmtpEmailConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Managers\OutboundConnectorManager;
@@ -33,7 +33,7 @@ class OutboundConnectorManagerTest extends TestCase
     public function test_resolves_email_driver(): void
     {
         $connector = $this->manager->driver('email');
-        $this->assertInstanceOf(SmtpEmailConnector::class, $connector);
+        $this->assertInstanceOf(EmailConnectorDispatcher::class, $connector);
     }
 
     public function test_resolves_webhook_driver(): void
@@ -63,7 +63,7 @@ class OutboundConnectorManagerTest extends TestCase
     public function test_connector_for_returns_real_connector_for_known_channel(): void
     {
         $connector = $this->manager->connectorFor('email');
-        $this->assertInstanceOf(SmtpEmailConnector::class, $connector);
+        $this->assertInstanceOf(EmailConnectorDispatcher::class, $connector);
     }
 
     public function test_has_connector_returns_true_for_core_channels(): void

@@ -6,6 +6,7 @@ use App\Domain\Experiment\Actions\CreateExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class CreateExperimentForm extends Component
@@ -48,6 +49,8 @@ class CreateExperimentForm extends Component
 
     public function create(): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $team = auth()->user()->currentTeam;

@@ -31,6 +31,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
+# Install Excimer extension — required for Sentry PHP profiling (CPU flame graphs per transaction).
+# linux-headers and $PHPIZE_DEPS are already present from the first RUN block above.
+RUN pecl install excimer && docker-php-ext-enable excimer
+
 # Configure OPcache
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \

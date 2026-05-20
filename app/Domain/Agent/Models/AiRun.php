@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<string, mixed>|null $error_metadata
+ */
 class AiRun extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;
@@ -35,6 +38,7 @@ class AiRun extends Model
         'cost_credits',
         'latency_ms',
         'status',
+        'error_metadata',
         'reasoning_chain',
         'has_reasoning',
         'classified_complexity',
@@ -57,6 +61,7 @@ class AiRun extends Model
             'latency_ms' => 'integer',
             'reasoning_chain' => 'array',
             'has_reasoning' => 'boolean',
+            'error_metadata' => 'array',
         ];
     }
 

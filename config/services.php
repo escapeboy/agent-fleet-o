@@ -91,6 +91,27 @@ return [
         'fireworks' => env('FIREWORKS_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sub-Program AI API Keys
+    |--------------------------------------------------------------------------
+    | Dedicated keys for sub-program teams (finance, etc.) so their LLM spend
+    | is isolated from — and never billed against — the main platform keys.
+    | Unset providers fall back to the platform key in applyTeamCredentials().
+    */
+    'sub_program_api_keys' => [
+        'anthropic' => env('SUB_PROGRAM_ANTHROPIC_API_KEY'),
+        'openai' => env('SUB_PROGRAM_OPENAI_API_KEY'),
+        'google' => env('SUB_PROGRAM_GOOGLE_AI_API_KEY'),
+        'groq' => env('SUB_PROGRAM_GROQ_API_KEY'),
+        'openrouter' => env('SUB_PROGRAM_OPENROUTER_API_KEY'),
+        'mistral' => env('SUB_PROGRAM_MISTRAL_API_KEY'),
+        'deepseek' => env('SUB_PROGRAM_DEEPSEEK_API_KEY'),
+        'xai' => env('SUB_PROGRAM_XAI_API_KEY'),
+        'perplexity' => env('SUB_PROGRAM_PERPLEXITY_API_KEY'),
+        'fireworks' => env('SUB_PROGRAM_FIREWORKS_API_KEY'),
+    ],
+
     'mjml' => [
         'url' => env('MJML_SERVER_URL'),
     ],

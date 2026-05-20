@@ -12,6 +12,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -58,6 +59,52 @@ class ClassifySignalIntentTest extends TestCase
         $this->assertNotEmpty($fresh->metadata['inferred_intent_at']);
     }
 
+    public function test_classification_uses_ai_classification_config_when_set(): void
+    {
+        config([
+            'ai.classification.provider' => 'groq',
+            'ai.classification.model' => 'llama-3.3-70b-versatile',
+        ]);
+
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'source_type' => 'webhook',
+            'payload' => ['subject' => 'hello'],
+        ]);
+
+        $this->bindGateway('neutral', 'routine');
+
+        app(ClassifySignalIntentAction::class)->execute($signal);
+
+        $this->assertSame(
+            'groq/llama-3.3-70b-versatile',
+            $signal->fresh()->metadata['inferred_intent_classifier'],
+        );
+    }
+
+    public function test_classification_uses_team_resolved_provider(): void
+    {
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'source_type' => 'webhook',
+            'payload' => ['subject' => 'hello'],
+        ]);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')
+            ->andReturn(['provider' => 'claude-code-vps', 'model' => 'claude-sonnet-4-5']);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $this->bindGateway('neutral', 'routine');
+
+        app(ClassifySignalIntentAction::class)->execute($signal);
+
+        $this->assertSame(
+            'claude-code-vps/claude-sonnet-4-5',
+            $signal->fresh()->metadata['inferred_intent_classifier'],
+        );
+    }
+
     public function test_listener_skips_bug_report_source(): void
     {
         Queue::fake();
@@ -65,6 +112,21 @@ class ClassifySignalIntentTest extends TestCase
             'team_id' => $this->team->id,
             'source_type' => 'bug_report',
             'payload' => ['severity' => 'critical'],
+        ]);
+
+        (new InferIncomingSignalIntent)->handle(new SignalIngested($signal));
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_listener_skips_sentry_source(): void
+    {
+        Queue::fake();
+        $signal = Signal::factory()->create([
+            'team_id' => $this->team->id,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'payload' => ['payload' => ['title' => 'TypeError in production']],
         ]);
 
         (new InferIncomingSignalIntent)->handle(new SignalIngested($signal));

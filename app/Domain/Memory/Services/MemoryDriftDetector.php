@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Services;
 
 use App\Domain\Memory\Models\Memory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Detect memory drift — when a fact's current `embedding` has diverged
@@ -35,6 +36,10 @@ class MemoryDriftDetector
     public function detectForTeam(string $teamId): array
     {
         if (DB::connection()->getDriverName() !== 'pgsql') {
+            return [];
+        }
+
+        if (! Schema::hasColumn('memories', 'embedding') || ! Schema::hasColumn('memories', 'embedding_at_creation')) {
             return [];
         }
 
@@ -76,6 +81,9 @@ class MemoryDriftDetector
             return;
         }
         if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+        if (! Schema::hasColumn('memories', 'embedding_at_creation')) {
             return;
         }
 

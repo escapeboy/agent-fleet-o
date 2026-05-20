@@ -251,6 +251,8 @@ class WorkflowBuilderPage extends Component
 
     public function activate(): void
     {
+        Gate::authorize('edit-content');
+
         if (! $this->workflowId) {
             return;
         }
@@ -444,6 +446,8 @@ class WorkflowBuilderPage extends Component
 
     public function generateFromPrompt(): void
     {
+        Gate::authorize('edit-content');
+
         if ($this->generatePrompt === '') {
             return;
         }

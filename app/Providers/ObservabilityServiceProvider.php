@@ -1,0 +1,124 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use App\Infrastructure\Observability\Alerts\AlertEvaluator;
+use App\Infrastructure\Observability\Alerts\AlertRules;
+use App\Infrastructure\Observability\Alerts\PlatformAlertTriggered;
+use App\Infrastructure\Observability\Health\HealthCheckRegistry;
+use App\Infrastructure\Observability\Prometheus\MetricEmitter;
+use App\Infrastructure\Observability\Prometheus\PrometheusRegistry;
+use App\Infrastructure\Observability\Prometheus\TopNTeamLabeller;
+use App\Infrastructure\Telemetry\Sentry\ErrorCaptured;
+use App\Infrastructure\Telemetry\Sentry\FingerprintResolver;
+use App\Infrastructure\Telemetry\Sentry\SentryContext;
+use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
+use App\Infrastructure\Telemetry\Sentry\SentryUrlBuilder;
+use App\Listeners\Alerts\SendAlertEmail;
+use App\Listeners\Observability\RecordPrometheusOnErrorCaptured;
+use App\Listeners\Observability\RecordPrometheusOnJobFailed;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+use Sentry\State\HubInterface;
+
+/**
+ * Wires the observability primitives:
+ *   - SentryContext / FingerprintResolver / SentryUrlBuilder as singletons.
+ *   - SentryEventCapturer wired against the active Sentry Hub.
+ *
+ * Prometheus / Health bindings are added by the subsequent sprints; this
+ * provider grows incrementally but stays the single observability binding
+ * surface (no auto-wired magic, easy to audit).
+ */
+final class ObservabilityServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__.'/../../config/observability.php', 'observability');
+
+        $this->app->singleton(SentryContext::class, fn () => new SentryContext);
+
+        $this->app->singleton(FingerprintResolver::class, fn () => new FingerprintResolver);
+
+        $this->app->singleton(SentryUrlBuilder::class, function ($app): SentryUrlBuilder {
+            return new SentryUrlBuilder($app->make('config'));
+        });
+
+        // SentryEventCapturer resolves HubInterface lazily through Sentry's own
+        // ServiceProvider, which is where `Sentry\init()` actually fires. We MUST
+        // NOT shadow that binding ourselves — doing so registers a singleton that
+        // returns `SentrySdk::getCurrentHub()` before init() has run, leaving the
+        // hub permanently client-less and Sentry stuck at "NOT CONFIGURED".
+        // sentry-laravel handles the no-DSN case itself (its binding returns a
+        // no-op hub when SENTRY_LARAVEL_DSN is absent).
+        $this->app->singleton(SentryEventCapturer::class, function ($app): SentryEventCapturer {
+            return new SentryEventCapturer(
+                context: $app->make(SentryContext::class),
+                fingerprinter: $app->make(FingerprintResolver::class),
+                hub: $app->make(HubInterface::class),
+                events: $app->make(Dispatcher::class),
+            );
+        });
+
+        // ----- Prometheus -----
+        $this->app->singleton(PrometheusRegistry::class, function ($app): PrometheusRegistry {
+            return new PrometheusRegistry($app->make('config'));
+        });
+
+        $this->app->singleton(TopNTeamLabeller::class, function ($app): TopNTeamLabeller {
+            return new TopNTeamLabeller(
+                config: $app->make('config'),
+                redis: $app->make('redis'),
+            );
+        });
+
+        $this->app->singleton(MetricEmitter::class, function ($app): MetricEmitter {
+            return new MetricEmitter(
+                registry: $app->make(PrometheusRegistry::class),
+                teamLabeller: $app->make(TopNTeamLabeller::class),
+                config: $app->make('config'),
+            );
+        });
+
+        // ----- Alerting -----
+        $this->app->singleton(AlertRules::class, function ($app): AlertRules {
+            return new AlertRules($app->make('config'));
+        });
+
+        $this->app->singleton(AlertEvaluator::class, function ($app): AlertEvaluator {
+            return new AlertEvaluator(
+                rules: $app->make(AlertRules::class),
+                config: $app->make('config'),
+                events: $app->make(Dispatcher::class),
+                http: $app->make(HttpFactory::class),
+            );
+        });
+
+        // ----- Spatie laravel-health declarative registry -----
+        $this->app->singleton(HealthCheckRegistry::class, fn (): HealthCheckRegistry => new HealthCheckRegistry);
+    }
+
+    public function boot(): void
+    {
+        // Wire Prometheus listeners.
+        Event::listen(ErrorCaptured::class, RecordPrometheusOnErrorCaptured::class);
+        Event::listen(JobFailed::class, RecordPrometheusOnJobFailed::class);
+
+        // Wire alert dispatcher.
+        Event::listen(PlatformAlertTriggered::class, SendAlertEmail::class);
+
+        // Register declarative health checks with the spatie/laravel-health facade.
+        // The existing HealthPage Livewire reads its own data; this registry is
+        // the canonical source for basic infrastructure checks (DB/Redis/cache/queue).
+        // Skip in console for `package:discover` and other early boot hooks where
+        // the facade might not be ready yet.
+        if (! $this->app->runningInConsole() || $this->app->runningUnitTests()) {
+            $this->app->make(HealthCheckRegistry::class)->register();
+        }
+    }
+}

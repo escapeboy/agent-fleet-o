@@ -5,6 +5,7 @@ namespace App\Domain\Workflow\Actions;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Services\GraphValidator;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -19,6 +20,7 @@ class GenerateWorkflowFromPromptAction
         private readonly GraphValidator $graphValidator,
         private readonly AiGatewayInterface $gateway,
         private readonly ProviderResolver $providerResolver,
+        private readonly FormatGuidePromptInjector $formatGuide,
     ) {}
 
     /**
@@ -60,7 +62,7 @@ class GenerateWorkflowFromPromptAction
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $resolved['provider'],
                 model: $resolved['model'],
-                systemPrompt: $systemPrompt,
+                systemPrompt: $this->formatGuide->inject($systemPrompt, $teamId),
                 userPrompt: $prompt.$knowledgeContext,
                 maxTokens: 4096,
                 temperature: 0.3,

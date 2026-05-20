@@ -3,6 +3,7 @@
 namespace App\Domain\Crew\Actions;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -13,6 +14,7 @@ class GenerateCrewFromPromptAction
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly ProviderResolver $providerResolver,
+        private readonly FormatGuidePromptInjector $formatGuide,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ class GenerateCrewFromPromptAction
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $provider,
                 model: $model,
-                systemPrompt: $systemPrompt,
+                systemPrompt: $this->formatGuide->inject($systemPrompt, $teamId),
                 userPrompt: $goal,
                 maxTokens: 2048,
                 temperature: 0.4,

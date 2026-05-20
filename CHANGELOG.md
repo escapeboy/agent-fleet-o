@@ -2,6 +2,114 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.26.0] - 2026-05-18
+
+A large feature release spanning eleven days of work: a Kanwas-inspired context
+& observability suite, autonomous Sentry triage, an LLM tracing platform,
+agent-governance controls, and isolated LLM billing keys for sub-programs.
+
+### Added — Kanwas-inspired context & observability suite
+
+Four patterns borrowed from kanwas.ai, each with MCP tools:
+
+- **Unified activity timeline** — `UnifiedTimelineService` merges state
+  transitions, AI runs, approvals and sandbox file activity into one
+  chronological human + agent stream; surfaced as an "Activity" tab on every
+  experiment. MCP: `experiment_activity_timeline`.
+- **Git-backed context filesystem** — `ContextGitSync` mirrors a team's
+  artifacts and memory to a Git repository as versioned markdown ("your files,
+  your repo"). New `/settings/git-sync` page — which also gives the existing
+  per-workflow YAML sync a UI for the first time. MCP: `context_git_sync_configure`,
+  `context_git_sync_status`, `context_git_export_now`.
+- **Project snapshots** — capture and restore a project's full configuration
+  (settings, schedule, milestones) via a "Snapshots" tab; restore is guarded
+  against active runs. MCP: `project_snapshot_create/list/restore`.
+- **Sandbox file observability** — files an agent produces are captured after
+  each sandboxed run and flow into the unified timeline. MCP:
+  `experiment_sandbox_files`.
+
+### Added — Sentry Watchdog (autonomous error triage)
+
+A Sentry integration that autonomously triages unresolved issues: polls
+enabled Sentry projects, matches issues into signals, and dispatches one
+batch-capped triage job per team, with optional digest delivery over the email
+channel and per-project scoping to isolate noisy projects. MCP:
+`sentry_watchdog_run`.
+
+### Added — Phoenix LLM tracing & observability platform
+
+OpenTelemetry-based LLM tracing — every `AiGatewayInterface::complete()` call is
+traced and exported (OTLP/protobuf) to a self-hosted Phoenix sidecar, with
+per-tenant tracer providers and attribute redaction.
+
+### Added — Agent governance controls
+
+- **Trust mode & equivocation detection** — crew executions are badged with
+  observable consensus quality; agents that contradict themselves are tracked
+  and auto-degraded. Optional commit-reveal parallel QA and union goal
+  decomposition. Per-team Shamir 2-of-2 credential-key escrow (super-admin
+  recovery).
+- **Strict mode, credential domain allowlists, signal relevance scoring,
+  auto-execution memory** — agents can be constrained to a tool allowlist with a
+  per-execution response audit; credentials can be locked to a domain allowlist
+  with access logging.
+
+### Added — Memory proposal workflow
+
+Extracted success/failure lessons can route through a `Proposed` tier first,
+where a heuristic auditor auto-approves, auto-rejects, or queues them for human
+review. Feature-flagged, off by default.
+
+### Added — MCP tool auto-discovery
+
+MCP tools are discovered by scanning `app/Mcp/Tools/**` at boot — adding a tool
+no longer requires editing `AgentFleetServer`, and deleting a tool file removes
+it from the registry.
+
+### Changed
+
+- **Internal-classification LLM provider** — internal classification tasks
+  (intent, topic, etc.) resolve a dedicated provider, separable from
+  user-facing inference.
+- **Sub-program LLM key isolation** — sub-program teams resolve a dedicated
+  platform Anthropic key (`SUB_PROGRAM_*_API_KEY`), keeping their LLM spend
+  isolated from the main platform key.
+- **Team-aware intent classification** — incoming-signal intent inference is
+  team-scoped and skips the Sentry source.
+- **API agent defaults** — agents created via the API default their
+  provider/model to the team-resolved platform default.
+
+### Fixed
+
+- **Sub-program key resolution** — `PrismAiGateway::applyTeamCredentials()` now
+  honours `sub_program_slug` at the platform-key fallback (previously every team
+  fell back to the main platform key regardless of sub-program).
+- **Symlink-safe sandbox teardown** — `SandboxedWorkspace::teardown()` no longer
+  follows symlinks, so a link planted by a sandboxed agent cannot make teardown
+  delete host files.
+- **Concurrent git pushes** — `PushContextToGitJob` and `PushWorkflowYamlJob`
+  use `WithoutOverlapping` so two pushes to the same branch cannot race.
+- **YAML frontmatter injection** — context-markdown frontmatter values are now
+  unconditionally quoted.
+- Sentry Watchdog signal-matching, batch-cap and unresolved-issues query
+  corrections; removed a crashing `->sentryMonitor()` cron check-in.
+
+### Infrastructure
+
+- **webclaw container** — runs `webclaw-server` (the HTTP extraction API) rather
+  than the image's default CLI command, which had been crash-looping.
+- Deploy hardening — `route:cache` retry, scheduler stopped before `git pull` to
+  avoid a namespace-race cascade, `sentry-cli` release-marker fixes.
+
+### Internal
+
+- 8 new MCP tools (auto-discovered); every tool now declares `#[IsReadOnly]` or
+  `#[IsDestructive]`.
+- 3 new migrations: `context_git_syncs`, `sandbox_file_activities`,
+  `project_snapshots`.
+- Version tracking realigned — `.version`, `composer.json` and the Git tag are
+  all `1.26.0` (previously drifted across `1.22`/`1.24`/`1.25`).
+
 ## [1.25.0] - 2026-05-07
 
 A maintenance release that pairs with FleetQ Cloud 1.25.0. The cloud edition adds Document OCR + cross-provider AI Gateway routing fixes; this release ensures the base AI gateway is the canonical routing layer for those features and shrinks the static-analysis surface.

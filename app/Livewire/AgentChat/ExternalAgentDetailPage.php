@@ -54,6 +54,8 @@ class ExternalAgentDetailPage extends Component
 
     public function disable(DisableExternalAgentAction $action): void
     {
+        $this->authorize('edit-content');
+
         $action->execute($this->externalAgent, softDelete: true);
         session()->flash('success', 'Agent disabled and archived.');
         $this->redirect(route('external-agents.index'));

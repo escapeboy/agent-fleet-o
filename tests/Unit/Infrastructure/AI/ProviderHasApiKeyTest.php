@@ -1,0 +1,126 @@
+<?php
+
+namespace Tests\Unit\Infrastructure\AI;
+
+use App\Infrastructure\AI\Gateways\FallbackAiGateway;
+use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use App\Infrastructure\AI\Services\CircuitBreaker;
+use ReflectionClass;
+use Tests\TestCase;
+
+class ProviderHasApiKeyTest extends TestCase
+{
+    private FallbackAiGateway $gateway;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->gateway = new FallbackAiGateway(
+            $this->createMock(PrismAiGateway::class),
+            $this->createMock(CircuitBreaker::class),
+        );
+
+        // Clear all cloud-provider keys; individual tests opt back in.
+        config([
+            'ai.providers.anthropic.key' => null,
+            'ai.providers.anthropic.api_key' => null,
+            'ai.providers.openai.key' => null,
+            'ai.providers.openai.api_key' => null,
+            'ai.providers.gemini.key' => null,
+            'ai.providers.gemini.api_key' => null,
+            'services.anthropic.key' => null,
+            'services.anthropic' => null,
+            'services.openai.key' => null,
+            'services.openai' => null,
+            'services.gemini.key' => null,
+            'services.gemini' => null,
+            'services.google.key' => null,
+            'services.google' => null,
+        ]);
+    }
+
+    private function invoke(string $provider): bool
+    {
+        $reflection = new ReflectionClass($this->gateway);
+        $method = $reflection->getMethod('providerHasApiKey');
+        $method->setAccessible(true);
+
+        return (bool) $method->invoke($this->gateway, $provider);
+    }
+
+    public function test_returns_true_when_provider_has_key_in_ai_providers_config(): void
+    {
+        config(['ai.providers.openai.key' => 'sk-svcacct-test-167-chars']);
+
+        $this->assertTrue($this->invoke('openai'));
+    }
+
+    public function test_returns_true_for_anthropic_with_key_field(): void
+    {
+        config(['ai.providers.anthropic.key' => 'sk-ant-test']);
+
+        $this->assertTrue($this->invoke('anthropic'));
+    }
+
+    public function test_returns_true_when_provider_has_api_key_field_for_backcompat(): void
+    {
+        config(['ai.providers.openai.api_key' => 'sk-test-backcompat']);
+
+        $this->assertTrue($this->invoke('openai'));
+    }
+
+    public function test_returns_true_when_only_services_config_is_populated(): void
+    {
+        config(['services.openai.key' => 'sk-services-test']);
+
+        $this->assertTrue($this->invoke('openai'));
+    }
+
+    public function test_returns_false_when_no_key_or_api_key_configured(): void
+    {
+        $this->assertFalse($this->invoke('openai'));
+        $this->assertFalse($this->invoke('anthropic'));
+        $this->assertFalse($this->invoke('gemini'));
+    }
+
+    public function test_returns_false_when_key_is_empty_string(): void
+    {
+        config([
+            'ai.providers.openai.key' => '',
+            'ai.providers.openai.api_key' => '',
+            'services.openai.key' => '',
+        ]);
+
+        $this->assertFalse($this->invoke('openai'));
+    }
+
+    public function test_local_and_bridge_providers_always_return_true(): void
+    {
+        // Local agents (claude-code, codex) and bridge providers don't need API keys.
+        $this->assertTrue($this->invoke('claude-code'));
+        $this->assertTrue($this->invoke('codex'));
+    }
+
+    /**
+     * Acceptance-test from the upstream bug report:
+     * for each cloud provider declared in config/ai.php with a populated
+     * `key`, providerHasApiKey() must return true.
+     */
+    public function test_matches_every_configured_ai_providers_entry_with_key_set(): void
+    {
+        $configured = [
+            'anthropic' => 'sk-ant-test',
+            'openai' => 'sk-openai-test',
+            'gemini' => 'gemini-test',
+        ];
+
+        foreach ($configured as $provider => $key) {
+            config(["ai.providers.{$provider}.key" => $key]);
+            $this->assertTrue(
+                $this->invoke($provider),
+                "providerHasApiKey({$provider}) should return true when ai.providers.{$provider}.key is set",
+            );
+        }
+    }
+}

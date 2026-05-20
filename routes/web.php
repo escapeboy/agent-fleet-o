@@ -6,8 +6,12 @@ use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
+use App\Http\Controllers\LlmsTxtController;
 use App\Http\Controllers\MarketplacePageController;
+use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
+use App\Http\Controllers\PublicReleaseController;
+use App\Http\Controllers\ReleaseKeysController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
@@ -15,9 +19,11 @@ use App\Http\Controllers\WebsitePagePreviewController;
 use App\Http\Controllers\WellKnownFleetQController;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\InternalNetworkOnly;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use App\Livewire\Admin\AiControlCenterPage;
+use App\Livewire\Admin\SentryWatchdogPage;
 use App\Livewire\AgentChat\AgentverseBrowsePage;
 use App\Livewire\AgentChat\ExternalAgentDetailPage;
 use App\Livewire\AgentChat\ExternalAgentListPage;
@@ -28,11 +34,14 @@ use App\Livewire\Agents\CreateAgentForm;
 use App\Livewire\Agents\QuickAgentForm;
 use App\Livewire\Agents\VoiceSessionPage;
 use App\Livewire\Approvals\ApprovalInboxPage;
+use App\Livewire\Audiences\AudienceDetailPage;
+use App\Livewire\Audiences\AudienceListPage;
 use App\Livewire\Audit\AuditLogPage;
 use App\Livewire\AuditConsole\AuditConsoleDetailPage;
 use App\Livewire\AuditConsole\AuditConsoleListPage;
 use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Auth\AcceptTermsPage;
+use App\Livewire\Broadcast\BroadcastDetailPage;
 use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Chatbots\ChatbotAnalyticsPage;
 use App\Livewire\Chatbots\ChatbotConversationListPage;
@@ -62,6 +71,7 @@ use App\Livewire\GitRepositories\CreateGitRepositoryForm;
 use App\Livewire\GitRepositories\GitRepositoryDetailPage;
 use App\Livewire\GitRepositories\GitRepositoryListPage;
 use App\Livewire\Health\HealthPage;
+use App\Livewire\Inbox\InboxPage;
 use App\Livewire\Insights\InsightsPage;
 use App\Livewire\Integrations\EditIntegrationForm;
 use App\Livewire\Integrations\IntegrationDetailPage;
@@ -85,6 +95,10 @@ use App\Livewire\Projects\EditProjectForm;
 use App\Livewire\Projects\ProjectDetailPage;
 use App\Livewire\Projects\ProjectKanbanPage;
 use App\Livewire\Projects\ProjectListPage;
+use App\Livewire\Releases\ReleaseDetailPage;
+use App\Livewire\Releases\ReleaseDiffPage;
+use App\Livewire\Releases\ReleaseListPage;
+use App\Livewire\Settings\GitSyncPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
 use App\Livewire\Setup\SetupPage;
@@ -163,8 +177,37 @@ Route::get('/.well-known/change-password', fn () => redirect(route('profile').'#
     ->name('well-known.change-password')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class]);
 
+// llmstxt.org — agent-readable docs index. Lets coding agents (Claude, Cursor,
+// Codex) discover the platform with a single fetch. Spec: https://llmstxt.org
+// `/llms.txt` is the compact index; `/llms-full.txt` bundles the full
+// capabilities document so agents can pull the whole knowledge surface at once.
+Route::get('/llms.txt', [LlmsTxtController::class, 'compact'])
+    ->name('llms.compact')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/llms-full.txt', [LlmsTxtController::class, 'full'])
+    ->name('llms.full')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:30,1');
+
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
+Route::get('/share/release/{shareToken}', [PublicReleaseController::class, 'show'])->name('releases.share');
+
+// Public JWKS endpoint — release signing public keys (no auth, throttled).
+// Prometheus scrape target — internal network only (Docker bridge 172.16/12 + localhost
+// + custom OBSERVABILITY_METRICS_ALLOWED_IPS). Returns text/plain Prometheus exposition
+// format. No `web` middleware group → no session, no CSRF, no team scope.
+Route::get('/metrics', PrometheusMetricsController::class)
+    ->withoutMiddleware('web')
+    ->middleware(InternalNetworkOnly::class)
+    ->name('metrics.prometheus');
+
+Route::get('/.well-known/release-keys.json', ReleaseKeysController::class)
+    ->name('release-keys.jwks')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
 
 // ── Social Login (OAuth) ──────────────────────────────────────────────────────
 // Guest-only initiation + callback routes (rate limited)
@@ -327,6 +370,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/{crew}/execute', CrewExecutionPage::class)->name('crews.execute');
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
 
+    Route::get('/releases', ReleaseListPage::class)->name('releases.index');
+    Route::get('/releases/{release}/diff', ReleaseDiffPage::class)->name('releases.diff');
+    Route::get('/releases/{release}', ReleaseDetailPage::class)->name('releases.show');
+
+    Route::get('/inbox', InboxPage::class)->name('inbox.index');
+
     Route::get('/projects', ProjectListPage::class)->name('projects.index');
     Route::get('/projects/create', CreateProjectFormPage::class)->name('projects.create');
     Route::get('/projects/{project}/edit', EditProjectForm::class)->name('projects.edit');
@@ -373,6 +422,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/admin/ai', AiControlCenterPage::class)->name('admin.ai');
+    Route::get('/admin/sentry-watchdog', SentryWatchdogPage::class)->name('admin.sentry-watchdog');
     Route::get('/insights', InsightsPage::class)->name('insights');
     Route::get('/plugins', PluginsPage::class)->name('plugins');
     Route::get('/team', TeamSettingsPage::class)->name('team.settings');
@@ -392,6 +442,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/webhooks', WebhookOutboundPage::class)->name('outbound.webhooks');
     Route::get('/outbound/notifications', NotificationOutboundPage::class)->name('outbound.notifications');
     Route::get('/outbound/whatsapp', WhatsAppOutboundPage::class)->name('outbound.whatsapp');
+
+    // Audiences & broadcasts
+    Route::get('/audiences', AudienceListPage::class)->name('audiences.index');
+    Route::get('/audiences/{audience}', AudienceDetailPage::class)->name('audiences.show');
+    Route::get('/broadcasts/{broadcast}', BroadcastDetailPage::class)->name('broadcasts.show');
 
     // Email themes
     Route::get('/email/themes', EmailThemeListPage::class)->name('email.themes.index');
@@ -420,6 +475,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit-console', AuditConsoleListPage::class)->name('audit-console.index');
     Route::get('/audit-console/{decision}', AuditConsoleDetailPage::class)->name('audit-console.show');
     Route::get('/settings/audit-console', AuditConsoleSettingsPage::class)->name('audit-console.settings');
+
+    // Git Sync — context filesystem + workflow YAML syncs (Kanwas-inspired sprint)
+    Route::get('/settings/git-sync', GitSyncPage::class)->name('settings.git-sync');
 
     // WebAuthn / Passkeys (JSON endpoints — consumed by Alpine.js ceremony)
     // Routes are auto-registered by LaravelWebauthn\WebauthnServiceProvider in v5+.

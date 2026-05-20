@@ -24,4 +24,32 @@ return [
         'mask_content' => (bool) env('LANGFUSE_MASK_CONTENT', false),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Arize Phoenix OTLP Trace Export
+    |--------------------------------------------------------------------------
+    |
+    | When PHOENIX_OTLP_ENDPOINT is set, every AI gateway call is exported as
+    | an OpenInference-shaped OTLP trace to the Phoenix instance. Failure to
+    | reach Phoenix never fails the AI request (fire-and-forget).
+    |
+    | Docker-internal sidecar (PHOENIX_OTLP_ENDPOINT=http://phoenix:6006) is
+    | the expected default — set PHOENIX_ALLOW_HTTP=true so the http:// scheme
+    | is permitted. Public endpoints must be https.
+    |
+    */
+    'phoenix' => [
+        'enabled' => ! empty(env('PHOENIX_OTLP_ENDPOINT')),
+        'endpoint' => env('PHOENIX_OTLP_ENDPOINT', ''),
+        'api_key' => env('PHOENIX_API_KEY', ''),
+        'allow_http' => (bool) env('PHOENIX_ALLOW_HTTP', false),
+        'project' => env('PHOENIX_PROJECT_NAME', 'fleetq'),
+        // Head sampling for root spans (0.0..1.0). Children of a sampled-in
+        // root always emit so trace hierarchies stay intact.
+        'sample_rate' => (float) env('PHOENIX_SAMPLE_RATE', 1.0),
+        // Replace prompt + response content with [REDACTED] before export.
+        // Token counts, model, provider, metadata stay.
+        'mask_content' => (bool) env('PHOENIX_MASK_CONTENT', false),
+    ],
+
 ];

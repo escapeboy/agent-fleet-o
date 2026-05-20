@@ -4,6 +4,7 @@ namespace App\Domain\Email\Actions;
 
 use App\Domain\Email\Models\EmailTheme;
 use App\Domain\Email\Services\MjmlRenderer;
+use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Models\GlobalSetting;
@@ -14,6 +15,7 @@ class GenerateEmailTemplateAction
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly MjmlRenderer $mjmlRenderer,
+        private readonly FormatGuidePromptInjector $formatGuide,
     ) {}
 
     /**
@@ -39,7 +41,7 @@ class GenerateEmailTemplateAction
         $response = $this->gateway->complete(new AiRequestDTO(
             provider: $provider,
             model: $model,
-            systemPrompt: $systemPrompt,
+            systemPrompt: $this->formatGuide->inject($systemPrompt, $teamId),
             userPrompt: $description,
             maxTokens: 8192,
             temperature: 0.4,

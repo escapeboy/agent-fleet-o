@@ -28,7 +28,7 @@
                 this.open = true;
                 if (e.detail?.message) {
                     this.$nextTick(() => {
-                        $wire.set('inputText', e.detail.message);
+                        this.inputText = e.detail.message;
                         this.$refs.messageInput?.focus();
                     });
                 }

@@ -32,6 +32,7 @@ class PlaybookStep extends Model
         'cost_credits',
         'loop_count',
         'error_message',
+        'error_metadata',
         'started_at',
         'completed_at',
         'last_heartbeat_at',
@@ -59,6 +60,7 @@ class PlaybookStep extends Model
             'completed_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
             'resume_at' => 'datetime',
+            'error_metadata' => 'array',
         ];
     }
 

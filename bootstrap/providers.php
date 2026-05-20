@@ -7,6 +7,7 @@ use App\Providers\ComputeServiceProvider;
 use App\Providers\FortifyServiceProvider;
 use App\Providers\HorizonServiceProvider;
 use App\Providers\IntegrationServiceProvider;
+use App\Providers\ObservabilityServiceProvider;
 use Barsy\Providers\AgentServiceProvider;
 use Barsy\Providers\BarsyServiceProvider;
 use Barsy\Providers\ChatServiceProvider;
@@ -21,6 +22,7 @@ return [
     FortifyServiceProvider::class,
     HorizonServiceProvider::class,
     AiServiceProvider::class,
+    ObservabilityServiceProvider::class,
     ComputeServiceProvider::class,
     IntegrationServiceProvider::class,
     BarsyServiceProvider::class,

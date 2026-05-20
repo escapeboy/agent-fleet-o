@@ -23,6 +23,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ContextHealthService;
+use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\ApplyTenantTracer;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
@@ -31,6 +32,8 @@ use App\Jobs\Middleware\EnforceConcurrencyLimit;
 use App\Jobs\Middleware\EnforceExecutionDepth;
 use App\Jobs\Middleware\EnforceExecutionTtl;
 use App\Jobs\Middleware\EnforceTenantContext;
+use App\Jobs\Middleware\HasSentryContext;
+use App\Jobs\Middleware\SentryContextJobMiddleware;
 use App\Jobs\Middleware\TenantRateLimit;
 use App\Models\GlobalSetting;
 use Illuminate\Bus\Queueable;
@@ -42,9 +45,23 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-abstract class BaseStageJob implements ShouldQueue
+abstract class BaseStageJob implements HasSentryContext, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * Sentry sub-program tag emitted for any failure inside this job.
+     * Overridable but defaults derive from the stage type.
+     */
+    public function sentryContext(): array
+    {
+        return [
+            'sub_program' => 'experiment.stage',
+            'team_id' => $this->teamId,
+            'experiment_id' => $this->experimentId,
+            'experiment_stage' => $this->stageType()->value,
+        ];
+    }
 
     public int $tries = 3;
 
@@ -94,6 +111,7 @@ abstract class BaseStageJob implements ShouldQueue
         return [
             new EnforceTenantContext,
             new ApplyTenantTracer,
+            app(SentryContextJobMiddleware::class),
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new CheckKmsAvailable,
@@ -225,18 +243,15 @@ abstract class BaseStageJob implements ShouldQueue
 
             // Collect per-node telemetry from LLM request logs written during this stage
             $stageStarted = $stage->started_at ?? now()->subMilliseconds($durationMs);
-            $tokenUsage = LlmRequestLog::where('experiment_id', $this->experimentId)
-                ->where('created_at', '>=', $stageStarted)
-                ->selectRaw('COALESCE(SUM((usage->>\'input_tokens\')::int), 0) as input_tokens, COALESCE(SUM((usage->>\'output_tokens\')::int), 0) as output_tokens, COUNT(*) as llm_calls')
-                ->first();
+            $tokenUsage = $this->collectStageTokenUsage($stageStarted);
 
             $telemetry = [
                 'stage_latency_ms' => $durationMs,
                 'retry_round' => $verificationAttempt,
                 'job_attempts' => $this->attempts(),
-                'token_input' => (int) ($tokenUsage->input_tokens ?? 0),
-                'token_output' => (int) ($tokenUsage->output_tokens ?? 0),
-                'llm_calls' => (int) ($tokenUsage->llm_calls ?? 0),
+                'token_input' => $tokenUsage['input_tokens'],
+                'token_output' => $tokenUsage['output_tokens'],
+                'llm_calls' => $tokenUsage['llm_calls'],
             ];
 
             // Only update if not already completed by process() — some stages
@@ -302,8 +317,42 @@ abstract class BaseStageJob implements ShouldQueue
             'job' => class_basename(static::class),
         ]);
 
+        // Capture the exception with rich FleetQ context. The capturer is graceful
+        // when Sentry DSN is absent — returns null event_id but never throws.
+        $captured = app(SentryEventCapturer::class)->capture($exception, [
+            'context' => $this->sentryContext(),
+        ]);
+
         $experiment = Experiment::withoutGlobalScopes()->find($this->experimentId);
-        if (! $experiment || $experiment->status->isTerminal()) {
+        if (! $experiment) {
+            return;
+        }
+
+        // Persist sentry_event_id + error classification on the most recent stage
+        // row for this experiment + stage type. The admin Stage detail page reads
+        // error_metadata via <x-sentry-link> and <x-error-badge>.
+        try {
+            $stage = $experiment->stages()
+                ->where('stage', $this->stageType()->value)
+                ->latest('started_at')
+                ->first();
+
+            if ($stage) {
+                $stage->update([
+                    'error_metadata' => array_replace(
+                        is_array($stage->error_metadata) ? $stage->error_metadata : [],
+                        $captured->toMetadata($exception),
+                    ),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('BaseStageJob: Failed to persist error_metadata', [
+                'experiment_id' => $this->experimentId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if ($experiment->status->isTerminal()) {
             return;
         }
 
@@ -337,6 +386,23 @@ abstract class BaseStageJob implements ShouldQueue
             StageType::CollectingMetrics, StageType::Evaluating => ExperimentStatus::Completed,
             default => null,
         };
+    }
+
+    /**
+     * @return array{input_tokens: int, output_tokens: int, llm_calls: int}
+     */
+    protected function collectStageTokenUsage(\DateTimeInterface $stageStarted): array
+    {
+        $row = LlmRequestLog::where('experiment_id', $this->experimentId)
+            ->where('created_at', '>=', $stageStarted)
+            ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens, COALESCE(SUM(output_tokens), 0) as output_tokens, COUNT(*) as llm_calls')
+            ->first();
+
+        return [
+            'input_tokens' => (int) ($row->input_tokens ?? 0),
+            'output_tokens' => (int) ($row->output_tokens ?? 0),
+            'llm_calls' => (int) ($row->llm_calls ?? 0),
+        ];
     }
 
     protected function findOrCreateStage(Experiment $experiment): ExperimentStage

@@ -18,6 +18,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreAgentRequest;
 use App\Http\Requests\Api\V1\UpdateAgentRequest;
 use App\Http\Resources\Api\V1\AgentResource;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -53,12 +54,16 @@ class AgentController extends Controller
         return new AgentResource($agent->load(['skills', 'runtimeState']));
     }
 
-    public function store(StoreAgentRequest $request, CreateAgentAction $action): JsonResponse
+    public function store(StoreAgentRequest $request, CreateAgentAction $action, ProviderResolver $resolver): JsonResponse
     {
+        // Provider/model are optional — fall back to the team-resolved platform
+        // default so agents created via the API match the UI/MCP/Assistant paths.
+        $resolved = $resolver->resolve(team: $request->user()->currentTeam);
+
         $agent = $action->execute(
             name: $request->name,
-            provider: $request->provider,
-            model: $request->model,
+            provider: $request->input('provider') ?? $resolved['provider'],
+            model: $request->input('model') ?? $resolved['model'],
             capabilities: $request->input('capabilities', []),
             config: $request->input('config', []),
             teamId: $request->user()->current_team_id,

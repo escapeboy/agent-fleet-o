@@ -110,6 +110,8 @@ class SignalConnectorsPage extends Component
      */
     public function addMonitor(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate([
             'newMonitorUrl' => ['required', 'url', function ($attr, $val, $fail) {
                 if (! in_array(parse_url($val, PHP_URL_SCHEME), ['http', 'https'])) {
@@ -145,6 +147,8 @@ class SignalConnectorsPage extends Component
      */
     public function removeMonitor(string $id): void
     {
+        Gate::authorize('manage-team');
+
         Connector::where('id', $id)->where('driver', 'http_monitor')->delete();
     }
 
@@ -153,6 +157,8 @@ class SignalConnectorsPage extends Component
      */
     public function addRssFeed(): void
     {
+        Gate::authorize('manage-team');
+
         $this->validate(['newRssUrl' => 'required|url']);
 
         Connector::create([
@@ -171,6 +177,8 @@ class SignalConnectorsPage extends Component
      */
     public function removeRssFeed(string $id): void
     {
+        Gate::authorize('manage-team');
+
         Connector::where('id', $id)->where('driver', 'rss')->delete();
     }
 
@@ -179,6 +187,8 @@ class SignalConnectorsPage extends Component
      */
     public function addImapConnector(): void
     {
+        Gate::authorize('manage-team');
+
         $rules = [
             'imapHost' => 'required|string|max:253',
             'imapPort' => 'required|integer|min:1|max:65535',
@@ -292,6 +302,8 @@ class SignalConnectorsPage extends Component
      */
     public function removeImapConnector(string $id): void
     {
+        Gate::authorize('manage-team');
+
         Connector::where('id', $id)->where('driver', 'imap')->delete();
     }
 

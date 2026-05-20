@@ -31,6 +31,8 @@ class GitRepositoryDetailPage extends Component
 
     public function testConnection(): void
     {
+        Gate::authorize('edit-content');
+
         $this->testing = true;
         $this->testMessage = null;
 

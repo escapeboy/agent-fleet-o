@@ -12,6 +12,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('approvals:expire-stale')->hourly();
+Schedule::command('memory:audit-proposals')->hourly()->withoutOverlapping(1);
 Schedule::command('approvals:auto-approve-on-loop')->everyMinute()->withoutOverlapping(1);
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs
 // Schedule::command('agents:health-check')->everyFiveMinutes();
@@ -21,6 +22,13 @@ Schedule::command('bridge:health-check')->everyFiveMinutes()->withoutOverlapping
 Schedule::command('bridge:detect-stale')->everyTwoMinutes()->withoutOverlapping(2);
 Schedule::command('metrics:aggregate --period=hourly')->hourly();
 Schedule::command('metrics:aggregate --period=daily')->dailyAt('01:00');
+// Prometheus gauge sampler — runs every minute (Laravel's smallest native interval).
+// Counter metrics arrive via event listeners; this command keeps gauges fresh.
+Schedule::command('metrics:sample')->everyMinute()->withoutOverlapping(1);
+// Hourly: trim the top-N ranking sorted set to bound Redis memory.
+Schedule::command('metrics:sample --trim')->hourly();
+// Platform alerting: evaluate every minute, dedup via Redis cooldown.
+Schedule::command('alerts:check')->everyMinute()->withoutOverlapping(1);
 Schedule::command('connectors:poll')->everyFifteenMinutes();
 Schedule::command('connectors:poll --driver=http_monitor')->everyFiveMinutes()->withoutOverlapping(5);
 Schedule::command('connectors:poll --driver=telegram')->everyMinute()->withoutOverlapping(2);
@@ -39,6 +47,8 @@ Schedule::command('error-translator:harvest --format=json')
 Schedule::command('audit:cleanup')->dailyAt('02:00');
 Schedule::command('agent-session-events:cleanup')->dailyAt('03:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('memory:check-drift --notify')->dailyAt('04:15')->withoutOverlapping(60)->onOneServer();
+// Cross-corpus contradiction scan — self-gates on memory.contradiction_scan.enabled (off by default).
+Schedule::command('memory:detect-contradictions')->dailyAt('04:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('worldmodel:rebuild')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
 Schedule::command('kg:build-communities')->dailyAt('02:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('kg:merge-entities')->dailyAt('04:30')->withoutOverlapping(30)->onOneServer();
@@ -67,7 +77,8 @@ Schedule::command('contacts:score-health')->dailyAt('03:30')->withoutOverlapping
 // Auto-skill generation from recurring experiment patterns (weekly)
 Schedule::command('skills:auto-generate')->weeklyOn(0, '02:00')->withoutOverlapping(120);
 
-// Agent memory consolidation & pruning (consolidate BEFORE prune)
+// Agent memory consolidation & pruning (distil events BEFORE consolidate BEFORE prune)
+Schedule::command('memory:distill-events')->dailyAt('01:30')->withoutOverlapping(60)->onOneServer();
 Schedule::command('memories:consolidate')->dailyAt('02:30')->withoutOverlapping(90)->onOneServer();
 Schedule::command('memories:prune')->dailyAt('03:00');
 Schedule::command('memory:prune')->dailyAt('03:15')->withoutOverlapping(30);
@@ -117,3 +128,8 @@ Schedule::command('agents:clean-locks')->everyFiveMinutes()->withoutOverlapping(
 
 // Refresh webhooks with expiring TTLs (e.g. Jira Cloud 30-day webhook expiry)
 Schedule::job(new RefreshExpiringWebhooksJob)->weekly();
+
+// Sentry Watchdog — triage new Sentry issues for each enabled integration twice daily
+Schedule::command('sentry:watchdog')
+    ->twiceDaily(9, 18)
+    ->withoutOverlapping(60);

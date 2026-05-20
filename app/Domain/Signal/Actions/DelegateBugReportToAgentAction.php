@@ -2,10 +2,13 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Experiment\Actions\CreateExperimentAction;
+use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\BugReportProjectConfig;
 use App\Domain\Signal\Models\Signal;
@@ -19,10 +22,15 @@ class DelegateBugReportToAgentAction
     public function __construct(
         private readonly CreateExperimentAction $createExperiment,
         private readonly UpdateSignalStatusAction $updateStatus,
+        private readonly TransitionExperimentAction $transitionExperiment,
     ) {}
 
-    public function execute(Signal $signal, User $actor, ?string $agentId = null): Experiment
-    {
+    public function execute(
+        Signal $signal,
+        User $actor,
+        ?string $agentId = null,
+        ?string $additionalContext = null,
+    ): Experiment {
         $payload = $signal->payload ?? [];
         $title = $payload['title'] ?? 'Bug report';
         $projectKey = $signal->project_key ?? ($payload['project'] ?? 'unknown');
@@ -90,6 +98,11 @@ class DelegateBugReportToAgentAction
             $structuredBlock[] = $commentBlock;
         }
 
+        if ($additionalContext !== null && $additionalContext !== '') {
+            // Hard cap and control-char strip — same posture the rest of the thesis uses.
+            $structuredBlock[] = '**Re-delegation Context:**'."\n".$this->sanitize($additionalContext, 4000);
+        }
+
         $thesis = implode("\n\n", array_filter([
             "## Bug Report: {$safeTitle}",
             "**Project:** {$safeProject}",
@@ -113,14 +126,24 @@ class DelegateBugReportToAgentAction
             ...$structuredBlock,
         ]));
 
+        $workflowId = $this->resolveDefaultWorkflowId($agentId, $signal->team_id);
+
         $experiment = $this->createExperiment->execute(
             userId: $actor->id,
             title: "Fix bug: {$title}",
             thesis: $thesis,
             track: ExperimentTrack::Debug->value,
             teamId: $signal->team_id,
+            workflowId: $workflowId,
             agentId: $agentId,
         );
+
+        // Append completion instruction with the concrete experiment ID so the bridge
+        // agent knows to call experiment_complete_building when done. Without this call
+        // the experiment stays stuck in building permanently.
+        $experiment->update([
+            'thesis' => $experiment->thesis."\n\n**When done:** Call the `experiment_complete_building` MCP tool with:\n- `experiment_id`: `{$experiment->id}`\n- `pr_urls`: list of any pull request URLs you opened\n- `summary`: one sentence describing what was fixed\n\nThis is required — without it the experiment stays stuck in building.",
+        ]);
 
         // Link signal to experiment and set status
         $signal->update(['experiment_id' => $experiment->id]);
@@ -132,10 +155,50 @@ class DelegateBugReportToAgentAction
             actor: $actor,
         );
 
-        // Auto-advance experiment to Scoring
-        $experiment->update(['status' => ExperimentStatus::Scoring]);
+        // Auto-advance experiment to Scoring via the canonical state machine so
+        // ExperimentTransitioned fires → DispatchNextStageJob queues RunScoringStage.
+        // A raw $experiment->update(['status' => Scoring]) would freeze the experiment
+        // in scoring forever (no event, no listener, no queue job).
+        return $this->transitionExperiment->execute(
+            experiment: $experiment,
+            toState: ExperimentStatus::Scoring,
+            reason: 'Bug report delegated to agent',
+            actorId: $actor->id,
+        );
+    }
 
-        return $experiment;
+    /**
+     * Resolve the workflow_id to materialize for this bug-fix experiment.
+     *
+     * Order: agent's default_workflow_id → team's default_bug_fix_workflow_id →
+     * null (legacy stage path; CreateExperimentAction skips materialization).
+     *
+     * Agent and team lookups bypass TeamScope intentionally — this action runs
+     * during webhook ingestion where the current-team context may not be set.
+     */
+    private function resolveDefaultWorkflowId(?string $agentId, ?string $teamId): ?string
+    {
+        if ($agentId !== null) {
+            $agentWorkflow = Agent::withoutGlobalScopes()
+                ->where('id', $agentId)
+                ->value('default_workflow_id');
+
+            if (is_string($agentWorkflow) && $agentWorkflow !== '') {
+                return $agentWorkflow;
+            }
+        }
+
+        if ($teamId !== null) {
+            $teamWorkflow = Team::withoutGlobalScopes()
+                ->where('id', $teamId)
+                ->value('default_bug_fix_workflow_id');
+
+            if (is_string($teamWorkflow) && $teamWorkflow !== '') {
+                return $teamWorkflow;
+            }
+        }
+
+        return null;
     }
 
     /**

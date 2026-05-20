@@ -3,6 +3,7 @@
 namespace App\Domain\Shared\Models;
 
 use App\Domain\Email\Models\EmailTheme;
+use App\Domain\Shared\Actions\InitializeTeamKeyEscrowAction;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Models\User;
@@ -39,6 +40,10 @@ class Team extends Model
             }
         });
 
+        static::created(function (self $team) {
+            app(InitializeTeamKeyEscrowAction::class)->execute($team);
+        });
+
         static::deleting(function (self $team) {
             if ($team->is_platform) {
                 throw new \RuntimeException('The platform team cannot be deleted.');
@@ -60,6 +65,8 @@ class Team extends Model
         'widget_public_key',
         'dashboard_config',
         'git_webhook_secret',
+        'default_bug_fix_workflow_id',
+        'signal_relevance_threshold',
     ];
 
     protected $hidden = [
@@ -77,6 +84,7 @@ class Team extends Model
             'allowed_models' => 'array',
             'dashboard_config' => 'array',
             'credential_key' => 'encrypted',
+            'signal_relevance_threshold' => 'float',
         ];
     }
 

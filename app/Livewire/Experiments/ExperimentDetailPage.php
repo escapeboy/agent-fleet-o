@@ -18,6 +18,7 @@ use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Workflow\Actions\SuggestWorkflowAction;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -89,6 +90,8 @@ class ExperimentDetailPage extends Component
 
     public function pauseExperiment(): void
     {
+        Gate::authorize('edit-content');
+
         $action = app(PauseExperimentAction::class);
         $action->execute($this->experiment, auth()->id());
         $this->experiment = $this->experiment->fresh();
@@ -96,6 +99,8 @@ class ExperimentDetailPage extends Component
 
     public function resumeExperiment(): void
     {
+        Gate::authorize('edit-content');
+
         $action = app(ResumeExperimentAction::class);
         $action->execute($this->experiment, auth()->id());
         $this->experiment = $this->experiment->fresh();
@@ -154,6 +159,8 @@ class ExperimentDetailPage extends Component
 
     public function resumeFromCheckpoint(): void
     {
+        Gate::authorize('edit-content');
+
         $result = app(ResumeFromCheckpointAction::class)->execute($this->experiment);
         $this->experiment = $this->experiment->fresh();
         $this->showResumeCheckpointConfirm = false;
@@ -196,6 +203,8 @@ class ExperimentDetailPage extends Component
 
     public function revokeShare(): void
     {
+        Gate::authorize('edit-content');
+
         $this->experiment->update([
             'share_token' => null,
             'share_enabled' => false,

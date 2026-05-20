@@ -34,14 +34,31 @@
                     <input type="checkbox" wire:model="isActive" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                     <span class="text-sm text-gray-700">Enabled</span>
                 </label>
-                <button wire:click="testConnection" wire:loading.attr="disabled"
-                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                    <span wire:loading.remove wire:target="testConnection">Test Connection</span>
-                    <span wire:loading wire:target="testConnection">Testing…</span>
-                </button>
+                @if ($provider === 'smtp')
+                    <button wire:click="testConnection" wire:loading.attr="disabled"
+                        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="testConnection">Test Connection</span>
+                        <span wire:loading wire:target="testConnection">Testing…</span>
+                    </button>
+                @endif
             </div>
         </div>
 
+        {{-- Email Provider --}}
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-base font-semibold text-gray-900">Email Provider</h2>
+                <p class="mt-0.5 text-sm text-gray-500">Send via your own SMTP server or the Resend API.</p>
+            </div>
+            <div class="p-6">
+                <x-form-select wire:model.live="provider" label="Provider">
+                    <option value="smtp">SMTP server</option>
+                    <option value="resend">Resend (resend.com)</option>
+                </x-form-select>
+            </div>
+        </div>
+
+        @if ($provider === 'smtp')
         {{-- SMTP Server --}}
         <div class="rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-200 px-6 py-4">
@@ -64,6 +81,22 @@
                 <x-form-input wire:model="password" type="password" label="Password" placeholder="{{ $host ? '(leave blank to keep existing)' : '' }}" autocomplete="new-password" />
             </div>
         </div>
+        @else
+        {{-- Resend --}}
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-base font-semibold text-gray-900">Resend</h2>
+                <p class="mt-0.5 text-sm text-gray-500">
+                    Paste a Resend API key. Delivery, bounce and complaint events flow back automatically
+                    when you point a Resend webhook at this team's signal endpoint.
+                </p>
+            </div>
+            <div class="p-6">
+                <x-form-input wire:model="apiKey" type="password" label="Resend API Key"
+                    placeholder="re_… (leave blank to keep existing)" autocomplete="new-password" />
+            </div>
+        </div>
+        @endif
 
         {{-- Sender Identity --}}
         <div class="rounded-xl border border-gray-200 bg-white">

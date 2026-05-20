@@ -28,6 +28,7 @@ class SkillExecution extends Model
         'evaluation_method',
         'judge_model',
         'error_message',
+        'error_metadata',
         'confidence_score',
         'consensus_level',
         'peer_reviews',
@@ -44,6 +45,7 @@ class SkillExecution extends Model
             'quality_details' => 'array',
             'confidence_score' => 'float',
             'peer_reviews' => 'array',
+            'error_metadata' => 'array',
         ];
     }
 

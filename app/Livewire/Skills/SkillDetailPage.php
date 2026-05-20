@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Skills;
 
+use App\Domain\Skill\Actions\BreakingChangeDetector;
 use App\Domain\Skill\Actions\CancelSkillBenchmarkAction;
 use App\Domain\Skill\Actions\StartSkillBenchmarkAction;
 use App\Domain\Skill\Actions\UpdateSkillAction;
@@ -214,6 +215,15 @@ class SkillDetailPage extends Component
             ->limit(10)
             ->get();
 
+        // Detect breaking changes between the two latest versions (if both exist).
+        $breakingChanges = [];
+        if ($versions->count() >= 2) {
+            $breakingChanges = app(BreakingChangeDetector::class)->execute(
+                old: $versions->get(1),
+                new: $versions->first(),
+            );
+        }
+
         $executions = SkillExecution::where('skill_id', $this->skill->id)
             ->orderByDesc('created_at')
             ->limit(20)
@@ -265,6 +275,7 @@ class SkillDetailPage extends Component
             'benchmarks' => $benchmarks,
             'activeBenchmark' => $activeBenchmark,
             'benchmarkRunning' => $benchmarkRunning,
+            'breakingChanges' => $breakingChanges,
         ])->layout('layouts.app', ['header' => $this->skill->name]);
     }
 }

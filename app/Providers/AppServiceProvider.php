@@ -33,12 +33,16 @@ use App\Domain\Experiment\Listeners\NotifyOnCriticalTransition;
 use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
+use App\Domain\Experiment\Listeners\SendSentryFixPrOpenedEmailListener;
+use App\Domain\GitRepository\Listeners\QueueContextGitPush;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
+use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
 use App\Domain\Memory\Listeners\ExtractSuccessPatternListener;
 use App\Domain\Memory\Listeners\FlushAgentMemoryOnCompletion;
 use App\Domain\Memory\Listeners\StoreExecutionMemory;
 use App\Domain\Memory\Listeners\StoreExperimentLearnings;
+use App\Domain\Memory\Models\Memory;
 use App\Domain\Metrics\Jobs\EvaluateExecutionJob;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\SmtpEmailConnector;
@@ -88,11 +92,16 @@ use App\Domain\Signal\Connectors\WebhookConnector;
 use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Events\SignalAssigned;
+use App\Domain\Signal\Events\SignalCommentAdded;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
+use App\Domain\Signal\Listeners\CloseBugReportOnPrMergeListener;
+use App\Domain\Signal\Listeners\CloseSentryIssueOnPrMergeListener;
+use App\Domain\Signal\Listeners\DispatchAutoTriageOnSignalIngested;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\ReDelegateOnReporterFollowupListener;
 use App\Domain\Signal\Listeners\SendSignalAssignedNotification;
 use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
 use App\Domain\Signal\Services\SignalConnectorRegistry;
@@ -129,6 +138,7 @@ use App\Mcp\DeadlineContext;
 use App\Mcp\ErrorClassifier;
 use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Mcp\Services\ConnectorMcpRegistrar;
+use App\Models\ArtifactVersion;
 use App\Models\User;
 use Barsy\Events\ChatMessageCompleted;
 use Carbon\CarbonInterval;
@@ -157,8 +167,10 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Events\SessionInitialized;
 use Laravel\Passport\Passport;
+use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Reverb\Events\MessageReceived;
 use Laravel\Sanctum\Sanctum;
+use Laravel\Sentinel\Http\Middleware\SentinelMiddleware;
 use Livewire\Livewire;
 use SocialiteProviders\Apple\Provider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -395,6 +407,44 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('feature.security_policy', fn ($user) => $mode->isSelfHosted());
         Gate::define('feature.built_in_tools', fn ($user) => $mode->isSelfHosted());
 
+        // Laravel Pulse dashboard access. Cloud: super-admins only — the dashboard
+        // exposes cross-tenant slow queries/jobs/exceptions. Self-hosted: any
+        // authenticated user, since the community edition is single-tenant and
+        // has no super-admin tier. Overrides Pulse's default local-only gate.
+        Gate::define('viewPulse', function ($user) use ($mode): bool {
+            return $mode->isCloud()
+                ? (bool) ($user->is_super_admin ?? false)
+                : true;
+        });
+
+        // Platform-admin gate. Guards super-admin-only surfaces (the Admin/*
+        // pages, global settings, LLM pricing). Cloud: super-admins only.
+        // Self-hosted: any authenticated user — the community edition is
+        // single-tenant with no super-admin tier. Use this in every write
+        // method of a super-admin page so Livewire component updates (which
+        // bypass route middleware) are individually authorized.
+        Gate::define('access-admin', function ($user) use ($mode): bool {
+            return $mode->isCloud()
+                ? (bool) ($user->is_super_admin ?? false)
+                : true;
+        });
+
+        // Pulse dashboard middleware: insert Laravel's `auth` ahead of Pulse's
+        // own Authorize gate so an unauthenticated visitor is redirected to
+        // login instead of getting a bare 403. Redefining the `pulse` group
+        // (rather than publishing config/pulse.php) sidesteps Pulse's
+        // mergeConfigFrom, which appends a duplicate web/Authorize in the wrong
+        // order. The booted() callback runs after PulseServiceProvider defines
+        // the group, so this definition wins.
+        $this->app->booted(function (): void {
+            \Illuminate\Support\Facades\Route::middlewareGroup('pulse', [
+                SentinelMiddleware::class.':pulse',
+                'web',
+                'auth',
+                Authorize::class,
+            ]);
+        });
+
         // Blade directives for deployment mode
         Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
         Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
@@ -433,6 +483,7 @@ class AppServiceProvider extends ServiceProvider
 
         // /team-graph live activity firehose — broadcast normalized TeamActivity events
         Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
+        Event::listen(AgentExecuted::class, CompressAndStoreExecutionMemoryListener::class);
         Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
 
         // AgentSession event log — funnel existing experiment transitions into the session log
@@ -453,6 +504,22 @@ class AppServiceProvider extends ServiceProvider
             WorkflowSaved::class,
             QueueWorkflowYamlPush::class,
         );
+
+        // Kanwas-inspired sprint: queue a context push when artifacts or memory
+        // change for a team with a configured context Git sync. QueueContextGitPush
+        // debounces (60s/team) and self-skips when no sync exists, so this is cheap.
+        ArtifactVersion::created(function (ArtifactVersion $version): void {
+            $teamId = $version->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
+            }
+        });
+        Memory::created(function (Memory $memory): void {
+            $teamId = $memory->getAttribute('team_id');
+            if (is_string($teamId) && $teamId !== '') {
+                app(QueueContextGitPush::class)->handle($teamId);
+            }
+        });
 
         // Domain event listeners
         Event::listen(ExperimentTransitioned::class, DispatchNextStageJob::class);
@@ -530,11 +597,26 @@ class AppServiceProvider extends ServiceProvider
         // Bug report signals: notify on critical severity + on status transitions
         Event::listen(SignalIngested::class, NotifyOnCriticalBugReport::class);
         Event::listen(SignalIngested::class, InferIncomingSignalIntent::class);
+        Event::listen(SignalIngested::class, DispatchAutoTriageOnSignalIngested::class);
         Event::listen(SignalStatusChanged::class, NotifyOnSignalStatusChange::class);
         Event::listen(SignalAssigned::class, SendSignalAssignedNotification::class);
 
         // Bug report delegation: advance signal to review when agent experiment completes
         Event::listen(ExperimentTransitioned::class, SyncSignalStatusOnExperimentComplete::class);
+
+        // Sentry Watchdog phase 1: email the operator when the fixing agent's PR opens
+        // (debug-track + sentry-sourced experiment reaches CollectingMetrics).
+        Event::listen(ExperimentTransitioned::class, SendSentryFixPrOpenedEmailListener::class);
+
+        // Reporter follow-up after a previous attempt landed in Review:
+        // re-engage the agent loop with the new context.
+        Event::listen(SignalCommentAdded::class, ReDelegateOnReporterFollowupListener::class);
+
+        // Bitbucket PR merged → close the originating bug-report Signal.
+        Event::listen(SignalIngested::class, CloseBugReportOnPrMergeListener::class);
+
+        // GitHub PR merged → resolve the Sentry issue an autonomous fix closed.
+        Event::listen(SignalIngested::class, CloseSentryIssueOnPrMergeListener::class);
 
         // Team member removal: revoke tokens + pause active experiments
         Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);

@@ -22,6 +22,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Internal Classification LLM
+    |--------------------------------------------------------------------------
+    |
+    | Provider/model for the platform's internal classification operations
+    | (signal intent classification, Sentry watchdog triage). When set, these
+    | use this key directly instead of per-team provider resolution — they are
+    | platform infrastructure, not team-billed work. Leave unset to fall back
+    | to ProviderResolver.
+    |
+    */
+
+    'classification' => [
+        'provider' => env('AI_CLASSIFICATION_PROVIDER'),
+        'model' => env('AI_CLASSIFICATION_MODEL'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Caching
     |--------------------------------------------------------------------------
     |

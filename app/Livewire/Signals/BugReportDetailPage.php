@@ -14,6 +14,8 @@ use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Domain\Signal\Services\SignalStatusTransitionMap;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -33,6 +35,15 @@ class BugReportDetailPage extends Component
     public string $delegateAgentId = '';
 
     public bool $showAssignModal = false;
+
+    public bool $showEditModal = false;
+
+    public string $editTitle = '';
+
+    public string $editDescription = '';
+
+    /** @var TemporaryUploadedFile|null */
+    public $editAttachment = null;
 
     #[Validate('nullable|string|uuid')]
     public ?string $assignUserId = null;
@@ -64,8 +75,57 @@ class BugReportDetailPage extends Component
         }
     }
 
+    public function openEditModal(): void
+    {
+        $payload = $this->signal->payload ?? [];
+        $this->editTitle = $payload['title'] ?? '';
+        $this->editDescription = $payload['description'] ?? '';
+        $this->editAttachment = null;
+        $this->showEditModal = true;
+    }
+
+    public function saveEdit(): void
+    {
+        Gate::authorize('edit-content');
+
+        $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
+
+        $this->validate([
+            'editTitle' => ['required', 'string', 'max:255'],
+            'editDescription' => ['nullable', 'string', 'max:10000'],
+            'editAttachment' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp,gif',
+                'max:'.($maxMb * 1024),
+            ],
+        ]);
+
+        $payload = $this->signal->payload ?? [];
+        $payload['title'] = $this->editTitle;
+        $payload['description'] = $this->editDescription ?? '';
+        $this->signal->update(['payload' => $payload]);
+
+        if ($this->editAttachment) {
+            $this->signal->clearMediaCollection('bug_report_files');
+            $this->signal
+                ->addMedia($this->editAttachment->getRealPath())
+                ->usingFileName(Str::uuid().'.'.$this->editAttachment->guessExtension())
+                ->toMediaCollection('bug_report_files');
+        }
+
+        $this->showEditModal = false;
+        $this->editTitle = '';
+        $this->editDescription = '';
+        $this->editAttachment = null;
+        $this->signal->refresh();
+    }
+
     public function addComment(): void
     {
+        Gate::authorize('edit-content');
+
         $maxAttachments = (int) config('signals.bug_report.widget_comment_max_attachments', 4);
         $maxMb = (int) config('signals.bug_report.widget_comment_max_attachment_mb', 5);
 

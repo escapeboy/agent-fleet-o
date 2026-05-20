@@ -15,9 +15,13 @@ use App\Domain\Skill\Actions\ExecuteSkillAction;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Models\WorkflowNodeEvent;
 use App\Domain\Workflow\Services\WorkflowEventRecorder;
+use App\Infrastructure\AI\Services\PhoenixTraceContext;
+use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
+use App\Jobs\Middleware\HasSentryContext;
 use App\Jobs\Middleware\PerAgentSerialExecution;
+use App\Jobs\Middleware\SentryContextJobMiddleware;
 use App\Jobs\Middleware\TenantRateLimit;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -27,9 +31,23 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ExecutePlaybookStepJob implements ShouldQueue
+class ExecutePlaybookStepJob implements HasSentryContext, ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function sentryContext(): array
+    {
+        $step = PlaybookStep::find($this->stepId);
+
+        return array_filter([
+            'sub_program' => $step?->workflow_node_id ? 'workflow.node' : 'experiment.stage',
+            'team_id' => $this->teamId,
+            'experiment_id' => $this->experimentId,
+            'agent_id' => $step?->agent_id,
+            'workflow_node_id' => $step?->workflow_node_id,
+            'skill_id' => $step?->skill_id,
+        ], fn ($v) => $v !== null);
+    }
 
     public int $tries = 5;          // Must match or exceed Horizon supervisor-ai-calls tries
 
@@ -53,6 +71,7 @@ class ExecutePlaybookStepJob implements ShouldQueue
     public function middleware(): array
     {
         return [
+            app(SentryContextJobMiddleware::class),
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
@@ -66,6 +85,22 @@ class ExecutePlaybookStepJob implements ShouldQueue
     }
 
     public function handle(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void
+    {
+        $traceCtx = app(PhoenixTraceContext::class);
+        $traceCtx->push('playbook.step', array_filter([
+            'metadata.step_id' => $this->stepId,
+            'metadata.experiment_id' => $this->experimentId,
+            'metadata.team_id' => $this->teamId,
+        ], fn ($v) => $v !== null));
+
+        try {
+            $this->handleInner($executeAgent, $executeSkill);
+        } finally {
+            $traceCtx->pop();
+        }
+    }
+
+    private function handleInner(ExecuteAgentAction $executeAgent, ExecuteSkillAction $executeSkill): void
     {
         $checkpointManager = app(CheckpointManager::class);
 
@@ -470,14 +505,27 @@ class ExecutePlaybookStepJob implements ShouldQueue
             'exception' => $exception?->getMessage(),
         ]);
 
+        $captured = $exception !== null
+            ? app(SentryEventCapturer::class)->capture($exception, ['context' => $this->sentryContext()])
+            : null;
+
         $step = PlaybookStep::find($this->stepId);
 
         if ($step && ($step->isPending() || $step->isRunning())) {
-            $step->update([
+            $updates = [
                 'status' => 'failed',
                 'error_message' => 'Job failed: '.($exception?->getMessage() ?? 'Unknown error'),
                 'completed_at' => now(),
-            ]);
+            ];
+
+            if ($captured !== null && $exception !== null) {
+                $updates['error_metadata'] = array_replace(
+                    is_array($step->error_metadata) ? $step->error_metadata : [],
+                    $captured->toMetadata($exception),
+                );
+            }
+
+            $step->update($updates);
         }
     }
 

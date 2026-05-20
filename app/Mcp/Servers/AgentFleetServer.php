@@ -11,6 +11,7 @@ use App\Mcp\Resources\DashboardResource;
 use App\Mcp\Resources\ExperimentDetailResource;
 use App\Mcp\Resources\WorkflowDagResource;
 use App\Mcp\Services\ConnectorMcpRegistrar;
+use App\Mcp\Services\ToolAutoDiscoverer;
 use App\Mcp\Tools\A2ui\A2uiComponentCatalogTool;
 use App\Mcp\Tools\A2ui\A2uiRenderSurfaceTool;
 use App\Mcp\Tools\A2ui\A2uiValidateSurfaceTool;
@@ -28,6 +29,9 @@ use App\Mcp\Tools\Agent\AgentCostsTool;
 use App\Mcp\Tools\Agent\AgentCreateTool;
 use App\Mcp\Tools\Agent\AgentDeleteTool;
 use App\Mcp\Tools\Agent\AgentDryRunTool;
+use App\Mcp\Tools\Agent\AgentEquivocationResetTool;
+use App\Mcp\Tools\Agent\AgentEquivocationStatusTool;
+use App\Mcp\Tools\Agent\AgentExecutionMemoriesTool;
 use App\Mcp\Tools\Agent\AgentExecutionsListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
@@ -41,15 +45,18 @@ use App\Mcp\Tools\Agent\AgentHookListTool;
 use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentListTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
+use App\Mcp\Tools\Agent\AgentResponseAuditListTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSandboxTool;
 use App\Mcp\Tools\Agent\AgentSetReasoningStrategyTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
+use App\Mcp\Tools\Agent\AgentStrictModeSetTool;
 use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolDenySetTool;
+use App\Mcp\Tools\Agent\AgentToolPermissionSetTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
 use App\Mcp\Tools\Agent\AgentUpdateTool;
@@ -101,6 +108,11 @@ use App\Mcp\Tools\Assistant\AssistantConversationGetTool;
 use App\Mcp\Tools\Assistant\AssistantConversationListTool;
 use App\Mcp\Tools\Assistant\AssistantReviewConversationTool;
 use App\Mcp\Tools\Assistant\AssistantSendMessageTool;
+use App\Mcp\Tools\Audience\AudienceAddMemberTool;
+use App\Mcp\Tools\Audience\AudienceCreateTool;
+use App\Mcp\Tools\Audience\AudienceGetTool;
+use App\Mcp\Tools\Audience\AudienceListTool;
+use App\Mcp\Tools\Audience\AudienceUnsubscribeTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleGetDecisionTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleListDecisionsTool;
 use App\Mcp\Tools\AuditConsole\AuditConsoleSettingsTool;
@@ -126,6 +138,12 @@ use App\Mcp\Tools\Bridge\BridgeRenameTool;
 use App\Mcp\Tools\Bridge\BridgeSetRoutingTool;
 use App\Mcp\Tools\Bridge\BridgeStatusTool;
 use App\Mcp\Tools\Bridge\BridgeUpdateUrlTool;
+use App\Mcp\Tools\Broadcast\BroadcastApproveTool;
+use App\Mcp\Tools\Broadcast\BroadcastCancelTool;
+use App\Mcp\Tools\Broadcast\BroadcastCreateTool;
+use App\Mcp\Tools\Broadcast\BroadcastGetTool;
+use App\Mcp\Tools\Broadcast\BroadcastListTool;
+use App\Mcp\Tools\Broadcast\BroadcastRequestApprovalTool;
 use App\Mcp\Tools\Budget\BudgetAddCreditsTool;
 use App\Mcp\Tools\Budget\BudgetCheckTool;
 use App\Mcp\Tools\Budget\BudgetCostBreakdownTool;
@@ -150,6 +168,7 @@ use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
 use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
 use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
+use App\Mcp\Tools\Credential\CredentialAccessLogTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialDeleteTool;
 use App\Mcp\Tools\Credential\CredentialGetTool;
@@ -159,6 +178,7 @@ use App\Mcp\Tools\Credential\CredentialOAuthFinalizeTool;
 use App\Mcp\Tools\Credential\CredentialOAuthInitiateTool;
 use App\Mcp\Tools\Credential\CredentialRollbackTool;
 use App\Mcp\Tools\Credential\CredentialRotateTool;
+use App\Mcp\Tools\Credential\CredentialSetDomainAllowlistTool;
 use App\Mcp\Tools\Credential\CredentialUpdateTool;
 use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewBeliefTrajectoryTool;
@@ -171,6 +191,7 @@ use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
 use App\Mcp\Tools\Crew\CrewExecutionResumeTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewExecutionTrustModeTool;
 use App\Mcp\Tools\Crew\CrewGenerateFromPromptTool;
 use App\Mcp\Tools\Crew\CrewGetMessagesTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
@@ -209,6 +230,7 @@ use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Evolution\SkillEvolveTool;
 use App\Mcp\Tools\Evolution\SkillMutationApplyTool;
 use App\Mcp\Tools\Evolution\SkillMutationListTool;
+use App\Mcp\Tools\Experiment\ExperimentCompleteBuildingTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
 use App\Mcp\Tools\Experiment\ExperimentCostTool;
 use App\Mcp\Tools\Experiment\ExperimentCreateTool;
@@ -218,6 +240,7 @@ use App\Mcp\Tools\Experiment\ExperimentGetTool;
 use App\Mcp\Tools\Experiment\ExperimentKillTool;
 use App\Mcp\Tools\Experiment\ExperimentListTool;
 use App\Mcp\Tools\Experiment\ExperimentPauseTool;
+use App\Mcp\Tools\Experiment\ExperimentProvenanceTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
@@ -289,7 +312,9 @@ use App\Mcp\Tools\Marketplace\MarketplaceRescanRiskTool;
 use App\Mcp\Tools\Marketplace\MarketplaceReviewTool;
 use App\Mcp\Tools\Marketplace\MarketplaceUnpublishTool;
 use App\Mcp\Tools\Memory\MemoryAddTool;
+use App\Mcp\Tools\Memory\MemoryAuditProposalsTool;
 use App\Mcp\Tools\Memory\MemoryChunkReadTool;
+use App\Mcp\Tools\Memory\MemoryContradictionsTool;
 use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryDriftStatusTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
@@ -300,6 +325,7 @@ use App\Mcp\Tools\Memory\MemoryListProposalsTool;
 use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemoryPromoteTool;
 use App\Mcp\Tools\Memory\MemoryProposeTool;
+use App\Mcp\Tools\Memory\MemoryRejectProposalTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
@@ -316,6 +342,10 @@ use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Outbound\NtfySendTool;
+use App\Mcp\Tools\Phoenix\PhoenixProjectListTool;
+use App\Mcp\Tools\Phoenix\PhoenixSpanSearchTool;
+use App\Mcp\Tools\Phoenix\PhoenixTraceGetTool;
+use App\Mcp\Tools\Phoenix\PhoenixTraceListTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
@@ -344,6 +374,16 @@ use App\Mcp\Tools\RAGFlow\RagflowDocumentUploadTool;
 use App\Mcp\Tools\RAGFlow\RagflowKnowledgeGraphBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowRaptorBuildTool;
 use App\Mcp\Tools\RAGFlow\RagflowSearchTool;
+use App\Mcp\Tools\Release\ReleaseAttachArtifactTool;
+use App\Mcp\Tools\Release\ReleaseCreateTool;
+use App\Mcp\Tools\Release\ReleaseGetTool;
+use App\Mcp\Tools\Release\ReleaseListTool;
+use App\Mcp\Tools\Release\ReleasePublishTool;
+use App\Mcp\Tools\Release\ReleaseSigningKeyGenerateTool;
+use App\Mcp\Tools\Release\ReleaseSigningKeyListTool;
+use App\Mcp\Tools\Release\ReleaseSigningKeyRevokeTool;
+use App\Mcp\Tools\Release\ReleaseSigningKeyRotateTool;
+use App\Mcp\Tools\Release\ReleaseVerifySignatureTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\ContactHealthScoreTool;
@@ -360,6 +400,7 @@ use App\Mcp\Tools\Shared\TeamClaudeCodeVpsAccessTool;
 use App\Mcp\Tools\Shared\TeamGetTool;
 use App\Mcp\Tools\Shared\TeamGraphGetTool;
 use App\Mcp\Tools\Shared\TeamInviteMemberTool;
+use App\Mcp\Tools\Shared\TeamKeyEscrowTool;
 use App\Mcp\Tools\Shared\TeamMembersTool;
 use App\Mcp\Tools\Shared\TeamModelAllowlistTool;
 use App\Mcp\Tools\Shared\TeamObservabilityGetTool;
@@ -403,11 +444,15 @@ use App\Mcp\Tools\Signal\KgSuggestMergesTool;
 use App\Mcp\Tools\Signal\ListHighRiskContactsTool;
 use App\Mcp\Tools\Signal\RouteMapLookupTool;
 use App\Mcp\Tools\Signal\SearxngSearchTool;
+use App\Mcp\Tools\Signal\SentryWatchdogRunTool;
+use App\Mcp\Tools\Signal\SentryWatchdogStatusTool;
 use App\Mcp\Tools\Signal\SignalAssignTool;
 use App\Mcp\Tools\Signal\SignalGetTool;
 use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalIntentReclassifyTool;
+use App\Mcp\Tools\Signal\SignalListByRelevanceTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SignalSetRelevanceThresholdTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SourceMapUploadTool;
 use App\Mcp\Tools\Signal\SupabaseConnectorTool;
@@ -449,6 +494,7 @@ use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
+use App\Mcp\Tools\System\SystemRecentErrorsTool;
 use App\Mcp\Tools\System\SystemVersionCheckTool;
 use App\Mcp\Tools\Telegram\TelegramBotTool;
 use App\Mcp\Tools\Tool\BrowserHarnessRunTool;
@@ -511,6 +557,7 @@ use App\Mcp\Tools\Website\WebsitePageUnpublishTool;
 use App\Mcp\Tools\Website\WebsitePageUpdateTool;
 use App\Mcp\Tools\Website\WebsiteUnpublishTool;
 use App\Mcp\Tools\Website\WebsiteUpdateTool;
+use App\Mcp\Tools\Workflow\ClassifyPrTierTool;
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
 use App\Mcp\Tools\Workflow\WorkflowDeactivateTool;
@@ -553,10 +600,11 @@ class AgentFleetServer extends Server
 
     protected string $version = '1.13.0';
 
-    // Return all tools in a single page — MCP clients like Claude.ai/Codex don't follow cursors
-    public int $defaultPaginationLength = 300;
+    // Return all tools in a single page — MCP clients like Claude.ai/Codex/Barsy bug-fix-agent
+    // don't follow cursors. 1000 covers the current ~540 registered tools with headroom.
+    public int $defaultPaginationLength = 1000;
 
-    public int $maxPaginationLength = 300;
+    public int $maxPaginationLength = 1000;
 
     protected string $instructions = <<<'INSTRUCTIONS'
         FleetQ — AI Agent Mission Control Platform (Laravel 12, multi-tenant, event-driven pipeline)
@@ -615,6 +663,24 @@ class AgentFleetServer extends Server
     protected function boot(): void
     {
         $this->bootstrapMcpAuth();
+
+        // Auto-discover Tool classes from `app/Mcp/Tools/**`. Catches files added
+        // to the filesystem but missing from the curated $tools array — the array
+        // is now redundant for correctness and kept only as documentation of the
+        // intended tool taxonomy. Discovery is wrapped in a try/catch so a
+        // reflection failure on one tool can't break the whole server boot.
+        try {
+            $discovered = app(ToolAutoDiscoverer::class)->discover();
+            $existing = array_flip(array_filter($this->tools, 'is_string'));
+            foreach ($discovered as $toolClass) {
+                if (! isset($existing[$toolClass])) {
+                    $this->tools[] = $toolClass;
+                    $existing[$toolClass] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('AgentFleetServer: tool auto-discovery skipped', ['error' => $e->getMessage()]);
+        }
 
         // Append plugin-contributed MCP tools (registered via FleetPluginServiceProvider::$mcpTools)
         foreach (app('fleet.mcp.tool_classes') as $toolClass) {
@@ -688,6 +754,8 @@ class AgentFleetServer extends Server
         AgentCreateTool::class,
         AgentUpdateTool::class,
         AgentToggleStatusTool::class,
+        AgentEquivocationStatusTool::class,
+        AgentEquivocationResetTool::class,
         AgentSetReasoningStrategyTool::class,
         AgentTemplatesListTool::class,
         AgentConstraintTemplatesTool::class,
@@ -715,6 +783,10 @@ class AgentFleetServer extends Server
         AgentToolApprovalConfigureTool::class,
         AgentWorkspaceExportTool::class,
         AgentWorkspaceImportTool::class,
+        AgentExecutionMemoriesTool::class,
+        AgentStrictModeSetTool::class,
+        AgentResponseAuditListTool::class,
+        AgentToolPermissionSetTool::class,
         AgentCloneTool::class,
         AgentExecutionsListTool::class,
         AgentCostsTool::class,
@@ -738,6 +810,7 @@ class AgentFleetServer extends Server
         CrewUpdateTool::class,
         CrewExecuteTool::class,
         CrewExecutionStatusTool::class,
+        CrewExecutionTrustModeTool::class,
         CrewExecutionPauseTool::class,
         CrewExecutionResumeTool::class,
         CrewExecutionsListTool::class,
@@ -768,8 +841,10 @@ class AgentFleetServer extends Server
         ExperimentResumeFromCheckpointTool::class,
         ExperimentStageTelemetryTool::class,
         ExperimentKillTool::class,
+        ExperimentCompleteBuildingTool::class,
         ExperimentValidTransitionsTool::class,
         ExperimentCostTool::class,
+        ExperimentProvenanceTool::class,
         ExperimentStepsTool::class,
         ExperimentShareTool::class,
         ExperimentSearchHistoryTool::class,
@@ -845,7 +920,7 @@ class AgentFleetServer extends Server
         ToolsetUpdateTool::class,
         ToolsetDeleteTool::class,
 
-        // Credential (10)
+        // Credential (12)
         CredentialListTool::class,
         CredentialGetTool::class,
         CredentialCreateTool::class,
@@ -856,6 +931,22 @@ class AgentFleetServer extends Server
         CredentialOAuthFinalizeTool::class,
         CredentialListVersionsTool::class,
         CredentialRollbackTool::class,
+        CredentialSetDomainAllowlistTool::class,
+        CredentialAccessLogTool::class,
+
+        // Release (5) — versioned artifact bundles
+        ReleaseListTool::class,
+        ReleaseGetTool::class,
+        ReleaseCreateTool::class,
+        ReleasePublishTool::class,
+        ReleaseAttachArtifactTool::class,
+
+        // Release crypto (5) — Ed25519 signing
+        ReleaseSigningKeyListTool::class,
+        ReleaseSigningKeyGenerateTool::class,
+        ReleaseSigningKeyRotateTool::class,
+        ReleaseSigningKeyRevokeTool::class,
+        ReleaseVerifySignatureTool::class,
 
         // Workflow (23) — Kestra-inspired YAML Git Sync (build #5)
         WorkflowExportYamlTool::class,
@@ -865,6 +956,7 @@ class AgentFleetServer extends Server
         WorkflowCreateTool::class,
         WorkflowUpdateTool::class,
         WorkflowValidateTool::class,
+        ClassifyPrTierTool::class,
         WorkflowActivateTool::class,
         WorkflowDuplicateTool::class,
         WorkflowSaveGraphTool::class,
@@ -920,12 +1012,16 @@ class AgentFleetServer extends Server
         ListSecurityReviewsTool::class,
         ResolveSecurityReviewTool::class,
 
-        // Signal (22)
+        // Signal (24)
         SignalListTool::class,
         SignalGetTool::class,
         SignalIngestTool::class,
         SignalAssignTool::class,
         SignalIntentReclassifyTool::class,
+        SignalSetRelevanceThresholdTool::class,
+        SignalListByRelevanceTool::class,
+        SentryWatchdogStatusTool::class,
+        SentryWatchdogRunTool::class,
         TicketConnectorTool::class,
         AlertConnectorTool::class,
         SlackConnectorTool::class,
@@ -1030,6 +1126,7 @@ class AgentFleetServer extends Server
         MemoryListRecentTool::class,
         MemoryStatsTool::class,
         MemoryDriftStatusTool::class,
+        MemoryContradictionsTool::class,
         MemoryDeleteTool::class,
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,
@@ -1037,6 +1134,12 @@ class AgentFleetServer extends Server
         MemoryProposeTool::class,
         MemoryPromoteTool::class,
         MemoryListProposalsTool::class,
+        MemoryRejectProposalTool::class,
+        MemoryAuditProposalsTool::class,
+        PhoenixProjectListTool::class,
+        PhoenixTraceListTool::class,
+        PhoenixTraceGetTool::class,
+        PhoenixSpanSearchTool::class,
         MemoryUpdateTool::class,
         MemoryExportTool::class,
         MemoryGetTool::class,
@@ -1074,6 +1177,21 @@ class AgentFleetServer extends Server
         ConnectorConfigTestTool::class,
         NtfySendTool::class,
 
+        // Audiences (5)
+        AudienceListTool::class,
+        AudienceGetTool::class,
+        AudienceCreateTool::class,
+        AudienceAddMemberTool::class,
+        AudienceUnsubscribeTool::class,
+
+        // Broadcasts (6)
+        BroadcastListTool::class,
+        BroadcastGetTool::class,
+        BroadcastCreateTool::class,
+        BroadcastRequestApprovalTool::class,
+        BroadcastApproveTool::class,
+        BroadcastCancelTool::class,
+
         // Webhook (4)
         WebhookListTool::class,
         WebhookCreateTool::class,
@@ -1086,6 +1204,7 @@ class AgentFleetServer extends Server
         TeamGetTool::class,
         TeamGraphGetTool::class,
         TeamUpdateTool::class,
+        TeamKeyEscrowTool::class,
         TeamMembersTool::class,
         TeamAiFeaturesGetTool::class,
         TeamAiFeaturesUpdateTool::class,
@@ -1157,9 +1276,10 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (11)
+        // System (12)
         DashboardKpisTool::class,
         SystemHealthTool::class,
+        SystemRecentErrorsTool::class,
         SystemVersionCheckTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,

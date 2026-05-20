@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Agent\Enums\ToolPermissionLevel;
 use App\Domain\Tool\Enums\ApprovalTimeoutAction;
 use App\Domain\Tool\Enums\ToolApprovalMode;
 use Illuminate\Database\Eloquent\Relations\Pivot;
@@ -20,6 +21,7 @@ class AgentToolPivot extends Pivot
             'approval_mode' => ToolApprovalMode::class,
             'approval_timeout_minutes' => 'integer',
             'approval_timeout_action' => ApprovalTimeoutAction::class,
+            'permission_level' => ToolPermissionLevel::class,
         ];
     }
 }

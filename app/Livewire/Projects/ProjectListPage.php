@@ -9,6 +9,7 @@ use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Livewire\Concerns\HasAssistantSelection;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -63,6 +64,8 @@ class ProjectListPage extends Component
 
     public function pause(string $projectId): void
     {
+        Gate::authorize('edit-content');
+
         $project = Project::findOrFail($projectId);
         app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
         session()->flash('message', "Project \"{$project->title}\" paused.");
@@ -70,6 +73,8 @@ class ProjectListPage extends Component
 
     public function resume(string $projectId): void
     {
+        Gate::authorize('edit-content');
+
         $project = Project::findOrFail($projectId);
         app(ResumeProjectAction::class)->execute($project);
         session()->flash('message', "Project \"{$project->title}\" resumed.");
@@ -77,6 +82,8 @@ class ProjectListPage extends Component
 
     public function archive(string $projectId): void
     {
+        Gate::authorize('edit-content');
+
         $project = Project::findOrFail($projectId);
         app(ArchiveProjectAction::class)->execute($project);
         session()->flash('message', "Project \"{$project->title}\" archived.");

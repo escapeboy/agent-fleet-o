@@ -134,6 +134,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Event Distillation
+    |--------------------------------------------------------------------------
+    |
+    | Nightly job (`memory:distill-events`) that reads each team's recent
+    | audit-entry stream and distils it into a few durable, high-signal
+    | facts stored as `events_digest` memories — borrowed from CraftBot's
+    | EVENT_UNPROCESSED.md -> MEMORY.md pass. Runs before consolidation so
+    | fresh digests get merged the same night.
+    |
+    */
+    'distillation' => [
+        'enabled' => (bool) env('MEMORY_DISTILLATION_ENABLED', true),
+        'window_hours' => 24,
+        'max_events' => 200,
+        'provider' => 'anthropic',
+        'model' => 'claude-haiku-4-5',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Importance-Weighted Pruning
     |--------------------------------------------------------------------------
     |
@@ -195,6 +215,54 @@ return [
     'visibility' => [
         'auto_promote_retrievals' => 3,
         'auto_promote_min_importance' => 0.7,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Proposal Workflow (Knowledge Nominations)
+    |--------------------------------------------------------------------------
+    |
+    | When extractors_enabled is true, ExtractSuccessPattern/FailureLesson
+    | route through the Proposed tier instead of writing directly to the
+    | curated tier. A heuristic auditor (AuditMemoryProposalsAction) then
+    | auto-approves obvious wins, auto-rejects obvious noise, and queues the
+    | rest for human review.
+    |
+    | Existing installs keep extractors_enabled=false → no behavior change.
+    |
+    */
+    'proposal_workflow' => [
+        'extractors_enabled' => (bool) env('MEMORY_PROPOSAL_WORKFLOW', false),
+        'auto_approve_threshold' => (float) env('MEMORY_PROPOSAL_AUTO_APPROVE', 0.85),
+        'min_content_length' => (int) env('MEMORY_PROPOSAL_MIN_LENGTH', 30),
+        'min_confidence' => (float) env('MEMORY_PROPOSAL_MIN_CONFIDENCE', 0.3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cross-Corpus Contradiction Scan (RoBrain Synthesis)
+    |--------------------------------------------------------------------------
+    |
+    | A scheduled batch job (`memory:detect-contradictions`) that scans the
+    | whole memory corpus for pairs of beliefs that reverse each other —
+    | contradictions that only emerge later, across sessions, which the
+    | per-write dedup gate cannot see. Flagged pairs are surfaced for human
+    | review in the Memory Browser.
+    |
+    | The scheduled run is OFF by default (it costs one Haiku call per team
+    | per run). The manual MCP scan ignores `enabled` — it is opt-in already.
+    | Candidate pairs are memories whose cosine similarity falls in the band
+    | [min_similarity, max_similarity]: similar enough to be about the same
+    | thing, not so similar they are duplicates the write gate already merged.
+    |
+    */
+    'contradiction_scan' => [
+        'enabled' => (bool) env('MEMORY_CONTRADICTION_SCAN', false),
+        'model' => env('MEMORY_CONTRADICTION_MODEL', 'claude-haiku-4-5'),
+        'min_similarity' => (float) env('MEMORY_CONTRADICTION_MIN_SIMILARITY', 0.55),
+        'max_similarity' => (float) env('MEMORY_CONTRADICTION_MAX_SIMILARITY', 0.92),
+        'candidate_limit' => (int) env('MEMORY_CONTRADICTION_CANDIDATE_LIMIT', 60),
+        'max_pairs' => (int) env('MEMORY_CONTRADICTION_MAX_PAIRS', 25),
     ],
 
 ];

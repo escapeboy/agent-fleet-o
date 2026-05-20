@@ -6,6 +6,7 @@ use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\ResolveWebsiteByDomain;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SentryContextWebMiddleware;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -26,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -58,7 +59,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsureTermsAccepted::class);
         $middleware->appendToGroup('web', SetPostgresRlsContext::class);
         $middleware->appendToGroup('web', ApplyTenantTracer::class);
+        $middleware->appendToGroup('web', SentryContextWebMiddleware::class);
         $middleware->appendToGroup('api', ApplyTenantTracer::class);
+        $middleware->appendToGroup('api', SentryContextWebMiddleware::class);
         $middleware->statefulApi();
         $middleware->alias([
             'scope' => CheckToken::class,
@@ -117,3 +120,13 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json($response, $status);
         });
     })->create();
+
+// Flush Sentry structured logs buffer on request/job termination.
+// Gated on enable_logs so it is a no-op until the feature is explicitly enabled.
+$app->terminating(function () use ($app): void {
+    if ($app->make('config')->get('sentry.enable_logs') && function_exists('\Sentry\logger')) {
+        \Sentry\logger()->flush();
+    }
+});
+
+return $app;

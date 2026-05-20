@@ -43,10 +43,6 @@ class TargetRateLimit
     {
         $target = $proposal->target;
 
-        if (is_array($target)) {
-            return $target['email'] ?? $target['phone'] ?? $target['id'] ?? null;
-        }
-
-        return is_string($target) ? $target : null;
+        return $target['email'] ?? $target['phone'] ?? $target['id'] ?? null;
     }
 }

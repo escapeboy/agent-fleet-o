@@ -4,9 +4,12 @@ namespace App\Livewire\Crews;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Actions\ReorderCrewMembersAction;
 use App\Domain\Crew\Actions\UpdateCrewAction;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
+use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewMember;
 use Illuminate\Support\Facades\Gate;
@@ -17,6 +20,8 @@ class CrewDetailPage extends Component
     public Crew $crew;
 
     public string $activeTab = 'overview';
+
+    public string $orgChartView = 'chart';
 
     // Editing state
     public bool $editing = false;
@@ -210,6 +215,27 @@ class CrewDetailPage extends Component
         }
     }
 
+    /**
+     * Persist a new worker ordering. Called from the org-chart drag/drop handler.
+     *
+     * @param  array<int, string>  $orderedMemberIds
+     */
+    public function reorderWorkers(array $orderedMemberIds, ReorderCrewMembersAction $action): void
+    {
+        Gate::authorize('edit-content');
+
+        try {
+            $action->execute($this->crew, $orderedMemberIds);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('crew', $e->getMessage());
+
+            return;
+        }
+
+        $this->crew->load('members.agent');
+        session()->flash('message', 'Worker order updated.');
+    }
+
     public function deleteCrew(): void
     {
         Gate::authorize('edit-content');
@@ -219,17 +245,46 @@ class CrewDetailPage extends Component
         $this->redirect(route('crews.index'));
     }
 
+    /**
+     * Resolve agent IDs currently executing tasks in the latest active CrewExecution.
+     * Used to drive the pulse indicator on the org-chart.
+     *
+     * @return array<int, string>
+     */
+    private function resolveActiveAgentIds(): array
+    {
+        $latest = $this->crew->executions()
+            ->whereIn('status', [CrewExecutionStatus::Executing, CrewExecutionStatus::Planning])
+            ->latest()
+            ->first();
+
+        if (! $latest) {
+            return [];
+        }
+
+        return $latest->taskExecutions()
+            ->where('status', CrewTaskStatus::Running)
+            ->whereNotNull('agent_id')
+            ->pluck('agent_id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function render()
     {
         $agents = Agent::where('status', AgentStatus::Active)->orderBy('name')->get();
         $members = $this->crew->members()->with('agent')->orderBy('sort_order')->get();
         $executions = $this->crew->executions()->with(['taskExecutions', 'artifacts'])->latest()->limit(20)->get();
+        $activeAgentIds = $this->resolveActiveAgentIds();
 
         return view('livewire.crews.crew-detail-page', [
             'agents' => $agents,
             'members' => $members,
             'executions' => $executions,
             'processTypes' => CrewProcessType::cases(),
+            'activeAgentIds' => $activeAgentIds,
+            'hasActiveExecution' => count($activeAgentIds) > 0,
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }

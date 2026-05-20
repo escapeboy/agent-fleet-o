@@ -21,8 +21,8 @@ class StoreAgentRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'provider' => ['required', 'string', 'max:50'],
-            'model' => ['required', 'string', 'max:100'],
+            'provider' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'model' => ['sometimes', 'nullable', 'string', 'max:100'],
             'role' => ['sometimes', 'nullable', 'string', 'max:255'],
             'goal' => ['sometimes', 'nullable', 'string'],
             'backstory' => ['sometimes', 'nullable', 'string'],

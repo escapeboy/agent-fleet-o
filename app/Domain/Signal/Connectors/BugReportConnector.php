@@ -34,6 +34,7 @@ class BugReportConnector implements InputConnectorInterface
         $payload = $config['payload'] ?? [];
         $teamId = $config['team_id'] ?? null;
         $projectKey = $config['project_key'] ?? null;
+        $reportedType = $config['reported_type'] ?? 'auto';
         $files = $config['files'] ?? [];
 
         if (empty($payload)) {
@@ -96,7 +97,11 @@ class BugReportConnector implements InputConnectorInterface
         );
 
         if ($signal && $projectKey) {
-            $signal->update(['project_key' => $projectKey, 'status' => SignalStatus::Received->value]);
+            $signal->update([
+                'project_key' => $projectKey,
+                'reported_type' => $reportedType,
+                'status' => SignalStatus::Received->value,
+            ]);
         }
 
         // Store uploaded files to the bug_report_files media collection (not the

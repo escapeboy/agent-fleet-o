@@ -56,10 +56,18 @@ class PollIntegrations extends Command
                 $signals = $driverInstance->poll($integration);
 
                 foreach ($signals as $signalData) {
+                    // Pass the driver's stable item id as source_native_id so
+                    // IngestSignalAction dedups on it. Without this, polled
+                    // items dedup only by content_hash — which breaks for
+                    // sources whose payload carries volatile fields (e.g. a
+                    // Sentry issue's event count / lastSeen change every poll),
+                    // re-ingesting the same item on every cycle.
+                    $nativeId = $signalData['source_id'] ?? null;
                     $this->ingestSignal->execute(
                         sourceType: 'integration',
                         sourceIdentifier: $driverSlug,
                         payload: $signalData,
+                        sourceNativeId: is_string($nativeId) ? $nativeId : null,
                         teamId: $teamId,
                     );
                     $totalSignals++;

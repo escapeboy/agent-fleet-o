@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Call to an undefined static method Propaganistas\\LaravelDisposableEmail\\Facades\\DisposableDomains\:\:isDisposable\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Domain/Signal/Rules/E01DisposableEmailRule.php
-
-		-
 			message: '#^PHPDoc tag @param references unknown parameter\: \$input$#'
 			identifier: parameter.notFound
 			count: 1
@@ -199,12 +193,6 @@ parameters:
 			path: app/Console/Commands/RecoverStuckTasks.php
 
 		-
-			message: '#^Offset ''reddit_session'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Console/Commands/RefreshRedditTokens.php
-
-		-
 			message: '#^Match arm comparison between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpHttp is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
@@ -239,6 +227,30 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$provider\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>provider" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ResetCircuitBreakersCommand.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:notify\(\)\.$#'
@@ -715,14 +727,38 @@ parameters:
 			path: app/Domain/Approval/Actions/CreateActionProposalAction.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Domain/Approval/Actions/CreateCredentialApprovalRequestAction.php
+			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Call to function is_numeric\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
 
 		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Offset ''confidence'' on array\{\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Approval/Actions/CreateHumanTaskAction.php
 
@@ -2365,38 +2401,8 @@ parameters:
 			path: app/Domain/Credential/Actions/RefreshRedditTokenAction.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Credential/Actions/ResolveProjectCredentialsAction.php
-
-		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Domain/Credential/Actions/ResolveProjectCredentialsAction.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Credential\\Models\\Credential\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Domain/Credential/Actions/ResolveProjectCredentialsAction.php
-
-		-
-			message: '#^Cannot call method isPast\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Credential/Models/Credential.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Credential/Models/Credential.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Credential\\Enums\\CredentialStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
+			message: '#^Argument of an invalid type string supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
 			count: 1
 			path: app/Domain/Credential/Models/Credential.php
 
@@ -2433,12 +2439,18 @@ parameters:
 		-
 			message: '#^Argument of an invalid type string supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
-			count: 1
+			count: 2
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
+			count: 1
+			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
+
+		-
+			message: '#^Method App\\Domain\\Crew\\Actions\\DecomposeGoalAction\:\:createTaskExecutions\(\) is unused\.$#'
+			identifier: method.unused
 			count: 1
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
@@ -2475,7 +2487,7 @@ parameters:
 		-
 			message: '#^Offset ''workers'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 2
+			count: 3
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
 		-
@@ -2509,8 +2521,20 @@ parameters:
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
 		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
+
+		-
 			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Agent\\Models\\Agent\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Agent\\Models\\Agent\>\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
+
+		-
+			message: '#^Variable \$workers in empty\(\) always exists and is always falsy\.$#'
+			identifier: empty.variable
 			count: 1
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
@@ -2599,27 +2623,33 @@ parameters:
 			path: app/Domain/Crew/Actions/UpdateCrewAction.php
 
 		-
-			message: '#^Offset ''expected_output'' on string on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''criterion_scores'' on array\{passed\: bool, score\: float, feedback\: string, issues\: array, criterion_scores\: array\<string, float\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
+			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
+
+		-
+			message: '#^Offset ''expected_output'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
 
 		-
 			message: '#^Offset ''qa_agent'' does not exist on string\.$#'
 			identifier: offsetAccess.notFound
-			count: 1
+			count: 2
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
 
 		-
 			message: '#^Offset ''quality_threshold'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
+			count: 2
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
 
 		-
 			message: '#^Parameter \#2 \$config of method App\\Domain\\Crew\\Actions\\ValidateTaskOutputAction\:\:resolveRubric\(\) expects array\<string, mixed\>, string given\.$#'
 			identifier: argument.type
-			count: 1
+			count: 2
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
 
 		-
@@ -2651,6 +2681,12 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Crew/Jobs/CoordinatorDecisionJob.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Crew/Jobs/ExecuteCrewJob.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -2729,6 +2765,12 @@ parameters:
 			identifier: argument.unknown
 			count: 1
 			path: app/Domain/Crew/Jobs/ExecuteCrewWorkflowNodeJob.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$settings\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Crew/Jobs/ValidateCrewTaskJob.php
 
 		-
 			message: '#^Offset ''convergence_mode'' on string on left side of \?\? does not exist\.$#'
@@ -2971,8 +3013,20 @@ parameters:
 			path: app/Domain/Crew/Services/CrewOrchestrator.php
 
 		-
+			message: '#^Expression on left side of \?\? is always null\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
 			message: '#^Match expression does not handle remaining values\: App\\Domain\\Crew\\Enums\\CrewProcessType\:\:ChatRoom\|App\\Domain\\Crew\\Enums\\CrewProcessType\:\:Fanout$#'
 			identifier: match.unhandled
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
 			count: 1
 			path: app/Domain/Crew/Services/CrewOrchestrator.php
 
@@ -3007,6 +3061,18 @@ parameters:
 			path: app/Domain/Crew/Services/CrewOrchestrator.php
 
 		-
+			message: '#^Offset ''process_type'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
+			message: '#^Offset ''workers'' on array\{\}\|string in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
 			message: '#^Offset ''workers'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -3033,6 +3099,18 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$crew of class App\\Domain\\Crew\\Events\\CrewExecuted constructor expects App\\Domain\\Crew\\Models\\Crew, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Domain\\Crew\\Enums\\CrewProcessType\:\:Parallel and App\\Domain\\Crew\\Enums\\CrewProcessType\:\:Adversarial will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Crew/Services/CrewOrchestrator.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Crew/Services/CrewOrchestrator.php
 
@@ -3355,6 +3433,12 @@ parameters:
 			path: app/Domain/Experiment/Models/Experiment.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$error_metadata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Experiment/Pipeline/BaseStageJob.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$output_snapshot\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3609,7 +3693,7 @@ parameters:
 		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
-			count: 1
+			count: 2
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
@@ -3633,6 +3717,12 @@ parameters:
 		-
 			message: '#^Result of \|\| is always true\.$#'
 			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Throwable and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
@@ -3709,6 +3799,12 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
 		-
+			message: '#^Offset ''debug_track'' on string\|null in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
 			message: '#^Parameter \#1 \$team of method App\\Domain\\Website\\Actions\\CreateWebsiteAction\:\:execute\(\) expects App\\Domain\\Shared\\Models\\Team, string\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -3723,6 +3819,12 @@ parameters:
 		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
+
+		-
+			message: '#^Result of \|\| is always false\.$#'
+			identifier: booleanOr.alwaysFalse
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunBuildingStage.php
 
@@ -4061,6 +4163,78 @@ parameters:
 			identifier: property.onlyWritten
 			count: 1
 			path: app/Domain/GitRepository/Services/PhpCodeParser.php
+
+		-
+			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\|App\\Domain\\Outbound\\Models\\OutboundProposal\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Inbox/Actions/RefineTriageWithLlmAction.php
+
+		-
+			message: '#^Domain class must not import from the presentation or MCP layer\: App\\Livewire\\Inbox\\Services\\InboxTriageScorer\. Move shared logic to app/Domain/ or app/Infrastructure/ instead\.$#'
+			identifier: domain.importBoundary
+			count: 1
+			path: app/Domain/Inbox/Actions/RefineTriageWithLlmAction.php
+
+		-
+			message: '#^Offset 0 does not exist on array\{provider\: string, model\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Domain/Inbox/Actions/RefineTriageWithLlmAction.php
+
+		-
+			message: '#^Offset 1 does not exist on array\{provider\: string, model\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Domain/Inbox/Actions/RefineTriageWithLlmAction.php
+
+		-
+			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$content \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: app/Domain/Inbox/Actions/RefineTriageWithLlmAction.php
+
+		-
+			message: '#^Offset ''kinds'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Inbox/Models/InboxQueue.php
+
+		-
+			message: '#^Offset ''min_risk_score'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Inbox/Models/InboxQueue.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between null and null will always evaluate to false\.$#'
+			identifier: notIdentical.alwaysFalse
+			count: 1
+			path: app/Domain/Inbox/Models/InboxQueue.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Inbox/Services/TriagePromptBuilder.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Inbox/Services/TriagePromptBuilder.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Inbox/Services/TriagePromptBuilder.php
+
+		-
+			message: '#^Offset ''summary'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Inbox/Services/TriagePromptBuilder.php
 
 		-
 			message: '#^Offset ''url'' on array\{id\: non\-falsy\-string, url\: string\} on left side of \?\? always exists and is not nullable\.$#'
@@ -5131,6 +5305,18 @@ parameters:
 			path: app/Domain/Marketplace/Models/MarketplaceListing.php
 
 		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Memory/Actions/AuditMemoryProposalsAction.php
+
+		-
+			message: '#^Offset ''target_tier'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Memory/Actions/AuditMemoryProposalsAction.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Memory\\Models\\Memory\:\:\$embedding\.$#'
 			identifier: property.notFound
 			count: 2
@@ -5195,6 +5381,18 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Domain/Memory/Jobs/AutoSaveConversationMemoryJob.php
+
+		-
+			message: '#^Call to function is_string\(\) with non\-empty\-array will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Memory/Jobs/CompressAndStoreExecutionMemoryJob.php
+
+		-
+			message: '#^Variable \$existing in empty\(\) always exists and is not falsy\.$#'
+			identifier: empty.variable
+			count: 1
+			path: app/Domain/Memory/Jobs/CompressAndStoreExecutionMemoryJob.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$experiment_id\.$#'
@@ -6175,6 +6373,12 @@ parameters:
 			path: app/Domain/Project/Jobs/DispatchScheduledProjectsJob.php
 
 		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Project/Jobs/ExecuteProjectRunJob.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -6425,6 +6629,144 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Project/Services/RunOutputCollector.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Artifact\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Release/Actions/AttachArtifactAction.php
+
+		-
+			message: '#^Property App\\Domain\\Release\\Crypto\\Actions\\RotateSigningKeyAction\:\:\$generator is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Release/Crypto/Actions/RotateSigningKeyAction.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Domain/Release/Crypto/Actions/VerifyReleaseSignatureAction.php
+
+		-
+			message: '#^Offset ''dual_signatures'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Release/Crypto/Actions/VerifyReleaseSignatureAction.php
+
+		-
+			message: '#^Offset ''kid'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Release/Crypto/Actions/VerifyReleaseSignatureAction.php
+
+		-
+			message: '#^Offset ''signature'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Release/Crypto/Actions/VerifyReleaseSignatureAction.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Release/Crypto/Models/ReleaseSigningKey.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Crypto\\Enums\\SigningKeyStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Crypto/Models/ReleaseSigningKey.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Crypto\\Enums\\SigningKeyStatus\:\:Grace will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Crypto/Models/ReleaseSigningKey.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Crypto\\Enums\\SigningKeyStatus\:\:Revoked will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Crypto/Models/ReleaseSigningKey.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Domain/Release/Crypto/Services/CanonicalizeManifest.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Enums\\ReleaseStatus\:\:Archived will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Models/Release.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Enums\\ReleaseStatus\:\:Draft will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Models/Release.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Enums\\ReleaseStatus\:\:Published will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Models/Release.php
+
+		-
+			message: '#^Call to an undefined method Intervention\\Image\\Interfaces\\ColorInterface\:\:blue\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Domain/Release/Services/Diff/ImagePixelDiff.php
+
+		-
+			message: '#^Call to an undefined method Intervention\\Image\\Interfaces\\ColorInterface\:\:green\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Domain/Release/Services/Diff/ImagePixelDiff.php
+
+		-
+			message: '#^Call to an undefined method Intervention\\Image\\Interfaces\\ColorInterface\:\:red\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Domain/Release/Services/Diff/ImagePixelDiff.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between int\<1, max\> and 0 will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Release/Services/Diff/ImagePixelDiff.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -6817,6 +7159,12 @@ parameters:
 			path: app/Domain/Signal/Jobs/RegisterSubscriptionWebhookJob.php
 
 		-
+			message: '#^Call to function is_string\(\) with array\<string, mixed\> will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Signal/Jobs/ScoreSignalRelevanceJob.php
+
+		-
 			message: '#^Offset ''metadata'' on array\{title\: string, description\: string, priority\: string, tags\: array\<string\>, source_type\: string, metadata\: array\<string, mixed\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -6839,6 +7187,72 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: app/Domain/Signal/Jobs/StructureBugReportJob.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
+
+		-
+			message: '#^Cannot call method isTerminal\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Signal\\Enums\\SignalStatus\:\:Resolved will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$experiment_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Parameter \$signal of method App\\Domain\\Signal\\Actions\\AddSignalCommentAction\:\:execute\(\) expects App\\Domain\\Signal\\Models\\Signal, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Parameter \$signal of method App\\Domain\\Signal\\Actions\\DelegateBugReportToAgentAction\:\:execute\(\) expects App\\Domain\\Signal\\Models\\Signal, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Signal/Listeners/ReDelegateOnReporterFollowupListener.php
 
 		-
 			message: '#^Cannot call method isApproved\(\) on string\.$#'
@@ -6889,16 +7303,22 @@ parameters:
 			path: app/Domain/Signal/Models/SignalConnectorSetting.php
 
 		-
+			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$content \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: app/Domain/Signal/Services/AutoBugReportClassifier.php
+
+		-
+			message: '#^Offset 1 on array\{list\<string\>, list\<''c''\|''cpp''\|''cs''\|''go''\|''h''\|''java''\|''js''\|''jsx''\|''kt''\|''m''\|''mm''\|''php''\|''py''\|''rb''\|''rs''\|''swift''\|''ts''\|''tsx''\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Signal/Services/CodeOwnershipResolver.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
 			path: app/Domain/Signal/Services/ConnectorBindingGate.php
-
-		-
-			message: '#^Offset ''agent_fixing''\|''delegated_to_agent''\|''dismissed''\|''in_progress''\|''received''\|''resolved''\|''review''\|''triaged'' on array\{received\: array\{''triaged'', ''in_progress'', ''delegated_to_agent'', ''dismissed''\}, triaged\: array\{''in_progress'', ''delegated_to_agent'', ''dismissed''\}, in_progress\: array\{''review'', ''resolved'', ''delegated_to_agent'', ''dismissed''\}, delegated_to_agent\: array\{''agent_fixing'', ''in_progress''\}, agent_fixing\: array\{''review'', ''in_progress''\}, review\: array\{''resolved'', ''in_progress''\}, resolved\: array\{\}, dismissed\: array\{\}\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Signal/Services/SignalStatusTransitionMap.php
 
 		-
 			message: '#^Method App\\Domain\\Signal\\Services\\SourceMapResolver\:\:findMapping\(\) never returns array\{src\: int, origLine\: int, origCol\: int, name\?\: int\} so it can be removed from the return type\.$#'
@@ -7411,12 +7831,6 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
 
 		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteSupabaseEdgeFunctionSkillAction\:\:resolveServiceRoleKey\(\) never returns string so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
 			message: '#^Negated boolean expression is always true\.$#'
 			identifier: booleanNot.alwaysTrue
 			count: 2
@@ -7430,12 +7844,6 @@ parameters:
 
 		-
 			message: '#^Offset ''function_name'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Offset ''key'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
@@ -7771,15 +8179,9 @@ parameters:
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
-			message: '#^Method App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:resolveToolCredential\(\) never returns array\<string, string\> so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
-
-		-
 			message: '#^Method App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:resolveToolCredential\(\) should return array\<string, string\>\|null but returns string\.$#'
 			identifier: return.type
-			count: 2
+			count: 1
 			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
@@ -8077,42 +8479,6 @@ parameters:
 			path: app/Domain/Tool/Services/McpStdioClient.php
 
 		-
-			message: '#^Constant App\\Domain\\Tool\\Services\\SshExecutor\:\:MAX_OUTPUT_BYTES is unused\.$#'
-			identifier: classConstant.unused
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
-			message: '#^Offset ''passphrase'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
-			message: '#^Offset ''private_key'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
-			message: '#^Property App\\Domain\\Tool\\Services\\SshExecutor\:\:\$fingerprintStore is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Tool/Services/SshExecutor.php
-
-		-
 			message: '#^Call to function is_array\(\) with null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 2
@@ -8145,13 +8511,13 @@ parameters:
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 3
+			count: 2
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
 			message: '#^Left side of && is always false\.$#'
 			identifier: booleanAnd.leftAlwaysFalse
-			count: 2
+			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
@@ -8263,12 +8629,6 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Offset ''host'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Offset ''host'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -8287,25 +8647,7 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Offset ''password'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''port'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Offset ''port'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''protocol'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
@@ -8359,12 +8701,6 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Offset ''username'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Offset ''username'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -8403,12 +8739,6 @@ parameters:
 		-
 			message: '#^Result of \|\| is always true\.$#'
 			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Right side of && is always false\.$#'
-			identifier: booleanAnd.rightAlwaysFalse
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
@@ -8465,6 +8795,12 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Trigger/Actions/ExecuteTriggerRuleAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Trigger/Jobs/EvaluateTriggerRulesJob.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -8626,42 +8962,6 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$slug\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Offset ''api_key'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Offset ''token'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between \*NEVER\* and '''' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
 			path: app/Domain/Website/Drivers/VercelDeploymentDriver.php
 
 		-
@@ -9055,16 +9355,40 @@ parameters:
 			path: app/Domain/Workflow/Actions/UpdateWorkflowAction.php
 
 		-
-			message: '#^Match arm comparison between \$this\(App\\Domain\\Workflow\\Enums\\WorkflowNodeType\)&App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:ExternalAgent and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:ExternalAgent is always true\.$#'
+			message: '#^Match arm comparison between \$this\(App\\Domain\\Workflow\\Enums\\WorkflowNodeType\)&App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:BitbucketPrMerge and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:BitbucketPrMerge is always true\.$#'
 			identifier: match.alwaysTrue
 			count: 1
 			path: app/Domain/Workflow/Enums/WorkflowNodeType.php
 
 		-
-			message: '#^Call to an undefined method App\\Domain\\Shared\\Services\\SsrfGuard\:\:validate\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
 			count: 1
-			path: app/Domain/Workflow/Executors/HttpRequestNodeExecutor.php
+			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Client\\Response\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Domain/Workflow/Executors/ClassifyPrTierNodeExecutor.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Workflow/Executors/ClassifyPrTierNodeExecutor.php
 
 		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
@@ -9287,6 +9611,36 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Models/WorkflowNode.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$source\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Domain\\Workflow\\Services\\ArtifactProvenanceFormatter\:\:compactJson\(\) expects array\<string, mixed\>, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between int and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Domain/Workflow/Services/ArtifactProvenanceFormatter.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -10169,6 +10523,24 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 2
 			path: app/Http/Controllers/PublicSiteController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/ReleaseKeysController.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ReleaseKeysController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Release\\Crypto\\Models\\ReleaseSigningKey\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/ReleaseKeysController.php
 
 		-
 			message: '#^Call to an undefined method Laravel\\Socialite\\Contracts\\Provider\:\:enablePKCE\(\)\.$#'
@@ -12841,12 +13213,6 @@ parameters:
 			path: app/Infrastructure/AI/Gateways/LocalBridgeGateway.php
 
 		-
-			message: '#^Access to an undefined property App\\Infrastructure\\AI\\DTOs\\AiUsageDTO\:\:\$totalTokens\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
-
-		-
 			message: '#^Offset ''api_key'' on string in isset\(\) does not exist\.$#'
 			identifier: isset.offset
 			count: 1
@@ -12875,6 +13241,12 @@ parameters:
 			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Infrastructure/AI/Gateways/PrismAiGateway.php
+
+		-
+			message: '#^Property App\\Infrastructure\\AI\\Jobs\\ExportToPhoenixJob\:\:\$spanId is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Infrastructure/AI/Jobs/ExportToPhoenixJob.php
 
 		-
 			message: '#^Access to an undefined property App\\Infrastructure\\AI\\Models\\LlmRequestLog\:\:\$team_id\.$#'
@@ -13105,6 +13477,12 @@ parameters:
 			path: app/Infrastructure/AI/Services/LocalAgentDiscovery.php
 
 		-
+			message: '#^Strict comparison using \!\=\= between array\{trace\: string, span\: string, name\: string, start_nanos\: int, attributes\: array\<string, bool\|float\|int\|string\|null\>, emit\: bool\} and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Infrastructure/AI/Services/PhoenixTraceContext.php
+
+		-
 			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Domain\\Shared\\Enums\\DataClassification\:\:Confidential, App\\Domain\\Shared\\Enums\\DataClassification\:\:Restricted\} and true will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -13186,6 +13564,12 @@ parameters:
 			message: '#^Offset ''model_selection_mode'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 2
+			path: app/Infrastructure/AI/Services/ProviderResolver.php
+
+		-
+			message: '#^Offset ''models'' on array\{name\: string, models\: array\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
@@ -13447,16 +13831,28 @@ parameters:
 			path: app/Infrastructure/Git/Clients/SandboxGitClient.php
 
 		-
-			message: '#^Offset ''api_key'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Infrastructure/Git/Clients/SandboxGitClient.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Mail\\Markdown\:\:view\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Infrastructure/Mail/TeamAwareMailChannel.php
+
+		-
+			message: '#^Method App\\Infrastructure\\Observability\\Alerts\\AlertEvaluator\:\:promQuery\(\) never returns int so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Infrastructure/Observability/Alerts/AlertEvaluator.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Infrastructure/Observability/Prometheus/PrometheusRegistry.php
+
+		-
+			message: '#^Property App\\Infrastructure\\Observability\\Prometheus\\TopNTeamLabeller\:\:\$topNCache \(array\<string, true\>\|null\) does not accept array\<\(int\|string\)\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Infrastructure/Observability/Prometheus/TopNTeamLabeller.php
 
 		-
 			message: '#^Method App\\Infrastructure\\RAGFlow\\RAGFlowClient\:\:delete\(\) is unused\.$#'
@@ -13493,6 +13889,18 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Jobs/Middleware/PerAgentSerialExecution.php
+
+		-
+			message: '#^Call to function is_array\(\) with array will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Listeners/Observability/RecordPrometheusOnJobFailed.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Illuminate\\Contracts\\Queue\\Job and ''getQueue'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Listeners/Observability/RecordPrometheusOnJobFailed.php
 
 		-
 			message: '#^Access to an undefined property App\\Infrastructure\\AI\\Models\\LlmRequestLog\:\:\$team_id\.$#'
@@ -13795,24 +14203,6 @@ parameters:
 			path: app/Livewire/Assistant/AssistantPanel.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
-			message: '#^Offset ''audit_log'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
-			message: '#^Offset ''llm_calls'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/AuditConsole/AuditConsoleDetailPage.php
-
-		-
 			message: '#^Access to an undefined property App\\Domain\\Chatbot\\Models\\ChatbotMessage\:\:\$avg_confidence\.$#'
 			identifier: property.notFound
 			count: 1
@@ -13829,54 +14219,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Chatbots/ChatbotDetailPage.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Credential\\Enums\\CredentialType\:\:ApiToken is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 2
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Credential\\Enums\\CredentialType\:\:BasicAuth is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 2
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Credential\\Enums\\CredentialType\:\:CustomKeyValue is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 2
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Credential\\Enums\\CredentialType\:\:SshKey is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 2
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: string$#'
-			identifier: match.unhandled
-			count: 2
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Credential\\Enums\\CredentialStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Credentials/CredentialDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Credential\\Enums\\CredentialStatus\:\:PendingReview will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Credentials/CredentialDetailPage.php
 
 		-
 			message: '#^Array has 2 duplicate keys with value ''canCreate'' \(''canCreate'', ''canCreate''\)\.$#'
@@ -13951,6 +14293,12 @@ parameters:
 			path: app/Livewire/Crews/CrewDetailPage.php
 
 		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:taskExecutions\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Livewire/Crews/CrewDetailPage.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -14011,8 +14359,26 @@ parameters:
 			path: app/Livewire/Dashboard/DashboardPage.php
 
 		-
+			message: '#^Call to function in_array\(\) with arguments \*NEVER\*, array\{''sre'', ''cto''\} and true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
 			identifier: method.nonObject
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Offset ''persona'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Dashboard/DashboardPage.php
 
@@ -14025,6 +14391,12 @@ parameters:
 		-
 			message: '#^Parameter \#3 \$second of static method Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\Experiment\>\:\:whereColumn\(\) expects string\|null, Illuminate\\Contracts\\Database\\Query\\Expression given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Livewire/Dashboard/DashboardPage.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Livewire/Dashboard/DashboardPage.php
 
@@ -14233,8 +14605,26 @@ parameters:
 			path: app/Livewire/Health/HealthPage.php
 
 		-
+			message: '#^Call to function is_array\(\) with array\<string, bool\|int\|string\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Livewire/Health/HealthPage.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Spatie\\Health\\Checks\\Result and ''getNotificationMess…'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Livewire/Health/HealthPage.php
+
+		-
 			message: '#^Parameter \#2 \$syntax of method Carbon\\Carbon\:\:diffForHumans\(\) expects array\|int\|null, true given\.$#'
 			identifier: argument.type
+			count: 1
+			path: app/Livewire/Health/HealthPage.php
+
+		-
+			message: '#^Property Spatie\\Health\\Checks\\Result\:\:\$shortSummary \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
 			count: 1
 			path: app/Livewire/Health/HealthPage.php
 
@@ -14243,6 +14633,96 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Health/HealthPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Offset ''address'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Offset ''summary'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Parameter \#1 \$deadline of static method App\\Livewire\\Inbox\\DTOs\\InboxItemDTO\:\:slaState\(\) expects Carbon\\CarbonInterface\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Parameter \$slaDeadline of class App\\Livewire\\Inbox\\DTOs\\InboxItemDTO constructor expects Carbon\\CarbonInterface\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 4
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 4
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 4
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>timestamp" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Livewire/Inbox/InboxPage.php
+
+		-
+			message: '#^Offset ''type'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Livewire/Inbox/Services/InboxTriageScorer.php
+
+		-
+			message: '#^Parameter \#1 \$deadline of method App\\Livewire\\Inbox\\Services\\InboxTriageScorer\:\:slaContribution\(\) expects Carbon\\CarbonInterface\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Inbox/Services/InboxTriageScorer.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between null and ''code_execution'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Livewire/Inbox/Services/InboxTriageScorer.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Agent\\Models\\AgentExecution\:\:\$failed\.$#'
@@ -14297,6 +14777,12 @@ parameters:
 			identifier: match.unhandled
 			count: 1
 			path: app/Livewire/Marketplace/PublishForm.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Livewire/Memory/MemoryBrowserPage.php
 
 		-
 			message: '#^Offset ''default_priority'' on array\{\}\|string on left side of \?\? does not exist\.$#'
@@ -14625,6 +15111,18 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
+			count: 4
+			path: app/Livewire/Releases/ReleaseDiffPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>content" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Releases/ReleaseDiffPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
 			count: 1
 			path: app/Livewire/Settings/ConnectorConfigModal.php
 
@@ -14675,6 +15173,12 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Livewire/Shared/FixWithAssistant.php
+
+		-
+			message: '#^Property App\\Livewire\\Signals\\BugReportDetailPage\:\:\$editDescription \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: app/Livewire/Signals/BugReportDetailPage.php
 
 		-
 			message: '#^Array has 2 duplicate keys with value ''datadog'' \(''datadog'', ''datadog''\)\.$#'
@@ -15157,6 +15661,30 @@ parameters:
 			path: app/Mcp/Services/McpAppRegistry.php
 
 		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Dead catch \- ReflectionException is never thrown in the try block\.$#'
+			identifier: catch.neverThrown
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and false will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Mcp/Services/ToolAutoDiscoverer.php
+
+		-
 			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -15215,6 +15743,24 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Agent/AgentCostsTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentEquivocationStatusTool.php
+
+		-
+			message: '#^Offset ''auto_captured'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentExecutionMemoriesTool.php
+
+		-
+			message: '#^Offset ''compressed'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentExecutionMemoriesTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -15323,6 +15869,24 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Agent/AgentListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Agent\\Models\\AgentResponseAudit\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Agent/AgentResponseAuditListTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -15527,36 +16091,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Assistant/AssistantSendMessageTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,FleetQ\\BorunaAudit\\Models\\BundleVerification\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleGetDecisionTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleListDecisionsTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,FleetQ\\BorunaAudit\\Models\\AuditableDecision\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/AuditConsole/AuditConsoleListDecisionsTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
@@ -15937,52 +16471,22 @@ parameters:
 			path: app/Mcp/Tools/Chatbot/ChatbotTokenCreateTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Mcp/Tools/Credential/CredentialCreateTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Mcp/Tools/Credential/CredentialGetTool.php
-
-		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
-			path: app/Mcp/Tools/Credential/CredentialGetTool.php
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Mcp/Tools/Credential/CredentialListTool.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mcp/Tools/Credential/CredentialListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Credential\\Models\\Credential\>\:\:map\(\) contains unresolvable type\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Credential\\Models\\CredentialAccessLog\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
-			path: app/Mcp/Tools/Credential/CredentialListTool.php
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/Credential/CredentialRotateTool.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
-			path: app/Mcp/Tools/Credential/CredentialRotateTool.php
+			path: app/Mcp/Tools/Credential/CredentialAccessLogTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -16073,6 +16577,24 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Crew/CrewExecutionStatusTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Crew/CrewExecutionTrustModeTool.php
+
+		-
+			message: '#^Cannot call method description\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionTrustModeTool.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewExecutionTrustModeTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -16291,18 +16813,6 @@ parameters:
 			path: app/Mcp/Tools/Evaluation/EvaluationRunTool.php
 
 		-
-			message: '#^Unknown parameter \$items in call to method Illuminate\\Contracts\\JsonSchema\\JsonSchema\:\:array\(\)\.$#'
-			identifier: argument.unknown
-			count: 1
-			path: app/Mcp/Tools/Evaluation/EvaluationRunTool.php
-
-		-
-			message: '#^Unknown parameter \$items in call to method Illuminate\\Contracts\\JsonSchema\\JsonSchema\:\:array\(\)\.$#'
-			identifier: argument.unknown
-			count: 1
-			path: app/Mcp/Tools/Evaluation/FlowEvaluationDatasetCreateTool.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$expected_output\.$#'
 			identifier: property.notFound
 			count: 1
@@ -16343,6 +16853,18 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Evolution/EvolutionGetTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Experiment\\ExperimentCompleteBuildingTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentCompleteBuildingTool.php
+
+		-
+			message: '#^Cannot call method diffInMilliseconds\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentCompleteBuildingTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -16477,12 +16999,6 @@ parameters:
 			path: app/Mcp/Tools/Experiment/ExperimentStepsTool.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\IntegerType\:\:minimum\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/Experiment/WorkflowSnapshotListTool.php
-
-		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -16553,18 +17069,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Tools/FounderMode/FounderModeStatusTool.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\IntegerType\:\:minimum\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/GitRepository/CodeCallChainTool.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\JsonSchema\\Types\\IntegerType\:\:minimum\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/GitRepository/CodeSearchTool.php
 
 		-
 			message: '#^Offset ''author'' on array\{sha\: string, message\: string, author\: string, date\: string\} on left side of \?\? always exists and is not nullable\.$#'
@@ -16861,6 +17365,18 @@ parameters:
 			path: app/Mcp/Tools/Memory/MemoryPromoteTool.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryPromoteTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Memory/MemoryRejectProposalTool.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -16931,6 +17447,12 @@ parameters:
 			identifier: method.nonObject
 			count: 2
 			path: app/Mcp/Tools/Migration/MigrationStatusTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Phoenix\\PhoenixTraceGetTool\:\:notFoundError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Phoenix/PhoenixTraceGetTool.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
@@ -17275,6 +17797,168 @@ parameters:
 			path: app/Mcp/Tools/RAGFlow/RagflowDocumentParseTool.php
 
 		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Release\\ReleaseAttachArtifactTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseAttachArtifactTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Release\\ReleaseCreateTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Mcp/Tools/Release/ReleaseCreateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseCreateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Release/ReleaseListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Release\\Models\\Release\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseListTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Release\\ReleasePublishTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleasePublishTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleasePublishTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleasePublishTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Release\\ReleaseSigningKeyGenerateTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyGenerateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyGenerateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Release\\Crypto\\Models\\ReleaseSigningKey\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyRevokeTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyRevokeTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Release\\ReleaseSigningKeyRotateTool\:\:validationError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyRotateTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseSigningKeyRotateTool.php
+
+		-
+			message: '#^Cannot call method diffInDays\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseVerifySignatureTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Release/ReleaseVerifySignatureTool.php
+
+		-
 			message: '#^Method App\\Mcp\\Tools\\RunPod\\RunPodManageTool\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -17441,6 +18125,12 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Mcp/Tools/Shared/TeamInviteMemberTool.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: mixed$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Mcp/Tools/Shared/TeamKeyEscrowTool.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$pivot\.$#'
@@ -17839,6 +18529,36 @@ parameters:
 			path: app/Mcp/Tools/Signal/SignalIntentReclassifyTool.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Signal\\Models\\Signal\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
+
+		-
 			message: '#^Call to an undefined method App\\Mcp\\Tools\\Signal\\WebclawCrawlTool\:\:internalError\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -18163,12 +18883,6 @@ parameters:
 			path: app/Mcp/Tools/Skill/SkillPlaygroundTestTool.php
 
 		-
-			message: '#^Attribute class Laravel\\Mcp\\Attributes\\IsIdempotent does not exist\.$#'
-			identifier: attribute.notFound
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillPlaygroundTestTool.php
-
-		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -18233,6 +18947,18 @@ parameters:
 			identifier: method.notFound
 			count: 2
 			path: app/Mcp/Tools/System/MetricsModelComparisonTool.php
+
+		-
+			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 4
+			path: app/Mcp/Tools/System/SystemRecentErrorsTool.php
+
+		-
+			message: '#^Parameter \#1 \$column of method Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:where\(\) expects array\<int\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, mixed\>\|\(Closure\(Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\: Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\|\(Closure\(Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\: void\)\|Illuminate\\Contracts\\Database\\Query\\Expression\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, ''experiments\.team_id'' given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Mcp/Tools/System/SystemRecentErrorsTool.php
 
 		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
@@ -18623,6 +19349,12 @@ parameters:
 			identifier: instanceof.alwaysTrue
 			count: 1
 			path: app/Mcp/Tools/Website/WebsiteUpdateTool.php
+
+		-
+			message: '#^Call to an undefined method App\\Mcp\\Tools\\Workflow\\ClassifyPrTierTool\:\:internalError\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/ClassifyPrTierTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
