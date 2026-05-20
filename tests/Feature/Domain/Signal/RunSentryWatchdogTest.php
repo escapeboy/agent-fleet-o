@@ -197,6 +197,60 @@ class RunSentryWatchdogTest extends TestCase
         );
     }
 
+    public function test_run_skips_signals_matching_ignore_title_patterns(): void
+    {
+        // Default config ignores "Cron failure:" boilerplate that Sentry's
+        // server-side monitor configs emit even after sentryMonitor() was
+        // removed from the codebase. The LLM defaults to 0.0 confidence on
+        // these — pure noise that pollutes the digest.
+        $integration = $this->seedSentryIntegration();
+
+        $this->seedSentrySignal('CRON-1', ['title' => 'Cron failure: claude-vps-check-token']);
+        $this->seedSentrySignal('CRON-2', ['title' => 'Cron failure: tasks-recover-stuck']);
+        $this->seedSentrySignal('REAL', ['title' => 'NullPointer in checkout']);
+
+        $triagedTitles = [];
+        $this->mockTriage(function (Signal $signal) use (&$triagedTitles) {
+            $triagedTitles[] = $signal->payload['payload']['title'] ?? '';
+
+            return $this->investigateResult($signal->id);
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame(['NullPointer in checkout'], $triagedTitles, 'Only the non-noise signal should reach triage.');
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+        $this->assertSame(1, $run->signals_triaged);
+    }
+
+    public function test_run_respects_custom_ignore_patterns(): void
+    {
+        // The default pattern set can be replaced — patterns are ILIKE so
+        // operators can suppress whole prefix families.
+        config(['sentry_watchdog.ignore_title_patterns' => ['%deprecated%', 'NullPointer%']]);
+
+        $integration = $this->seedSentryIntegration();
+        $this->seedSentrySignal('IGNORE-1', ['title' => 'This deprecated API call']);
+        $this->seedSentrySignal('IGNORE-2', ['title' => 'NullPointer in legacy module']);
+        $this->seedSentrySignal('KEEP', ['title' => 'OAuth refresh failed']);
+
+        $triagedTitles = [];
+        $this->mockTriage(function (Signal $signal) use (&$triagedTitles) {
+            $triagedTitles[] = $signal->payload['payload']['title'] ?? '';
+
+            return $this->investigateResult($signal->id);
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame(['OAuth refresh failed'], $triagedTitles);
+    }
+
     public function test_run_collects_critical_signals_into_digest_summary(): void
     {
         $integration = $this->seedSentryIntegration();

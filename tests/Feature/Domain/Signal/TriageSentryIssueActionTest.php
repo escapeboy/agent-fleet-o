@@ -374,4 +374,110 @@ class TriageSentryIssueActionTest extends TestCase
         $this->assertSame(0.77, $result->confidence);
         $this->assertSame($signal->id, $result->signalId);
     }
+
+    public function test_unparseable_first_attempt_is_retried_with_stricter_prompt(): void
+    {
+        // First call returns prose; second call (after retry-prompt) returns valid JSON.
+        // The action must succeed and not record a triage error.
+        config(['sentry_watchdog.mode' => 'phase0']);
+
+        $calls = 0;
+        $secondPromptSawStrictReminder = false;
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturnUsing(function ($dto) use (&$calls, &$secondPromptSawStrictReminder) {
+            $calls++;
+            if ($calls === 1) {
+                return new AiResponseDTO(
+                    content: 'Sure, here is what I think happened — the cache layer went stale...',
+                    parsedOutput: null,
+                    usage: new AiUsageDTO(promptTokens: 200, completionTokens: 80, costCredits: 1),
+                    provider: 'groq',
+                    model: 'llama-3.3-70b-versatile',
+                    latencyMs: 80,
+                );
+            }
+            $secondPromptSawStrictReminder = str_contains($dto->systemPrompt, 'your previous reply could not be parsed');
+
+            return new AiResponseDTO(
+                content: $this->triageJson(['confidence' => 0.85, 'root_cause' => 'Stale cache layer.']),
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 230, completionTokens: 80, costCredits: 1),
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                latencyMs: 80,
+            );
+        });
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn(['provider' => 'groq', 'model' => 'llama-3.3-70b-versatile']);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(2, $calls, 'gateway should be invoked twice on first-attempt parse failure');
+        $this->assertTrue($secondPromptSawStrictReminder, 'retry must include the stricter JSON-only reminder');
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.85, $result->confidence);
+        $this->assertSame('Stale cache layer.', $result->rootCause);
+
+        $signal->refresh();
+        $this->assertArrayNotHasKey(
+            'sentry_watchdog_triage_error',
+            $signal->payload,
+            'successful retry must not record a triage error',
+        );
+    }
+
+    public function test_both_attempts_fail_records_structured_error_on_signal_payload(): void
+    {
+        // Both LLM calls return prose; the action must default AND persist a
+        // structured error blob on the signal so the failure is auditable.
+        config(['sentry_watchdog.mode' => 'phase1']);
+        $this->fakeGateway('I cannot determine the root cause from this little context.');
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.0, $result->confidence);
+
+        $signal->refresh();
+        $this->assertArrayHasKey('sentry_watchdog_triage_error', $signal->payload);
+        $error = $signal->payload['sentry_watchdog_triage_error'];
+        $this->assertSame('parse_failure', $error['stage']);
+        $this->assertStringContainsString('I cannot determine the root cause', $error['raw_response']);
+        $this->assertSame('anthropic', $error['provider']);
+        $this->assertSame('claude-sonnet-4-5', $error['model']);
+        $this->assertNotEmpty($error['occurred_at']);
+    }
+
+    public function test_gateway_throwable_records_structured_error_on_signal_payload(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase0']);
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andThrow(new \RuntimeException('upstream timeout'));
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn(['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5']);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertSame(0.0, $result->confidence);
+
+        $signal->refresh();
+        $this->assertArrayHasKey('sentry_watchdog_triage_error', $signal->payload);
+        $error = $signal->payload['sentry_watchdog_triage_error'];
+        $this->assertSame('gateway_exception', $error['stage']);
+        $this->assertStringContainsString('upstream timeout', $error['message']);
+    }
 }
