@@ -90,10 +90,21 @@ class RunSentryWatchdogJob implements ShouldQueue
         $criticalCount = 0;
         $lines = [];
         $criticalLines = [];
+        $prsCap = (int) config('sentry_watchdog.max_prs_per_run', 3);
+        $quotaReached = false;
 
         foreach ($groups as $group) {
             /** @var Signal $signal */
             $signal = $group->first();
+
+            // Hard cap on delegations per run. Once reached, remaining signals
+            // stay pending (unstamped) for the next run — both to keep the
+            // human reviewer's PR queue manageable and to limit Anthropic Max
+            // bill exposure when claude-code-vps misbehaves.
+            if ($prsOpened >= $prsCap) {
+                $quotaReached = true;
+                break;
+            }
 
             try {
                 $result = $triage->execute($signal);
@@ -126,6 +137,10 @@ class RunSentryWatchdogJob implements ShouldQueue
             $lines[] = '• ['.strtoupper($result->tier->value).'] '
                 .($result->summary ?? 'Sentry issue')
                 .' — '.($result->wasDelegated() ? 'PR opened' : 'investigate-only');
+        }
+
+        if ($quotaReached) {
+            $lines[] = '• [QUOTA] PR cap of '.$prsCap.' reached; remaining signals deferred to next run.';
         }
 
         $run->update([

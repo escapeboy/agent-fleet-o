@@ -197,6 +197,46 @@ class RunSentryWatchdogTest extends TestCase
         );
     }
 
+    public function test_run_enforces_max_prs_per_run_cap(): void
+    {
+        // The PR cap protects (a) the human reviewer's queue and (b) the
+        // Anthropic Max bill from runaway claude-code-vps loops. Once hit,
+        // we stop the loop and defer remaining signals to the next run.
+        config(['sentry_watchdog.max_prs_per_run' => 2]);
+
+        $integration = $this->seedSentryIntegration();
+        foreach (['ISSUE-A', 'ISSUE-B', 'ISSUE-C', 'ISSUE-D'] as $id) {
+            $this->seedSentrySignal($id);
+        }
+
+        $triageCalls = 0;
+        $this->mockTriage(function (Signal $signal) use (&$triageCalls) {
+            $triageCalls++;
+
+            return new SentryTriageResult(
+                signalId: $signal->id,
+                outcome: SentryTriageOutcome::Delegated,
+                tier: FixTier::T1,
+                confidence: 0.9,
+                isCritical: false,
+                summary: 'auto-fix',
+                experimentId: (string) Str::uuid7(),
+            );
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame(2, $triageCalls, 'Loop must stop after the cap is reached — no extra LLM spend on signals 3 and 4.');
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+        $this->assertSame(2, $run->prs_opened);
+        $this->assertStringContainsString('QUOTA', $run->digest_summary);
+        $this->assertStringContainsString('cap of 2', $run->digest_summary);
+    }
+
     public function test_run_skips_signals_matching_ignore_title_patterns(): void
     {
         // Default config ignores "Cron failure:" boilerplate that Sentry's
