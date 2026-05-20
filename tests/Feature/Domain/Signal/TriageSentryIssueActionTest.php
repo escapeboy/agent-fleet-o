@@ -6,7 +6,6 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Actions\NotifyCriticalSentryIssueAction;
 use App\Domain\Signal\Actions\TriageSentryIssueAction;
-use App\Domain\Signal\Enums\FixTier;
 use App\Domain\Signal\Enums\SentryTriageOutcome;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\Signal;
@@ -199,25 +198,28 @@ class TriageSentryIssueActionTest extends TestCase
         $this->assertSame(1, Experiment::query()->count());
     }
 
-    public function test_tc13_phase1_base_submodule_suspect_file_is_not_delegated(): void
+    public function test_tc13_phase1_base_submodule_suspect_file_is_delegated_to_base_repo(): void
     {
+        // Submodule-aware routing: pure-base suspect_files no longer block
+        // delegation — the fix is routed at the agent-fleet-o repo instead.
         config(['sentry_watchdog.mode' => 'phase1']);
         $this->fakeGateway($this->triageJson([
             'suspect_files' => ['base/app/Domain/Agent/Models/Agent.php'],
             'confidence' => 0.95,
+            'estimated_diff_lines' => 10,
         ]));
 
         $signal = $this->makeSentrySignal();
 
         $result = app(TriageSentryIssueAction::class)->execute($signal);
 
-        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
-        $this->assertNull($result->experimentId);
-        $this->assertSame(FixTier::T4, $result->tier);
-        $this->assertSame(0, Experiment::query()->count());
+        $this->assertSame(SentryTriageOutcome::Delegated, $result->outcome);
+        $this->assertNotNull($result->experimentId);
+        $this->assertSame(1, Experiment::query()->count());
 
         $signal->refresh();
-        $this->assertNull($signal->experiment_id);
+        $this->assertSame($result->experimentId, $signal->experiment_id);
+        $this->assertSame('escapeboy/agent-fleet-o', $signal->payload['target_repository']);
     }
 
     public function test_tc14_phase1_confidence_below_threshold_is_not_delegated(): void

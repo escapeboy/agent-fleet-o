@@ -26,10 +26,13 @@ class SentryFixTierClassifierTest extends TestCase
         );
     }
 
-    public function test_tc1_base_submodule_file_is_t4(): void
+    public function test_tc1_base_submodule_file_is_classified_like_parent(): void
     {
+        // Submodule-aware routing: pure-base paths no longer force T4 — they
+        // are classified by size, sensitive fragments, etc. like parent paths.
+        // A small base-only fix that does not hit a sensitive fragment is T1.
         $tier = $this->classifier->classify(['base/app/Domain/Tool/Models/Tool.php'], 12);
-        $this->assertSame(FixTier::T4, $tier);
+        $this->assertSame(FixTier::T1, $tier);
     }
 
     public function test_tc2_migration_file_is_t4(): void

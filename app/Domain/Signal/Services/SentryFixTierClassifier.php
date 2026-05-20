@@ -71,13 +71,10 @@ class SentryFixTierClassifier
             $files,
         );
 
-        // Rule 1: base/ submodule — needs the submodule-aware merge (G6) that
-        // this sprint does not build, so it stays human-only.
-        foreach ($normalized as $path) {
-            if (str_starts_with($path, 'base/') || str_contains($path, '/base/')) {
-                return FixTier::T4;
-            }
-        }
+        // Rule 1 (was: base/ submodule → T4) — superseded by submodule-aware
+        // routing in TriageSentryIssueAction (phase 1 enablement sprint).
+        // Pure-base suspect_files now delegate against escapeboy/agent-fleet-o
+        // and are tier-classified the same as parent-repo paths.
 
         // Rule 2: migrations / schema changes.
         foreach ($normalized as $path) {
