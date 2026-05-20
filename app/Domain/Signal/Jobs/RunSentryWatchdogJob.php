@@ -15,6 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -69,6 +70,15 @@ class RunSentryWatchdogJob implements ShouldQueue
             ->orderBy('created_at')
             ->limit((int) config('sentry_watchdog.max_signals_per_run', 15))
             ->get();
+
+        // Drop known Sentry noise (e.g. Cron-monitor boilerplate) before triage
+        // so the LLM never burns credits on signals that produce no actionable
+        // result. Filter applied in PHP because SQLite (the test driver) lacks
+        // ILIKE and the result set is already capped at max_signals_per_run.
+        $signals = $this->dropIgnoredTitles(
+            $signals,
+            (array) config('sentry_watchdog.ignore_title_patterns', []),
+        );
 
         // Group by Sentry issue id so a re-ingested issue is triaged once.
         // Integration signals wrap the driver item: the stable id is payload.source_id.
@@ -129,6 +139,45 @@ class RunSentryWatchdogJob implements ShouldQueue
 
         $run->refresh();
         $digest->execute($run);
+    }
+
+    /**
+     * Drop signals whose Sentry issue title matches any configured ignore
+     * pattern. Patterns use SQL ILIKE syntax (`%` wildcard) for parity with
+     * the surrounding codebase; comparison is case-insensitive.
+     *
+     * @param  Collection<int, Signal>  $signals
+     * @param  list<string>  $patterns
+     * @return Collection<int, Signal>
+     */
+    private function dropIgnoredTitles($signals, array $patterns)
+    {
+        if ($patterns === []) {
+            return $signals;
+        }
+
+        // Convert ILIKE patterns to regular expressions once.
+        $regexes = array_map(
+            static function (string $pattern): string {
+                // Translate SQL `%` (multi) and `_` (single) wildcards to regex.
+                $escaped = preg_quote($pattern, '/');
+                $regex = str_replace(['%', '_'], ['.*', '.'], $escaped);
+
+                return '/^'.$regex.'$/i';
+            },
+            $patterns,
+        );
+
+        return $signals->reject(function (Signal $signal) use ($regexes): bool {
+            $title = (string) ($signal->payload['payload']['title'] ?? '');
+            foreach ($regexes as $regex) {
+                if (preg_match($regex, $title) === 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        })->values();
     }
 
     /**

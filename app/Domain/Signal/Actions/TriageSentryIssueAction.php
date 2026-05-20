@@ -58,7 +58,7 @@ class TriageSentryIssueAction
         // driver item — the actual Sentry issue lives under payload['payload'].
         $raw = $signal->payload ?? [];
         $payload = (isset($raw['payload']) && is_array($raw['payload'])) ? $raw['payload'] : $raw;
-        $investigation = $this->investigate($payload, $team);
+        $investigation = $this->investigate($payload, $signal, $team);
         $tier = $this->classifier->classify(
             $investigation['suspect_files'],
             $investigation['estimated_diff_lines'],
@@ -177,7 +177,7 @@ class TriageSentryIssueAction
      * @param  array<string, mixed>  $payload
      * @return array{root_cause: string, confidence: float, suspect_files: list<string>, estimated_diff_lines: int, is_critical: bool, summary: string}
      */
-    private function investigate(array $payload, Team $team): array
+    private function investigate(array $payload, Signal $signal, Team $team): array
     {
         $default = [
             'root_cause' => 'Investigation unavailable — see Sentry issue directly.',
@@ -188,41 +188,56 @@ class TriageSentryIssueAction
             'summary' => $this->clean((string) ($payload['title'] ?? 'Sentry issue'), 200),
         ];
 
-        try {
-            // Watchdog triage runs on the dedicated platform classification
-            // key when set (config/ai.php classification), else per-team resolution.
-            $provider = (string) config('ai.classification.provider');
-            $model = (string) config('ai.classification.model');
-            if ($provider === '' || $model === '') {
+        // Watchdog triage runs on the dedicated platform classification
+        // key when set (config/ai.php classification), else per-team resolution.
+        $provider = (string) config('ai.classification.provider');
+        $model = (string) config('ai.classification.model');
+        if ($provider === '' || $model === '') {
+            try {
                 $resolved = $this->providerResolver->resolve(team: $team, purpose: 'sentry-triage');
                 $provider = $resolved['provider'];
                 $model = $resolved['model'];
+            } catch (\Throwable $e) {
+                $this->recordTriageError($signal, 'provider_resolution_failed', $e->getMessage(), null, null, null);
+
+                return $default;
             }
+        }
 
-            $request = new AiRequestDTO(
-                provider: $provider,
-                model: $model,
-                systemPrompt: $this->systemPrompt(),
-                userPrompt: $this->userPrompt($payload),
-                maxTokens: 1024,
-                userId: Team::ownerIdFor($team->id),
-                teamId: $team->id,
-                purpose: 'sentry-triage',
-                temperature: 0.2,
-            );
+        $rawResponse = null;
+        try {
+            $rawResponse = $this->callGateway($provider, $model, $payload, $team, retry: false);
+            $parsed = $this->extractJson($rawResponse);
 
-            $response = $this->gateway->complete($request);
-            $parsed = $this->extractJson($response->content);
+            // One retry with a stricter "JSON only" reminder when the first
+            // attempt is unparseable. Most parse failures on Groq are markdown
+            // prose explanations bracketing the JSON object — a second pass
+            // with an explicit reminder recovers ~all of them, and the cost
+            // (~80 output tokens) is far cheaper than burning the slot on a
+            // defaulted triage that says nothing useful.
+            if ($parsed === null) {
+                Log::info('Sentry watchdog triage: first parse failed, retrying with stricter prompt', [
+                    'signal_id' => $signal->id,
+                    'team_id' => $team->id,
+                    'raw_excerpt' => mb_substr($rawResponse, 0, 200),
+                ]);
+                $rawResponse = $this->callGateway($provider, $model, $payload, $team, retry: true);
+                $parsed = $this->extractJson($rawResponse);
+            }
         } catch (\Throwable $e) {
             Log::warning('Sentry watchdog investigation failed', [
                 'team_id' => $team->id,
+                'signal_id' => $signal->id,
                 'error' => $e->getMessage(),
             ]);
+            $this->recordTriageError($signal, 'gateway_exception', $e->getMessage(), $rawResponse, $provider, $model);
 
             return $default;
         }
 
         if ($parsed === null) {
+            $this->recordTriageError($signal, 'parse_failure', 'extractJson returned null on both attempts', $rawResponse, $provider, $model);
+
             return $default;
         }
 
@@ -236,14 +251,69 @@ class TriageSentryIssueAction
         ];
     }
 
-    private function systemPrompt(): string
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function callGateway(string $provider, string $model, array $payload, Team $team, bool $retry): string
     {
-        return 'You are a senior engineer triaging a production error from Sentry. '
+        $request = new AiRequestDTO(
+            provider: $provider,
+            model: $model,
+            systemPrompt: $this->systemPrompt($retry),
+            userPrompt: $this->userPrompt($payload),
+            maxTokens: 1024,
+            userId: Team::ownerIdFor($team->id),
+            teamId: $team->id,
+            purpose: 'sentry-triage',
+            temperature: 0.2,
+        );
+
+        return $this->gateway->complete($request)->content;
+    }
+
+    /**
+     * Persist the failure mode + raw LLM output onto signal.payload so the
+     * defaulted triage is no longer a silent outcome: the next watchdog run,
+     * digest review, or audit can see exactly which stage failed and what
+     * the model emitted. Truncated to 2KB to keep the JSONB row bounded.
+     */
+    private function recordTriageError(
+        Signal $signal,
+        string $stage,
+        string $message,
+        ?string $rawResponse,
+        ?string $provider,
+        ?string $model,
+    ): void {
+        $payload = $signal->payload ?? [];
+        $payload['sentry_watchdog_triage_error'] = [
+            'stage' => $stage,
+            'message' => mb_substr($message, 0, 500),
+            'raw_response' => $rawResponse !== null ? mb_substr($rawResponse, 0, 2000) : null,
+            'provider' => $provider,
+            'model' => $model,
+            'occurred_at' => now()->toIso8601String(),
+        ];
+        $signal->payload = $payload;
+        $signal->save();
+    }
+
+    private function systemPrompt(bool $retry = false): string
+    {
+        $base = 'You are a senior engineer triaging a production error from Sentry. '
             .'Identify the most likely root cause and the repository files that would need to change. '
             .'Respond with ONLY a single JSON object, no prose, with keys: '
             .'root_cause (string), confidence (number 0-1), suspect_files (array of repo-relative paths), '
             .'estimated_diff_lines (integer), is_critical (boolean — true for data loss, outages, or auth/billing breakage), '
             .'summary (string, one sentence).';
+
+        if ($retry) {
+            $base .= ' IMPORTANT: your previous reply could not be parsed. Output the JSON object only — '
+                .'no leading text, no trailing text, no markdown code fences, no commentary. The very first '
+                .'character of your reply must be "{" and the very last character must be "}".';
+        }
+
+        return $base;
     }
 
     /**
