@@ -5,11 +5,31 @@ namespace App\Domain\Telegram\Models;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string|null $bot_token
+ * @property string|null $bot_username
+ * @property string|null $bot_name
+ * @property string $routing_mode
+ * @property string|null $default_project_id
+ * @property bool $webhook_mode
+ * @property string|null $webhook_secret
+ * @property string $status
+ * @property string|null $last_error
+ * @property Carbon|null $last_message_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Project|null $defaultProject
+ * @property-read Collection<int, TelegramChatBinding> $chatBindings
+ */
 class TelegramBot extends Model
 {
     use BelongsToTeam, HasUuids;

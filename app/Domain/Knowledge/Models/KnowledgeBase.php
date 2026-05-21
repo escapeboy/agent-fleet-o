@@ -5,16 +5,32 @@ namespace App\Domain\Knowledge\Models;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Knowledge\Enums\KnowledgeBaseStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
+ * @property string $id
+ * @property string $team_id
+ * @property string|null $agent_id
+ * @property string $name
+ * @property string|null $description
  * @property KnowledgeBaseStatus $status
+ * @property int $chunks_count
  * @property Carbon|null $last_ingested_at
+ * @property bool $ragflow_enabled
+ * @property string|null $ragflow_dataset_id
+ * @property string|null $ragflow_chunk_method
+ * @property Carbon|null $ragflow_last_synced_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property-read Agent|null $agent
+ * @property-read Collection<int, KnowledgeChunk> $chunks
  */
 class KnowledgeBase extends Model
 {
