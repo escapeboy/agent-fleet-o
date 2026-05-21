@@ -89,7 +89,7 @@ class TeamGraphGetTool extends Tool
                 'id' => 'crew:'.$crew->id,
                 'type' => 'crew',
                 'label' => $crew->name,
-                'process_type' => $crew->process_type instanceof \BackedEnum ? $crew->process_type->value : (string) $crew->process_type,
+                'process_type' => $crew->process_type->value,
             ];
         }
 
@@ -105,7 +105,7 @@ class TeamGraphGetTool extends Tool
                 'source' => 'agent:'.$cm->agent_id,
                 'target' => 'crew:'.$cm->crew_id,
                 'kind' => 'member',
-                'role' => $cm->role instanceof \BackedEnum ? $cm->role->value : (string) $cm->role,
+                'role' => $cm->role->value,
             ];
         }
 

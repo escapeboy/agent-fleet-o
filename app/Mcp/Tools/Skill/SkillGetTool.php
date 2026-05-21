@@ -58,8 +58,8 @@ class SkillGetTool extends Tool
             'status' => $skill->status->value,
             'description' => $skill->description,
             'prompt_template' => $promptPreview,
-            'risk_level' => $skill->risk_level?->value,
-            'execution_type' => $skill->execution_type?->value,
+            'risk_level' => $skill->risk_level->value,
+            'execution_type' => $skill->execution_type->value,
             'created_at' => $skill->created_at?->toIso8601String(),
         ]));
     }

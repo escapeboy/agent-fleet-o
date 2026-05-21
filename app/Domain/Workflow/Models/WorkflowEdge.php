@@ -7,10 +7,25 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
+ * @property string $id
+ * @property string $workflow_id
+ * @property string $source_node_id
+ * @property string $target_node_id
+ * @property array<string, mixed>|null $condition
+ * @property string|null $case_value
+ * @property string|null $label
+ * @property bool $is_default
+ * @property int $sort_order
  * @property string|null $source_channel
  * @property string|null $target_channel
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Workflow $workflow
+ * @property-read WorkflowNode $sourceNode
+ * @property-read WorkflowNode $targetNode
  */
 class WorkflowEdge extends Model
 {

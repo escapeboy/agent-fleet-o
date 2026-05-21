@@ -46,10 +46,8 @@ class TrajectorySkillExtractor
 
         $lines[] = '## Outcome';
         $finalOutput = $execution->final_output;
-        if (is_array($finalOutput)) {
+        if ($finalOutput !== null) {
             $lines[] = $finalOutput['result'] ?? $finalOutput['summary'] ?? json_encode($finalOutput);
-        } elseif (is_string($finalOutput)) {
-            $lines[] = $finalOutput;
         }
 
         $lines[] = '';
@@ -89,10 +87,8 @@ class TrajectorySkillExtractor
 
         $lines[] = '## Output';
         $output = $execution->output;
-        if (is_array($output)) {
+        if ($output !== null) {
             $lines[] = json_encode($output, JSON_PRETTY_PRINT);
-        } elseif (is_string($output)) {
-            $lines[] = $output;
         }
 
         $lines[] = '';

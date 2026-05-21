@@ -202,7 +202,7 @@ class ExecuteCodeExecutionSkillAction
             // Best-effort worktree cleanup — admin can run `git worktree prune` if this fails
             if ($worktreePath !== null && is_dir($worktreePath)) {
                 try {
-                    $this->worktreeManager->remove($worktreePath, $repoPath ?? '');
+                    $this->worktreeManager->remove($worktreePath, $repoPath);
                 } catch (\Throwable) {
                     // Non-fatal
                 }

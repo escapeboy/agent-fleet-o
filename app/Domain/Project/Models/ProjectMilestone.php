@@ -6,7 +6,21 @@ use App\Domain\Project\Enums\MilestoneStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $project_id
+ * @property string $title
+ * @property string|null $description
+ * @property array<string, mixed>|null $criteria
+ * @property int $sort_order
+ * @property MilestoneStatus|null $status
+ * @property Carbon|null $completed_at
+ * @property string|null $completed_by_run_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class ProjectMilestone extends Model
 {
     use HasUuids;

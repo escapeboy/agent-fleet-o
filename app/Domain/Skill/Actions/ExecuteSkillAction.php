@@ -65,37 +65,37 @@ class ExecuteSkillAction
         string $purpose = 'run',
     ): array {
         // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
-        if ($skill->type === SkillType::CodeExecution->value) {
+        if ($skill->type === SkillType::CodeExecution) {
             return $this->executeCodeExecution->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // Browser Automation calls Browserless REST API directly — no LLM, no budget reservation
-        if ($skill->type === SkillType::Browser->value) {
+        if ($skill->type === SkillType::Browser) {
             return $this->executeBrowserSkill->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // RunPod Endpoint calls RunPod REST API directly — no LLM, costs billed to user's RunPod account
-        if ($skill->type === SkillType::RunpodEndpoint->value) {
+        if ($skill->type === SkillType::RunpodEndpoint) {
             return $this->executeRunPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // RunPod Pod manages a full GPU pod lifecycle — create → wait → call → stop
-        if ($skill->type === SkillType::RunpodPod->value) {
+        if ($skill->type === SkillType::RunpodPod) {
             return $this->executeRunPodPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // GpuCompute routes to the pluggable compute provider system
-        if ($skill->type === SkillType::GpuCompute->value) {
+        if ($skill->type === SkillType::GpuCompute) {
             return $this->executeGpuCompute->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // BorunaScript runs a deterministic .ax script via the Boruna MCP stdio server — no LLM, no credits
-        if ($skill->type === SkillType::BorunaScript->value) {
+        if ($skill->type === SkillType::BorunaScript) {
             return $this->executeBorunaScript->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
         // Supabase Edge Function calls a Supabase Edge Function via REST — no LLM, costs billed to user's Supabase account
-        if ($skill->type === SkillType::SupabaseEdgeFunction->value) {
+        if ($skill->type === SkillType::SupabaseEdgeFunction) {
             return $this->executeSupabaseEdgeFunction->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
         }
 
@@ -227,7 +227,7 @@ class ExecuteSkillAction
                 'cost_credits' => $response->usage->costCredits,
             ];
 
-            if ($skill->type === SkillType::MultiModelConsensus->value && is_array($output)) {
+            if ($skill->type === SkillType::MultiModelConsensus && is_array($output)) {
                 $executionData['confidence_score'] = $output['confidence_score'] ?? null;
                 $executionData['consensus_level'] = $output['consensus_level'] ?? null;
                 $executionData['peer_reviews'] = $output['peer_reviews'] ?? null;
@@ -246,11 +246,11 @@ class ExecuteSkillAction
             // Record schema retry trail so operators can see which outputs
             // required self-correction (Sprint 14, mirrors Agent Sprint 12).
             if ($schemaRetryAttempts > 0) {
-                $executionData['quality_details'] = array_merge($executionData['quality_details'] ?? [], [
+                $executionData['quality_details'] = [
                     'output_schema_valid' => $schemaValid,
                     'output_schema_retries' => $schemaRetryAttempts,
                     'output_schema_retry_trail' => $schemaRetryTrail,
-                ]);
+                ];
             }
 
             $execution = SkillExecution::create($executionData);
@@ -414,7 +414,7 @@ class ExecuteSkillAction
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
-            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute, SkillType::BorunaScript => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, GpuCompute, and BorunaScript skill types must be short-circuited before reaching executeByType.'),
+            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute, SkillType::BorunaScript, SkillType::SupabaseEdgeFunction, SkillType::RagflowRetrieval => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, GpuCompute, BorunaScript, SupabaseEdgeFunction, and RagflowRetrieval skill types must be short-circuited before reaching executeByType.'),
         };
     }
 

@@ -20,7 +20,47 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $source_listing_id
+ * @property string $name
+ * @property string $slug
+ * @property string|null $description
+ * @property SkillType $type
+ * @property Framework|null $framework
+ * @property ExecutionType $execution_type
+ * @property SkillStatus $status
+ * @property bool $evaluation_enabled
+ * @property float $evaluation_sample_rate
+ * @property string|null $evaluation_model
+ * @property array<string, mixed>|null $evaluation_criteria
+ * @property RiskLevel $risk_level
+ * @property DataClassification $data_classification
+ * @property array<string, mixed>|null $input_schema
+ * @property array<string, mixed>|null $output_schema
+ * @property int|null $output_schema_max_retries
+ * @property array<string, mixed>|null $configuration
+ * @property array<string, mixed>|null $cost_profile
+ * @property array<string, mixed>|null $safety_flags
+ * @property array<string, mixed>|null $provider_requirements
+ * @property string $current_version
+ * @property bool $requires_approval
+ * @property string|null $system_prompt
+ * @property int $execution_count
+ * @property int $success_count
+ * @property string $avg_latency_ms
+ * @property int $applied_count
+ * @property int $completed_count
+ * @property int $effective_count
+ * @property int $fallback_count
+ * @property array<string, mixed>|null $meta
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ */
 class Skill extends Model
 {
     use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
@@ -145,8 +185,8 @@ class Skill extends Model
             $this->increment('success_count');
         }
 
-        // Running average for latency
-        $total = ($this->avg_latency_ms * ($this->execution_count - 1)) + $durationMs;
+        // Running average for latency (decimal:2 cast returns string)
+        $total = ((float) $this->avg_latency_ms * ($this->execution_count - 1)) + $durationMs;
         $this->update(['avg_latency_ms' => $total / $this->execution_count]);
     }
 

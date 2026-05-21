@@ -36,7 +36,7 @@ class WorkflowExternalAgentHandler
             throw new \RuntimeException('external_agent node missing config.external_agent_id');
         }
 
-        $teamId = (string) ($step->team_id ?? $node->workflow?->team_id ?? '');
+        $teamId = $node->workflow->team_id;
         $externalAgent = ExternalAgent::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->find($externalAgentId);

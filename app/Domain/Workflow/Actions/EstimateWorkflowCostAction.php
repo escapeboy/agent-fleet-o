@@ -33,7 +33,7 @@ class EstimateWorkflowCostAction
             } elseif ($node->type === WorkflowNodeType::Llm || $node->type === WorkflowNodeType::ParameterExtractor) {
                 // LLM and ParameterExtractor nodes use a direct LLM call — estimate using Haiku pricing
                 // (assumes claude-haiku-4-5 unless configured otherwise)
-                $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+                $config = $node->config ?? [];
                 $maxTokens = (int) ($config['max_tokens'] ?? 1024);
                 // Haiku: ~3 credits input / 15 credits output per 1k tokens
                 $costPerRun = (int) ceil((1000 / 1000 * 3) + ($maxTokens / 1000 * 15));
