@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Domain\Integration;
 
+use App\Domain\Integration\Drivers\Attio\AttioIntegrationDriver;
 use App\Domain\Integration\Drivers\ClickUp\ClickUpIntegrationDriver;
 use App\Domain\Integration\Drivers\Freshdesk\FreshdeskIntegrationDriver;
 use App\Domain\Integration\Drivers\Slack\SlackIntegrationDriver;
@@ -129,5 +130,34 @@ class IntegrationDriverHotfixTest extends TestCase
             $driver->authType(),
             'Freshdesk uses HTTP Basic with an API key, not OAuth2 — authType must reflect this',
         );
+    }
+
+    public function test_attio_webhook_payload_matches_dot_separated_event_types(): void
+    {
+        $driver = new AttioIntegrationDriver;
+
+        $cases = [
+            'people.created' => 'record_created',
+            'companies.updated' => 'record_updated',
+            'record.created' => 'record_created',
+            'note.created' => 'note_created',
+            'task.created' => 'task_created',
+            // Legacy dash form remains supported defensively
+            'record-created' => 'record_created',
+        ];
+
+        foreach ($cases as $eventType => $expectedTrigger) {
+            $result = $driver->parseWebhookPayload(
+                ['event_type' => $eventType, 'id' => ['event_id' => 'evt_1']],
+                [],
+            );
+
+            $tags = $result[0]['tags'] ?? [];
+            $this->assertContains(
+                $expectedTrigger,
+                $tags,
+                "Attio event_type '{$eventType}' should map to trigger '{$expectedTrigger}'",
+            );
+        }
     }
 }
