@@ -28,11 +28,7 @@ class BugReportConfirmController extends Controller
 
         $this->throttle('widget-bug-report-confirm:'.$signalModel->id, 5);
 
-        $currentStatus = $signalModel->status instanceof SignalStatus
-            ? $signalModel->status
-            : SignalStatus::tryFrom((string) $signalModel->status);
-
-        if ($currentStatus !== SignalStatus::Resolved) {
+        if ($signalModel->status !== SignalStatus::Resolved) {
             return $this->withCors(response()->json([
                 'error' => 'not_resolved',
                 'message' => 'Confirmation is only allowed on resolved bug reports.',
@@ -63,13 +59,8 @@ class BugReportConfirmController extends Controller
             ];
         });
 
-        $status = $result['status'];
-        if ($status instanceof SignalStatus) {
-            $status = $status->value;
-        }
-
         return $this->withCors(response()->json([
-            'status' => $status,
+            'status' => $result['status']->value,
             'comment_id' => $result['comment_id'],
             'confirmed' => $confirmed,
         ]));

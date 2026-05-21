@@ -17,6 +17,7 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Models\Artifact;
 use App\Models\User;
 use Database\Factories\Domain\Experiment\ExperimentFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -59,6 +60,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read ProjectRun|null $projectRun
+ * @property-read Collection<int, OutboundProposal> $outboundProposals
+ * @property-read Collection<int, Artifact> $artifacts
  */
 class Experiment extends Model
 {

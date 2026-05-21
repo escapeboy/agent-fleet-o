@@ -95,7 +95,7 @@ class InboundConnectorManageTool extends Tool
             ]);
 
         return Response::text(json_encode([
-            'webhook_connectors' => array_values($webhooks),
+            'webhook_connectors' => $webhooks,
             'polling_connectors' => $pollingConnectors->values(),
         ]));
     }

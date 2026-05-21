@@ -62,7 +62,7 @@ class SignalListByRelevanceTool extends Tool
                 'relevance_score' => $s->relevance_score,
                 'relevance_scored_at' => $s->relevance_scored_at?->toIso8601String(),
                 'intent_score' => $s->score,
-                'status' => $s->status?->value,
+                'status' => $s->status->value,
                 'received_at' => $s->received_at?->toIso8601String(),
             ])->values()->toArray(),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
