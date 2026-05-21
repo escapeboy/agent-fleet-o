@@ -23,7 +23,7 @@ class CreateHumanTaskAction
         PlaybookStep $step,
         WorkflowNode $node,
     ): ApprovalRequest {
-        $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
+        $config = $node->config ?? [];
 
         $slaHours = $config['sla_hours'] ?? 48;
         $assignmentPolicy = $config['assignment_policy'] ?? 'any_team_member';

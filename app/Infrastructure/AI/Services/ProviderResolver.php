@@ -124,6 +124,7 @@ class ProviderResolver
     {
         $override = $member->model_override;
         $agent = $member->agent;
+        /** @var Team|null $team */
         $team = $agent?->team;
 
         if ($override !== null) {

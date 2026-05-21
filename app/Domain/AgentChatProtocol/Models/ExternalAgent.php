@@ -15,7 +15,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string|null $credential_id
+ * @property string $name
+ * @property ExternalAgentStatus $status
+ * @property AdapterKind $adapter_kind
+ * @property array<string, mixed>|null $manifest_cached
+ * @property array<string, mixed>|null $capabilities
+ * @property array<string, mixed>|null $metadata
+ * @property Carbon|null $manifest_fetched_at
+ * @property Carbon|null $last_call_at
+ * @property Carbon|null $last_success_at
+ */
 class ExternalAgent extends Model
 {
     use BelongsToTeam;

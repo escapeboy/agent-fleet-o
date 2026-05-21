@@ -36,12 +36,9 @@ class InjectTeamContext
 
         foreach ($memberships as $self) {
             $crew = $self->crew;
-            if (! $crew) {
-                continue;
-            }
 
             $peerLines = [];
-            foreach ($crew->members ?? [] as $peer) {
+            foreach ($crew->members as $peer) {
                 if ($peer->id === $self->id) {
                     continue;
                 }
