@@ -10,7 +10,40 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $crew_execution_id
+ * @property string|null $agent_id
+ * @property string|null $external_agent_id
+ * @property string $title
+ * @property string $description
+ * @property CrewTaskStatus $status
+ * @property array<string, mixed>|null $input_context
+ * @property array<string, mixed>|null $output
+ * @property array<string, mixed>|null $qa_feedback
+ * @property float|null $qa_score
+ * @property array<int, string>|null $depends_on
+ * @property array<string, mixed>|null $skip_condition
+ * @property int $attempt_number
+ * @property int $max_attempts
+ * @property int $cost_credits
+ * @property int|null $duration_ms
+ * @property string|null $error_message
+ * @property array<string, mixed>|null $error_metadata
+ * @property int $sort_order
+ * @property string|null $batch_id
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $claimed_at
+ * @property array<string, mixed>|null $belief_state
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read CrewExecution $crewExecution
+ * @property-read Agent|null $agent
+ * @property-read ExternalAgent|null $externalAgent
+ */
 class CrewTaskExecution extends Model
 {
     use HasUuids;
