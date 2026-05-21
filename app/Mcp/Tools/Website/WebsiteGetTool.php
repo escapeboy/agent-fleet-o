@@ -46,7 +46,7 @@ class WebsiteGetTool extends Tool
                 'id' => $p->id,
                 'slug' => $p->slug,
                 'title' => $p->title,
-                'status' => $p->status instanceof \BackedEnum ? $p->status->value : $p->status,
+                'status' => $p->status->value,
                 'sort_order' => $p->sort_order,
             ]),
         ], JSON_PRETTY_PRINT));

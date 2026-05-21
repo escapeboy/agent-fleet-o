@@ -168,8 +168,13 @@ class SendSentryFixPrOpenedEmailListener
             ->latest('completed_at')
             ->first();
 
-        $output = $stage?->output_snapshot ?? [];
+        if ($stage === null) {
+            return '';
+        }
 
-        return is_string($output['summary'] ?? null) ? $output['summary'] : '';
+        $output = $stage->output_snapshot ?? [];
+        $summary = $output['summary'] ?? null;
+
+        return is_string($summary) ? $summary : '';
     }
 }
