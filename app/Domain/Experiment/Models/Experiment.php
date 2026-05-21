@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string|null $team_id
  * @property string|null $user_id
+ * @property string|null $agent_id
  * @property string|null $workflow_id
  * @property int|null $workflow_version
  * @property string $title
@@ -36,8 +37,12 @@ use Illuminate\Support\Carbon;
  * @property ExperimentTrack|null $track
  * @property ExperimentStatus $status
  * @property string|null $paused_from_status
- * @property array|null $constraints
- * @property array|null $success_criteria
+ * @property array<string, mixed>|null $constraints
+ * @property array<string, mixed>|null $success_criteria
+ * @property string|null $share_token
+ * @property bool $share_enabled
+ * @property array<string, mixed>|null $share_config
+ * @property int $delegation_depth
  * @property int|null $budget_cap_credits
  * @property int $budget_spent_credits
  * @property int|null $max_iterations
@@ -49,8 +54,10 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $killed_at
  * @property string|null $parent_experiment_id
  * @property int $nesting_depth
- * @property array|null $orchestration_config
- * @property array|null $meta
+ * @property array<string, mixed>|null $orchestration_config
+ * @property array<string, mixed>|null $meta
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read ProjectRun|null $projectRun
  */
 class Experiment extends Model
