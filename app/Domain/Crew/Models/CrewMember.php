@@ -10,7 +10,24 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $crew_id
+ * @property string|null $agent_id
+ * @property string|null $external_agent_id
+ * @property string|null $member_kind
+ * @property CrewMemberRole $role
+ * @property int $sort_order
+ * @property array<string, mixed>|null $config
+ * @property array<int, string>|null $context_scope
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Crew $crew
+ * @property-read Agent|null $agent
+ * @property-read ExternalAgent|null $externalAgent
+ */
 class CrewMember extends Model
 {
     use HasFactory, HasUuids;
@@ -41,16 +58,19 @@ class CrewMember extends Model
         ];
     }
 
+    /** @return BelongsTo<Crew, $this> */
     public function crew(): BelongsTo
     {
         return $this->belongsTo(Crew::class);
     }
 
+    /** @return BelongsTo<Agent, $this> */
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
     }
 
+    /** @return BelongsTo<ExternalAgent, $this> */
     public function externalAgent(): BelongsTo
     {
         return $this->belongsTo(ExternalAgent::class);
