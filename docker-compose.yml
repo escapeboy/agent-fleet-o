@@ -11,12 +11,9 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
-      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
-      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
-      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
-      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
-      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
-      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
+      # Optional plugin source mounts live in docker-compose.override.yml.example.
+      # Copy that file to docker-compose.override.yml on machines that have the
+      # plugin checkouts; Compose merges overrides automatically.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -90,12 +87,7 @@ services:
       - .:/var/www
       - vendor_data:/var/www/vendor
       - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
-      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
-      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
-      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
-      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
-      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
-      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
+      # Optional plugin mounts: docker-compose.override.yml.example
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -124,12 +116,7 @@ services:
       - .:/var/www
       - vendor_data:/var/www/vendor
       - ./docker/php/conf.d/horizon.ini:/usr/local/etc/php/conf.d/zz-horizon.ini
-      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
-      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
-      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
-      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
-      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
-      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
+      # Optional plugin mounts: docker-compose.override.yml.example
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -170,12 +157,7 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
-      - /Users/katsarov/htdocs/fleetq-plugin-sdk:/Users/katsarov/htdocs/fleetq-plugin-sdk
-      - /Users/katsarov/htdocs/fleetq-website-plugin-core:/Users/katsarov/htdocs/fleetq-website-plugin-core
-      - /Users/katsarov/htdocs/fleetq-website-plugin-blog:/Users/katsarov/htdocs/fleetq-website-plugin-blog
-      - /Users/katsarov/htdocs/fleetq-website-plugin-forms:/Users/katsarov/htdocs/fleetq-website-plugin-forms
-      - /Users/katsarov/htdocs/fleetq-website-plugin-chatbot:/Users/katsarov/htdocs/fleetq-website-plugin-chatbot
-      - /Users/katsarov/htdocs/fleetq-website-plugin-ecommerce:/Users/katsarov/htdocs/fleetq-website-plugin-ecommerce
+      # Optional plugin mounts: docker-compose.override.yml.example
     environment:
       - APP_ENV=local
       - RUNNING_IN_DOCKER=true
