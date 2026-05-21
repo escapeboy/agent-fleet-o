@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Domain\Audit\Models\AuditEntry;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin AuditEntry */
 class AuditEntryResource extends JsonResource
 {
     public function toArray(Request $request): array
