@@ -9,7 +9,40 @@ use App\Domain\Skill\Models\Skill;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $experiment_id
+ * @property string|null $agent_id
+ * @property string|null $skill_id
+ * @property string|null $crew_id
+ * @property string|null $workflow_node_id
+ * @property int $order
+ * @property ExecutionMode|null $execution_mode
+ * @property string|null $group_id
+ * @property array<string, mixed>|null $conditions
+ * @property array<string, mixed>|null $input_mapping
+ * @property array<string, mixed>|null $output
+ * @property array<string, mixed>|null $checkpoint_data
+ * @property string $status
+ * @property int|null $duration_ms
+ * @property int|null $cost_credits
+ * @property int|null $loop_count
+ * @property string|null $error_message
+ * @property array<string, mixed>|null $error_metadata
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $last_heartbeat_at
+ * @property string|null $worker_id
+ * @property string|null $idempotency_key
+ * @property int $checkpoint_version
+ * @property array<string, mixed>|null $guardrail_result
+ * @property Carbon|null $resume_at
+ * @property string|null $root_event_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class PlaybookStep extends Model
 {
     use HasUuids;

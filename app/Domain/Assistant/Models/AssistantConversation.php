@@ -9,7 +9,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string|null $user_id
+ * @property string|null $title
+ * @property string|null $context_type
+ * @property string|null $context_id
+ * @property array<string, mixed>|null $metadata
+ * @property Carbon|null $last_message_at
+ * @property Carbon|null $expired_at
+ * @property array<string, mixed>|null $review
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class AssistantConversation extends Model
 {
     use BelongsToTeam, HasUuids;
@@ -41,6 +56,7 @@ class AssistantConversation extends Model
         return $query->whereNull('expired_at');
     }
 
+    /** @return HasMany<AssistantMessage, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(AssistantMessage::class, 'conversation_id');
