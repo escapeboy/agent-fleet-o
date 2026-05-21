@@ -23,6 +23,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Per-developer Docker Compose overrides (see docker-compose.override.yml.example)
+docker-compose.override.yml
 /.serena
 /plans
 /.claude

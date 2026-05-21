@@ -1,0 +1,52 @@
+# docker-compose.override.yml — per-developer Compose overrides
+#
+# Copy this file to `docker-compose.override.yml` (gitignored) and customise.
+# Docker Compose automatically merges `docker-compose.override.yml` on top of
+# `docker-compose.yml` whenever you run `docker compose up`. The file is
+# ignored by git and never shipped, so each contributor can keep their own
+# local mounts, ports, or env tweaks here without polluting the shared config.
+#
+# The example below mounts plugin SDK and website-plugin checkouts from the
+# host into the same absolute paths inside the container so Composer path
+# repositories resolve. Adjust the host paths (`${HOME}/htdocs/…`) to wherever
+# you cloned those repos — and delete any line that doesn't apply.
+#
+# Skip this file entirely if you don't develop against the plugin SDK. The
+# app, horizon, scheduler, and reverb services start without these mounts.
+
+services:
+  app:
+    volumes:
+      - ${HOME}/htdocs/fleetq-plugin-sdk:${HOME}/htdocs/fleetq-plugin-sdk
+      - ${HOME}/htdocs/fleetq-website-plugin-core:${HOME}/htdocs/fleetq-website-plugin-core
+      - ${HOME}/htdocs/fleetq-website-plugin-blog:${HOME}/htdocs/fleetq-website-plugin-blog
+      - ${HOME}/htdocs/fleetq-website-plugin-forms:${HOME}/htdocs/fleetq-website-plugin-forms
+      - ${HOME}/htdocs/fleetq-website-plugin-chatbot:${HOME}/htdocs/fleetq-website-plugin-chatbot
+      - ${HOME}/htdocs/fleetq-website-plugin-ecommerce:${HOME}/htdocs/fleetq-website-plugin-ecommerce
+
+  horizon:
+    volumes:
+      - ${HOME}/htdocs/fleetq-plugin-sdk:${HOME}/htdocs/fleetq-plugin-sdk
+      - ${HOME}/htdocs/fleetq-website-plugin-core:${HOME}/htdocs/fleetq-website-plugin-core
+      - ${HOME}/htdocs/fleetq-website-plugin-blog:${HOME}/htdocs/fleetq-website-plugin-blog
+      - ${HOME}/htdocs/fleetq-website-plugin-forms:${HOME}/htdocs/fleetq-website-plugin-forms
+      - ${HOME}/htdocs/fleetq-website-plugin-chatbot:${HOME}/htdocs/fleetq-website-plugin-chatbot
+      - ${HOME}/htdocs/fleetq-website-plugin-ecommerce:${HOME}/htdocs/fleetq-website-plugin-ecommerce
+
+  scheduler:
+    volumes:
+      - ${HOME}/htdocs/fleetq-plugin-sdk:${HOME}/htdocs/fleetq-plugin-sdk
+      - ${HOME}/htdocs/fleetq-website-plugin-core:${HOME}/htdocs/fleetq-website-plugin-core
+      - ${HOME}/htdocs/fleetq-website-plugin-blog:${HOME}/htdocs/fleetq-website-plugin-blog
+      - ${HOME}/htdocs/fleetq-website-plugin-forms:${HOME}/htdocs/fleetq-website-plugin-forms
+      - ${HOME}/htdocs/fleetq-website-plugin-chatbot:${HOME}/htdocs/fleetq-website-plugin-chatbot
+      - ${HOME}/htdocs/fleetq-website-plugin-ecommerce:${HOME}/htdocs/fleetq-website-plugin-ecommerce
+
+  reverb:
+    volumes:
+      - ${HOME}/htdocs/fleetq-plugin-sdk:${HOME}/htdocs/fleetq-plugin-sdk
+      - ${HOME}/htdocs/fleetq-website-plugin-core:${HOME}/htdocs/fleetq-website-plugin-core
+      - ${HOME}/htdocs/fleetq-website-plugin-blog:${HOME}/htdocs/fleetq-website-plugin-blog
+      - ${HOME}/htdocs/fleetq-website-plugin-forms:${HOME}/htdocs/fleetq-website-plugin-forms
+      - ${HOME}/htdocs/fleetq-website-plugin-chatbot:${HOME}/htdocs/fleetq-website-plugin-chatbot
+      - ${HOME}/htdocs/fleetq-website-plugin-ecommerce:${HOME}/htdocs/fleetq-website-plugin-ecommerce
