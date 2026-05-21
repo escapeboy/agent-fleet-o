@@ -191,11 +191,11 @@ class ExperimentDiagnoseTool extends Tool
     {
         if ($stage !== null) {
             $snapshot = $stage->output_snapshot ?? [];
-            if (is_array($snapshot) && isset($snapshot['error']) && is_string($snapshot['error']) && $snapshot['error'] !== '') {
+            if (isset($snapshot['error']) && is_string($snapshot['error']) && $snapshot['error'] !== '') {
                 return $snapshot['error'];
             }
             $telemetry = $stage->telemetry ?? [];
-            if (is_array($telemetry) && isset($telemetry['error']) && is_string($telemetry['error']) && $telemetry['error'] !== '') {
+            if (isset($telemetry['error']) && is_string($telemetry['error']) && $telemetry['error'] !== '') {
                 return $telemetry['error'];
             }
         }
@@ -222,7 +222,7 @@ class ExperimentDiagnoseTool extends Tool
             $evidence[] = [
                 'kind' => 'stage_failure',
                 'stage_id' => $stage->id,
-                'stage' => $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
+                'stage' => $stage->stage->value,
                 'iteration' => $stage->iteration,
                 'retry_count' => $stage->retry_count,
                 'recovery_attempts' => $stage->recovery_attempts,
