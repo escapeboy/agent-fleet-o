@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  * @property string $team_id
  * @property string $provider
  * @property string|null $name
- * @property array{api_key?: string, base_url?: string, models?: list<string>, model_aliases?: array<string, string>, organization_id?: string, project_id?: string, byok_enabled?: bool, deployment?: string, api_version?: string}|null $credentials
+ * @property array<string, mixed>|null $credentials
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
