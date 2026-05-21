@@ -6,7 +6,19 @@ use App\Infrastructure\Encryption\Casts\TeamEncryptedArray;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string $provider
+ * @property string|null $name
+ * @property array{api_key?: string, base_url?: string, models?: list<string>, model_aliases?: array<string, string>, organization_id?: string, project_id?: string, byok_enabled?: bool, deployment?: string, api_version?: string}|null $credentials
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Team $team
+ */
 class TeamProviderCredential extends Model
 {
     use HasUuids;
