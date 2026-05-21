@@ -213,6 +213,7 @@ class Experiment extends Model
         return $this->hasMany(WorkflowSnapshot::class)->orderBy('sequence');
     }
 
+    /** @return HasMany<ExperimentTask, $this> */
     public function tasks(): HasMany
     {
         return $this->hasMany(ExperimentTask::class)->orderBy('sort_order');

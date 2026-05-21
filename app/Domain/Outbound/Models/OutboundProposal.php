@@ -8,6 +8,7 @@ use App\Domain\Outbound\Enums\OutboundChannel;
 use App\Domain\Outbound\Enums\OutboundProposalStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Database\Factories\Domain\Outbound\OutboundProposalFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Experiment|null $experiment
+ * @property-read Collection<int, OutboundAction> $outboundActions
+ * @property-read ApprovalRequest|null $approvalRequest
  */
 class OutboundProposal extends Model
 {

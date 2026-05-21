@@ -4,6 +4,7 @@ namespace App\Livewire\Experiments;
 
 use App\Domain\Experiment\Actions\RetryFromStepAction;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\Experiment\Models\PlaybookStep;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -112,7 +113,7 @@ class ExperimentTasksPanel extends Component
     {
         $tasks = $this->experiment->tasks()->orderBy('sort_order')->get();
 
-        $normalizedTasks = $tasks->map(function ($task) {
+        $normalizedTasks = $tasks->map(function (ExperimentTask $task): object {
             return (object) [
                 'id' => $task->id,
                 'name' => $task->name,

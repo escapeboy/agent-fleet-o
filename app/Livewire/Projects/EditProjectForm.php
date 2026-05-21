@@ -87,6 +87,9 @@ class EditProjectForm extends Component
 
     public bool $doneGateKillSwitch = false;
 
+    /** @var list<string> Future run timestamps for the schedule preview panel. */
+    public array $schedulePreview = [];
+
     public function mount(Project $project): void
     {
         $this->project = $project;

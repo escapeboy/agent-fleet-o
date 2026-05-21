@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * A per-subscription connector record that links an Integration (OAuth/API key account)
@@ -23,6 +24,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Inbound webhooks arrive at POST /api/signals/subscription/{subscription_id}.
  * The secret is registered with the provider when the subscription is created
  * via RegisterSubscriptionWebhookJob.
+ *
+ * @property string $id
+ * @property string $team_id
+ * @property string $integration_id
+ * @property string $name
+ * @property string $driver
+ * @property array<string, mixed> $filter_config
+ * @property bool $is_active
+ * @property string|null $webhook_secret
+ * @property string|null $webhook_id
+ * @property string|null $webhook_status
+ * @property Carbon|null $webhook_expires_at
+ * @property Carbon|null $last_signal_at
+ * @property int $signal_count
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Integration|null $integration
  */
 class ConnectorSignalSubscription extends Model
 {

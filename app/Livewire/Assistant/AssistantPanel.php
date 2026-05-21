@@ -221,7 +221,7 @@ class AssistantPanel extends Component
     public function handleArtifactFormSubmit(string $messageId): void
     {
         $data = $this->artifactForms[$messageId] ?? [];
-        if (! is_array($data) || $data === []) {
+        if ($data === []) {
             return;
         }
 
