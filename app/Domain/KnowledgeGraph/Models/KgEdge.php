@@ -10,7 +10,29 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string $source_entity_id
+ * @property string $source_node_type
+ * @property string $target_entity_id
+ * @property string $target_node_type
+ * @property string $edge_type
+ * @property string $relation_type
+ * @property string $fact
+ * @property array<int, float>|null $fact_embedding
+ * @property Carbon|null $valid_at
+ * @property Carbon|null $invalid_at
+ * @property Carbon|null $expired_at
+ * @property string|null $episode_id
+ * @property array<string, mixed>|null $attributes
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Entity|null $sourceEntity
+ * @property-read Entity|null $targetEntity
+ */
 class KgEdge extends Model
 {
     use BelongsToTeam, HasUuids;
