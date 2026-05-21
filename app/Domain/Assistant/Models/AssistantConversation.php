@@ -56,6 +56,7 @@ class AssistantConversation extends Model
         return $query->whereNull('expired_at');
     }
 
+    /** @return HasMany<AssistantMessage, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(AssistantMessage::class, 'conversation_id');

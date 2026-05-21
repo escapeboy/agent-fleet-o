@@ -29,11 +29,10 @@ class RunOutputCollector
 
             $label = $step->label ?? $step->skill_name ?? "Step {$step->order}";
 
-            if (is_array($output)) {
-                $text = $output['result'] ?? $output['text'] ?? $output['content'] ?? json_encode($output, JSON_PRETTY_PRINT);
-            } else {
-                $text = (string) $output;
-            }
+            $text = $output['result']
+                ?? $output['text']
+                ?? $output['content']
+                ?? (string) json_encode($output, JSON_PRETTY_PRINT);
 
             $parts[] = "## {$label}\n\n{$text}";
         }

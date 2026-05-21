@@ -44,7 +44,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $share_config
  * @property int $delegation_depth
  * @property int|null $budget_cap_credits
- * @property int $budget_spent_credits
+ * @property int|null $budget_spent_credits
  * @property int|null $max_iterations
  * @property int $current_iteration
  * @property int|null $max_outbound_count

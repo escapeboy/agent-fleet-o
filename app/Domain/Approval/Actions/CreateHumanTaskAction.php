@@ -128,7 +128,7 @@ class CreateHumanTaskAction
             return $default;
         }
 
-        $output = is_array($sourceStep->output) ? $sourceStep->output : [];
+        $output = $sourceStep->output;
         $confidence = $output['confidence'] ?? null;
 
         if (! is_numeric($confidence)) {

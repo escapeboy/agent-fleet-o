@@ -27,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $checkpoint_data
  * @property string $status
  * @property int|null $duration_ms
- * @property int $cost_credits
+ * @property int|null $cost_credits
  * @property int|null $loop_count
  * @property string|null $error_message
  * @property array<string, mixed>|null $error_metadata
