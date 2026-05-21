@@ -77,8 +77,8 @@ class SearchTools
                     'experiment' => $r->experiment_title,
                     'experiment_id' => $r->experiment_id,
                     'experiment_status' => $r->experiment_status,
-                    'stage_type' => $r->stage_type instanceof \BackedEnum ? $r->stage_type->value : $r->stage_type,
-                    'stage_status' => $r->status instanceof \BackedEnum ? $r->status->value : $r->status,
+                    'stage_type' => $r->stage_type->value,
+                    'stage_status' => $r->status->value,
                     'date' => $r->created_at?->toDateTimeString(),
                     'excerpt' => Str::limit($r->searchable_text, 500),
                 ])->toArray();

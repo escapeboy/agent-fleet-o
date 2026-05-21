@@ -138,7 +138,8 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
             $response = Http::withToken($adminToken)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->timeout(8)
-                ->post("{$httpUrl}/twirp/livekit.RoomService/ListRooms", (object) []);
+                ->withBody('{}', 'application/json')
+                ->post("{$httpUrl}/twirp/livekit.RoomService/ListRooms");
 
             // 200 = success, 401/403 = wrong credentials, 404/other = server running but unexpected
             return $response->status() === 200;
@@ -171,7 +172,8 @@ class LiveKitIntegrationDriver implements IntegrationDriverInterface
             $response = Http::withToken($adminToken)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->timeout(10)
-                ->post("{$httpUrl}/twirp/livekit.RoomService/ListRooms", (object) []);
+                ->withBody('{}', 'application/json')
+                ->post("{$httpUrl}/twirp/livekit.RoomService/ListRooms");
 
             $latency = (int) ((microtime(true) - $start) * 1000);
 

@@ -11,7 +11,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string $experiment_id
+ * @property StageType $stage
+ * @property int $iteration
+ * @property StageStatus $status
+ * @property array<string, mixed>|null $input_snapshot
+ * @property array<string, mixed>|null $output_snapshot
+ * @property int $retry_count
+ * @property int $recovery_attempts
+ * @property Carbon|null $last_recovery_at
+ * @property string|null $recovery_reason
+ * @property int|null $duration_ms
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property string|null $searchable_text
+ * @property array<string, mixed>|null $telemetry
+ * @property array<string, mixed>|null $error_metadata
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class ExperimentStage extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;
