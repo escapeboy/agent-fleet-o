@@ -4395,7 +4395,7 @@ parameters:
 		-
 			message: '#^Parameter \#2 \$data of method Illuminate\\Http\\Client\\PendingRequest\<false\>\:\:post\(\) expects array\<int\<0, max\>\|string, mixed\>\|Illuminate\\Contracts\\Support\\Arrayable\<string, mixed\>\|JsonSerializable, object\{\}&stdClass given\.$#'
 			identifier: argument.type
-			count: 1
+			count: 2
 			path: app/Domain/Integration/Drivers/LiveKit/LiveKitIntegrationDriver.php
 
 		-

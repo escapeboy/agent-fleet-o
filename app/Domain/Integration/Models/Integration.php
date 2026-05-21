@@ -12,7 +12,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string $driver
+ * @property string $name
+ * @property string|null $credential_id
+ * @property IntegrationStatus $status
+ * @property array<string, mixed>|null $config
+ * @property array<string, mixed>|null $meta
+ * @property Carbon|null $last_pinged_at
+ * @property string|null $last_ping_status
+ * @property string|null $last_ping_message
+ * @property int $error_count
+ */
 class Integration extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;

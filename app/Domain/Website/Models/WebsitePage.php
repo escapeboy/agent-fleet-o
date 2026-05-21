@@ -9,7 +9,24 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $website_id
+ * @property string $team_id
+ * @property string $slug
+ * @property string $title
+ * @property WebsitePageType $page_type
+ * @property WebsitePageStatus $status
+ * @property array<string, mixed>|null $grapes_json
+ * @property string|null $exported_html
+ * @property string|null $exported_css
+ * @property array<string, mixed>|null $meta
+ * @property int $sort_order
+ * @property Carbon|null $published_at
+ * @property string|null $form_id
+ */
 class WebsitePage extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

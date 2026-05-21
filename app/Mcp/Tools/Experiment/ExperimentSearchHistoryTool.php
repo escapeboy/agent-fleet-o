@@ -86,7 +86,7 @@ class ExperimentSearchHistoryTool extends Tool
                 'experiment_id' => $r->experiment_id,
                 'experiment_status' => $r->experiment_status instanceof \BackedEnum ? $r->experiment_status->value : $r->experiment_status,
                 'stage_type' => $r->stage_type instanceof \BackedEnum ? $r->stage_type->value : $r->stage_type,
-                'stage_status' => $r->status instanceof \BackedEnum ? $r->status->value : $r->status,
+                'stage_status' => $r->status->value,
                 'duration_ms' => $r->duration_ms,
                 'date' => $r->created_at?->toIso8601String(),
                 'excerpt' => Str::limit($r->searchable_text, 500),

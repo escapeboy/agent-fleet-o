@@ -8,6 +8,7 @@ use App\Domain\Shared\Scopes\TeamScope;
 use App\Domain\Signal\Jobs\RunSentryWatchdogJob;
 use App\Domain\Signal\Models\SentryWatchdogRun;
 use App\Domain\Signal\Models\Signal;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -30,7 +31,7 @@ class SentryWatchdogPage extends Component
 
     public function runNow(): void
     {
-        abort_unless(auth()->user()?->is_super_admin, 403);
+        Gate::authorize('access-admin');
 
         $integrations = Integration::withoutGlobalScopes()
             ->where('driver', 'sentry')

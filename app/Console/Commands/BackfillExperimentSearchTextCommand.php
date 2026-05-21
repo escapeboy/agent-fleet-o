@@ -26,12 +26,12 @@ class BackfillExperimentSearchTextCommand extends Command
                     $parts = [
                         $stage->experiment->title ?? '',
                         $stage->experiment->thesis ?? '',
-                        $stage->stage instanceof \BackedEnum ? $stage->stage->value : (string) $stage->stage,
+                        $stage->stage->value,
                     ];
 
-                    $outputText = is_array($stage->output_snapshot)
-                        ? json_encode($stage->output_snapshot)
-                        : (string) $stage->output_snapshot;
+                    $outputText = $stage->output_snapshot !== null
+                        ? (string) json_encode($stage->output_snapshot)
+                        : '';
 
                     $parts[] = Str::limit($outputText, 5000, '');
 
