@@ -45,7 +45,7 @@ use Illuminate\Support\Carbon;
  * @property string $provider
  * @property string $model
  * @property array<string, mixed>|null $output_schema
- * @property int $output_schema_max_retries
+ * @property int|null $output_schema_max_retries
  * @property AgentStatus $status
  * @property array<string, mixed>|null $config
  * @property array<string, mixed>|null $capabilities
