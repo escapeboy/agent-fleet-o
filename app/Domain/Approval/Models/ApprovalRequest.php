@@ -42,7 +42,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $assignment_policy
  * @property Carbon|null $expires_at
  * @property Carbon|null $sla_deadline
- * @property array<string, mixed>|null $escalation_chain
+ * @property list<string>|null $escalation_chain
  * @property int $escalation_level
  * @property Carbon|null $reviewed_at
  * @property string|null $callback_url
@@ -53,6 +53,13 @@ use Illuminate\Support\Carbon;
  * @property string|null $edited_content
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Experiment|null $experiment
+ * @property-read Credential|null $credential
+ * @property-read OutboundProposal|null $outboundProposal
+ * @property-read WorkflowNode|null $workflowNode
+ * @property-read ChatbotMessage|null $chatbotMessage
+ * @property-read User|null $reviewer
+ * @property-read User|null $assignee
  */
 class ApprovalRequest extends Model
 {

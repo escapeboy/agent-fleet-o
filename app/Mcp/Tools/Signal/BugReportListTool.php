@@ -57,7 +57,7 @@ class BugReportListTool extends Tool
                 'id' => $r->id,
                 'title' => $r->payload['title'] ?? null,
                 'severity' => $r->payload['severity'] ?? null,
-                'status' => $r->status?->value,
+                'status' => $r->status->value,
                 'project' => $r->project_key,
                 'reporter' => $r->payload['reporter_name'] ?? null,
                 'created_at' => $r->created_at?->toISOString(),

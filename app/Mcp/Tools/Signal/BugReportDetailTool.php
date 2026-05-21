@@ -48,7 +48,7 @@ class BugReportDetailTool extends Tool
         return Response::text(json_encode([
             'id' => $signal->id,
             'project' => $signal->project_key,
-            'status' => $signal->status?->value,
+            'status' => $signal->status->value,
             'title' => $payload['title'] ?? null,
             'description' => $payload['description'] ?? null,
             'severity' => $payload['severity'] ?? null,

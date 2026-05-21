@@ -62,7 +62,7 @@ class BugReportUpdateStatusTool extends Tool
 
         return Response::text(json_encode([
             'signal_id' => $signal->id,
-            'status' => $signal->fresh()->status?->value,
+            'status' => $signal->fresh()->status->value,
         ]));
     }
 }

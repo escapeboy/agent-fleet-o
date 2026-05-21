@@ -7,7 +7,6 @@ use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Models\User;
-use Carbon\Carbon;
 use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
