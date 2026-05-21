@@ -15,7 +15,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $project_id
+ * @property int $run_number
+ * @property string|null $experiment_id
+ * @property string|null $crew_execution_id
+ * @property string|null $trigger_rule_id
+ * @property string|null $signal_id
+ * @property string|null $triggered_by_conversation_id
+ * @property ProjectRunStatus|null $status
+ * @property string $trigger
+ * @property array<string, mixed>|null $input_data
+ * @property string|null $output_summary
+ * @property int $spend_credits
+ * @property string|null $error_message
+ * @property array<string, mixed>|null $error_metadata
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property int $delegation_depth
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class ProjectRun extends Model
 {
     use HasFactory, HasUuids;
@@ -107,7 +130,7 @@ class ProjectRun extends Model
 
         $end = $this->completed_at ?? now();
 
-        return $this->started_at->diffInSeconds($end);
+        return (int) $this->started_at->diffInSeconds($end);
     }
 
     public function durationForHumans(): string
