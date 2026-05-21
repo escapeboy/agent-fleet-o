@@ -7,7 +7,28 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $chatbot_id
+ * @property string $session_id
+ * @property string $message_id
+ * @property string $team_id
+ * @property string $user_message
+ * @property string $original_response
+ * @property string $corrected_response
+ * @property string|null $reason_code
+ * @property string|null $operator_notes
+ * @property array<string, mixed>|null $model_config
+ * @property LearningEntryStatus $status
+ * @property Carbon|null $exported_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Chatbot|null $chatbot
+ * @property-read ChatbotSession|null $session
+ * @property-read ChatbotMessage|null $message
+ */
 class ChatbotLearningEntry extends Model
 {
     use BelongsToTeam, HasUuids;

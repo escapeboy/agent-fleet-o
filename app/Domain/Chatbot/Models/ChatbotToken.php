@@ -14,10 +14,13 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $token_prefix
  * @property string $token_hash
- * @property array|null $allowed_origins
+ * @property array<int, string>|null $allowed_origins
  * @property Carbon|null $last_used_at
  * @property Carbon|null $expires_at
  * @property Carbon|null $revoked_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Chatbot|null $chatbot
  */
 class ChatbotToken extends Model
 {
