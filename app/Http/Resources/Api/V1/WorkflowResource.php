@@ -2,8 +2,10 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Domain\Workflow\Models\Workflow;
 use Illuminate\Http\Request;
 
+/** @mixin Workflow */
 class WorkflowResource extends FleetQResource
 {
     public function toArray(Request $request): array
@@ -29,7 +31,7 @@ class WorkflowResource extends FleetQResource
                 'position_y' => $n->position_y,
                 'config' => $n->config,
                 'order' => $n->order,
-            ])),
+            ])->all()),
             'edges' => $this->whenLoaded('edges', fn () => $this->edges->map(fn ($e) => [
                 'id' => $e->id,
                 'source_node_id' => $e->source_node_id,
@@ -38,7 +40,7 @@ class WorkflowResource extends FleetQResource
                 'label' => $e->label,
                 'is_default' => $e->is_default,
                 'sort_order' => $e->sort_order,
-            ])),
+            ])->all()),
             'user_id' => $this->user_id,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),

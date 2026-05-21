@@ -10,7 +10,24 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $team_id
+ * @property string|null $project_id
+ * @property string $name
+ * @property string $source_type
+ * @property array<string, mixed>|null $conditions
+ * @property array<string, mixed>|null $input_mapping
+ * @property int $cooldown_seconds
+ * @property int $max_concurrent
+ * @property TriggerRuleStatus $status
+ * @property Carbon|null $last_triggered_at
+ * @property int $total_triggers
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class TriggerRule extends Model
 {
     use BelongsToTeam, HasUuids;
