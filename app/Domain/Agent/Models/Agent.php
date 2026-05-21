@@ -22,6 +22,7 @@ use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Models\User;
 use Database\Factories\Domain\Agent\AgentFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,24 +34,65 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
+ * @property string $id
  * @property string|null $team_id
  * @property string $name
+ * @property string $slug
  * @property string|null $role
  * @property string|null $goal
  * @property string|null $backstory
- * @property array|null $personality
+ * @property array<string, mixed>|null $personality
  * @property string $provider
  * @property string $model
+ * @property array<string, mixed>|null $output_schema
+ * @property int|null $output_schema_max_retries
  * @property AgentStatus $status
- * @property array|null $config
- * @property array|null $capabilities
- * @property array|null $constraints
+ * @property array<string, mixed>|null $config
+ * @property array<string, mixed>|null $capabilities
+ * @property array<string, mixed>|null $constraints
  * @property int|null $budget_cap_credits
  * @property int $budget_spent_credits
  * @property int|null $max_credits_per_call
+ * @property bool $evaluation_enabled
+ * @property float $evaluation_sample_rate
+ * @property string|null $evaluation_model
+ * @property array<string, mixed>|null $evaluation_criteria
  * @property int $cost_per_1k_input
  * @property int $cost_per_1k_output
  * @property Carbon|null $last_health_check
+ * @property int $equivocation_count
+ * @property Carbon|null $last_equivocated_at
+ * @property string|null $knowledge_base_id
+ * @property string|null $risk_score
+ * @property array<string, mixed>|null $risk_profile
+ * @property Carbon|null $risk_profile_updated_at
+ * @property array<string, mixed>|null $meta
+ * @property array<string, mixed>|null $heartbeat_definition
+ * @property DataClassification|null $data_classification
+ * @property array<string, mixed>|null $sandbox_profile
+ * @property string|null $tool_profile
+ * @property AgentEnvironment|null $environment
+ * @property array<string, mixed>|null $system_prompt_template
+ * @property AgentReasoningStrategy|null $reasoning_strategy
+ * @property AgentScope|null $scope
+ * @property string|null $owner_user_id
+ * @property bool $chat_protocol_enabled
+ * @property AgentChatVisibility|null $chat_protocol_visibility
+ * @property string|null $chat_protocol_slug
+ * @property array<string, mixed>|null $chat_protocol_config
+ * @property string|null $chat_protocol_secret
+ * @property array<string, mixed>|null $tool_deny_list
+ * @property string|null $default_workflow_id
+ * @property bool $strict_mode
+ * @property ToolPermissionLevel|null $tool_permission_default
+ * @property-read Team|null $team
+ * @property-read Collection<int, Skill> $skills
+ * @property-read Collection<int, Tool> $tools
+ * @property-read Collection<int, Toolset> $toolsets
+ * @property-read User|null $owner
+ * @property-read AgentRuntimeState|null $runtimeState
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Agent extends Model
 {

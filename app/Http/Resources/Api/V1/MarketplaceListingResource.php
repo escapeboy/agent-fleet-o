@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Domain\Marketplace\Models\MarketplaceListing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin MarketplaceListing */
 class MarketplaceListingResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -32,7 +34,7 @@ class MarketplaceListingResource extends JsonResource
                 'comment' => $r->comment,
                 'user_id' => $r->user_id,
                 'created_at' => $r->created_at->toISOString(),
-            ])),
+            ])->all()),
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

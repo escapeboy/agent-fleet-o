@@ -6,7 +6,22 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $agent_id
+ * @property string|null $team_id
+ * @property string|null $session_id
+ * @property array<string, mixed>|null $state_json
+ * @property int $total_input_tokens
+ * @property int $total_output_tokens
+ * @property int $total_cached_tokens
+ * @property int $total_cost_credits
+ * @property int $total_executions
+ * @property string|null $last_error
+ * @property Carbon|null $last_active_at
+ */
 class AgentRuntimeState extends Model
 {
     use BelongsToTeam, HasUuids;
