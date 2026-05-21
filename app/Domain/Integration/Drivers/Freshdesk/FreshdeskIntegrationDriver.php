@@ -39,7 +39,7 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function authType(): AuthType
     {
-        return AuthType::OAuth2;
+        return AuthType::ApiKey;
     }
 
     public function credentialSchema(): array
@@ -58,24 +58,24 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
         return "https://{$domain}.freshdesk.com/api/v2";
     }
 
-    private function bearerToken(Integration $integration): string
+    private function apiKey(Integration $integration): string
     {
-        return (string) ($integration->getCredentialSecret('access_token') ?? $integration->getCredentialSecret('api_key') ?? '');
+        return (string) ($integration->getCredentialSecret('api_key') ?? $integration->getCredentialSecret('access_token') ?? '');
     }
 
     public function validateCredentials(array $credentials): bool
     {
         $subdomain = $credentials['subdomain'] ?? $credentials['domain'] ?? null;
-        $accessToken = $credentials['access_token'] ?? $credentials['api_key'] ?? null;
+        $apiKey = $credentials['api_key'] ?? $credentials['access_token'] ?? null;
 
-        if (! $subdomain || ! $accessToken) {
+        if (! $subdomain || ! $apiKey) {
             return false;
         }
 
         try {
             $base = $this->apiBase($credentials);
 
-            return Http::withToken($accessToken)
+            return Http::withBasicAuth($apiKey, 'X')
                 ->timeout(10)
                 ->get("{$base}/tickets?per_page=1")
                 ->successful();
@@ -86,16 +86,16 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function ping(Integration $integration): HealthResult
     {
-        $token = $this->bearerToken($integration);
+        $apiKey = $this->apiKey($integration);
 
-        if (! $token) {
+        if (! $apiKey) {
             return HealthResult::fail('Credentials not configured.');
         }
 
         $start = microtime(true);
         try {
             $base = $this->apiBase($integration);
-            $response = Http::withToken($token)
+            $response = Http::withBasicAuth($apiKey, 'X')
                 ->timeout(10)
                 ->get("{$base}/tickets?per_page=1");
             $latency = (int) ((microtime(true) - $start) * 1000);
@@ -153,11 +153,11 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function poll(Integration $integration): array
     {
-        $token = $this->bearerToken($integration);
+        $apiKey = $this->apiKey($integration);
         $base = $this->apiBase($integration);
 
         try {
-            $response = Http::withToken($token)
+            $response = Http::withBasicAuth($apiKey, 'X')
                 ->timeout(15)
                 ->get("{$base}/tickets", [
                     'order_type' => 'desc',
@@ -222,9 +222,9 @@ class FreshdeskIntegrationDriver implements IntegrationDriverInterface
 
     public function execute(Integration $integration, string $action, array $params): mixed
     {
-        $token = $this->bearerToken($integration);
+        $apiKey = $this->apiKey($integration);
         $base = $this->apiBase($integration);
-        $http = Http::withToken($token)->timeout(15);
+        $http = Http::withBasicAuth($apiKey, 'X')->timeout(15);
 
         return match ($action) {
             'create_ticket' => $this->checked($http->post("{$base}/tickets", array_filter([

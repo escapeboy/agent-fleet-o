@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Http;
  */
 class WhatsAppIntegrationDriver implements IntegrationDriverInterface
 {
-    private const API_BASE = 'https://graph.facebook.com/v18.0';
+    private const API_BASE = 'https://graph.facebook.com/v22.0';
 
     public function key(): string
     {

@@ -56,7 +56,7 @@ class MondayIntegrationDriver implements IntegrationDriverInterface
             : ($source['access_token'] ?? $source['api_key'] ?? '');
 
         $response = Http::withToken((string) $token)
-            ->withHeaders(['API-Version' => '2024-01'])
+            ->withHeaders(['API-Version' => '2026-04'])
             ->timeout(15)
             ->post(self::API_URL, ['query' => $query, 'variables' => $variables]);
 

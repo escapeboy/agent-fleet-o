@@ -153,33 +153,34 @@ class TwilioIntegrationDriver implements IntegrationDriverInterface
      * Twilio signature: x-twilio-signature header — base64(HMAC-SHA1("{url}{sorted_form_params}")).
      *
      * IMPORTANT: Twilio webhooks POST application/x-www-form-urlencoded data.
-     * This implementation attempts to parse rawBody as URL-encoded params.
-     * The full webhook URL must match exactly — including protocol and path.
+     * This implementation parses rawBody as URL-encoded params and reconstructs the
+     * webhook URL from request headers. The full URL must match exactly — including
+     * protocol and path.
      *
-     * If rawBody cannot be parsed as URL-encoded, falls back to permissive (returns true).
+     * Fail-closed: any missing precondition (signature header, secret, host, or
+     * form-encoded body) rejects the webhook. There is no permissive fallback.
      */
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
         $sig = $headers['x-twilio-signature'] ?? '';
 
         if ($sig === '' || $secret === '') {
-            return true; // Permissive when no secret configured
+            return false;
         }
 
-        // Attempt to determine the full webhook URL from headers
-        $proto = $headers['x-forwarded-proto'] ?? 'https';
+        // Reconstruct the full webhook URL from headers — fail if we can't.
         $host = $headers['host'] ?? '';
+        if (! $host) {
+            return false;
+        }
+
+        $proto = $headers['x-forwarded-proto'] ?? 'https';
         $path = $headers['x-forwarded-prefix'] ?? '';
 
-        if (! $host) {
-            return true; // Cannot reconstruct URL; skip verification
-        }
-
-        // Parse URL-encoded body and sort params
+        // Twilio signs URL-encoded form bodies. JSON or empty bodies are not signable.
         parse_str($rawBody, $params);
-
         if (empty($params)) {
-            return true; // Not form-encoded; skip (possibly JSON test payload)
+            return false;
         }
 
         ksort($params);
