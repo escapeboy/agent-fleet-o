@@ -22,14 +22,18 @@ use Illuminate\Support\Facades\Http;
  *   - w_organization_social, w_member_social_feed, w_organization_social_feed:
  *     require LinkedIn Community Management API approval (vetted partner programme).
  *
- * LinkedIn API version: 202603
+ * LinkedIn API version: 202605 (LinkedIn supports each version ≥1 year; bump quarterly).
  * Docs: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/
+ *
+ * Note: post_text/post_link still use the legacy /v2/ugcPosts endpoint. LinkedIn is
+ * migrating to the versioned /rest/posts API with a different body shape. Migration
+ * is tracked separately — UGC Posts continues to be served as of 202605.
  */
 class LinkedInIntegrationDriver implements IntegrationDriverInterface
 {
     private const API_BASE = 'https://api.linkedin.com';
 
-    private const API_VERSION = '202603';
+    private const API_VERSION = '202605';
 
     public function key(): string
     {

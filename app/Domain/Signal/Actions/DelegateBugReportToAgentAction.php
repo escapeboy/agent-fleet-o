@@ -33,7 +33,10 @@ class DelegateBugReportToAgentAction
     ): Experiment {
         $payload = $signal->payload ?? [];
         $title = $payload['title'] ?? 'Bug report';
-        $projectKey = $signal->project_key ?? ($payload['project'] ?? 'unknown');
+        // Sentry signals carry payload['project'] as the Sentry project object
+        // ({id, slug, name, ...}), not a string. Coerce to a scalar key so the
+        // downstream sanitize() (which requires a string) never receives an array.
+        $projectKey = $signal->project_key ?? $this->coerceProjectKey($payload['project'] ?? 'unknown');
 
         // Build console errors extract (most useful for agent)
         $consoleLog = $payload['console_log'] ?? [];
@@ -265,6 +268,21 @@ class DelegateBugReportToAgentAction
     private function sanitize(string $text, int $maxLen): string
     {
         return preg_replace('/[\x00-\x1F\x7F]/u', '', mb_substr($text, 0, $maxLen)) ?? '';
+    }
+
+    /**
+     * Reduce a project identifier to a string. Sentry issue payloads nest the
+     * project as an object; webhook bug reports pass a plain string key.
+     *
+     * @param  mixed  $project
+     */
+    private function coerceProjectKey($project): string
+    {
+        if (is_array($project)) {
+            return (string) ($project['slug'] ?? $project['name'] ?? $project['id'] ?? 'unknown');
+        }
+
+        return is_scalar($project) ? (string) $project : 'unknown';
     }
 
     /**

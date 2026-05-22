@@ -71,16 +71,52 @@ class SentryIntegrationDriverPollTest extends TestCase
         Http::assertSent(fn ($request) => str_contains(urldecode($request->url()), 'is:unresolved'));
     }
 
+    public function test_poll_attaches_in_app_stacktrace_frames_from_latest_event(): void
+    {
+        // The issues-list endpoint carries no stacktrace; poll() fetches the
+        // latest event per issue and attaches in-app frames so triage can name
+        // concrete suspect files. Sentry returns camelCase keys (inApp/lineNo).
+        Http::fake([
+            '*events/latest*' => Http::response([
+                'entries' => [[
+                    'type' => 'exception',
+                    'data' => ['values' => [[
+                        'stacktrace' => ['frames' => [
+                            ['filename' => 'vendor/laravel/framework/foo.php', 'function' => 'boot', 'lineNo' => 10, 'inApp' => false],
+                            ['filename' => 'app/Jobs/CrawlInstitutionJob.php', 'function' => 'handle', 'lineNo' => 42, 'inApp' => true],
+                        ]],
+                    ]]],
+                ]],
+            ], 200),
+            '*' => Http::response([['id' => '762', 'title' => 'N+1 Query', 'level' => 'error', 'count' => '5']], 200),
+        ]);
+
+        $items = (new SentryIntegrationDriver)->poll($this->makeIntegration([]));
+
+        $this->assertCount(1, $items);
+        $frames = $items[0]['payload']['suspect_frames'];
+        // Only the in-app frame is kept; the vendor frame is dropped.
+        $this->assertSame(['app/Jobs/CrawlInstitutionJob.php:42 in handle()'], $frames);
+    }
+
     public function test_repeated_polls_dedup_the_same_sentry_issue(): void
     {
         Queue::fake();
 
         $issue = ['id' => '90909', 'title' => 'TypeError in checkout', 'level' => 'error', 'count' => '3'];
         // Two polls of the same issue — second has a changed event count, the
-        // kind of volatile field that defeats content_hash dedup.
-        Http::fakeSequence()
-            ->push([$issue], 200)
-            ->push([array_merge($issue, ['count' => '11'])], 200);
+        // kind of volatile field that defeats content_hash dedup. A closure fake
+        // routes the per-issue latest-event call (stacktrace frames) separately so
+        // it never consumes an issues-list response.
+        $listCalls = 0;
+        Http::fake(function ($request) use ($issue, &$listCalls) {
+            if (str_contains($request->url(), 'events/latest')) {
+                return Http::response(['entries' => []], 200);
+            }
+            $listCalls++;
+
+            return Http::response([array_merge($issue, ['count' => $listCalls === 1 ? '3' : '11'])], 200);
+        });
 
         $this->makeIntegration([]);
 

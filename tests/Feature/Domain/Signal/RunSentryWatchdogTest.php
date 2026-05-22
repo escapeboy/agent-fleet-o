@@ -374,6 +374,21 @@ class RunSentryWatchdogTest extends TestCase
         Queue::assertPushed(RunSentryWatchdogJob::class, 1);
     }
 
+    public function test_command_dispatches_separate_jobs_for_distinct_projects_on_one_team(): void
+    {
+        Queue::fake();
+
+        // Same team, two different Sentry projects. Each job is project-scoped and
+        // routes to its own target_repository, so both must run — deduping to one
+        // would silently skip a whole project.
+        $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 9], 'Sentry fleetq');
+        $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 6], 'Sentry signalio-backend');
+
+        $this->artisan('sentry:watchdog')->assertExitCode(RunSentryWatchdog::SUCCESS);
+
+        Queue::assertPushed(RunSentryWatchdogJob::class, 2);
+    }
+
     public function test_run_caps_triage_at_max_signals_per_run(): void
     {
         config(['sentry_watchdog.max_signals_per_run' => 3]);
@@ -399,6 +414,91 @@ class RunSentryWatchdogTest extends TestCase
             ->where('integration_id', $integration->id)
             ->firstOrFail();
         $this->assertSame(3, $run->signals_triaged);
+    }
+
+    public function test_failed_delegation_is_surfaced_in_digest_not_silently_dropped(): void
+    {
+        // A Failed triage outcome (e.g. a delegation that threw) used to hit a
+        // bare `continue` — the signal stayed pending and was re-attempted every
+        // run with no trace in the metrics, presenting as an invisible 0-PR loop.
+        // It must now appear in the digest.
+        $integration = $this->seedSentryIntegration();
+        $this->seedSentrySignal('ISSUE-FAIL');
+
+        $this->mockTriage(
+            fn (Signal $signal) => SentryTriageResult::failed($signal->id, 'Delegation failed: boom'),
+        );
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+
+        $this->assertSame(0, $run->signals_triaged);
+        $this->assertSame(0, $run->prs_opened);
+        $this->assertStringContainsString('FAILED', $run->digest_summary);
+        $this->assertStringContainsString('Delegation failed: boom', $run->digest_summary);
+        $this->assertStringContainsString('delegation(s) failed', $run->digest_summary);
+    }
+
+    public function test_integration_target_repository_is_passed_to_triage(): void
+    {
+        $integration = $this->seedSentryIntegration([
+            'watchdog_enabled' => true,
+            'target_repository' => 'escapeboy/signalio-backend',
+        ]);
+        $this->seedSentrySignal('ISSUE-OVR');
+
+        $captured = 'unset';
+        $this->mock(TriageSentryIssueAction::class, function (MockInterface $mock) use (&$captured) {
+            $mock->shouldReceive('execute')->andReturnUsing(
+                function (Signal $signal, ?string $override = null) use (&$captured) {
+                    $captured = $override;
+
+                    return new SentryTriageResult(
+                        signalId: $signal->id,
+                        outcome: SentryTriageOutcome::InvestigateOnly,
+                        tier: FixTier::T4,
+                        confidence: 0.4,
+                        isCritical: false,
+                        summary: 'investigate-only',
+                    );
+                },
+            );
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame('escapeboy/signalio-backend', $captured);
+    }
+
+    public function test_run_only_triages_signals_for_the_integrations_project(): void
+    {
+        // A team can connect multiple Sentry projects (each its own integration
+        // with its own target_repository). The job is team-scoped, so it must
+        // filter to the dispatching integration's project_id — otherwise it would
+        // triage another project's signals and route their PRs to the wrong repo.
+        $integration = $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 9]);
+
+        $this->seedSentrySignal('FLEETQ-1', ['project' => ['id' => '9']]);
+        $this->seedSentrySignal('SIGNALIO-1', ['project' => ['id' => '6']]);
+        $this->seedSentrySignal('FLEETQ-2', ['project' => ['id' => '9']]);
+
+        $triagedIds = [];
+        $this->mockTriage(function (Signal $signal) use (&$triagedIds) {
+            $triagedIds[] = $signal->payload['payload']['id'] ?? '';
+
+            return $this->investigateResult($signal->id);
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        sort($triagedIds);
+        $this->assertSame(['FLEETQ-1', 'FLEETQ-2'], $triagedIds, 'Only the integration project (9) signals are triaged; project 6 is excluded.');
     }
 
     private function runJob(string $integrationId): void

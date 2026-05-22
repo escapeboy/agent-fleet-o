@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
 /**
  * ClickUp integration driver.
  *
- * Project management platform. Webhooks use HMAC-MD5 signature.
+ * Project management platform. Webhooks use HMAC-SHA256 signature.
  * Note: ClickUp's Authorization header does NOT use a Bearer prefix.
  * Implements SubscribableConnectorInterface for programmatic webhook registration.
  */
@@ -151,7 +151,7 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
     }
 
     /**
-     * ClickUp signature: x-signature header — raw hex HMAC-MD5 of rawBody.
+     * ClickUp signature: x-signature header — raw hex HMAC-SHA256 of rawBody.
      */
     public function verifyWebhookSignature(string $rawBody, array $headers, string $secret): bool
     {
@@ -161,7 +161,7 @@ class ClickUpIntegrationDriver implements IntegrationDriverInterface, Subscribab
             return false;
         }
 
-        return hash_equals(hash_hmac('md5', $rawBody, $secret), $sig);
+        return hash_equals(hash_hmac('sha256', $rawBody, $secret), $sig);
     }
 
     public function parseWebhookPayload(array $payload, array $headers): array

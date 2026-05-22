@@ -6,7 +6,6 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\Integration\Enums\IntegrationStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Database\Factories\Domain\Integration\IntegrationFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,8 +30,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read Credential|null $credential
- * @property-read Collection<int, WebhookRoute> $webhookRoutes
  */
 class Integration extends Model
 {

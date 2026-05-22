@@ -14,7 +14,7 @@ class BuildingVerifier implements StageVerifier
         $errors = [];
 
         $hasArtifacts = $experiment->artifacts()->exists();
-        $hasContent = $output !== [];
+        $hasContent = ! empty($output);
 
         if (! $hasArtifacts && ! $hasContent) {
             $errors[] = 'Stage produced no artifacts and output_snapshot is empty.';

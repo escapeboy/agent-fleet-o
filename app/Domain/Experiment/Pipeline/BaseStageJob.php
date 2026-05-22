@@ -608,7 +608,7 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
             ];
 
             $outputText = $stage->output_snapshot !== null
-                ? (string) json_encode($stage->output_snapshot)
+                ? json_encode($stage->output_snapshot)
                 : '';
 
             $parts[] = Str::limit($outputText, 5000, '');

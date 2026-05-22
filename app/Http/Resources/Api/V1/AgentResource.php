@@ -2,10 +2,8 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Agent\Models\Agent;
 use Illuminate\Http\Request;
 
-/** @mixin Agent */
 class AgentResource extends FleetQResource
 {
     public function toArray(Request $request): array
@@ -32,9 +30,13 @@ class AgentResource extends FleetQResource
                 'id' => $skill->id,
                 'name' => $skill->name,
                 'type' => $skill->type->value,
-                /** @phpstan-ignore-next-line property.notFound — `pivot` is dynamically attached by BelongsToMany at runtime */
-                'priority' => $skill->pivot?->getAttribute('priority'),
-            ])->all()),
+                'priority' => $skill->pivot->priority,
+            ])),
+            'tools' => $this->whenLoaded('tools', fn () => $this->tools->map(fn ($tool) => [
+                'id' => $tool->id,
+                'name' => $tool->name,
+                'slug' => $tool->slug,
+            ])),
             'runtime_state' => $this->whenLoaded('runtimeState', fn () => $this->runtimeState ? [
                 'total_executions' => $this->runtimeState->total_executions,
                 'total_input_tokens' => $this->runtimeState->total_input_tokens,

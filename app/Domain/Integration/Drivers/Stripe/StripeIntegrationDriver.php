@@ -14,6 +14,22 @@ class StripeIntegrationDriver implements IntegrationDriverInterface
 {
     private const API_BASE = 'https://api.stripe.com/v1';
 
+    /**
+     * Default Stripe API version to pin. Override via config('integrations.stripe.api_version').
+     * Pinning protects against dashboard-side default upgrades silently changing response shapes.
+     */
+    private const DEFAULT_API_VERSION = '2024-12-18.acacia';
+
+    private function stripeVersion(): string
+    {
+        return (string) config('integrations.stripe.api_version', self::DEFAULT_API_VERSION);
+    }
+
+    private function stripeHeaders(): array
+    {
+        return ['Stripe-Version' => $this->stripeVersion()];
+    }
+
     public function key(): string
     {
         return 'stripe';
@@ -51,7 +67,7 @@ class StripeIntegrationDriver implements IntegrationDriverInterface
         }
 
         try {
-            $response = Http::withBasicAuth($key, '')->timeout(10)->get(self::API_BASE.'/balance');
+            $response = Http::withBasicAuth($key, '')->withHeaders($this->stripeHeaders())->timeout(10)->get(self::API_BASE.'/balance');
 
             return $response->successful();
         } catch (\Throwable) {
@@ -70,7 +86,7 @@ class StripeIntegrationDriver implements IntegrationDriverInterface
         $start = microtime(true);
 
         try {
-            $response = Http::withBasicAuth($key, '')->timeout(10)->get(self::API_BASE.'/balance');
+            $response = Http::withBasicAuth($key, '')->withHeaders($this->stripeHeaders())->timeout(10)->get(self::API_BASE.'/balance');
             $latency = (int) ((microtime(true) - $start) * 1000);
 
             return $response->successful()
@@ -168,6 +184,7 @@ class StripeIntegrationDriver implements IntegrationDriverInterface
 
         return match ($action) {
             'retrieve_customer' => Http::withBasicAuth((string) $key, '')
+                ->withHeaders($this->stripeHeaders())
                 ->get(self::API_BASE."/customers/{$params['customer_id']}")
                 ->json(),
             default => throw new \InvalidArgumentException("Unknown action: {$action}"),

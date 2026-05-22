@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
- * @property string $team_id
+ * @property string|null $team_id
  * @property string $experiment_id
  * @property StageType $stage
  * @property int $iteration
@@ -32,6 +32,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $searchable_text
  * @property array<string, mixed>|null $telemetry
  * @property array<string, mixed>|null $error_metadata
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class ExperimentStage extends Model
 {

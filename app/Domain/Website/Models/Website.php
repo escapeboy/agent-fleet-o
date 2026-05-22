@@ -56,16 +56,19 @@ class Website extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<WebsitePage, $this> */
     public function pages(): HasMany
     {
         return $this->hasMany(WebsitePage::class);
     }
 
+    /** @return HasMany<WebsiteAsset, $this> */
     public function assets(): HasMany
     {
         return $this->hasMany(WebsiteAsset::class);
     }
 
+    /** @return HasMany<WebsiteDeployment, $this> */
     public function deployments(): HasMany
     {
         return $this->hasMany(WebsiteDeployment::class);

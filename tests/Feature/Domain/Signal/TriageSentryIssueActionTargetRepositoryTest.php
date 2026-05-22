@@ -191,4 +191,116 @@ class TriageSentryIssueActionTargetRepositoryTest extends TestCase
         $this->assertNotEmpty($result->suspectFiles);
         $this->assertStringContainsString('mixed', $result->suspectFiles[0]);
     }
+
+    public function test_integration_override_routes_all_files_to_configured_repository(): void
+    {
+        // A project whose code lives in a single repo outside the agent-fleet
+        // monorepo (e.g. signalio-backend) declares config['target_repository'];
+        // every suspect file then routes there regardless of the base/ prefix.
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => [
+                'app/Jobs/CrawlInstitutionJob.php',
+                'app/Models/Alert.php',
+            ],
+            'confidence' => 0.9,
+            'estimated_diff_lines' => 10,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)
+            ->execute($signal, 'escapeboy/signalio-backend');
+
+        $this->assertSame(SentryTriageOutcome::Delegated, $result->outcome);
+        $this->assertNotNull($result->experimentId);
+
+        $signal->refresh();
+        $this->assertSame('escapeboy/signalio-backend', $signal->payload['target_repository']);
+    }
+
+    public function test_sentry_project_object_does_not_break_delegation(): void
+    {
+        // Regression: prod Sentry signals carry payload['project'] as an object
+        // and no project_key column. DelegateBugReportToAgentAction::sanitize()
+        // used to receive that array and throw a TypeError, silently blocking
+        // every PR (the watchdog reported 0 delegations across every run).
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => ['app/Jobs/CrawlInstitutionJob.php'],
+            'confidence' => 0.9,
+            'estimated_diff_lines' => 8,
+        ]));
+
+        $signal = Signal::create([
+            'team_id' => $this->team->id,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'project_key' => null,
+            'payload' => [
+                'source_type' => 'sentry',
+                'source_id' => 'sentry:'.bin2hex(random_bytes(4)),
+                'payload' => [
+                    'id' => 'sentry-issue-762',
+                    'title' => 'N+1 Query',
+                    'culprit' => 'App\\Jobs\\CrawlInstitutionJob',
+                    'level' => 'error',
+                    'count' => 12,
+                    'project' => ['id' => 6, 'slug' => 'signalio-backend', 'name' => 'Signalio Backend'],
+                    'permalink' => 'https://sentry.example.com/issues/762/',
+                    'metadata' => ['type' => 'N+1 Query', 'value' => 'N+1 query in CrawlInstitutionJob'],
+                ],
+            ],
+            'content_hash' => hash('sha256', uniqid('sentry-proj-obj-', true)),
+            'received_at' => now(),
+            'status' => SignalStatus::Received,
+        ]);
+
+        $result = app(TriageSentryIssueAction::class)
+            ->execute($signal, 'escapeboy/signalio-backend');
+
+        $this->assertSame(SentryTriageOutcome::Delegated, $result->outcome);
+        $this->assertNotNull($result->experimentId);
+        $this->assertSame(1, Experiment::query()->count());
+    }
+
+    public function test_stacktrace_frames_are_included_in_triage_prompt(): void
+    {
+        $captured = null;
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->andReturnUsing(function ($request) use (&$captured) {
+                $captured = $request->userPrompt;
+
+                return new AiResponseDTO(
+                    content: $this->triageJson([]),
+                    parsedOutput: null,
+                    usage: new AiUsageDTO(promptTokens: 200, completionTokens: 80, costCredits: 1),
+                    provider: 'anthropic',
+                    model: 'claude-sonnet-4-5',
+                    latencyMs: 120,
+                );
+            });
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldReceive('resolve')->andReturn([
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal();
+        $payload = $signal->payload;
+        $payload['payload']['suspect_frames'] = [
+            'app/Jobs/CrawlInstitutionJob.php:42 in handle()',
+            'app/Models/Alert.php:88 in scopeActive()',
+        ];
+        $signal->payload = $payload;
+        $signal->save();
+
+        app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertNotNull($captured);
+        $this->assertStringContainsString('In-app stacktrace frames', $captured);
+        $this->assertStringContainsString('app/Jobs/CrawlInstitutionJob.php:42 in handle()', $captured);
+    }
 }
