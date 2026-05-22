@@ -401,6 +401,65 @@ class RunSentryWatchdogTest extends TestCase
         $this->assertSame(3, $run->signals_triaged);
     }
 
+    public function test_failed_delegation_is_surfaced_in_digest_not_silently_dropped(): void
+    {
+        // A Failed triage outcome (e.g. a delegation that threw) used to hit a
+        // bare `continue` — the signal stayed pending and was re-attempted every
+        // run with no trace in the metrics, presenting as an invisible 0-PR loop.
+        // It must now appear in the digest.
+        $integration = $this->seedSentryIntegration();
+        $this->seedSentrySignal('ISSUE-FAIL');
+
+        $this->mockTriage(
+            fn (Signal $signal) => SentryTriageResult::failed($signal->id, 'Delegation failed: boom'),
+        );
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $run = SentryWatchdogRun::withoutGlobalScopes()
+            ->where('integration_id', $integration->id)
+            ->firstOrFail();
+
+        $this->assertSame(0, $run->signals_triaged);
+        $this->assertSame(0, $run->prs_opened);
+        $this->assertStringContainsString('FAILED', $run->digest_summary);
+        $this->assertStringContainsString('Delegation failed: boom', $run->digest_summary);
+        $this->assertStringContainsString('delegation(s) failed', $run->digest_summary);
+    }
+
+    public function test_integration_target_repository_is_passed_to_triage(): void
+    {
+        $integration = $this->seedSentryIntegration([
+            'watchdog_enabled' => true,
+            'target_repository' => 'escapeboy/signalio-backend',
+        ]);
+        $this->seedSentrySignal('ISSUE-OVR');
+
+        $captured = 'unset';
+        $this->mock(TriageSentryIssueAction::class, function (MockInterface $mock) use (&$captured) {
+            $mock->shouldReceive('execute')->andReturnUsing(
+                function (Signal $signal, ?string $override = null) use (&$captured) {
+                    $captured = $override;
+
+                    return new SentryTriageResult(
+                        signalId: $signal->id,
+                        outcome: SentryTriageOutcome::InvestigateOnly,
+                        tier: FixTier::T4,
+                        confidence: 0.4,
+                        isCritical: false,
+                        summary: 'investigate-only',
+                    );
+                },
+            );
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        $this->assertSame('escapeboy/signalio-backend', $captured);
+    }
+
     private function runJob(string $integrationId): void
     {
         app()->call([new RunSentryWatchdogJob($integrationId), 'handle']);

@@ -177,12 +177,75 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
                 return [];
             }
 
-            return array_map(fn ($issue) => [
-                'source_type' => 'sentry',
-                'source_id' => 'sentry:'.$issue['id'],
-                'payload' => $issue,
-                'tags' => ['sentry', 'issue', $issue['level'] ?? 'error'],
-            ], $response->json() ?? []);
+            return array_map(function ($issue) use ($apiBase, $token) {
+                // The issues-list endpoint returns no stacktrace. Attach the
+                // latest event's in-app frames so downstream triage can name
+                // concrete suspect files instead of guessing from the title.
+                $issue['suspect_frames'] = $this->fetchSuspectFrames($apiBase, $token, (string) ($issue['id'] ?? ''));
+
+                return [
+                    'source_type' => 'sentry',
+                    'source_id' => 'sentry:'.$issue['id'],
+                    'payload' => $issue,
+                    'tags' => ['sentry', 'issue', $issue['level'] ?? 'error'],
+                ];
+            }, $response->json() ?? []);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Fetch the latest event for an issue and return its in-app stacktrace
+     * frames as compact "path:line in function()" strings (top 15). Never
+     * throws — a frame-fetch failure must not abort ingestion of the issue.
+     *
+     * @return list<string>
+     */
+    private function fetchSuspectFrames(string $apiBase, string $token, string $issueId): array
+    {
+        if ($issueId === '') {
+            return [];
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->timeout(8)
+                ->get("{$apiBase}/issues/{$issueId}/events/latest/");
+
+            if (! $response->successful()) {
+                return [];
+            }
+
+            $entries = $response->json('entries') ?? [];
+            $frames = [];
+            foreach ($entries as $entry) {
+                if (($entry['type'] ?? null) !== 'exception') {
+                    continue;
+                }
+
+                foreach ($entry['data']['values'] ?? [] as $value) {
+                    foreach ($value['stacktrace']['frames'] ?? [] as $frame) {
+                        $inApp = $frame['inApp'] ?? $frame['in_app'] ?? false;
+                        if (! $inApp) {
+                            continue;
+                        }
+
+                        $path = $frame['filename'] ?? $frame['absPath'] ?? $frame['abs_path'] ?? null;
+                        if (! is_string($path) || $path === '') {
+                            continue;
+                        }
+
+                        $line = $frame['lineNo'] ?? $frame['lineno'] ?? null;
+                        $fn = $frame['function'] ?? null;
+                        $frames[] = $path
+                            .($line !== null ? ':'.$line : '')
+                            .(is_string($fn) && $fn !== '' ? ' in '.$fn.'()' : '');
+                    }
+                }
+            }
+
+            return array_slice(array_values(array_unique($frames)), 0, 15);
         } catch (\Throwable) {
             return [];
         }

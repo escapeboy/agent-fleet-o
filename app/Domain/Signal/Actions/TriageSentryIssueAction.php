@@ -56,7 +56,7 @@ class TriageSentryIssueAction
         private readonly NotifyCriticalSentryIssueAction $notifyCritical,
     ) {}
 
-    public function execute(Signal $signal): SentryTriageResult
+    public function execute(Signal $signal, ?string $targetRepositoryOverride = null): SentryTriageResult
     {
         // Idempotency — never re-triage a signal already delegated or closed.
         if ($signal->experiment_id !== null
@@ -93,13 +93,16 @@ class TriageSentryIssueAction
         }
 
         // Phase 1 — delegate an autonomous fix only for actionable, confident
-        // issues. Suspect files are now bucketed into a single target repo:
-        // pure-parent → escapeboy/agent-fleet, pure-base → escapeboy/agent-fleet-o.
-        // Mixed (files in both repos) cannot be fixed in a single PR — drop to
+        // issues. Suspect files are bucketed into a single target repo. When the
+        // integration declares config['target_repository'] (a project whose code
+        // lives in one specific repo, e.g. signalio-backend), every suspect file
+        // routes there. Otherwise the agent-fleet monorepo split applies:
+        // pure-base → escapeboy/agent-fleet-o, pure-parent → escapeboy/agent-fleet,
+        // and mixed (files in both repos) cannot be fixed in a single PR — drop to
         // investigate-only with a "mixed" reason so the digest surfaces it.
         $threshold = (float) config('sentry_watchdog.confidence_threshold', 0.7);
         $target = $investigation['suspect_files'] !== []
-            ? $this->resolveTargetRepository($investigation['suspect_files'])
+            ? $this->resolveTargetRepository($investigation['suspect_files'], $targetRepositoryOverride)
             : null;
 
         if ($investigation['suspect_files'] !== [] && $target === null) {
@@ -364,6 +367,20 @@ class TriageSentryIssueAction
             'Exception value: '.$this->clean((string) ($metadata['value'] ?? 'unknown'), 600),
         ];
 
+        // In-app stacktrace frames (from the latest event) ground the model in
+        // concrete file paths — without them it guesses suspect_files from the
+        // title alone and frequently returns an empty list.
+        $frames = array_filter(
+            is_array($payload['suspect_frames'] ?? null) ? $payload['suspect_frames'] : [],
+            'is_string',
+        );
+        if ($frames !== []) {
+            $lines[] = 'In-app stacktrace frames (most relevant first):';
+            foreach (array_slice(array_values($frames), 0, 15) as $frame) {
+                $lines[] = '  - '.$this->clean($frame, 300);
+            }
+        }
+
         return implode("\n", $lines);
     }
 
@@ -456,18 +473,26 @@ class TriageSentryIssueAction
     /**
      * Bucket suspect_files into a single target repository.
      *
-     * `base/...` paths belong to the open-core submodule (`agent-fleet-o`);
-     * everything else belongs to the cloud parent (`agent-fleet`). A single
-     * PR cannot span both repos, so mixed lists return null and the caller
-     * falls back to investigate-only.
+     * When $override is set (the integration declares config['target_repository']),
+     * every suspect file routes to that one repo — used for projects whose code
+     * lives in a single repo outside the agent-fleet monorepo (e.g. signalio-backend).
+     *
+     * Otherwise the agent-fleet monorepo split applies: `base/...` paths belong to
+     * the open-core submodule (`agent-fleet-o`); everything else belongs to the
+     * cloud parent (`agent-fleet`). A single PR cannot span both repos, so mixed
+     * lists return null and the caller falls back to investigate-only.
      *
      * @param  list<string>  $files
-     * @return array{kind: 'base'|'parent', full_name: string}|null
+     * @return array{kind: 'base'|'parent'|'configured', full_name: string}|null
      */
-    private function resolveTargetRepository(array $files): ?array
+    private function resolveTargetRepository(array $files, ?string $override = null): ?array
     {
         if ($files === []) {
             return null;
+        }
+
+        if ($override !== null && $override !== '') {
+            return ['kind' => 'configured', 'full_name' => $override];
         }
 
         $base = 0;

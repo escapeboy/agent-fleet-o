@@ -88,10 +88,17 @@ class RunSentryWatchdogJob implements ShouldQueue
         $prsOpened = 0;
         $investigateOnly = 0;
         $criticalCount = 0;
+        $delegationFailures = 0;
         $lines = [];
         $criticalLines = [];
         $prsCap = (int) config('sentry_watchdog.max_prs_per_run', 3);
         $quotaReached = false;
+
+        // Projects whose code lives in a single repo outside the agent-fleet
+        // monorepo declare it here; suspect files then route to that one repo
+        // instead of the base/parent split. Null → agent-fleet monorepo default.
+        $configuredRepo = data_get($integration->config, 'target_repository');
+        $targetRepositoryOverride = is_string($configuredRepo) ? $configuredRepo : null;
 
         foreach ($groups as $group) {
             /** @var Signal $signal */
@@ -107,7 +114,7 @@ class RunSentryWatchdogJob implements ShouldQueue
             }
 
             try {
-                $result = $triage->execute($signal);
+                $result = $triage->execute($signal, $targetRepositoryOverride);
             } catch (\Throwable $e) {
                 // TriageSentryIssueAction is designed not to throw; this is
                 // defence-in-depth so one bad signal cannot abort the batch.
@@ -130,7 +137,18 @@ class RunSentryWatchdogJob implements ShouldQueue
             } elseif ($result->outcome === SentryTriageOutcome::InvestigateOnly) {
                 $investigateOnly++;
                 $triaged++;
+            } elseif ($result->outcome === SentryTriageOutcome::Failed) {
+                // A Failed outcome (e.g. delegation threw) used to be silently
+                // dropped here, leaving the signal pending and re-attempted every
+                // run with zero trace in the metrics. Surface it in the digest so
+                // a broken delegation path is visible instead of an invisible
+                // 0-PR loop. The signal stays unstamped so a deployed fix retries it.
+                $delegationFailures++;
+                $lines[] = '• [FAILED] '.($result->summary ?? 'delegation error').' — not delegated';
+
+                continue;
             } else {
+                // Skipped — idempotency guard (already delegated/terminal). Expected, silent.
                 continue;
             }
 
@@ -141,6 +159,10 @@ class RunSentryWatchdogJob implements ShouldQueue
 
         if ($quotaReached) {
             $lines[] = '• [QUOTA] PR cap of '.$prsCap.' reached; remaining signals deferred to next run.';
+        }
+
+        if ($delegationFailures > 0) {
+            $lines[] = '• [WARN] '.$delegationFailures.' delegation(s) failed this run — see [FAILED] lines above.';
         }
 
         $run->update([
