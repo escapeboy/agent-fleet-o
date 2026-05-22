@@ -374,6 +374,21 @@ class RunSentryWatchdogTest extends TestCase
         Queue::assertPushed(RunSentryWatchdogJob::class, 1);
     }
 
+    public function test_command_dispatches_separate_jobs_for_distinct_projects_on_one_team(): void
+    {
+        Queue::fake();
+
+        // Same team, two different Sentry projects. Each job is project-scoped and
+        // routes to its own target_repository, so both must run — deduping to one
+        // would silently skip a whole project.
+        $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 9], 'Sentry fleetq');
+        $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 6], 'Sentry signalio-backend');
+
+        $this->artisan('sentry:watchdog')->assertExitCode(RunSentryWatchdog::SUCCESS);
+
+        Queue::assertPushed(RunSentryWatchdogJob::class, 2);
+    }
+
     public function test_run_caps_triage_at_max_signals_per_run(): void
     {
         config(['sentry_watchdog.max_signals_per_run' => 3]);

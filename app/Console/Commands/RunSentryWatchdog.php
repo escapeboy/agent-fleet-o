@@ -37,15 +37,19 @@ class RunSentryWatchdog extends Command
             return self::SUCCESS;
         }
 
-        // The job triages every Sentry signal for a team, so dispatch one job
-        // per team — a second job for the same team would double-triage the
-        // same signals (the two jobs race and re-spend LLM calls).
-        $dispatchedTeams = [];
+        // Dispatch one job per (team, Sentry project). The job triages signals
+        // scoped to its integration's project_id, so two integrations on the same
+        // team but different projects are disjoint and must BOTH run — each routes
+        // its PRs to its own target_repository. Integrations without a project_id
+        // triage org-wide, so they dedup per team to avoid double-triage races.
+        $dispatchedKeys = [];
         foreach ($integrations as $integration) {
-            if (in_array($integration->team_id, $dispatchedTeams, true)) {
+            $project = $integration->config['project_id'] ?? null;
+            $key = $integration->team_id.'|'.(($project !== null && $project !== '') ? (string) $project : '__org_wide__');
+            if (in_array($key, $dispatchedKeys, true)) {
                 continue;
             }
-            $dispatchedTeams[] = $integration->team_id;
+            $dispatchedKeys[] = $key;
             RunSentryWatchdogJob::dispatch($integration->id);
             $this->info("Dispatched Sentry Watchdog for: {$integration->name}");
         }
