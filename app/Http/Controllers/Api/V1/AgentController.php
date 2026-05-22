@@ -22,6 +22,7 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -51,7 +52,7 @@ class AgentController extends Controller
 
     public function show(Agent $agent): AgentResource
     {
-        return new AgentResource($agent->load(['skills', 'runtimeState']));
+        return new AgentResource($agent->load(['skills', 'tools', 'runtimeState']));
     }
 
     public function store(StoreAgentRequest $request, CreateAgentAction $action, ProviderResolver $resolver): JsonResponse
@@ -101,6 +102,8 @@ class AgentController extends Controller
         $data = $request->validated();
         $skillIds = $data['skill_ids'] ?? null;
         unset($data['skill_ids']);
+        $toolIds = $data['tool_ids'] ?? null;
+        unset($data['tool_ids']);
 
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
@@ -123,7 +126,29 @@ class AgentController extends Controller
             $agent->skills()->sync($syncData);
         }
 
-        return new AgentResource($agent->fresh()->load('skills'));
+        if ($toolIds !== null) {
+            // Preserve approval/permission pivot config for tools that remain attached;
+            // a bare sync() would reset retained tools to DB defaults.
+            $existingPivots = $agent->tools()->get()->mapWithKeys(fn ($tool) => [
+                $tool->id => Arr::only($tool->pivot->getAttributes(), [
+                    'priority',
+                    'overrides',
+                    'approval_mode',
+                    'approval_timeout_minutes',
+                    'approval_timeout_action',
+                    'permission_level',
+                ]),
+            ]);
+
+            $syncData = [];
+            foreach ($toolIds as $toolId) {
+                $syncData[$toolId] = $existingPivots->get($toolId, []);
+            }
+
+            $agent->tools()->sync($syncData);
+        }
+
+        return new AgentResource($agent->fresh()->load(['skills', 'tools']));
     }
 
     /**

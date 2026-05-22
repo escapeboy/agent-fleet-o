@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Services\ProviderResolver;
 
 class AgentControllerTest extends ApiTestCase
@@ -270,5 +272,111 @@ class AgentControllerTest extends ApiTestCase
             ->assertJsonPath('data.environment', 'coding')
             ->assertJsonPath('data.tool_profile', 'researcher')
             ->assertJsonPath('data.config.reasoning_effort', 'auto');
+    }
+
+    public function test_show_agent_returns_attached_tools(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+        $tool = Tool::factory()->create(['team_id' => $this->team->id]);
+        $agent->tools()->attach($tool->id, ['priority' => 0]);
+
+        $response = $this->getJson("/api/v1/agents/{$agent->id}");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.tools')
+            ->assertJsonPath('data.tools.0.id', $tool->id)
+            ->assertJsonPath('data.tools.0.name', $tool->name)
+            ->assertJsonPath('data.tools.0.slug', $tool->slug);
+    }
+
+    public function test_update_agent_with_tool_ids_replaces_pivot(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+        $existing = Tool::factory()->create(['team_id' => $this->team->id]);
+        $agent->tools()->attach($existing->id, ['priority' => 0]);
+
+        $replacement = Tool::factory()->create(['team_id' => $this->team->id]);
+
+        $response = $this->putJson("/api/v1/agents/{$agent->id}", [
+            'tool_ids' => [$replacement->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.tools')
+            ->assertJsonPath('data.tools.0.id', $replacement->id);
+
+        $this->assertDatabaseHas('agent_tool', [
+            'agent_id' => $agent->id,
+            'tool_id' => $replacement->id,
+        ]);
+        $this->assertDatabaseMissing('agent_tool', [
+            'agent_id' => $agent->id,
+            'tool_id' => $existing->id,
+        ]);
+    }
+
+    public function test_update_agent_rejects_unknown_tool_id(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $response = $this->putJson("/api/v1/agents/{$agent->id}", [
+            'tool_ids' => ['00000000-0000-0000-0000-000000000000'],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['tool_ids.0']);
+    }
+
+    public function test_update_agent_rejects_tool_from_other_team(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $otherTeam = Team::factory()->create();
+        $foreignTool = Tool::factory()->create(['team_id' => $otherTeam->id]);
+
+        $response = $this->putJson("/api/v1/agents/{$agent->id}", [
+            'tool_ids' => [$foreignTool->id],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['tool_ids.0']);
+
+        $this->assertDatabaseMissing('agent_tool', [
+            'agent_id' => $agent->id,
+            'tool_id' => $foreignTool->id,
+        ]);
+    }
+
+    public function test_update_agent_preserves_pivot_config_for_retained_tools(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+        $retained = Tool::factory()->create(['team_id' => $this->team->id]);
+        $agent->tools()->attach($retained->id, [
+            'priority' => 5,
+            'approval_mode' => 'ask',
+            'permission_level' => 'read_only',
+        ]);
+
+        $added = Tool::factory()->create(['team_id' => $this->team->id]);
+
+        $response = $this->putJson("/api/v1/agents/{$agent->id}", [
+            'tool_ids' => [$retained->id, $added->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data.tools');
+
+        $this->assertDatabaseHas('agent_tool', [
+            'agent_id' => $agent->id,
+            'tool_id' => $retained->id,
+            'priority' => 5,
+            'approval_mode' => 'ask',
+            'permission_level' => 'read_only',
+        ]);
     }
 }

@@ -32,6 +32,11 @@ class AgentResource extends FleetQResource
                 'type' => $skill->type->value,
                 'priority' => $skill->pivot->priority,
             ])),
+            'tools' => $this->whenLoaded('tools', fn () => $this->tools->map(fn ($tool) => [
+                'id' => $tool->id,
+                'name' => $tool->name,
+                'slug' => $tool->slug,
+            ])),
             'runtime_state' => $this->whenLoaded('runtimeState', fn () => $this->runtimeState ? [
                 'total_executions' => $this->runtimeState->total_executions,
                 'total_input_tokens' => $this->runtimeState->total_input_tokens,
