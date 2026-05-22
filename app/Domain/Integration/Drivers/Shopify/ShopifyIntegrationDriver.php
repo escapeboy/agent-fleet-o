@@ -26,7 +26,7 @@ class ShopifyIntegrationDriver implements IntegrationDriverInterface, Subscribab
 {
     use ChecksIntegrationResponse;
 
-    private const API_VERSION = '2024-01';
+    private const API_VERSION = '2025-10';
 
     public function key(): string
     {

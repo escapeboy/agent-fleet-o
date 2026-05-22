@@ -37,7 +37,10 @@ class SlackIntegrationDriver implements IntegrationDriverInterface
     public function credentialSchema(): array
     {
         return [
-            'access_token' => ['type' => 'string', 'required' => true, 'label' => 'Bot Access Token'],
+            'access_token' => ['type' => 'password', 'required' => true, 'label' => 'Bot Access Token',
+                'hint' => 'Slack App → OAuth & Permissions → Bot User OAuth Token (xoxb-...)'],
+            'signing_secret' => ['type' => 'password', 'required' => false, 'label' => 'Signing Secret',
+                'hint' => 'Slack App → Basic Information → Signing Secret. Required for inbound webhook signature verification.'],
         ];
     }
 

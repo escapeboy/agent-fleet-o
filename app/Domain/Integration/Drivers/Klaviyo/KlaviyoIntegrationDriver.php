@@ -15,14 +15,15 @@ use Illuminate\Support\Facades\Http;
  * Klaviyo email/SMS marketing integration driver.
  *
  * Uses Private API Key with Klaviyo-API-Key header.
- * All requests require revision header: 2024-02-15.
+ * Revision header is read from config('integrations.klaviyo.revision') with a current default.
+ * Klaviyo retires revisions ~2 years after release — bump quarterly.
  * Webhook signature: X-Klaviyo-Signature = HMAC SHA256(secret, timestamp + body).
  */
 class KlaviyoIntegrationDriver implements IntegrationDriverInterface
 {
     private const API_BASE = 'https://a.klaviyo.com/api';
 
-    private const REVISION = '2024-02-15';
+    private const DEFAULT_REVISION = '2026-04-15';
 
     public function key(): string
     {
@@ -254,7 +255,7 @@ class KlaviyoIntegrationDriver implements IntegrationDriverInterface
     {
         return Http::withHeaders([
             'Klaviyo-API-Key' => $apiKey,
-            'revision' => self::REVISION,
+            'revision' => (string) config('integrations.klaviyo.revision', self::DEFAULT_REVISION),
         ])->timeout(15)->acceptJson();
     }
 

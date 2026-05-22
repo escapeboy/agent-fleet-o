@@ -157,12 +157,22 @@ class AttioIntegrationDriver implements IntegrationDriverInterface
         $eventId = $payload['id']['event_id'] ?? uniqid('attio_', true);
         $objectType = $payload['data']['record']['object_slug'] ?? 'record';
 
-        $trigger = match ($eventType) {
-            'record-created' => 'record_created',
-            'record-updated' => 'record_updated',
-            'note-created' => 'note_created',
-            'task-created' => 'task_created',
-            default => str_replace('-', '_', $eventType),
+        // Attio emits dot-separated event types. Standard CRUD shapes:
+        //   record.created / record.updated — generic record changes
+        //   note.created                    — distinct from records
+        //   task.created                    — distinct from records
+        //   {object}.created / {object}.updated (people, companies, …) — custom objects
+        // Map specific entity verbs first; any remaining ".created" / ".updated" rolls up
+        // to record_created / record_updated so triggers consistently match.
+        // Dash variants are kept as a defensive fallback for older payload shapes.
+        $normalised = str_replace('-', '.', $eventType);
+
+        $trigger = match (true) {
+            $normalised === 'note.created' => 'note_created',
+            $normalised === 'task.created' => 'task_created',
+            str_ends_with($normalised, '.created') => 'record_created',
+            str_ends_with($normalised, '.updated') => 'record_updated',
+            default => str_replace(['.', '-'], '_', $eventType),
         };
 
         return [

@@ -303,22 +303,25 @@ class SentryIntegrationDriver implements IntegrationDriverInterface
         abort_unless($token && $orgSlug, 422, 'Sentry credentials not configured.');
 
         $apiBase = $this->apiBase($integration);
+        // Sentry's documented form is org-scoped: /api/0/organizations/{org}/issues/{id}/
+        // The bare /api/0/issues/{id}/ form still serves but is the legacy path.
+        $issueBase = "{$apiBase}/organizations/{$orgSlug}/issues/{$params['issue_id']}";
 
         return match ($action) {
             'resolve_issue' => Http::withToken($token)->timeout(15)
-                ->put("{$apiBase}/issues/{$params['issue_id']}/", ['status' => 'resolved'])
+                ->put("{$issueBase}/", ['status' => 'resolved'])
                 ->json(),
 
             'assign_issue' => Http::withToken($token)->timeout(15)
-                ->put("{$apiBase}/issues/{$params['issue_id']}/", ['assignedTo' => $params['assignee']])
+                ->put("{$issueBase}/", ['assignedTo' => $params['assignee']])
                 ->json(),
 
             'create_note' => Http::withToken($token)->timeout(15)
-                ->post("{$apiBase}/issues/{$params['issue_id']}/comments/", ['text' => $params['text']])
+                ->post("{$issueBase}/comments/", ['text' => $params['text']])
                 ->json(),
 
             'update_issue' => Http::withToken($token)->timeout(15)
-                ->put("{$apiBase}/issues/{$params['issue_id']}/", array_filter([
+                ->put("{$issueBase}/", array_filter([
                     'status' => $params['status'] ?? null,
                     'priority' => $params['priority'] ?? null,
                 ]))->json(),

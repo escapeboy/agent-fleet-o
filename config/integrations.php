@@ -447,4 +447,23 @@ return [
         'timestamp_tolerance' => 300,    // Max age of timestamp header in seconds (5 min)
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Vendor API Version Pins
+    |--------------------------------------------------------------------------
+    |
+    | Vendors that use date-based or quarterly versioning. Each driver pins a
+    | recent default; bump these via env when the vendor sunsets older versions.
+    | Klaviyo retires revisions ~2 years after release; Stripe lets you pin via
+    | the Stripe-Version header to protect against dashboard-side upgrades.
+    |
+    */
+    'klaviyo' => [
+        'revision' => env('KLAVIYO_API_REVISION', '2026-04-15'),
+    ],
+
+    'stripe' => [
+        'api_version' => env('STRIPE_API_VERSION', '2024-12-18.acacia'),
+    ],
+
 ];
