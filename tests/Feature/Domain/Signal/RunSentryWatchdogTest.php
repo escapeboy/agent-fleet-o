@@ -460,6 +460,32 @@ class RunSentryWatchdogTest extends TestCase
         $this->assertSame('escapeboy/signalio-backend', $captured);
     }
 
+    public function test_run_only_triages_signals_for_the_integrations_project(): void
+    {
+        // A team can connect multiple Sentry projects (each its own integration
+        // with its own target_repository). The job is team-scoped, so it must
+        // filter to the dispatching integration's project_id — otherwise it would
+        // triage another project's signals and route their PRs to the wrong repo.
+        $integration = $this->seedSentryIntegration(['watchdog_enabled' => true, 'project_id' => 9]);
+
+        $this->seedSentrySignal('FLEETQ-1', ['project' => ['id' => '9']]);
+        $this->seedSentrySignal('SIGNALIO-1', ['project' => ['id' => '6']]);
+        $this->seedSentrySignal('FLEETQ-2', ['project' => ['id' => '9']]);
+
+        $triagedIds = [];
+        $this->mockTriage(function (Signal $signal) use (&$triagedIds) {
+            $triagedIds[] = $signal->payload['payload']['id'] ?? '';
+
+            return $this->investigateResult($signal->id);
+        });
+        $this->fakeDigest();
+
+        $this->runJob($integration->id);
+
+        sort($triagedIds);
+        $this->assertSame(['FLEETQ-1', 'FLEETQ-2'], $triagedIds, 'Only the integration project (9) signals are triaged; project 6 is excluded.');
+    }
+
     private function runJob(string $integrationId): void
     {
         app()->call([new RunSentryWatchdogJob($integrationId), 'handle']);
