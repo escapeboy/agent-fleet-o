@@ -11,40 +11,13 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Shared\Traits\HasPluginMeta;
 use App\Models\User;
 use Database\Factories\Domain\Crew\CrewFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string $user_id
- * @property string|null $coordinator_agent_id
- * @property string|null $qa_agent_id
- * @property string $name
- * @property string $slug
- * @property string|null $description
- * @property CrewProcessType $process_type
- * @property int $max_task_iterations
- * @property float $quality_threshold
- * @property CrewStatus $status
- * @property array<string, mixed>|null $settings
- * @property array<string, mixed>|null $meta
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
- * @property-read User|null $user
- * @property-read Agent|null $coordinator
- * @property-read Agent|null $qaAgent
- * @property-read Collection<int, CrewMember> $members
- * @property-read Collection<int, CrewMember> $workerMembers
- * @property-read Collection<int, CrewExecution> $executions
- */
 class Crew extends Model
 {
     use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;
@@ -97,13 +70,11 @@ class Crew extends Model
         return $this->belongsTo(Agent::class, 'qa_agent_id');
     }
 
-    /** @return HasMany<CrewMember, $this> */
     public function members(): HasMany
     {
         return $this->hasMany(CrewMember::class)->orderBy('sort_order');
     }
 
-    /** @return HasMany<CrewMember, $this> */
     public function workerMembers(): HasMany
     {
         return $this->hasMany(CrewMember::class)
@@ -111,7 +82,6 @@ class Crew extends Model
             ->orderBy('sort_order');
     }
 
-    /** @return HasMany<CrewExecution, $this> */
     public function executions(): HasMany
     {
         return $this->hasMany(CrewExecution::class)->orderByDesc('created_at');

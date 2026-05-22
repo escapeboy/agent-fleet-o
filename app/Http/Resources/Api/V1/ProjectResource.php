@@ -2,12 +2,8 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Project\Models\Project;
 use Illuminate\Http\Request;
 
-/**
- * @mixin Project
- */
 class ProjectResource extends FleetQResource
 {
     public function toArray(Request $request): array

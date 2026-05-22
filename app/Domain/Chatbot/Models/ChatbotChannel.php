@@ -6,17 +6,13 @@ use App\Domain\Chatbot\Enums\ChannelType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
  * @property string $chatbot_id
  * @property ChannelType $channel_type
- * @property array<string, mixed> $config
+ * @property array $config
  * @property bool $is_active
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Chatbot|null $chatbot
  */
 class ChatbotChannel extends Model
 {

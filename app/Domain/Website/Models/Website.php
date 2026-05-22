@@ -7,27 +7,12 @@ use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string|null $user_id
- * @property string $name
- * @property string $slug
- * @property WebsiteStatus $status
- * @property array<string, mixed>|null $settings
- * @property string|null $custom_domain
- * @property int $content_version
- * @property string|null $managing_crew_id
- * @property string|null $crew_execution_id
- * @property Collection<int, WebsitePage> $pages
- */
 class Website extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

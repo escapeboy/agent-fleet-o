@@ -17,27 +17,19 @@ use Illuminate\Support\Carbon;
 /**
  * @property string $id
  * @property string|null $team_id
- * @property string|null $agent_id
- * @property string|null $skill_id
+ * @property string $agent_id
  * @property string|null $execution_id
  * @property EvolutionProposalStatus $status
- * @property string $trigger
- * @property EvolutionType $evolution_type
- * @property array<string, mixed>|null $mutation_variant
  * @property string|null $analysis
- * @property array<string, mixed>|null $proposed_changes
+ * @property array|null $proposed_changes
  * @property string|null $reasoning
  * @property float|null $confidence_score
- * @property int|null $complexity_delta
- * @property float|null $complexity_penalty_applied
  * @property string|null $reviewed_by
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Agent|null $agent
+ * @property-read Agent $agent
  * @property-read AgentExecution|null $execution
- * @property-read User|null $reviewer
- * @property-read Skill|null $skill
  */
 class EvolutionProposal extends Model
 {

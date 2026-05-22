@@ -23,7 +23,7 @@ class CreateHumanTaskAction
         PlaybookStep $step,
         WorkflowNode $node,
     ): ApprovalRequest {
-        $config = $node->config ?? [];
+        $config = is_string($node->config) ? json_decode($node->config, true) : ($node->config ?? []);
 
         $slaHours = $config['sla_hours'] ?? 48;
         $assignmentPolicy = $config['assignment_policy'] ?? 'any_team_member';
@@ -128,7 +128,7 @@ class CreateHumanTaskAction
             return $default;
         }
 
-        $output = $sourceStep->output;
+        $output = is_array($sourceStep->output) ? $sourceStep->output : [];
         $confidence = $output['confidence'] ?? null;
 
         if (! is_numeric($confidence)) {

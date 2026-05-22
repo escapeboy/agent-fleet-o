@@ -17,7 +17,6 @@ use App\Domain\Workflow\Models\Workflow;
 use App\Models\Artifact;
 use App\Models\User;
 use Database\Factories\Domain\Experiment\ExperimentFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +29,6 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string|null $team_id
  * @property string|null $user_id
- * @property string|null $agent_id
  * @property string|null $workflow_id
  * @property int|null $workflow_version
  * @property string $title
@@ -38,14 +36,10 @@ use Illuminate\Support\Carbon;
  * @property ExperimentTrack|null $track
  * @property ExperimentStatus $status
  * @property string|null $paused_from_status
- * @property array<string, mixed>|null $constraints
- * @property array<string, mixed>|null $success_criteria
- * @property string|null $share_token
- * @property bool $share_enabled
- * @property array<string, mixed>|null $share_config
- * @property int $delegation_depth
+ * @property array|null $constraints
+ * @property array|null $success_criteria
  * @property int|null $budget_cap_credits
- * @property int|null $budget_spent_credits
+ * @property int $budget_spent_credits
  * @property int|null $max_iterations
  * @property int $current_iteration
  * @property int|null $max_outbound_count
@@ -55,13 +49,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $killed_at
  * @property string|null $parent_experiment_id
  * @property int $nesting_depth
- * @property array<string, mixed>|null $orchestration_config
- * @property array<string, mixed>|null $meta
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property array|null $orchestration_config
+ * @property array|null $meta
  * @property-read ProjectRun|null $projectRun
- * @property-read Collection<int, OutboundProposal> $outboundProposals
- * @property-read Collection<int, Artifact> $artifacts
  */
 class Experiment extends Model
 {
@@ -213,7 +203,6 @@ class Experiment extends Model
         return $this->hasMany(WorkflowSnapshot::class)->orderBy('sequence');
     }
 
-    /** @return HasMany<ExperimentTask, $this> */
     public function tasks(): HasMany
     {
         return $this->hasMany(ExperimentTask::class)->orderBy('sort_order');

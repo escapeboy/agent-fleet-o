@@ -233,7 +233,7 @@ class ConversationManager
     /**
      * Get recent conversations for the sidebar list.
      *
-     * @return Collection<int, AssistantConversation>
+     * @return Collection<AssistantConversation>
      */
     public function getRecentConversations(string $userId, int $limit = 20): Collection
     {

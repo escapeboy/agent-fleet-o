@@ -58,7 +58,7 @@ class AgentverseInstallTool extends Tool
             'name' => $agent->name,
             'slug' => $agent->slug,
             'agent_address' => $agent->agent_address,
-            'adapter_kind' => $agent->adapter_kind->value,
+            'adapter_kind' => $agent->adapter_kind?->value,
             'status' => $agent->status->value,
         ]));
     }

@@ -2,12 +2,8 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Experiment\Models\Experiment;
 use Illuminate\Http\Request;
 
-/**
- * @mixin Experiment
- */
 class ExperimentResource extends FleetQResource
 {
     public function toArray(Request $request): array

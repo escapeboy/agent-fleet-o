@@ -33,7 +33,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgentDetailPage extends Component
 {
@@ -723,7 +723,7 @@ class AgentDetailPage extends Component
 
     // ── Export ──
 
-    public function exportWorkspace(): BinaryFileResponse
+    public function exportWorkspace(): StreamedResponse
     {
         $this->authorize('edit-content');
 

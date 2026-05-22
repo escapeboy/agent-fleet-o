@@ -8,42 +8,11 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\Artifact;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string $crew_id
- * @property string|null $experiment_id
- * @property string $goal
- * @property CrewExecutionStatus $status
- * @property array<int|string, mixed>|null $task_plan
- * @property array<string, mixed>|null $final_output
- * @property array<string, mixed>|null $config_snapshot
- * @property float|null $quality_score
- * @property int $coordinator_iterations
- * @property int $total_cost_credits
- * @property int|null $duration_ms
- * @property string|null $error_message
- * @property array<string, mixed>|null $error_metadata
- * @property int|null $delegation_depth
- * @property Carbon|null $started_at
- * @property Carbon|null $completed_at
- * @property array<string, mixed>|null $quality_dimensions
- * @property CrewExecutionTrustMode|null $trust_mode
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Crew $crew
- * @property-read Experiment|null $experiment
- * @property-read Collection<int, CrewTaskExecution> $taskExecutions
- * @property-read Collection<int, CrewChatMessage> $chatMessages
- * @property-read Collection<int, Artifact> $artifacts
- */
 class CrewExecution extends Model
 {
     use BelongsToTeam, HasUuids;

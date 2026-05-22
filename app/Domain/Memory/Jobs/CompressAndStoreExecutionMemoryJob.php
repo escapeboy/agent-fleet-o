@@ -51,7 +51,7 @@ class CompressAndStoreExecutionMemoryJob implements ShouldQueue
             return;
         }
 
-        $rawContent = (string) json_encode($output);
+        $rawContent = is_string($output) ? $output : json_encode($output);
 
         $team = $execution->team_id ? Team::withoutGlobalScopes()->find($execution->team_id) : null;
         $resolved = $resolver->resolve(team: $team);

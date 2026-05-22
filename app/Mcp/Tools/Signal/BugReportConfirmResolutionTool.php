@@ -44,10 +44,14 @@ class BugReportConfirmResolutionTool extends Tool
             return Response::text(json_encode(['error' => 'Bug report not found']));
         }
 
-        if ($signal->status !== SignalStatus::Resolved) {
+        $currentStatus = $signal->status instanceof SignalStatus
+            ? $signal->status
+            : SignalStatus::tryFrom((string) $signal->status);
+
+        if ($currentStatus !== SignalStatus::Resolved) {
             return Response::text(json_encode([
                 'error' => 'Bug report must be in status=resolved to accept a confirmation decision.',
-                'current_status' => $signal->status->value,
+                'current_status' => $currentStatus?->value,
             ]));
         }
 
@@ -75,9 +79,14 @@ class BugReportConfirmResolutionTool extends Tool
             ];
         });
 
+        $status = $result['status'];
+        if ($status instanceof SignalStatus) {
+            $status = $status->value;
+        }
+
         return Response::text(json_encode([
             'signal_id' => $signal->id,
-            'status' => $result['status']->value,
+            'status' => $status,
             'confirmed' => $confirmed,
             'comment_id' => $result['comment_id'],
         ]));

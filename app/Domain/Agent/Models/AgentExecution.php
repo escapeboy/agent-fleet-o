@@ -16,21 +16,15 @@ use Illuminate\Support\Carbon;
  * @property string|null $experiment_id
  * @property string|null $team_id
  * @property string $status
- * @property array<string, mixed>|null $input
- * @property array<string, mixed>|null $output
- * @property array<int|string, mixed>|null $skills_executed
- * @property array<int|string, mixed>|null $tools_used
+ * @property array|null $input
+ * @property array|null $output
+ * @property array|null $skills_executed
+ * @property array|null $tools_used
  * @property int $tool_calls_count
  * @property int $llm_steps_count
- * @property int|null $duration_ms
+ * @property int $duration_ms
  * @property int $cost_credits
- * @property float|null $quality_score
- * @property array<string, mixed>|null $quality_details
- * @property string|null $evaluation_method
- * @property string|null $judge_model
  * @property string|null $error_message
- * @property string|null $extracted_skill_id
- * @property array<string, mixed>|null $workspace_contract
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

@@ -9,38 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string|null $team_id
- * @property string $name
- * @property EmailThemeStatus $status
- * @property string|null $logo_url
- * @property int $logo_width
- * @property string $background_color
- * @property string $canvas_color
- * @property string $primary_color
- * @property string $text_color
- * @property string $heading_color
- * @property string $muted_color
- * @property string $divider_color
- * @property string $font_name
- * @property string|null $font_url
- * @property string $font_family
- * @property int $heading_font_size
- * @property int $body_font_size
- * @property float $line_height
- * @property int $email_width
- * @property int $content_padding
- * @property string|null $company_name
- * @property string|null $company_address
- * @property string|null $footer_text
- * @property bool $is_system_default
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
- */
 class EmailTheme extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

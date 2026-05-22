@@ -8,43 +8,14 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Enums\ActivationMode;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use Database\Factories\Domain\Workflow\WorkflowNodeFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 /**
- * @property string $id
- * @property string $workflow_id
- * @property string|null $agent_id
- * @property string|null $skill_id
- * @property string|null $crew_id
  * @property string|null $sub_workflow_id
- * @property string|null $guardrail_skill_id
- * @property WorkflowNodeType $type
- * @property string $label
- * @property int $position_x
- * @property int $position_y
- * @property array<string, mixed>|null $config
- * @property ActivationMode|null $activation_mode
- * @property int|null $activation_threshold
- * @property string|null $expression
- * @property int $order
- * @property string|null $compensation_node_id
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Workflow $workflow
- * @property-read Agent|null $agent
- * @property-read Skill|null $skill
- * @property-read Crew|null $crew
- * @property-read Skill|null $guardrailSkill
- * @property-read Workflow|null $subWorkflow
- * @property-read WorkflowNode|null $compensationNode
- * @property-read Collection<int, WorkflowEdge> $outgoingEdges
- * @property-read Collection<int, WorkflowEdge> $incomingEdges
  */
 class WorkflowNode extends Model
 {

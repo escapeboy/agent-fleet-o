@@ -5,7 +5,6 @@ namespace App\Domain\Signal\Models;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * Composite buyer intent score for a company or person.
@@ -16,23 +15,6 @@ use Illuminate\Support\Carbon;
  *
  * Updated asynchronously by RecalculateIntentScoreJob whenever a new
  * signal arrives for the entity, debounced to once per 15 minutes.
- *
- * @property string $id
- * @property string $team_id
- * @property string $entity_key
- * @property string $entity_type
- * @property float $composite_score
- * @property float $fit_score
- * @property float $intent_score
- * @property float $engagement_score
- * @property float $relationship_score
- * @property int $signal_count
- * @property int $signal_diversity
- * @property array<string, mixed> $score_breakdown
- * @property Carbon|null $last_scored_at
- * @property Carbon|null $recalculate_after
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
  */
 class CompanyIntentScore extends Model
 {

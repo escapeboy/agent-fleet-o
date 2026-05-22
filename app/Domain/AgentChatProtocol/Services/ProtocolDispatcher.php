@@ -45,7 +45,11 @@ class ProtocolDispatcher
 
     private function adapterKind(ExternalAgent $externalAgent): AdapterKind
     {
-        return $externalAgent->adapter_kind;
+        if ($externalAgent->adapter_kind instanceof AdapterKind) {
+            return $externalAgent->adapter_kind;
+        }
+
+        return AdapterKind::tryFrom((string) $externalAgent->adapter_kind) ?? AdapterKind::Http;
     }
 
     /**

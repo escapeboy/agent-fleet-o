@@ -33,7 +33,7 @@ class DecomposeGoalAction
         }
 
         $crew = $execution->crew;
-        if ((bool) ($crew->settings['union_contributions'] ?? false)) {
+        if ($crew && (bool) ($crew->settings['union_contributions'] ?? false)) {
             return $this->executeUnion($execution);
         }
 

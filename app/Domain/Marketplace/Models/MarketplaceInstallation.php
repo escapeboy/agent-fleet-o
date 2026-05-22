@@ -10,21 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * @property string $id
- * @property string $listing_id
- * @property string $team_id
- * @property string $installed_by
- * @property string $installed_version
- * @property string|null $installed_skill_id
- * @property string|null $installed_agent_id
- * @property string|null $installed_workflow_id
- * @property string|null $installed_email_theme_id
- * @property string|null $installed_email_template_id
- * @property array<string, mixed>|null $bundle_metadata
- * @property string $total_credits_spent
- * @property string $total_revenue_earned
- */
 class MarketplaceInstallation extends Model
 {
     use HasUuids;

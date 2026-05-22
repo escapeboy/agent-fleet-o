@@ -14,17 +14,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
- * @property string $id
- * @property string $name
- * @property string $slug
- * @property string|null $owner_id
- * @property bool $is_platform
- * @property bool $claude_code_vps_allowed
- * @property bool $assistant_ui_artifacts_allowed
  * @property array<string, mixed>|null $settings
  * @property string|null $plan
  * @property array<string, mixed>|null $custom_limits
@@ -32,16 +24,6 @@ use Illuminate\Support\Str;
  * @property float|null $credit_margin_multiplier
  * @property int|null $max_credits_per_call
  * @property int|null $byok_platform_fee_per_call
- * @property string|null $credential_key
- * @property string|null $default_email_theme_id
- * @property array<string, mixed>|null $allowed_models
- * @property string|null $widget_public_key
- * @property array<string, mixed>|null $dashboard_config
- * @property string|null $git_webhook_secret
- * @property string|null $default_bug_fix_workflow_id
- * @property float|null $signal_relevance_threshold
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
  */
 class Team extends Model
 {

@@ -2,10 +2,8 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Crew\Models\CrewExecution;
 use Illuminate\Http\Request;
 
-/** @mixin CrewExecution */
 class CrewExecutionResource extends FleetQResource
 {
     public function toArray(Request $request): array
@@ -42,7 +40,7 @@ class CrewExecutionResource extends FleetQResource
                 'sort_order' => $t->sort_order,
                 'started_at' => $t->started_at?->toISOString(),
                 'completed_at' => $t->completed_at?->toISOString(),
-            ])->all()),
+            ])),
             'started_at' => $this->started_at?->toISOString(),
             'completed_at' => $this->completed_at?->toISOString(),
             'created_at' => $this->created_at->toISOString(),

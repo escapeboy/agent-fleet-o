@@ -7,14 +7,12 @@ use App\Domain\Chatbot\Enums\ChatbotStatus;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Workflow\Models\Workflow;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -27,26 +25,13 @@ use Illuminate\Support\Carbon;
  * @property ChatbotType $type
  * @property ChatbotStatus $status
  * @property bool $agent_is_dedicated
- * @property array<string, mixed> $config
- * @property array<string, mixed> $widget_config
- * @property string $confidence_threshold
+ * @property array $config
+ * @property array $widget_config
+ * @property float $confidence_threshold
  * @property bool $human_escalation_enabled
  * @property int|null $approval_timeout_hours
  * @property string|null $welcome_message
  * @property string|null $fallback_message
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
- * @property-read Agent|null $agent
- * @property-read Workflow|null $workflow
- * @property-read Collection<int, ChatbotToken> $tokens
- * @property-read Collection<int, ChatbotToken> $activeTokens
- * @property-read Collection<int, ChatbotChannel> $channels
- * @property-read Collection<int, ChatbotChannel> $activeChannels
- * @property-read Collection<int, ChatbotSession> $sessions
- * @property-read Collection<int, ChatbotMessage> $messages
- * @property-read Collection<int, ChatbotKnowledgeSource> $knowledgeSources
- * @property-read Collection<int, ChatbotKbChunk> $kbChunks
  */
 class Chatbot extends Model
 {

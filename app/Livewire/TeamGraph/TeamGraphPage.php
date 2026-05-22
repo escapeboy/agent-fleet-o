@@ -6,7 +6,6 @@ use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Crew\Models\Crew;
-use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Models\User;
@@ -126,9 +125,9 @@ class TeamGraphPage extends Component
             $this->drawerActivity = $crew
                 ? $crew->executions()->latest('created_at')->limit(5)
                     ->get(['id', 'status', 'created_at'])
-                    ->map(fn (CrewExecution $e): array => [
+                    ->map(fn ($e) => [
                         'id' => $e->id,
-                        'status' => $e->status->value,
+                        'status' => (string) $e->status,
                         'at' => optional($e->created_at)->diffForHumans(),
                     ])->all()
                 : [];
@@ -212,7 +211,7 @@ class TeamGraphPage extends Component
                 'id' => 'crew:'.$crew->id,
                 'type' => 'crew',
                 'label' => $crew->name,
-                'process_type' => $crew->process_type->value,
+                'process_type' => $crew->process_type instanceof \BackedEnum ? $crew->process_type->value : (string) $crew->process_type,
             ];
         }
 
@@ -228,7 +227,7 @@ class TeamGraphPage extends Component
                 'source' => 'agent:'.$cm->agent_id,
                 'target' => 'crew:'.$cm->crew_id,
                 'kind' => 'member',
-                'role' => $cm->role->value,
+                'role' => $cm->role instanceof \BackedEnum ? $cm->role->value : (string) $cm->role,
             ];
         }
 

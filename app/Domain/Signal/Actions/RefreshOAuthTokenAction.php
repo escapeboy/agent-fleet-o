@@ -67,7 +67,7 @@ class RefreshOAuthTokenAction
         // Persist updated tokens
         $updatedCreds = array_merge($creds, [
             'access_token' => $newTokens['access_token'],
-            'token_expires_at' => date('c', time() + $newTokens['expires_in']),
+            'token_expires_at' => date('c', time() + ((int) ($newTokens['expires_in'] ?? 3600))),
         ]);
 
         if (! empty($newTokens['refresh_token'])) {

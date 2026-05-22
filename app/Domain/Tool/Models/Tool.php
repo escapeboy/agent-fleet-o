@@ -18,31 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string|null $team_id
- * @property string|null $credential_id
- * @property bool $is_platform
- * @property string $name
- * @property string $slug
- * @property string|null $description
- * @property ToolType $type
- * @property string|null $subkind
- * @property ToolStatus $status
- * @property ToolRiskLevel|null $risk_level
- * @property array<string, mixed>|null $transport_config
- * @property array<string, mixed>|null $credentials
- * @property array<string, mixed>|null $tool_definitions
- * @property array<string, mixed>|null $server_capabilities
- * @property array<string, mixed>|null $settings
- * @property array<string, mixed>|null $network_policy
- * @property Carbon|null $last_health_check
- * @property string|null $health_status
- * @property bool $result_as_answer
- * @property array<int, string>|null $tags
- */
 class Tool extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
@@ -160,7 +136,8 @@ class Tool extends Model
                 return;
             }
 
-            if ($tool->type !== ToolType::McpStdio) {
+            $type = $tool->type instanceof ToolType ? $tool->type : ToolType::tryFrom((string) $tool->type);
+            if ($type !== ToolType::McpStdio) {
                 return;
             }
 

@@ -19,7 +19,6 @@ use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\CrewExecution;
-use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
 use App\Domain\Skill\Jobs\ExtractSkillFromTrajectoryJob;
@@ -277,7 +276,6 @@ class CrewOrchestrator
         // External members get external_agent_id set (and agent_id left null); the
         // orchestrator branches on that in dispatchTask().
         $taskExecutions = [];
-        /** @var CrewMember $member */
         foreach ($members as $index => $member) {
             $memberName = $member->isExternal()
                 ? (string) $member->externalAgent?->name
@@ -855,11 +853,11 @@ class CrewOrchestrator
         }
 
         $firstPassCount = $tasks->filter(
-            fn ($t) => ($t->attempt_number ?? 1) <= 1 && $t->status === CrewTaskStatus::Validated,
+            fn ($t) => ($t->attempt_number ?? 1) <= 1 && $t->status === CrewTaskStatus::Validated->value,
         )->count();
 
         $nonSkippedCount = $tasks->filter(
-            fn ($t) => $t->status !== CrewTaskStatus::Skipped,
+            fn ($t) => $t->status !== CrewTaskStatus::Skipped->value,
         )->count();
 
         if ($nonSkippedCount > 0 && $firstPassCount === $nonSkippedCount) {

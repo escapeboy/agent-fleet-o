@@ -97,10 +97,10 @@ class MeasureSkillMetricAction
     {
         $output = $execution->output;
 
-        if ($output === null) {
-            return '';
+        if (is_array($output)) {
+            return json_encode($output) ?: '';
         }
 
-        return (string) json_encode($output);
+        return (string) ($output ?? '');
     }
 }

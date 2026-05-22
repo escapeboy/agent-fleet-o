@@ -20,44 +20,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 
 /**
- * @property string $id
- * @property string|null $team_id
- * @property string|null $user_id
- * @property string $title
- * @property string|null $description
- * @property ProjectType $type
- * @property ProjectExecutionMode $execution_mode
- * @property ProjectStatus $status
- * @property string|null $paused_from_status
- * @property string|null $goal
- * @property string|null $crew_id
- * @property string|null $workflow_id
- * @property string|null $website_id
- * @property string|null $email_template_id
- * @property array<string, mixed>|null $agent_config
- * @property array<string, mixed>|null $budget_config
- * @property array<string, mixed>|null $notification_config
- * @property array<string, mixed>|null $delivery_config
  * @property array<string, mixed>|null $settings
- * @property array<int, string>|null $allowed_tool_ids
- * @property array<int, string>|null $allowed_credential_ids
- * @property int $total_runs
- * @property int $successful_runs
- * @property int $failed_runs
- * @property int $total_spend_credits
- * @property Carbon|null $started_at
- * @property Carbon|null $paused_at
- * @property Carbon|null $completed_at
- * @property Carbon|null $last_run_at
- * @property Carbon|null $next_run_at
- * @property array<string, mixed>|null $meta
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read User|null $user
- * @property-read ProjectSchedule|null $schedule
  */
 class Project extends Model
 {

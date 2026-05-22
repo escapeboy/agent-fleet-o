@@ -78,7 +78,7 @@ class KgSuggestMergesTool extends Tool
         }, $candidates);
 
         return Response::text(json_encode([
-            'candidates' => $enriched,
+            'candidates' => array_values($enriched),
             'count' => count($enriched),
             'threshold' => $threshold,
         ]));

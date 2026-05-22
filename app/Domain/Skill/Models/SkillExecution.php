@@ -8,31 +8,7 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $skill_id
- * @property string|null $agent_id
- * @property string|null $experiment_id
- * @property string|null $team_id
- * @property string $status
- * @property array<string, mixed>|null $input
- * @property array<string, mixed>|null $output
- * @property int|null $duration_ms
- * @property int $cost_credits
- * @property float|null $quality_score
- * @property array<string, mixed>|null $quality_details
- * @property string|null $evaluation_method
- * @property string|null $judge_model
- * @property string|null $error_message
- * @property array<string, mixed>|null $error_metadata
- * @property float|null $confidence_score
- * @property string|null $consensus_level
- * @property array<string, mixed>|null $peer_reviews
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- */
 class SkillExecution extends Model
 {
     use BelongsToTeam, HasUuids;

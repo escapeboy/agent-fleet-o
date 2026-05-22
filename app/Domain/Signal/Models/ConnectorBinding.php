@@ -8,25 +8,8 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string $channel
- * @property string $external_id
- * @property string|null $external_name
- * @property ConnectorBindingStatus $status
- * @property string|null $pairing_code
- * @property Carbon|null $pairing_code_expires_at
- * @property Carbon|null $approved_at
- * @property string|null $approved_by
- * @property array<string, mixed>|null $metadata
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read User|null $approvedBy
- */
 class ConnectorBinding extends Model
 {
     use BelongsToTeam, HasUuids;

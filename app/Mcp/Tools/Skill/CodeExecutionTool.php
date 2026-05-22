@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools\Skill;
 
+use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
@@ -126,7 +127,9 @@ class CodeExecutionTool extends Tool
         if ($execution->approval_request_id) {
             $approval = ApprovalRequest::find($execution->approval_request_id);
             if ($approval !== null) {
-                $approvalStatus = $approval->status->value;
+                $approvalStatus = $approval->status instanceof ApprovalStatus
+                    ? $approval->status->value
+                    : null;
             }
         }
 

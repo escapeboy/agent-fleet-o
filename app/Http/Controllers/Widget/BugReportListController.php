@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Widget;
 
 use App\Domain\Signal\Enums\CommentAuthorType;
+use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\Signal;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Widget\Concerns\ResolvesWidgetAccess;
@@ -52,7 +53,10 @@ class BugReportListController extends Controller
             ->get(['id', 'payload', 'status', 'created_at']);
 
         $reports = $signals->map(function (Signal $signal) {
-            $status = $signal->status->value;
+            $status = $signal->status instanceof SignalStatus
+                ? $signal->status->value
+                : (string) $signal->status;
+
             $payload = $signal->payload;
 
             return [
@@ -62,7 +66,7 @@ class BugReportListController extends Controller
                 'url' => $payload['url'] ?? null,
                 'severity' => $payload['severity'] ?? null,
                 'status' => $status,
-                'status_group' => self::STATUS_GROUPS[$status],
+                'status_group' => self::STATUS_GROUPS[$status] ?? 'not_started',
                 'created_at' => $signal->created_at?->toISOString(),
                 'unread_comments_count' => (int) ($signal->visible_comments_count ?? 0),
             ];

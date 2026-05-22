@@ -16,7 +16,9 @@ class BroadcastAgentExecuted
 
         $verb = $event->succeeded ? 'completed' : 'failed';
         $input = $event->execution->input ?? [];
-        $task = $input['task'] ?? $input['content'] ?? $input['query'] ?? null;
+        $task = is_array($input)
+            ? ($input['task'] ?? $input['content'] ?? $input['query'] ?? null)
+            : null;
         $summary = is_string($task) && trim($task) !== ''
             ? "{$verb}: ".str($task)->limit(80)
             : "{$verb} run";

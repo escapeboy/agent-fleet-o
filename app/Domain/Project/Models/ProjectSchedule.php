@@ -10,30 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $project_id
- * @property ScheduleFrequency $frequency
- * @property string|null $cron_expression
- * @property int|null $interval_minutes
- * @property string $timezone
- * @property OverlapPolicy $overlap_policy
- * @property int $max_consecutive_failures
- * @property bool $catchup_missed
- * @property bool $run_immediately
- * @property array<string, mixed>|null $overrides
- * @property bool $enabled
- * @property Carbon|null $last_run_at
- * @property Carbon|null $next_run_at
- * @property Carbon|null $queued_run_at
- * @property bool $heartbeat_enabled
- * @property int|null $heartbeat_interval_minutes
- * @property int|null $heartbeat_budget_cap
- * @property array<string, mixed>|null $heartbeat_context_sources
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Project $project
- */
 class ProjectSchedule extends Model
 {
     use HasUuids;

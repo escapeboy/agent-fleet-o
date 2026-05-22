@@ -19,48 +19,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string|null $experiment_id
- * @property string|null $outbound_proposal_id
- * @property string|null $credential_id
- * @property string|null $workflow_node_id
- * @property string|null $reviewed_by
- * @property string|null $assigned_to
- * @property ApprovalStatus $status
- * @property ApprovalMode|null $mode
- * @property int|null $intervention_window_seconds
- * @property Carbon|null $auto_approved_at
- * @property string|null $rejection_reason
- * @property string|null $reviewer_notes
- * @property array<string, mixed>|null $context
- * @property array<string, mixed>|null $form_schema
- * @property array<string, mixed>|null $form_response
- * @property string|null $assignment_policy
- * @property Carbon|null $expires_at
- * @property Carbon|null $sla_deadline
- * @property list<string>|null $escalation_chain
- * @property int $escalation_level
- * @property Carbon|null $reviewed_at
- * @property string|null $callback_url
- * @property string|null $callback_secret
- * @property Carbon|null $callback_fired_at
- * @property string|null $callback_status
- * @property string|null $chatbot_message_id
- * @property string|null $edited_content
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Experiment|null $experiment
- * @property-read Credential|null $credential
- * @property-read OutboundProposal|null $outboundProposal
- * @property-read WorkflowNode|null $workflowNode
- * @property-read ChatbotMessage|null $chatbotMessage
- * @property-read User|null $reviewer
- * @property-read User|null $assignee
- */
 class ApprovalRequest extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids;

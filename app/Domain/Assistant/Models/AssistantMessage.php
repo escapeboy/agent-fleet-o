@@ -8,20 +8,7 @@ use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $conversation_id
- * @property string $role
- * @property string|null $content
- * @property array<int, array<string, mixed>>|null $tool_calls
- * @property array<int, array<string, mixed>>|null $tool_results
- * @property array<string, mixed>|null $token_usage
- * @property array<string, mixed>|null $metadata
- * @property array<int, array<string, mixed>>|null $ui_artifacts
- * @property Carbon $created_at
- */
 class AssistantMessage extends Model
 {
     use HasUuids, MassPrunable;

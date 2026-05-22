@@ -64,12 +64,12 @@ class CrewExecutionStatusTool extends Tool
         $includeFullOutput = $validated['include_full_output'] ?? false;
 
         if ($includeFullOutput) {
-            $resultText = $result !== null
-                ? (string) json_encode($result, JSON_PRETTY_PRINT)
+            $resultText = $result
+                ? (is_array($result) ? json_encode($result, JSON_PRETTY_PRINT) : (string) $result)
                 : null;
         } else {
-            $resultText = $result !== null
-                ? mb_substr((string) json_encode($result), 0, 500)
+            $resultText = $result
+                ? mb_substr(is_array($result) ? json_encode($result) : (string) $result, 0, 500)
                 : null;
         }
 

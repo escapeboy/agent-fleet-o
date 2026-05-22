@@ -6,28 +6,7 @@ use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string $session_id
- * @property string|null $label
- * @property int $priority
- * @property BridgeConnectionStatus $status
- * @property string|null $bridge_version
- * @property array<string, mixed>|null $endpoints
- * @property string|null $ip_address
- * @property string|null $user_agent
- * @property Carbon|null $connected_at
- * @property Carbon|null $last_seen_at
- * @property Carbon|null $disconnected_at
- * @property string|null $endpoint_url
- * @property string|null $endpoint_secret
- * @property string|null $tunnel_provider
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- */
 class BridgeConnection extends Model
 {
     use BelongsToTeam, HasUuids;

@@ -8,31 +8,7 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $team_id
- * @property string $experiment_id
- * @property string|null $stage
- * @property string|null $batch_id
- * @property string $name
- * @property string|null $description
- * @property string|null $type
- * @property ExperimentTaskStatus $status
- * @property string|null $agent_id
- * @property string|null $provider
- * @property string|null $model
- * @property array<string, mixed>|null $input_data
- * @property array<string, mixed>|null $output_data
- * @property string|null $error
- * @property int $sort_order
- * @property Carbon|null $started_at
- * @property Carbon|null $completed_at
- * @property int|null $duration_ms
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- */
 class ExperimentTask extends Model
 {
     use BelongsToTeam, HasUuids;

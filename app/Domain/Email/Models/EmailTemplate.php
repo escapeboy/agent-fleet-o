@@ -10,23 +10,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string|null $team_id
- * @property string|null $email_theme_id
- * @property string $name
- * @property string|null $subject
- * @property string|null $preview_text
- * @property array<string, mixed>|null $design_json
- * @property string|null $html_cache
- * @property EmailTemplateStatus $status
- * @property EmailTemplateVisibility $visibility
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
- */
 class EmailTemplate extends Model
 {
     use BelongsToTeam, HasUuids, SoftDeletes;

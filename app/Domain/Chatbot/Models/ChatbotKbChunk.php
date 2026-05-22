@@ -6,23 +6,7 @@ use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
-/**
- * @property string $id
- * @property string $source_id
- * @property string $chatbot_id
- * @property string $team_id
- * @property string $content
- * @property string|null $embedding
- * @property int $chunk_index
- * @property string $access_level
- * @property array<string, mixed>|null $metadata
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read ChatbotKnowledgeSource|null $source
- * @property-read Chatbot|null $chatbot
- */
 class ChatbotKbChunk extends Model
 {
     use BelongsToTeam, HasUuids;

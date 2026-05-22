@@ -7,6 +7,7 @@ use App\Domain\Shared\Models\ContactIdentity;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Factories\Domain\Signal\SignalFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,40 +15,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
- * @property string $id
- * @property string $team_id
- * @property string|null $experiment_id
- * @property string|null $contact_identity_id
- * @property string $source_type
- * @property string|null $source_identifier
- * @property string|null $source_native_id
  * @property array<string, mixed> $payload
- * @property float|null $score
- * @property array<string, mixed>|null $scoring_details
- * @property array<string, mixed>|null $metadata
- * @property string|null $content_hash
- * @property SignalStatus $status
- * @property string|null $project_key
- * @property string|null $reported_type
- * @property string|null $suggested_type
- * @property float|null $suggested_type_confidence
- * @property array<string, mixed>|null $tags
- * @property Carbon|null $received_at
- * @property Carbon|null $scored_at
- * @property int $duplicate_count
- * @property Carbon|null $last_received_at
+ * @property string $team_id
  * @property string|null $assigned_user_id
  * @property Carbon|null $assigned_at
- * @property float|null $relevance_score
- * @property Carbon|null $relevance_scored_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read User|null $assignedUser
+ * @property User|null $assignedUser
  */
 class Signal extends Model implements HasMedia
 {

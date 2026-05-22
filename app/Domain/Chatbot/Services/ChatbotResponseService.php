@@ -218,7 +218,7 @@ class ChatbotResponseService
         $gateway = app(AiGatewayInterface::class);
 
         $request = new AiRequestDTO(
-            provider: $chatbot->agent->provider,
+            provider: $chatbot->agent?->provider->value ?? 'openai',
             model: $chatbot->agent->model ?? 'gpt-4o-mini',
             systemPrompt: $systemPrompt,
             userPrompt: $context,

@@ -2,10 +2,8 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Approval\Models\ApprovalRequest;
 use Illuminate\Http\Request;
 
-/** @mixin ApprovalRequest */
 class ApprovalResource extends FleetQResource
 {
     public function toArray(Request $request): array

@@ -42,7 +42,7 @@ class CrewExecutionPage extends Component
             $execution = $action->execute(
                 crew: $this->crew,
                 goal: $this->goal,
-                teamId: auth()->user()->currentTeam->id,
+                teamId: auth()->user()->currentTeam?->id ?? $this->crew->team_id,
             );
 
             session()->flash('message', 'Crew execution started.');

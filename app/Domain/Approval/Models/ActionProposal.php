@@ -10,35 +10,9 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
- * @property string $id
- * @property string $team_id
- * @property string|null $actor_user_id
- * @property string|null $actor_agent_id
- * @property string $target_type
- * @property string|null $target_id
- * @property string $summary
  * @property array<string, mixed> $payload
- * @property array<int, mixed> $lineage
- * @property string $risk_level
- * @property int|null $rubric_score
- * @property array<string, mixed>|null $rubric_breakdown
- * @property ActionProposalStatus $status
- * @property Carbon|null $expires_at
- * @property string|null $decided_by_user_id
- * @property Carbon|null $decided_at
- * @property string|null $decision_reason
- * @property Carbon|null $executed_at
- * @property array<string, mixed>|null $execution_result
- * @property string|null $execution_error
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Team|null $team
- * @property-read User|null $actorUser
- * @property-read Agent|null $actorAgent
- * @property-read User|null $decidedByUser
  */
 class ActionProposal extends Model
 {

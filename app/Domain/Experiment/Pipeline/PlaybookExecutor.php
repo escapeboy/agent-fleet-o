@@ -316,7 +316,6 @@ class PlaybookExecutor
                 '>=' => $actual >= $numericValue,
                 '<=' => $actual <= $numericValue,
                 '==' => $actual == $numericValue,
-                /** @phpstan-ignore-next-line match.alwaysTrue — exhaustive arms, PHPStan narrows regex group too aggressively */
                 '!=' => $actual != $numericValue,
                 default => true,
             };

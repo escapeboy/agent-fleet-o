@@ -7,7 +7,6 @@ use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 
 /**
  * Per-team signal connector configuration.
@@ -17,19 +16,6 @@ use Illuminate\Support\Carbon;
  *
  * Secrets are encrypted with XSalsa20-Poly1305 under the team's DEK.
  * Secret rotation keeps the previous secret valid for 1 hour (grace period).
- *
- * @property string $id
- * @property string $team_id
- * @property string $driver
- * @property string|null $webhook_secret
- * @property string|null $previous_webhook_secret
- * @property Carbon|null $secret_rotated_at
- * @property Carbon|null $last_signal_at
- * @property int $signal_count
- * @property bool $is_active
- * @property array<string, mixed> $metadata
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
  */
 class SignalConnectorSetting extends Model
 {

@@ -3,7 +3,6 @@
 namespace App\Domain\Chatbot\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,15 +16,10 @@ use Illuminate\Support\Carbon;
  * @property string $channel
  * @property string|null $external_user_id
  * @property string|null $ip_address
- * @property array<string, mixed> $metadata
+ * @property array $metadata
  * @property int $message_count
  * @property Carbon $started_at
  * @property Carbon|null $last_activity_at
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Chatbot|null $chatbot
- * @property-read Collection<int, ChatbotMessage> $messages
- * @property-read Collection<int, ChatbotMessage> $lastMessages
  */
 class ChatbotSession extends Model
 {
