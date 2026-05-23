@@ -22,6 +22,7 @@ class SendOutboundAction
         private readonly ChannelRateLimit $channelRateLimit,
         private readonly TargetRateLimit $targetRateLimit,
         private readonly OutboundConnectorManager $connectorManager,
+        private readonly ContentQualityGateAction $qualityGate,
     ) {}
 
     public function execute(OutboundProposal $proposal): OutboundAction
@@ -45,6 +46,10 @@ class SendOutboundAction
                 'Target rate limit exceeded — contact cooldown active',
             );
         }
+
+        // Content quality gate (no-op unless the team opts in). Blocks delivery
+        // in `block` mode; warns and proceeds otherwise.
+        $this->qualityGate->guard($proposal);
 
         // Plugin hook: allow plugins to cancel outbound delivery
         $sending = new OutboundSending($proposal);

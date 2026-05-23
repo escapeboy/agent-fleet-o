@@ -385,6 +385,7 @@ use App\Mcp\Tools\Release\ReleaseSigningKeyRevokeTool;
 use App\Mcp\Tools\Release\ReleaseSigningKeyRotateTool;
 use App\Mcp\Tools\Release\ReleaseVerifySignatureTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
+use App\Mcp\Tools\Schema\SchemaDescribeTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\ContactHealthScoreTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
@@ -1424,6 +1425,9 @@ class AgentFleetServer extends Server
         // avoid loading every tool schema upfront. Pair search + execute.
         CodemodeSearchTool::class,
         CodemodeExecuteTool::class,
+
+        // Schema (1) — enum/state introspection so agents discover valid values.
+        SchemaDescribeTool::class,
     ];
 
     /** @var array<int, class-string<Server\Resource>> */

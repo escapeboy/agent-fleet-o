@@ -68,4 +68,35 @@ class FormatGuidePromptInjectorTest extends TestCase
 
         $this->assertSame('Base prompt.', $result);
     }
+
+    public function test_renders_structured_brand_voice_block(): void
+    {
+        $team = $this->team(['brand_voice' => [
+            'tone' => 'Professional and concise.',
+            'forbidden_phrases' => ['synergy'],
+            'glossary' => [['term' => 'users', 'preferred' => 'customers']],
+        ]]);
+
+        $result = app(FormatGuidePromptInjector::class)->inject('You are a writer.', $team->id);
+
+        $this->assertStringContainsString('## Brand Voice', $result);
+        $this->assertStringContainsString('Professional and concise.', $result);
+        $this->assertStringContainsString('synergy', $result);
+        $this->assertStringContainsString('customers', $result);
+    }
+
+    public function test_format_guide_and_brand_voice_coexist(): void
+    {
+        $team = $this->team([
+            'format_guide' => 'Primary colour is #FF4F18.',
+            'brand_voice' => ['tone' => 'Friendly.'],
+        ]);
+
+        $result = app(FormatGuidePromptInjector::class)->inject('Base.', $team->id);
+
+        $this->assertStringContainsString('Team Format & Brand Guide', $result);
+        $this->assertStringContainsString('#FF4F18', $result);
+        $this->assertStringContainsString('## Brand Voice', $result);
+        $this->assertStringContainsString('Friendly.', $result);
+    }
 }
