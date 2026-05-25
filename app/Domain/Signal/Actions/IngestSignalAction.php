@@ -3,6 +3,8 @@
 namespace App\Domain\Signal\Actions;
 
 use App\Domain\Shared\Services\ContactResolver;
+use App\Domain\Signal\Enums\SignalStatus;
+use App\Domain\Signal\Events\SignalFixRecurred;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalIngesting;
 use App\Domain\Signal\Jobs\ExtractSignalEntitiesJob;
@@ -204,6 +206,10 @@ class IngestSignalAction
             array_merge($existing->tags ?? [], $tags),
         ));
 
+        // A new occurrence arriving for an already-Resolved signal means the
+        // shipped fix did not survive — capture it as a fix-durability failure.
+        $isFixRecurrence = $existing->status === SignalStatus::Resolved;
+
         $mergedPayload = array_merge($existing->payload ?? [], $payload);
 
         $updates = [
@@ -223,6 +229,10 @@ class IngestSignalAction
         }
 
         $existing->update($updates);
+
+        if ($isFixRecurrence) {
+            event(new SignalFixRecurred($existing));
+        }
 
         return $existing;
     }
