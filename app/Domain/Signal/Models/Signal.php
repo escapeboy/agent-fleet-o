@@ -20,9 +20,12 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property array<string, mixed> $payload
+ * @property array<string, mixed>|null $metadata
  * @property string $team_id
  * @property string|null $assigned_user_id
  * @property Carbon|null $assigned_at
+ * @property float|null $learned_relevance_score
+ * @property Carbon|null $learned_relevance_at
  * @property User|null $assignedUser
  */
 class Signal extends Model implements HasMedia
