@@ -7,7 +7,9 @@ use App\Domain\Signal\Connectors\CalendarConnector;
 use App\Domain\Signal\Connectors\ConfluenceConnector;
 use App\Domain\Signal\Connectors\DatadogAlertConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
+use App\Domain\Signal\Connectors\GitHubReleasesConnector;
 use App\Domain\Signal\Connectors\GitHubWikiConnector;
+use App\Domain\Signal\Connectors\HackerNewsConnector;
 use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
@@ -15,6 +17,7 @@ use App\Domain\Signal\Connectors\LinearConnector;
 use App\Domain\Signal\Connectors\MatrixConnector;
 use App\Domain\Signal\Connectors\NotionConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
+use App\Domain\Signal\Connectors\RedditConnector;
 use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SentryAlertConnector;
@@ -29,7 +32,7 @@ use Illuminate\Support\Facades\Log;
 
 class PollInputConnectors extends Command
 {
-    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki, screenpipe, webclaw_scrape, url_watch). Polls all if omitted.}';
+    protected $signature = 'connectors:poll {--driver= : Driver to poll (rss, imap, api_polling, calendar, github_issues, jira, linear, sentry, datadog, pagerduty, telegram, http_monitor, signal_protocol, matrix, notion, confluence, github_wiki, screenpipe, webclaw_scrape, url_watch, hacker_news, reddit, github_releases). Polls all if omitted.}';
 
     protected $description = 'Poll active input connectors for new signals';
 
@@ -55,6 +58,9 @@ class PollInputConnectors extends Command
         'screenpipe' => ScreenpipeConnector::class,
         'webclaw_scrape' => WebScrapingConnector::class,
         'url_watch' => UrlWatchConnector::class,
+        'hacker_news' => HackerNewsConnector::class,
+        'reddit' => RedditConnector::class,
+        'github_releases' => GitHubReleasesConnector::class,
     ];
 
     public function handle(): int
