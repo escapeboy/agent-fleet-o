@@ -65,6 +65,7 @@ class SignalGetTool extends Tool
             'score' => $signal->score,
             'scored_at' => $signal->scored_at?->toIso8601String(),
             'metadata' => $signal->metadata,
+            'recurrence_count' => $signal->recurrence_count,
             'experiment_id' => $signal->experiment_id,
             'attachments' => $attachments,
             'created_at' => $signal->created_at?->toIso8601String(),
