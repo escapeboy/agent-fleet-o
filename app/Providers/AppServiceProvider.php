@@ -96,6 +96,7 @@ use App\Domain\Signal\Connectors\WebScrapingConnector;
 use App\Domain\Signal\Connectors\WhatsAppWebhookConnector;
 use App\Domain\Signal\Events\SignalAssigned;
 use App\Domain\Signal\Events\SignalCommentAdded;
+use App\Domain\Signal\Events\SignalFixRecurred;
 use App\Domain\Signal\Events\SignalIngested;
 use App\Domain\Signal\Events\SignalStatusChanged;
 use App\Domain\Signal\Listeners\CloseBugReportOnPrMergeListener;
@@ -104,6 +105,7 @@ use App\Domain\Signal\Listeners\DispatchAutoTriageOnSignalIngested;
 use App\Domain\Signal\Listeners\InferIncomingSignalIntent;
 use App\Domain\Signal\Listeners\NotifyOnCriticalBugReport;
 use App\Domain\Signal\Listeners\NotifyOnSignalStatusChange;
+use App\Domain\Signal\Listeners\RecordFixRecurrence;
 use App\Domain\Signal\Listeners\ReDelegateOnReporterFollowupListener;
 use App\Domain\Signal\Listeners\SendSignalAssignedNotification;
 use App\Domain\Signal\Listeners\SyncSignalStatusOnExperimentComplete;
@@ -623,6 +625,9 @@ class AppServiceProvider extends ServiceProvider
 
         // GitHub PR merged → resolve the Sentry issue an autonomous fix closed.
         Event::listen(SignalIngested::class, CloseSentryIssueOnPrMergeListener::class);
+
+        // Fix-durability: a resolved signal recurring means the fix did not survive.
+        Event::listen(SignalFixRecurred::class, RecordFixRecurrence::class);
 
         // Team member removal: revoke tokens + pause active experiments
         Event::listen(TeamMemberRemoved::class, RevokeTeamMemberAccess::class);

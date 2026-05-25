@@ -20,9 +20,15 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property array<string, mixed> $payload
+ * @property array<string, mixed>|null $metadata
+ * @property SignalStatus $status
+ * @property int $duplicate_count
  * @property string $team_id
  * @property string|null $assigned_user_id
  * @property Carbon|null $assigned_at
+ * @property float|null $learned_relevance_score
+ * @property Carbon|null $learned_relevance_at
+ * @property int $recurrence_count
  * @property User|null $assignedUser
  */
 class Signal extends Model implements HasMedia
@@ -57,6 +63,7 @@ class Signal extends Model implements HasMedia
         'relevance_scored_at',
         'learned_relevance_score',
         'learned_relevance_at',
+        'recurrence_count',
     ];
 
     protected function casts(): array
@@ -76,6 +83,7 @@ class Signal extends Model implements HasMedia
             'assigned_at' => 'datetime',
             'relevance_score' => 'float',
             'relevance_scored_at' => 'datetime',
+            'recurrence_count' => 'integer',
             'learned_relevance_score' => 'float',
             'learned_relevance_at' => 'datetime',
         ];
