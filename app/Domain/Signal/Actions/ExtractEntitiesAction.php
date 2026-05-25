@@ -16,11 +16,6 @@ class ExtractEntitiesAction
         private readonly AiGatewayInterface $gateway,
     ) {}
 
-    /**
-     * Extract named entities from a signal and link them.
-     *
-     * @return Entity[]
-     */
     public function execute(Signal $signal): array
     {
         $text = $this->buildTextFromSignal($signal);
@@ -34,7 +29,7 @@ class ExtractEntitiesAction
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
-            systemPrompt: 'Extract named entities from the following text. Return ONLY a valid JSON array (no markdown, no code fences) of objects with: type (one of: person, company, location, date, product, topic), name (the entity as mentioned), context_sentence (the sentence or phrase where it was found, max 200 chars), confidence (0.0-1.0). Maximum 20 entities. Be selective — only extract clearly identifiable entities.',
+            systemPrompt: 'Analyze the following text and return ONLY a valid JSON object (no markdown, no code fences) with two keys: "entities" — an array of objects with type (one of: person, company, location, date, product, topic), name (the entity as mentioned), context_sentence (the sentence or phrase where it was found, max 200 chars), confidence (0.0-1.0); maximum 20 entities, be selective and only extract clearly identifiable entities. "novelty" — an integer from 1 to 5 rating how novel and non-routine this signal is (1 = routine, boilerplate, or near-duplicate of common chatter; 5 = highly novel, surprising, or unprecedented).',
             userPrompt: mb_substr($text, 0, 8000),
             maxTokens: 1024,
             teamId: $teamId,
@@ -44,13 +39,15 @@ class ExtractEntitiesAction
 
         try {
             $response = $this->gateway->complete($request);
-            $entities = $this->parseEntities($response->content ?? '');
+            $parsed = $this->parseEnrichment($response->content ?? '');
 
-            if (empty($entities)) {
+            $this->persistNovelty($signal, $parsed['novelty']);
+
+            if (empty($parsed['entities'])) {
                 return [];
             }
 
-            return $this->upsertEntities($entities, $signal, $teamId);
+            return $this->upsertEntities($parsed['entities'], $signal, $teamId);
         } catch (\Throwable $e) {
             Log::warning('ExtractEntitiesAction: Extraction failed', [
                 'signal_id' => $signal->id,
@@ -101,7 +98,10 @@ class ExtractEntitiesAction
         return ['provider' => $provider, 'model' => $model];
     }
 
-    private function parseEntities(string $content): array
+    /**
+     * @return array{entities: array<int, array<string, mixed>>, novelty: int|null}
+     */
+    private function parseEnrichment(string $content): array
     {
         $content = trim($content);
 
@@ -114,15 +114,38 @@ class ExtractEntitiesAction
         $decoded = json_decode($content, true);
 
         if (! is_array($decoded)) {
-            return [];
+            return ['entities' => [], 'novelty' => null];
         }
 
-        // Handle {entities: [...]} wrapper
-        if (isset($decoded['entities']) && is_array($decoded['entities'])) {
-            $decoded = $decoded['entities'];
+        $novelty = null;
+        if (isset($decoded['novelty']) && is_numeric($decoded['novelty'])) {
+            $novelty = (int) max(1, min(5, (int) $decoded['novelty']));
         }
 
-        return array_filter($decoded, fn ($e) => isset($e['type'], $e['name']));
+        // Entities may be the top-level array or wrapped under an "entities" key.
+        $entities = (isset($decoded['entities']) && is_array($decoded['entities']))
+            ? $decoded['entities']
+            : $decoded;
+
+        $entities = array_values(array_filter(
+            $entities,
+            fn ($e) => is_array($e) && isset($e['type'], $e['name']),
+        ));
+
+        return ['entities' => $entities, 'novelty' => $novelty];
+    }
+
+    private function persistNovelty(Signal $signal, ?int $novelty): void
+    {
+        if ($novelty === null) {
+            return;
+        }
+
+        $metadata = $signal->metadata ?? [];
+        $metadata['novelty'] = $novelty;
+        $metadata['novelty_at'] = now()->toIso8601String();
+        $signal->metadata = $metadata;
+        $signal->save();
     }
 
     /**

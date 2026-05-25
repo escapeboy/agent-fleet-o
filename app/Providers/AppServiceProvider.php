@@ -67,9 +67,11 @@ use App\Domain\Signal\Connectors\ConfluenceConnector;
 use App\Domain\Signal\Connectors\DatadogAlertConnector;
 use App\Domain\Signal\Connectors\DiscordWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubIssuesConnector;
+use App\Domain\Signal\Connectors\GitHubReleasesConnector;
 use App\Domain\Signal\Connectors\GitHubWebhookConnector;
 use App\Domain\Signal\Connectors\GitHubWikiConnector;
 use App\Domain\Signal\Connectors\GoogleDriveConnector;
+use App\Domain\Signal\Connectors\HackerNewsConnector;
 use App\Domain\Signal\Connectors\HttpMonitorConnector;
 use App\Domain\Signal\Connectors\ImapConnector;
 use App\Domain\Signal\Connectors\JiraConnector;
@@ -78,6 +80,7 @@ use App\Domain\Signal\Connectors\ManualSignalConnector;
 use App\Domain\Signal\Connectors\MatrixConnector;
 use App\Domain\Signal\Connectors\NotionConnector;
 use App\Domain\Signal\Connectors\PagerDutyConnector;
+use App\Domain\Signal\Connectors\RedditConnector;
 use App\Domain\Signal\Connectors\RssConnector;
 use App\Domain\Signal\Connectors\ScreenpipeConnector;
 use App\Domain\Signal\Connectors\SearxngConnector;
@@ -282,6 +285,9 @@ class AppServiceProvider extends ServiceProvider
             SlackChannelKnowledgeConnector::class,
             WebScrapingConnector::class,
             UrlWatchConnector::class,
+            HackerNewsConnector::class,
+            RedditConnector::class,
+            GitHubReleasesConnector::class,
         ], 'fleet.signal.connectors');
 
         // Bind SignalConnectorRegistry to resolve all tagged signal connectors

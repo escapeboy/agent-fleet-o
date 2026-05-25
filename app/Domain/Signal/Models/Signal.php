@@ -55,6 +55,8 @@ class Signal extends Model implements HasMedia
         'assigned_at',
         'relevance_score',
         'relevance_scored_at',
+        'learned_relevance_score',
+        'learned_relevance_at',
     ];
 
     protected function casts(): array
@@ -74,6 +76,8 @@ class Signal extends Model implements HasMedia
             'assigned_at' => 'datetime',
             'relevance_score' => 'float',
             'relevance_scored_at' => 'datetime',
+            'learned_relevance_score' => 'float',
+            'learned_relevance_at' => 'datetime',
         ];
     }
 
