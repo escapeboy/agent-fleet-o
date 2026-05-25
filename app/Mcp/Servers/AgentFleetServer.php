@@ -453,6 +453,7 @@ use App\Mcp\Tools\Signal\SignalIngestTool;
 use App\Mcp\Tools\Signal\SignalIntentReclassifyTool;
 use App\Mcp\Tools\Signal\SignalListByRelevanceTool;
 use App\Mcp\Tools\Signal\SignalListTool;
+use App\Mcp\Tools\Signal\SignalRelevanceExplainTool;
 use App\Mcp\Tools\Signal\SignalSetRelevanceThresholdTool;
 use App\Mcp\Tools\Signal\SlackConnectorTool;
 use App\Mcp\Tools\Signal\SourceMapUploadTool;
@@ -1021,6 +1022,7 @@ class AgentFleetServer extends Server
         SignalIntentReclassifyTool::class,
         SignalSetRelevanceThresholdTool::class,
         SignalListByRelevanceTool::class,
+        SignalRelevanceExplainTool::class,
         SentryWatchdogStatusTool::class,
         SentryWatchdogRunTool::class,
         TicketConnectorTool::class,
