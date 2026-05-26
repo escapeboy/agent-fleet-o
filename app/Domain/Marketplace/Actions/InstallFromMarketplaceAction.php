@@ -82,6 +82,9 @@ class InstallFromMarketplaceAction
                     'status' => 'active',
                     'capabilities' => $snapshot['capabilities'] ?? [],
                     'constraints' => $snapshot['constraints'] ?? [],
+                    'output_schema' => $snapshot['output_schema'] ?? null,
+                    // Column is NOT NULL with default; legacy snapshots lack this key.
+                    'reasoning_strategy' => $snapshot['reasoning_strategy'] ?? 'function_calling',
                 ]);
 
                 $installedAgentId = $agent->id;
