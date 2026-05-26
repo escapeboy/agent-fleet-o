@@ -18,6 +18,10 @@ class SecurityPolicyPanel extends Component
 
     public string $requireApprovalFor = '';
 
+    public bool $sqlGuardEnabled = true;
+
+    public string $requireApprovalSqlPatterns = '';
+
     public ?int $maxCommandTimeout = null;
 
     public bool $editing = false;
@@ -36,6 +40,8 @@ class SecurityPolicyPanel extends Component
         $this->allowedCommands = implode("\n", $policy['allowed_commands'] ?? []);
         $this->allowedPaths = implode("\n", $policy['allowed_paths'] ?? []);
         $this->requireApprovalFor = implode("\n", $policy['require_approval_for'] ?? []);
+        $this->sqlGuardEnabled = $policy['sql_guard_enabled'] ?? true;
+        $this->requireApprovalSqlPatterns = implode("\n", $policy['require_approval_sql_patterns'] ?? []);
         $this->maxCommandTimeout = $policy['max_command_timeout'] ?? null;
     }
 
@@ -54,6 +60,16 @@ class SecurityPolicyPanel extends Component
 
         // Remove empty arrays to keep it clean
         $policy = array_filter($policy, fn ($v) => ! empty($v));
+
+        // Persist sql_guard_enabled only when disabled (default-on otherwise).
+        // array_filter above would drop a false value, so set it explicitly.
+        if (! $this->sqlGuardEnabled) {
+            $policy['sql_guard_enabled'] = false;
+        }
+        $sqlPatterns = $this->parseLines($this->requireApprovalSqlPatterns);
+        if (! empty($sqlPatterns)) {
+            $policy['require_approval_sql_patterns'] = $sqlPatterns;
+        }
 
         GlobalSetting::set('org_security_policy', $policy);
 

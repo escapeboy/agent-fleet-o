@@ -71,6 +71,17 @@
                     <textarea wire:model="requireApprovalFor" rows="4" class="w-full rounded-lg border-(--color-input-border) bg-(--color-input-bg) text-(--color-on-surface) font-mono text-sm" placeholder="pip install&#10;npm install&#10;apt-get"></textarea>
                 </div>
 
+                {{-- Destructive SQL guard --}}
+                <div>
+                    <label class="flex items-center gap-2 text-sm font-medium text-(--color-on-surface)">
+                        <input type="checkbox" wire:model="sqlGuardEnabled" class="rounded border-(--color-input-border)">
+                        Destructive SQL guard
+                    </label>
+                    <p class="mb-1 text-xs text-(--color-on-surface-muted)">When on, shell commands running destructive SQL (DROP/TRUNCATE/ALTER, or any write to the <span class="font-mono">migrations</span> table via psql/mysql) are blocked from autonomous execution and flagged for human approval.</p>
+                    <textarea wire:model="requireApprovalSqlPatterns" rows="3" class="w-full rounded-lg border-(--color-input-border) bg-(--color-input-bg) text-(--color-on-surface) font-mono text-sm" placeholder="vacuum full&#10;reindex"></textarea>
+                    <p class="mt-1 text-xs text-(--color-on-surface-muted)">Optional: extra case-insensitive substrings to also flag.</p>
+                </div>
+
                 {{-- Max Timeout --}}
                 <div>
                     <label class="block text-sm font-medium text-(--color-on-surface)">Max Command Timeout (seconds)</label>
@@ -102,7 +113,17 @@
                 $blocked = $policy['blocked_commands'] ?? [];
                 $patterns = $policy['blocked_patterns'] ?? [];
                 $allowed = $policy['allowed_commands'] ?? [];
+                $sqlGuardOn = $policy['sql_guard_enabled'] ?? true;
             @endphp
+
+            <div class="rounded-lg border border-(--color-theme-border) bg-(--color-surface-raised) p-3">
+                <p class="text-xs font-medium text-(--color-on-surface-muted)">Destructive SQL Guard</p>
+                @if($sqlGuardOn)
+                    <span class="mt-1 inline-flex rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">On — destructive SQL requires approval</span>
+                @else
+                    <span class="mt-1 inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">Off</span>
+                @endif
+            </div>
 
             <div class="rounded-lg border border-(--color-theme-border) bg-(--color-surface-raised) p-3">
                 <p class="text-xs font-medium text-(--color-on-surface-muted)">Blocked Commands</p>

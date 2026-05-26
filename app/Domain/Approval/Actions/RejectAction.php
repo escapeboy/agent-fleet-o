@@ -5,6 +5,7 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Approval\Models\ApprovalVote;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Credential\Enums\CredentialStatus;
@@ -42,6 +43,12 @@ class RejectAction
                     "Approval request [{$locked->id}] is not pending.",
                 );
             }
+
+            // A single rejection vetoes the request regardless of quorum size.
+            ApprovalVote::updateOrCreate(
+                ['approval_request_id' => $locked->id, 'user_id' => $reviewerId],
+                ['decision' => 'reject', 'notes' => $notes],
+            );
 
             $locked->update([
                 'status' => ApprovalStatus::Rejected,

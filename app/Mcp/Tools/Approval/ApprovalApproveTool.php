@@ -57,10 +57,15 @@ class ApprovalApproveTool extends Tool
                 $validated['notes'] ?? null,
             );
 
+            $approval->refresh();
+
             return Response::text(json_encode([
                 'success' => true,
                 'approval_id' => $approval->id,
-                'status' => 'approved',
+                'status' => $approval->status->value,
+                'approvals_recorded' => $approval->approveVoteCount(),
+                'approvals_required' => (int) $approval->required_approvals,
+                'quorum_reached' => $approval->quorumReached(),
             ]));
         } catch (\Throwable $e) {
             throw $e;

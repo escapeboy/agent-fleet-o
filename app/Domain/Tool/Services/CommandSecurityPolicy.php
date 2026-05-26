@@ -67,6 +67,25 @@ class CommandSecurityPolicy
     ];
 
     /**
+     * Destructive SQL fingerprints (case-insensitive regex, no delimiters).
+     *
+     * Borrowed from clawpatrol's SQL fact extraction, but applied at the shell
+     * layer: agents only reach a database by shelling out to psql/mysql/etc.,
+     * so we scan the full command string. A match does NOT hard-deny — it sets
+     * requiresApproval=true so destructive SQL cannot run in autonomous mode
+     * (founder rule: "sensitive paths = pause + double-check"). Writes to the
+     * `migrations` table are the founder's one hard-block surface.
+     */
+    protected const DESTRUCTIVE_SQL_PATTERNS = [
+        'DROP\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW)\b',
+        'TRUNCATE\s+(TABLE\s+)?\w',
+        'ALTER\s+TABLE\b[\s\S]+\bDROP\b',
+        // Any write targeting the migrations bookkeeping table.
+        '(DROP|TRUNCATE)\b[\s\S]*\bmigrations\b',
+        '(DELETE\s+FROM|UPDATE|INSERT\s+INTO)\s+["`\']?migrations["`\']?\b',
+    ];
+
+    /**
      * Validate a command against the security hierarchy.
      *
      * Hierarchy (most restrictive wins):
@@ -116,6 +135,19 @@ class CommandSecurityPolicy
                 allowed: false,
                 reason: 'Command contains newline or carriage-return character',
                 level: 'platform',
+            );
+        }
+
+        // 2c. Destructive SQL guard (default-on; disable via org policy
+        // sql_guard_enabled=false). Blocks autonomous execution and flags the
+        // command as requiring human approval rather than hard-denying.
+        $sqlMatch = $this->detectDestructiveSql($command, $orgSecurityPolicy);
+        if ($sqlMatch !== null) {
+            return new CommandValidationResult(
+                allowed: false,
+                reason: "Destructive SQL requires human approval (blocked in autonomous execution): {$sqlMatch}",
+                level: 'sql_guard',
+                requiresApproval: true,
             );
         }
 
@@ -256,6 +288,38 @@ class CommandSecurityPolicy
         if ($maxTimeout !== null) {
             // Timeout is enforced at execution time, not here.
             // Store it for downstream use.
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect destructive SQL embedded in a shell command.
+     *
+     * Returns a short human-readable description of the first match, or null.
+     * Default patterns are always active unless org policy sets
+     * sql_guard_enabled=false; require_approval_sql_patterns adds extra
+     * case-insensitive substrings on top of the defaults.
+     *
+     * @param  array<string,mixed>|null  $orgSecurityPolicy
+     */
+    private function detectDestructiveSql(string $command, ?array $orgSecurityPolicy): ?string
+    {
+        if (($orgSecurityPolicy['sql_guard_enabled'] ?? true) === false) {
+            return null;
+        }
+
+        foreach (self::DESTRUCTIVE_SQL_PATTERNS as $pattern) {
+            if (preg_match('/'.$pattern.'/i', $command) === 1) {
+                return $pattern;
+            }
+        }
+
+        $extra = $orgSecurityPolicy['require_approval_sql_patterns'] ?? [];
+        foreach ($extra as $needle) {
+            if (is_string($needle) && $needle !== '' && stripos($command, $needle) !== false) {
+                return $needle;
+            }
         }
 
         return null;
