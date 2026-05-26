@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
+// @mcp-cross-tenant team-self-lookup — loads the caller's own team via mcp.team_id / current_team_id
 class InspectDiffCommentsTool extends Tool
 {
     use HasStructuredErrors;
