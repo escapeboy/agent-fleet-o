@@ -17477,3 +17477,9 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Approval/ApprovalApproveTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 6
+			path: app/Domain/Skill/Actions/ExportSkillToAgentSkillsAction.php

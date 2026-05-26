@@ -5,6 +5,7 @@ namespace App\Domain\Memory\Services;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Shared\Models\Team;
 
 /**
  * Produces an in-execution "persist your learnings" nudge for an agent,
@@ -19,7 +20,12 @@ class MemoryNudgeInjector
 {
     public function nudgeFor(Agent $agent): ?string
     {
-        if (! ($agent->team?->settings['memory_nudge_enabled'] ?? false)) {
+        $team = $agent->team;
+        if (! $team instanceof Team) {
+            return null;
+        }
+
+        if (! ($team->settings['memory_nudge_enabled'] ?? false)) {
             return null;
         }
 
