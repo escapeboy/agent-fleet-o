@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Skill;
 
 use App\Domain\Skill\Actions\ImportSkillFromAgentSkillsAction;
+use App\Domain\Skill\Support\SkillKitSpec;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
@@ -53,6 +54,7 @@ class SkillImportAgentSkillsTool extends Tool
             'id' => $skill->id,
             'slug' => $skill->slug,
             'name' => $skill->name,
+            'section_warnings' => SkillKitSpec::missingSections($validated['skill_md']),
         ]));
     }
 }
