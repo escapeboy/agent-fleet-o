@@ -872,7 +872,7 @@ class ExecuteAgentAction
         }
 
         // Opt-in per-team guardrail: enforce comment discipline on code the agent writes.
-        if ((($agent->team?->settings ?? [])['enable_comment_guardrail'] ?? false) === true) {
+        if ((($agent->team->settings ?? [])['enable_comment_guardrail'] ?? false) === true) {
             $parts[] = implode("\n", [
                 '## Code Comment Discipline (enforced)',
                 'Comments must explain a non-obvious WHY: a hidden constraint, a subtle invariant, or a workaround.',
