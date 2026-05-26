@@ -107,4 +107,36 @@ class ExportSkillToAgentSkillsActionTest extends TestCase
 
         $this->assertLessThanOrEqual(1024, mb_strlen($fm['description']));
     }
+
+    public function test_body_includes_skillkit_recommended_sections(): void
+    {
+        $skill = Skill::factory()->make([
+            'team_id' => 'team-1',
+            'name' => 'Sectioned',
+            'slug' => 'sectioned',
+            'description' => 'A sectioned skill.',
+            'system_prompt' => 'Plain instructions with no sections.',
+        ]);
+
+        [, $body] = $this->parse($this->action->execute($skill));
+
+        $this->assertStringContainsString('## When to Use', $body);
+        $this->assertStringContainsString('## Boundaries', $body);
+    }
+
+    public function test_existing_sections_are_not_duplicated(): void
+    {
+        $skill = Skill::factory()->make([
+            'team_id' => 'team-1',
+            'name' => 'Pre Sectioned',
+            'slug' => 'pre-sectioned',
+            'description' => 'desc',
+            'system_prompt' => "Body.\n\n## When to Use\n\nAlready here.\n\n## Boundaries\n\nAlready here.",
+        ]);
+
+        [, $body] = $this->parse($this->action->execute($skill));
+
+        $this->assertSame(1, substr_count($body, '## When to Use'));
+        $this->assertSame(1, substr_count($body, '## Boundaries'));
+    }
 }
