@@ -490,6 +490,7 @@ use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
+use App\Mcp\Tools\System\InspectDiffCommentsTool;
 use App\Mcp\Tools\System\LangfuseConfigTool;
 use App\Mcp\Tools\System\MetricsAggregationsTool;
 use App\Mcp\Tools\System\MetricsModelComparisonTool;
@@ -1289,6 +1290,7 @@ class AgentFleetServer extends Server
         GlobalSettingsUpdateTool::class,
         BlacklistManageTool::class,
         SecurityPolicyManageTool::class,
+        InspectDiffCommentsTool::class,
         LangfuseConfigTool::class,
         MetricsAggregationsTool::class,
         MetricsModelComparisonTool::class,

@@ -871,6 +871,17 @@ class ExecuteAgentAction
             $parts[] = "Constraints:\n{$constraintList}";
         }
 
+        // Opt-in per-team guardrail: enforce comment discipline on code the agent writes.
+        if ((($agent->team?->settings ?? [])['enable_comment_guardrail'] ?? false) === true) {
+            $parts[] = implode("\n", [
+                '## Code Comment Discipline (enforced)',
+                'Comments must explain a non-obvious WHY: a hidden constraint, a subtle invariant, or a workaround.',
+                'Do not add comments that restate the code, decorative banners, or commented-out code.',
+                'Before you open or finalise a pull request, call the `code_inspect_comments` tool with your full `git diff`,',
+                'then remove or rewrite every comment it flags.',
+            ]);
+        }
+
         // Execution budget awareness — only meaningful for agentic (multi-step) calls
         $maxSteps = $tierConfig['max_steps'] ?? 0;
         if ($maxSteps > 1) {
