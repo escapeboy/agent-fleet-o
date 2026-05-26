@@ -19,20 +19,20 @@ class LocalAgentRegistryTest extends TestCase
     public function test_custom_agent_is_merged_into_registry(): void
     {
         GlobalSetting::set('local_agents_custom', [
-            'copilot' => [
-                'binary' => 'copilot',
+            'my-custom-cli' => [
+                'binary' => 'my-custom-cli',
                 'execute_flags' => ['-p'],
             ],
         ]);
 
         $agents = $this->discovery()->registeredAgents();
 
-        $this->assertArrayHasKey('copilot', $agents);
-        $this->assertSame('copilot', $agents['copilot']['binary']);
+        $this->assertArrayHasKey('my-custom-cli', $agents);
+        $this->assertSame('my-custom-cli', $agents['my-custom-cli']['binary']);
         // Built-ins remain present alongside customs.
         $this->assertArrayHasKey('claude-code', $agents);
 
-        $cfg = $this->discovery()->agentConfig('copilot');
+        $cfg = $this->discovery()->agentConfig('my-custom-cli');
         $this->assertNotNull($cfg);
         $this->assertSame(['-p'], $cfg['execute_flags']);
         $this->assertTrue($cfg['custom']);
