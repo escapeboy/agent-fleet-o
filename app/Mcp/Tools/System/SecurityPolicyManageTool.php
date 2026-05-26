@@ -38,6 +38,8 @@ class SecurityPolicyManageTool extends Tool
                 'allowed_commands' => $schema->array()->items($schema->string()),
                 'allowed_paths' => $schema->array()->items($schema->string()),
                 'require_approval_for' => $schema->array()->items($schema->string()),
+                'sql_guard_enabled' => $schema->boolean()->description('Default true. When false, disables the destructive-SQL guard (DROP/TRUNCATE/ALTER + migrations-table writes shelled via psql/mysql).'),
+                'require_approval_sql_patterns' => $schema->array()->items($schema->string())->description('Extra case-insensitive substrings that flag a shell command as destructive SQL requiring approval.'),
                 'max_command_timeout' => $schema->integer()->description('Max command timeout in seconds. Null to remove limit.'),
             ])
                 ->description('Required for update. Policy fields to set.'),
@@ -70,6 +72,8 @@ class SecurityPolicyManageTool extends Tool
                 'allowed_commands' => $policy['allowed_commands'] ?? [],
                 'allowed_paths' => $policy['allowed_paths'] ?? [],
                 'require_approval_for' => $policy['require_approval_for'] ?? [],
+                'sql_guard_enabled' => $policy['sql_guard_enabled'] ?? true,
+                'require_approval_sql_patterns' => $policy['require_approval_sql_patterns'] ?? [],
                 'max_command_timeout' => $policy['max_command_timeout'] ?? null,
             ],
         ]));
@@ -95,6 +99,8 @@ class SecurityPolicyManageTool extends Tool
             'allowed_commands' => $policyInput['allowed_commands'] ?? null,
             'allowed_paths' => $policyInput['allowed_paths'] ?? null,
             'require_approval_for' => $policyInput['require_approval_for'] ?? null,
+            'sql_guard_enabled' => $policyInput['sql_guard_enabled'] ?? null,
+            'require_approval_sql_patterns' => $policyInput['require_approval_sql_patterns'] ?? null,
             'max_command_timeout' => $policyInput['max_command_timeout'] ?? null,
         ], fn ($v) => $v !== null));
 

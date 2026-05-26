@@ -58,6 +58,8 @@ class ApprovalListTool extends Tool
                 'id' => $a->id,
                 'type' => $a->experiment_id ? 'experiment' : ($a->outbound_proposal_id ? 'outbound' : 'unknown'),
                 'payload' => mb_substr(json_encode($a->context ?? []), 0, 200),
+                'approvals_recorded' => $a->approveVoteCount(),
+                'approvals_required' => (int) $a->required_approvals,
                 'created_at' => $a->created_at?->diffForHumans(),
             ])->toArray(),
         ]));

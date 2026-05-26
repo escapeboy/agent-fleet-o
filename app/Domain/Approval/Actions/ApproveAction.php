@@ -5,6 +5,7 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Jobs\FireApprovalWebhookJob;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Approval\Models\ApprovalVote;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
@@ -45,6 +46,33 @@ class ApproveAction
                 throw new InvalidArgumentException(
                     "Approval request [{$locked->id}] is not pending.",
                 );
+            }
+
+            // Record this approver's vote (one per user — repeat approvals by
+            // the same reviewer upsert rather than stack toward quorum).
+            if ($reviewerId !== null) {
+                ApprovalVote::updateOrCreate(
+                    ['approval_request_id' => $locked->id, 'user_id' => $reviewerId],
+                    ['decision' => 'approve', 'notes' => $notes],
+                );
+            } else {
+                ApprovalVote::create([
+                    'approval_request_id' => $locked->id,
+                    'user_id' => null,
+                    'decision' => 'approve',
+                    'notes' => $notes,
+                ]);
+            }
+
+            // N-of-M: hold at Pending until the quorum of distinct approve
+            // votes is met. required_approvals defaults to 1, so single-approver
+            // callers flip on the first vote exactly as before.
+            $required = max(1, (int) $locked->required_approvals);
+            $approveVotes = $locked->votes()->where('decision', 'approve')->count();
+            if ($approveVotes < $required) {
+                $approvalRequest->setRawAttributes($locked->fresh()->getAttributes(), true);
+
+                return;
             }
 
             $locked->update([
