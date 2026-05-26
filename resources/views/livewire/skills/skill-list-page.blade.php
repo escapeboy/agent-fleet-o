@@ -23,6 +23,12 @@
             @endforeach
         </x-form-select>
 
+        <a href="{{ route('skills.import') }}"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            title="Import a skill from an agentskills.io SKILL.md file">
+            <i class="fa-solid fa-file-import"></i> Import
+        </a>
+
         @if($canCreate)
             <a href="{{ route('skills.create') }}"
                 class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">

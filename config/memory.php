@@ -28,6 +28,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Memory Nudge (Hermes-inspired closed learning loop)
+    |--------------------------------------------------------------------------
+    |
+    | When a team opts in (settings['memory_nudge_enabled'] === true), agents
+    | whose un-memorialized activity reaches this threshold receive an in-prompt
+    | reminder to persist durable learnings via the memory store tool. This
+    | complements the post-hoc distill/consolidate crons; it does not write
+    | memories itself. Off by default at the team level.
+    |
+    */
+    'nudge' => [
+        'execution_threshold' => (int) env('MEMORY_NUDGE_EXECUTION_THRESHOLD', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Memory TTL (Days)
     |--------------------------------------------------------------------------
     |

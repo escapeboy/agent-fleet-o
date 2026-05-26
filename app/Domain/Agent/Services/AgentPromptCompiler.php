@@ -3,15 +3,18 @@
 namespace App\Domain\Agent\Services;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Memory\Services\MemoryNudgeInjector;
 
 class AgentPromptCompiler
 {
+    public function __construct(private readonly MemoryNudgeInjector $memoryNudge) {}
+
     public function compile(Agent $agent, array $runtimeContext = []): string
     {
         $template = $agent->system_prompt_template;
 
         if (empty($template)) {
-            return $agent->backstory ?? '';
+            return $this->withNudge($agent, $agent->backstory ?? '');
         }
 
         $sections = [];
@@ -42,7 +45,20 @@ class AgentPromptCompiler
             $compiled = str_replace('{{'.$key.'}}', $value, $compiled);
         }
 
-        return $compiled;
+        return $this->withNudge($agent, $compiled);
+    }
+
+    private function withNudge(Agent $agent, string $compiled): string
+    {
+        $nudge = $this->memoryNudge->nudgeFor($agent);
+
+        if ($nudge === null) {
+            return $compiled;
+        }
+
+        $section = "## Persisting Knowledge\n".$nudge;
+
+        return $compiled === '' ? $section : $compiled."\n\n".$section;
     }
 
     private function buildVariables(Agent $agent, array $context): array

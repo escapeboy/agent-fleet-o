@@ -8,6 +8,7 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
 /**
  * Register, list, or remove operator-defined local-agent CLIs so the platform can
@@ -18,6 +19,7 @@ use Laravel\Mcp\Server\Tool;
  * LocalAgentDiscovery::registeredAgents(). Super-admin only: a custom agent's
  * `binary`/`detect_command` are shell-executed on the host.
  */
+#[IsDestructive]
 class LocalAgentCustomManageTool extends Tool
 {
     use HasStructuredErrors;
