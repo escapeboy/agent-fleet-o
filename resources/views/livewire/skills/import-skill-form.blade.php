@@ -9,6 +9,30 @@
         </p>
     </div>
 
+    <form wire:submit="importFromGitHub" class="mb-8 space-y-4">
+        <x-form-input
+            wire:model="githubSource"
+            label="From GitHub"
+            placeholder="iii-hq/iii/skills"
+            hint="org/repo[/path][@ref] — imports a SKILL.md or every SKILL.md under a directory (public repos need no token)."
+            :error="$errors->first('githubSource')"
+        />
+
+        <div class="flex items-center justify-end">
+            <button type="submit"
+                wire:loading.attr="disabled"
+                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                <span wire:loading.remove wire:target="importFromGitHub">Import from GitHub</span>
+                <span wire:loading wire:target="importFromGitHub">Importing…</span>
+            </button>
+        </div>
+    </form>
+
+    <div class="relative my-8">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+        <div class="relative flex justify-center"><span class="bg-white px-3 text-xs uppercase tracking-wide text-gray-400">or paste</span></div>
+    </div>
+
     <form wire:submit="import" class="space-y-4">
         <x-form-textarea
             wire:model="skillMd"

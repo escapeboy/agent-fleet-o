@@ -480,6 +480,7 @@ use App\Mcp\Tools\Skill\SkillExportAgentSkillsTool;
 use App\Mcp\Tools\Skill\SkillGenerateImprovementTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillImportAgentSkillsTool;
+use App\Mcp\Tools\Skill\SkillImportGitHubTool;
 use App\Mcp\Tools\Skill\SkillLineageTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
@@ -895,6 +896,7 @@ class AgentFleetServer extends Server
         SkillTrajectoryExtractTool::class,
         SkillExportAgentSkillsTool::class,
         SkillImportAgentSkillsTool::class,
+        SkillImportGitHubTool::class,
 
         // Tool (25) — Browser Harness (build #4)
         BrowserHarnessRunTool::class,

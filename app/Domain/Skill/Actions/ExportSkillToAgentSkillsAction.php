@@ -3,6 +3,7 @@
 namespace App\Domain\Skill\Actions;
 
 use App\Domain\Skill\Models\Skill;
+use App\Domain\Skill\Support\SkillKitSpec;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 
@@ -51,6 +52,15 @@ class ExportSkillToAgentSkillsAction
         if ($body === '') {
             $body = "# {$name}\n\n{$description}";
         }
+
+        // SkillKit expects every SKILL.md to document "## When to Use" and
+        // "## Boundaries"; back-fill any the prompt omits (idempotent).
+        $body = SkillKitSpec::appendRecommendedSections(
+            $body,
+            $description,
+            $skill->risk_level,
+            $skill->type,
+        );
 
         $yaml = rtrim(Yaml::dump($frontmatter, 6, 2));
 

@@ -1,0 +1,13 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#3 \$risk of static method App\\Domain\\Skill\\Support\\SkillKitSpec\:\:appendRecommendedSections\(\) expects App\\Domain\\Skill\\Enums\\RiskLevel, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Skill/Actions/ExportSkillToAgentSkillsAction.php
+
+		-
+			message: '#^Parameter \#4 \$type of static method App\\Domain\\Skill\\Support\\SkillKitSpec\:\:appendRecommendedSections\(\) expects App\\Domain\\Skill\\Enums\\SkillType, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Skill/Actions/ExportSkillToAgentSkillsAction.php
