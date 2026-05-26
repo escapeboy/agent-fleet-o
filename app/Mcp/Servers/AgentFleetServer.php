@@ -476,8 +476,10 @@ use App\Mcp\Tools\Skill\SkillCloneTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillDegradationReportTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
+use App\Mcp\Tools\Skill\SkillExportAgentSkillsTool;
 use App\Mcp\Tools\Skill\SkillGenerateImprovementTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
+use App\Mcp\Tools\Skill\SkillImportAgentSkillsTool;
 use App\Mcp\Tools\Skill\SkillLineageTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
@@ -891,6 +893,8 @@ class AgentFleetServer extends Server
         SkillAutoGenerateRunTool::class,
         SkillCloneTool::class,
         SkillTrajectoryExtractTool::class,
+        SkillExportAgentSkillsTool::class,
+        SkillImportAgentSkillsTool::class,
 
         // Tool (25) — Browser Harness (build #4)
         BrowserHarnessRunTool::class,
