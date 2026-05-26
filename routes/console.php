@@ -58,6 +58,7 @@ Schedule::command('tasks:recover-stuck')->everyFiveMinutes();
 Schedule::command('websites:recover-stuck')->everyFiveMinutes();
 Schedule::command('human-tasks:check-sla')->everyFiveMinutes();
 Schedule::command('workflows:poll-time-gates')->everyMinute()->withoutOverlapping(1);
+Schedule::command('secret-proxy:drain-audit')->everyMinute()->withoutOverlapping(1);
 
 // Integration health checks, polling, token refresh, and Activepieces piece sync
 Schedule::command('integrations:ping')->everyFifteenMinutes()->withoutOverlapping(10);

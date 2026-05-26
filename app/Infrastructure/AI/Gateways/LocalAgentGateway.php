@@ -15,6 +15,8 @@ use App\Infrastructure\AI\Services\ClaudeCodeMcpConfigBuilder;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Infrastructure\AI\Services\RunSecretVault;
+use App\Infrastructure\AI\Services\SecretProxyInjector;
 use App\Models\User;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
@@ -291,10 +293,9 @@ class LocalAgentGateway implements AiGatewayInterface
             }
 
             // Bridge any MCP tools the agent has attached so Claude Code can
-            // reach them via its own MCP protocol. Reads <HOME>/.claude.json
-            // automatically — HOME is the ephemeral workdir that gets wiped
-            // in finally{}, so the file is gone after this run.
-            $this->writeAgentMcpConfig($request, $workdir);
+            // reach them via its own MCP protocol. The actual .claude.json write
+            // happens just below (after $env is built) so the secret-proxy path
+            // can rewrite both env and .claude.json from a single place.
         }
 
         $env = [
@@ -308,6 +309,20 @@ class LocalAgentGateway implements AiGatewayInterface
             // form the real sandbox — this flag just tells the CLI to accept it.
             'IS_SANDBOX' => '1',
         ];
+
+        // Secret-proxy injection: when enabled, the agent receives only an opaque
+        // run token; the secret-proxy daemon swaps it for the real OAuth token /
+        // MCP bearer at request time. Flag off = real creds injected directly
+        // (legacy behaviour), preserving the exact pre-feature codepath.
+        $proxyToken = null;
+        if (SecretProxyInjector::enabled()) {
+            $realMcp = $isAssistant ? null : $this->buildAgentMcpConfig($request);
+            $proxyToken = app(SecretProxyInjector::class)->apply(
+                $request, $workdir, $env, $oauthToken, $timeout, $realMcp,
+            );
+        } elseif (! $isAssistant) {
+            $this->writeAgentMcpConfig($request, $workdir);
+        }
 
         Log::info('LocalAgentGateway: executing claude-code-vps', [
             'team_id' => $teamId,
@@ -359,6 +374,9 @@ class LocalAgentGateway implements AiGatewayInterface
                 latencyMs: $latencyMs,
             );
         } finally {
+            if ($proxyToken !== null) {
+                app(RunSecretVault::class)->revoke($proxyToken);
+            }
             $cap->release($teamId, $slotToken);
             $this->removeEphemeralWorkdir($workdir);
             $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr);
