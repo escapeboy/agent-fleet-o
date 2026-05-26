@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Skill\Models\Skill;
 use Symfony\Component\Yaml\Yaml;
 use ZipArchive;
 
@@ -54,7 +55,7 @@ class ExportAgentWorkspaceAction
                     'approval_timeout_action' => $tool->pivot->approval_timeout_action ?? 'deny',
                 ],
             ])->values()->toArray(),
-            'skills' => $agent->skills->map(fn ($skill) => [
+            'skills' => $agent->skills->map(fn (Skill $skill) => [
                 'slug' => $skill->slug,
                 'name' => $skill->name,
                 'priority' => $skill->pivot->priority ?? 0,

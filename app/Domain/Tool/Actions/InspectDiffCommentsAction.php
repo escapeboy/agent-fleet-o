@@ -49,8 +49,8 @@ class InspectDiffCommentsAction
         }
 
         $resolved = $this->providerResolver->resolve(team: $team, purpose: 'guardrail');
-        $provider = $resolved['provider'] ?? 'anthropic';
-        $model = $resolved['model'] ?? 'claude-haiku-4-5';
+        $provider = $resolved['provider'];
+        $model = $resolved['model'];
 
         try {
             $response = $this->gateway->complete(new AiRequestDTO(
