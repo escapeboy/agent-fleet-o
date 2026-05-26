@@ -74,6 +74,20 @@
                                 {{ $approval->experiment->title }}
                             </a>
                             <x-status-badge :status="$approval->status->value" />
+                            @if(($approval->required_approvals ?? 1) > 1)
+                                <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ $approval->approveVoteCount() }}/{{ $approval->required_approvals }} approvals</span>
+                            @endif
+                            @php $aiSummary = is_array($approval->context ?? null) ? ($approval->context['ai_summary'] ?? null) : null; @endphp
+                            @if($aiSummary)
+                                @php
+                                    $riskColor = match($aiSummary['risk'] ?? 'medium') {
+                                        'high' => 'bg-red-100 text-red-700',
+                                        'low' => 'bg-green-100 text-green-700',
+                                        default => 'bg-yellow-100 text-yellow-700',
+                                    };
+                                @endphp
+                                <span class="rounded-full {{ $riskColor }} px-2 py-0.5 text-xs font-medium" title="{{ $aiSummary['rationale'] ?? '' }}">AI risk: {{ $aiSummary['risk'] ?? 'medium' }}</span>
+                            @endif
                             @if($approval->isClarification())
                                 <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Clarification</span>
                             @elseif($approval->isHumanTask())

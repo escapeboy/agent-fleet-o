@@ -200,4 +200,70 @@ class CommandSecurityPolicyTest extends TestCase
 
         $this->assertTrue($result->allowed);
     }
+
+    // --- Destructive SQL guard (clawpatrol-borrowed) ---
+
+    public function test_sql_guard_blocks_drop_table_via_psql(): void
+    {
+        $result = $this->policy->validate('psql -c "DROP TABLE users"', null, ['psql'], ['/tmp']);
+
+        $this->assertFalse($result->allowed);
+        $this->assertTrue($result->requiresApproval);
+        $this->assertEquals('sql_guard', $result->level);
+    }
+
+    public function test_sql_guard_blocks_truncate_via_mysql(): void
+    {
+        $result = $this->policy->validate('mysql -e "TRUNCATE orders"', null, ['mysql'], ['/tmp']);
+
+        $this->assertFalse($result->allowed);
+        $this->assertEquals('sql_guard', $result->level);
+    }
+
+    public function test_sql_guard_blocks_delete_from_migrations(): void
+    {
+        $result = $this->policy->validate('psql -c "DELETE FROM migrations WHERE 1=1"', null, ['psql'], ['/tmp']);
+
+        $this->assertFalse($result->allowed);
+        $this->assertEquals('sql_guard', $result->level);
+    }
+
+    public function test_sql_guard_allows_benign_select(): void
+    {
+        $result = $this->policy->validate('psql -c "SELECT * FROM users LIMIT 10"', null, ['psql'], ['/tmp']);
+
+        $this->assertTrue($result->allowed);
+    }
+
+    public function test_sql_guard_can_be_disabled_via_org_policy(): void
+    {
+        $org = ['sql_guard_enabled' => false];
+
+        $result = $this->policy->validate(
+            'psql -c "DROP TABLE users"', null, ['psql'], ['/tmp'], null, null, $org,
+        );
+
+        $this->assertTrue($result->allowed);
+    }
+
+    public function test_sql_guard_honors_custom_org_patterns(): void
+    {
+        $org = ['require_approval_sql_patterns' => ['vacuum full']];
+
+        $result = $this->policy->validate(
+            'psql -c "VACUUM FULL"', null, ['psql'], ['/tmp'], null, null, $org,
+        );
+
+        $this->assertFalse($result->allowed);
+        $this->assertEquals('sql_guard', $result->level);
+    }
+
+    public function test_always_blocked_command_takes_precedence_over_sql_guard(): void
+    {
+        // 'shutdown' is platform-blocked and must win even if SQL-ish text follows.
+        $result = $this->policy->validate('shutdown; psql -c "DROP TABLE x"', null, ['shutdown'], ['/tmp']);
+
+        $this->assertFalse($result->allowed);
+        $this->assertEquals('platform', $result->level);
+    }
 }

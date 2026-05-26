@@ -4,6 +4,7 @@ namespace App\Domain\Approval\Actions;
 
 use App\Domain\Approval\Enums\ApprovalMode;
 use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Jobs\SummarizeApprovalJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Outbound\Models\OutboundProposal;
@@ -18,6 +19,7 @@ class CreateApprovalRequestAction
         array $context = [],
         ApprovalMode $mode = ApprovalMode::InLoop,
         ?int $interventionWindowSeconds = null,
+        int $requiredApprovals = 1,
     ): ApprovalRequest {
         $team = $experiment->team_id ? Team::withoutGlobalScopes()->find($experiment->team_id) : null;
         $teamTimeout = $team?->settings['approval_timeout_hours'] ?? null;
@@ -30,11 +32,12 @@ class CreateApprovalRequestAction
             ? ($interventionWindowSeconds ?? 3600)
             : null;
 
-        return ApprovalRequest::withoutGlobalScopes()->create([
+        $approval = ApprovalRequest::withoutGlobalScopes()->create([
             'experiment_id' => $experiment->id,
             'team_id' => $experiment->team_id,
             'outbound_proposal_id' => $outboundProposal?->id,
             'status' => ApprovalStatus::Pending,
+            'required_approvals' => max(1, $requiredApprovals),
             'mode' => $mode,
             'intervention_window_seconds' => $windowSeconds,
             'context' => array_merge($context, [
@@ -44,5 +47,13 @@ class CreateApprovalRequestAction
             ]),
             'expires_at' => now()->addHours($defaultTimeout),
         ]);
+
+        // Opt-in per team: enrich the approval card with an LLM risk summary
+        // off the request path. Failure inside the job never blocks approval.
+        if (($team?->settings['approval_ai_summary'] ?? false) === true) {
+            SummarizeApprovalJob::dispatch($approval->id);
+        }
+
+        return $approval;
     }
 }

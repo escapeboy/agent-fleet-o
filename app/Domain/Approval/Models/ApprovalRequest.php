@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApprovalRequest extends Model
@@ -37,6 +38,7 @@ class ApprovalRequest extends Model
         'reviewed_by',
         'assigned_to',
         'status',
+        'required_approvals',
         'rejection_reason',
         'reviewer_notes',
         'context',
@@ -64,6 +66,7 @@ class ApprovalRequest extends Model
         return [
             'status' => ApprovalStatus::class,
             'mode' => ApprovalMode::class,
+            'required_approvals' => 'integer',
             'intervention_window_seconds' => 'integer',
             'auto_approved_at' => 'datetime',
             'context' => 'array',
@@ -126,6 +129,27 @@ class ApprovalRequest extends Model
     public function chatbotMessage(): BelongsTo
     {
         return $this->belongsTo(ChatbotMessage::class);
+    }
+
+    public function votes(): HasMany
+    {
+        return $this->hasMany(ApprovalVote::class);
+    }
+
+    /**
+     * Distinct approve votes recorded so far.
+     */
+    public function approveVoteCount(): int
+    {
+        return $this->votes()->where('decision', 'approve')->count();
+    }
+
+    /**
+     * Whether the recorded approve votes meet the required quorum.
+     */
+    public function quorumReached(): bool
+    {
+        return $this->approveVoteCount() >= max(1, (int) $this->required_approvals);
     }
 
     public function isCredentialReview(): bool
