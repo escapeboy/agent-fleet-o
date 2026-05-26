@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,9 @@ class ImportAgentWorkspaceAction
         if ($zip->locateName('system_prompt_template.json') !== false) {
             $workspace['system_prompt_template'] = json_decode($zip->getFromName('system_prompt_template.json'), true);
         }
+        if ($zip->locateName('skills.json') !== false) {
+            $workspace['skills'] = json_decode($zip->getFromName('skills.json'), true);
+        }
         if ($zip->locateName('memories.json') !== false) {
             $workspace['memories'] = json_decode($zip->getFromName('memories.json'), true);
         }
@@ -118,7 +122,7 @@ class ImportAgentWorkspaceAction
     {
         $identity = $workspace['identity'] ?? [];
 
-        $agent = Agent::create([
+        $attributes = [
             'team_id' => $teamId,
             'name' => ($identity['name'] ?? 'Imported Agent').' (imported)',
             'slug' => null,
@@ -130,9 +134,20 @@ class ImportAgentWorkspaceAction
             'model' => $identity['model'] ?? 'claude-sonnet-4-5',
             'status' => 'active',
             'system_prompt_template' => $workspace['system_prompt_template'] ?? null,
-        ]);
+            'capabilities' => $identity['capabilities'] ?? [],
+            'constraints' => $identity['constraints'] ?? [],
+            'output_schema' => $identity['output_schema'] ?? null,
+        ];
+
+        // Only override the column default when the export actually carried a strategy.
+        if (! empty($identity['reasoning_strategy'])) {
+            $attributes['reasoning_strategy'] = $identity['reasoning_strategy'];
+        }
+
+        $agent = Agent::create($attributes);
 
         $toolsLinked = $this->linkTools($agent, $workspace['tools'] ?? [], $teamId);
+        $skillsLinked = $this->linkSkills($agent, $workspace['skills'] ?? [], $teamId);
         $memoriesImported = $this->importMemories($agent, $workspace['memories'] ?? [], $teamId);
 
         return [
@@ -140,6 +155,7 @@ class ImportAgentWorkspaceAction
             'agent_name' => $agent->name,
             'mode' => 'create',
             'tools_linked' => $toolsLinked,
+            'skills_linked' => $skillsLinked,
             'memories_imported' => $memoriesImported,
         ];
     }
@@ -155,11 +171,16 @@ class ImportAgentWorkspaceAction
             'backstory' => $identity['backstory'] ?? null,
             'personality' => $identity['personality'] ?? null,
             'system_prompt_template' => $workspace['system_prompt_template'] ?? null,
+            'capabilities' => $identity['capabilities'] ?? null,
+            'constraints' => $identity['constraints'] ?? null,
+            'output_schema' => $identity['output_schema'] ?? null,
+            'reasoning_strategy' => $identity['reasoning_strategy'] ?? null,
         ]);
 
         $agent->update($updates);
 
         $toolsLinked = $this->linkTools($agent, $workspace['tools'] ?? [], $teamId);
+        $skillsLinked = $this->linkSkills($agent, $workspace['skills'] ?? [], $teamId);
         $memoriesImported = $this->importMemories($agent, $workspace['memories'] ?? [], $teamId);
 
         return [
@@ -168,6 +189,7 @@ class ImportAgentWorkspaceAction
             'mode' => 'merge',
             'fields_updated' => array_keys($updates),
             'tools_linked' => $toolsLinked,
+            'skills_linked' => $skillsLinked,
             'memories_imported' => $memoriesImported,
         ];
     }
@@ -196,6 +218,33 @@ class ImportAgentWorkspaceAction
             }
 
             $agent->tools()->syncWithoutDetaching([$tool->id => $pivotData]);
+            $linked++;
+        }
+
+        return $linked;
+    }
+
+    private function linkSkills(Agent $agent, array $skills, string $teamId): int
+    {
+        $linked = 0;
+        foreach ($skills as $skillData) {
+            $slug = $skillData['slug'] ?? null;
+            if ($slug === null) {
+                continue;
+            }
+
+            $skill = Skill::where('team_id', $teamId)
+                ->where('slug', $slug)
+                ->first();
+
+            // Skill not present in the target team — skip rather than fail the import.
+            if (! $skill) {
+                continue;
+            }
+
+            $agent->skills()->syncWithoutDetaching([
+                $skill->id => ['priority' => $skillData['priority'] ?? 0],
+            ]);
             $linked++;
         }
 
