@@ -49,6 +49,7 @@ class LocalAgentGatewayTest extends TestCase
     public function test_complete_throws_for_unknown_agent(): void
     {
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
 
         $gateway = new LocalAgentGateway($discovery);
 
@@ -80,6 +81,7 @@ class LocalAgentGatewayTest extends TestCase
         ]]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('codex')
@@ -103,6 +105,7 @@ class LocalAgentGatewayTest extends TestCase
     public function test_estimate_cost_returns_zero(): void
     {
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
@@ -138,6 +141,7 @@ class LocalAgentGatewayTest extends TestCase
         config(['local_agents.timeout' => 10]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('echo-agent')
@@ -174,6 +178,7 @@ class LocalAgentGatewayTest extends TestCase
         ]]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('cursor')
@@ -197,6 +202,7 @@ class LocalAgentGatewayTest extends TestCase
     public function test_cursor_estimate_cost_is_zero(): void
     {
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $gateway = new LocalAgentGateway($discovery);
 
         $request = new AiRequestDTO(
@@ -223,6 +229,7 @@ class LocalAgentGatewayTest extends TestCase
         ]]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         // When 'local' provider + model='cursor', resolveAgentKey maps to 'cursor' directly
         // without calling detect() — so binaryPath('cursor') will be called next
@@ -263,6 +270,7 @@ class LocalAgentGatewayTest extends TestCase
         ]]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        $discovery->shouldReceive('agentConfig')->andReturnUsing(fn ($k) => config("local_agents.agents.{$k}"));
         $discovery->shouldReceive('isBridgeMode')->andReturn(false);
         $discovery->shouldReceive('binaryPath')
             ->with('cursor')

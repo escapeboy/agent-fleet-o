@@ -31,7 +31,7 @@ class LocalAgentGateway implements AiGatewayInterface
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         $agentKey = $this->resolveAgentKey($request->provider, $request->model);
-        $config = config("local_agents.agents.{$agentKey}");
+        $config = $this->discovery->agentConfig($agentKey);
 
         if (! $config) {
             throw new RuntimeException("Unknown local agent: {$agentKey}");
@@ -181,7 +181,7 @@ class LocalAgentGateway implements AiGatewayInterface
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
         $agentKey = $this->resolveAgentKey($request->provider, $request->model);
-        $config = config("local_agents.agents.{$agentKey}");
+        $config = $this->discovery->agentConfig($agentKey);
 
         if (! $config) {
             throw new RuntimeException("Unknown local agent: {$agentKey}");
@@ -999,21 +999,11 @@ class LocalAgentGateway implements AiGatewayInterface
     private function resolveAgentKey(string $provider, ?string $model = null): string
     {
         if ($provider === 'local') {
-            // If a specific model is requested that maps to a known agent key, use it directly
-            // without calling detect() (which can block on single-threaded bridge)
-            $knownModels = [
-                'claude-code' => 'claude-code',
-                'codex' => 'codex',
-                'gemini-cli' => 'gemini-cli',
-                'kiro' => 'kiro',
-                'aider' => 'aider',
-                'amp' => 'amp',
-                'opencode' => 'opencode',
-                'cursor' => 'cursor',
-            ];
-
-            if ($model && isset($knownModels[$model])) {
-                return $knownModels[$model];
+            // Any registered agent (built-in or operator-registered custom) is routable
+            // directly by its key — without calling detect(), which can block on a
+            // single-threaded bridge. agentConfig() is a cheap config + settings lookup.
+            if ($model !== null && $model !== '' && $this->discovery->agentConfig($model) !== null) {
+                return $model;
             }
 
             $detected = $this->discovery->detect();
