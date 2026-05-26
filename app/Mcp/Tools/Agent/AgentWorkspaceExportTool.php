@@ -20,7 +20,7 @@ class AgentWorkspaceExportTool extends Tool
 
     protected string $name = 'agent_workspace_export';
 
-    protected string $description = 'Export an agent\'s full workspace (identity, tools, memories, soul.md) as a zip or yaml file. Returns the file path for download.';
+    protected string $description = 'Export an agent\'s full workspace — identity & definition (role, goal, backstory, model, reasoning strategy, capabilities, constraints, output schema), tools, skills, memories, and soul.md — as a zip or yaml file for GitOps/portability. Round-trips via agent_workspace_import. Returns the file path for download.';
 
     public function schema(JsonSchema $schema): array
     {

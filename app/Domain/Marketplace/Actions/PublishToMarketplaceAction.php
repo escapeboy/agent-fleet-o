@@ -59,8 +59,13 @@ class PublishToMarketplaceAction
             $item instanceof Agent => [
                 'role' => $item->role,
                 'goal' => $item->goal,
+                'backstory' => $item->backstory,
+                'personality' => $item->personality,
+                'system_prompt_template' => $item->system_prompt_template,
                 'provider' => $item->provider,
                 'model' => $item->model,
+                'reasoning_strategy' => $item->reasoning_strategy?->value,
+                'output_schema' => $item->output_schema,
                 'capabilities' => $item->capabilities,
                 'constraints' => $item->constraints,
             ],

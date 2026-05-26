@@ -36,6 +36,10 @@ class ExportAgentWorkspaceAction
                 'personality' => $agent->personality,
                 'provider' => $agent->provider,
                 'model' => $agent->model,
+                'reasoning_strategy' => $agent->reasoning_strategy?->value,
+                'capabilities' => $agent->capabilities ?? [],
+                'constraints' => $agent->constraints ?? [],
+                'output_schema' => $agent->output_schema,
             ],
             'system_prompt_template' => $agent->system_prompt_template,
             'tools' => $agent->tools->map(fn ($tool) => [
@@ -49,6 +53,11 @@ class ExportAgentWorkspaceAction
                     'approval_timeout_minutes' => $tool->pivot->approval_timeout_minutes ?? 30,
                     'approval_timeout_action' => $tool->pivot->approval_timeout_action ?? 'deny',
                 ],
+            ])->values()->toArray(),
+            'skills' => $agent->skills->map(fn ($skill) => [
+                'slug' => $skill->slug,
+                'name' => $skill->name,
+                'priority' => $skill->pivot->priority ?? 0,
             ])->values()->toArray(),
         ];
 
@@ -113,6 +122,10 @@ class ExportAgentWorkspaceAction
 
         if (! empty($workspace['system_prompt_template'])) {
             $zip->addFromString('system_prompt_template.json', json_encode($workspace['system_prompt_template'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        }
+
+        if (! empty($workspace['skills'])) {
+            $zip->addFromString('skills.json', json_encode($workspace['skills'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
 
         if (! empty($workspace['memories'])) {
