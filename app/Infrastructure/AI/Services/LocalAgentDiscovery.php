@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Bridge\Models\BridgeConnection;
+use App\Models\GlobalSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +36,7 @@ class LocalAgentDiscovery
             return $this->bridgeDiscover();
         }
 
-        $agents = config('local_agents.agents', []);
+        $agents = $this->registeredAgents();
         $detected = [];
 
         foreach ($agents as $key => $config) {
@@ -58,7 +59,7 @@ class LocalAgentDiscovery
             return false;
         }
 
-        $config = config("local_agents.agents.{$agentKey}");
+        $config = $this->agentConfig($agentKey);
 
         if (! $config) {
             return false;
@@ -78,7 +79,7 @@ class LocalAgentDiscovery
      */
     public function binaryPath(string $agentKey): ?string
     {
-        $config = config("local_agents.agents.{$agentKey}");
+        $config = $this->agentConfig($agentKey);
 
         if (! $config) {
             return null;
@@ -116,7 +117,7 @@ class LocalAgentDiscovery
      */
     public function version(string $agentKey): ?string
     {
-        $config = config("local_agents.agents.{$agentKey}");
+        $config = $this->agentConfig($agentKey);
 
         if (! $config) {
             return null;
@@ -154,7 +155,75 @@ class LocalAgentDiscovery
      */
     public function allAgents(): array
     {
-        return config('local_agents.agents', []);
+        return $this->registeredAgents();
+    }
+
+    /**
+     * The full agent registry: built-in config entries plus any operator-registered
+     * custom agents (stored in GlobalSetting). Built-ins win on key collision so a
+     * custom entry can never shadow a shipped agent.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function registeredAgents(): array
+    {
+        return array_merge($this->customAgents(), config('local_agents.agents', []));
+    }
+
+    /**
+     * Resolve a single agent's config from the merged registry.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function agentConfig(string $agentKey): ?array
+    {
+        return $this->registeredAgents()[$agentKey] ?? null;
+    }
+
+    /**
+     * Operator-registered custom local agents, normalised to the same shape as the
+     * built-in registry. Read lazily (never at boot) and guarded so a missing
+     * global_settings table on a fresh install degrades to "no custom agents".
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function customAgents(): array
+    {
+        try {
+            $raw = GlobalSetting::get('local_agents_custom', []);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($raw as $key => $cfg) {
+            if (! is_string($key) || ! is_array($cfg) || empty($cfg['binary']) || ! is_string($cfg['binary'])) {
+                continue;
+            }
+
+            $executeFlags = array_values(array_filter((array) ($cfg['execute_flags'] ?? []), 'is_string'));
+
+            $out[$key] = [
+                'name' => (string) ($cfg['name'] ?? $key),
+                'binary' => $cfg['binary'],
+                'description' => (string) ($cfg['description'] ?? 'Custom local agent'),
+                'detect_command' => (string) ($cfg['detect_command'] ?? ($cfg['binary'].' --version')),
+                'requires_env' => isset($cfg['requires_env']) ? (string) $cfg['requires_env'] : null,
+                'capabilities' => array_values(array_filter((array) ($cfg['capabilities'] ?? ['code_generation']), 'is_string')),
+                'supported_modes' => array_values(array_filter((array) ($cfg['supported_modes'] ?? ['sync']), 'is_string')),
+                'execute_flags' => $executeFlags,
+                'stream_flags' => array_values(array_filter((array) ($cfg['stream_flags'] ?? $executeFlags), 'is_string')),
+                'output_format' => (string) ($cfg['output_format'] ?? 'text'),
+                'requires_pty' => (bool) ($cfg['requires_pty'] ?? false),
+                'custom' => true,
+            ];
+        }
+
+        return $out;
     }
 
     /**
