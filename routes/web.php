@@ -12,6 +12,7 @@ use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
 use App\Http\Controllers\ReleaseKeysController;
+use App\Http\Controllers\SkillExportController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
@@ -115,6 +116,7 @@ use App\Livewire\Signals\ManualSignalForm;
 use App\Livewire\Signals\SignalBrowserPage;
 use App\Livewire\Signals\SignalConnectorsPage;
 use App\Livewire\Skills\CreateSkillForm;
+use App\Livewire\Skills\ImportSkillForm;
 use App\Livewire\Skills\SkillDetailPage;
 use App\Livewire\Skills\SkillListPage;
 use App\Livewire\TeamGraph\TeamGraphPage;
@@ -319,7 +321,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/skills', SkillListPage::class)->name('skills.index');
     Route::get('/skills/create', CreateSkillForm::class)->name('skills.create');
+    Route::get('/skills/import', ImportSkillForm::class)->name('skills.import');
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
+    Route::get('/skills/{skill}/export', SkillExportController::class)->name('skills.export');
 
     Route::get('/frameworks', FrameworksBrowsePage::class)->name('frameworks.index');
 

@@ -118,6 +118,9 @@
                 <button wire:click="startEdit" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Edit Skill">
                     <i class="fa-solid fa-pen text-base"></i>
                 </button>
+                <a href="{{ route('skills.export', $skill) }}" class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" title="Export as agentskills.io SKILL.md">
+                    <i class="fa-solid fa-file-export text-base"></i>
+                </a>
                 <button
                     x-data="{ active: @js($skill->status === \App\Domain\Skill\Enums\SkillStatus::Active) }"
                     wire:click="toggleStatus"
