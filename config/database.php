@@ -213,6 +213,19 @@ return [
             'database' => env('REDIS_LOCK_DB', '2'),
         ],
 
+        // Secret-proxy run vault (DB 2, no prefix) -- keys shared with the
+        // secret-proxy Go daemon, which reads/writes raw keys without any
+        // Laravel prefix (same convention as the `bridge` connection).
+        'secret_proxy' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('SECRET_PROXY_REDIS_DB', '2'),
+            'options' => ['prefix' => ''],
+        ],
+
     ],
 
 ];

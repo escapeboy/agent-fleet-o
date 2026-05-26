@@ -498,6 +498,7 @@ use App\Mcp\Tools\System\InspectDiffCommentsTool;
 use App\Mcp\Tools\System\LangfuseConfigTool;
 use App\Mcp\Tools\System\MetricsAggregationsTool;
 use App\Mcp\Tools\System\MetricsModelComparisonTool;
+use App\Mcp\Tools\System\SecretProxyStatusTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
 use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
@@ -1288,8 +1289,9 @@ class AgentFleetServer extends Server
         EmailTemplateDeleteTool::class,
         EmailTemplateGenerateTool::class,
 
-        // System (12)
+        // System (13)
         DashboardKpisTool::class,
+        SecretProxyStatusTool::class,
         SystemHealthTool::class,
         SystemRecentErrorsTool::class,
         SystemVersionCheckTool::class,
