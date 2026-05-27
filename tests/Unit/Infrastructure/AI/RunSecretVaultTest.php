@@ -84,7 +84,14 @@ class RunSecretVaultTest extends TestCase
         $vault = new RunSecretVault;
         $token = $vault->issue(['anthropic_oauth' => 'x', 'mcp' => [], 'allowed_hosts' => []], 300);
 
-        $tampered = substr($token, 0, -1).($token[-1] === 'A' ? 'B' : 'A');
+        // Flip the first MAC byte deterministically. (Flipping the last base64url
+        // char is unreliable — it can land on ignored padding bits, leaving the
+        // decoded MAC unchanged.)
+        [$id, $mac] = explode('.', $token, 2);
+        $macRaw = base64_decode(strtr($mac, '-_', '+/').str_repeat('=', (4 - strlen($mac) % 4) % 4), true);
+        $macRaw[0] = chr(ord($macRaw[0]) ^ 0xFF);
+        $tampered = $id.'.'.rtrim(strtr(base64_encode($macRaw), '+/', '-_'), '=');
+
         $this->assertNull($vault->resolve($tampered));
     }
 
