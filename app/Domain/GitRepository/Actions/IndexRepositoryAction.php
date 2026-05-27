@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\GitRepository\Actions;
 
 use App\Domain\GitRepository\Contracts\GitClientInterface;
+use App\Domain\GitRepository\Models\CodeEdge;
 use App\Domain\GitRepository\Models\CodeElement;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\PhpCodeParser;
+use App\Domain\GitRepository\Services\PolyglotCodeExtractor;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +30,7 @@ class IndexRepositoryAction
         private readonly PhpCodeParser $phpParser,
         private readonly GitOperationRouter $router,
         private readonly EmbeddingService $embeddings,
+        private readonly PolyglotCodeExtractor $polyglot,
     ) {}
 
     public function execute(GitRepository $repository): void
@@ -73,6 +76,83 @@ class IndexRepositoryAction
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+        // Second pass: non-PHP source via the CodeGraph extractor. A no-op when
+        // the feature flag is off or the binary is absent. Failures here must
+        // not fail the (successful) PHP index.
+        try {
+            $this->indexPolyglot($repository, $client);
+        } catch (\Throwable $e) {
+            Log::warning('IndexRepositoryAction: polyglot pass failed', [
+                'repository_id' => $repository->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Index non-PHP source files using the CodeGraph extractor, populating both
+     * code_elements and code_edges. Whole-tree re-extract: all existing non-PHP
+     * elements for the repo are replaced (their edges cascade-delete via FK).
+     */
+    private function indexPolyglot(GitRepository $repository, GitClientInterface $client): void
+    {
+        $result = $this->polyglot->extract($repository, $client);
+
+        if ($result->isEmpty()) {
+            return;
+        }
+
+        // Replace prior non-PHP elements (PHP elements own the .php files and are
+        // left untouched). Cascade FK clears the associated code_edges rows.
+        CodeElement::where('git_repository_id', $repository->id)
+            ->where('file_path', 'not like', '%.php')
+            ->delete();
+
+        // Insert elements, mapping CodeGraph node ids → our UUIDs for edge resolution.
+        $idMap = [];
+        foreach ($result->elements as $extracted) {
+            $text = implode("\n", array_filter([
+                $extracted->elementType.': '.$extracted->name,
+                $extracted->signature ? 'Signature: '.$extracted->signature : null,
+                $extracted->docstring ? 'Docstring: '.$extracted->docstring : null,
+            ]));
+
+            $element = CodeElement::create([
+                'team_id' => $repository->team_id,
+                'git_repository_id' => $repository->id,
+                'element_type' => $extracted->elementType,
+                'name' => $extracted->name,
+                'file_path' => $extracted->filePath,
+                'line_start' => $extracted->lineStart,
+                'line_end' => $extracted->lineEnd,
+                'signature' => $extracted->signature,
+                'docstring' => $extracted->docstring,
+                'content_hash' => null,
+                'indexed_at' => now(),
+            ]);
+
+            $idMap[$extracted->graphId] = $element->id;
+
+            $this->applySearchAndEmbedding($element->id, $text, $repository->team_id);
+        }
+
+        // Insert edges, resolving both endpoints through the id map.
+        foreach ($result->edges as $edge) {
+            $sourceId = $idMap[$edge->sourceGraphId] ?? null;
+            $targetId = $idMap[$edge->targetGraphId] ?? null;
+            if ($sourceId === null || $targetId === null) {
+                continue;
+            }
+
+            CodeEdge::create([
+                'team_id' => $repository->team_id,
+                'git_repository_id' => $repository->id,
+                'source_id' => $sourceId,
+                'target_id' => $targetId,
+                'edge_type' => $edge->edgeType,
+            ]);
         }
     }
 
@@ -138,34 +218,39 @@ class IndexRepositoryAction
                 'indexed_at' => now(),
             ]);
 
-            // Update the full-text search vector on PostgreSQL.
-            // Silently skip on SQLite (tests) where tsvector is not available.
-            try {
-                DB::statement(
-                    "UPDATE code_elements SET search_vector = to_tsvector('english', ?) WHERE id = ?",
-                    [$text, $element->id],
-                );
-            } catch (\Throwable) {
-                // SQLite or non-PostgreSQL environment — tsvector not supported.
-            }
+            $this->applySearchAndEmbedding($element->id, $text, $repository->team_id);
+        }
+    }
 
-            // Embed the element for semantic code search. Additive and best-effort:
-            // a missing embedding key (BYOK), a provider error, or the absence of
-            // the pgvector column (SQLite) must never abort indexing.
-            try {
-                $vector = $this->embeddings->embedForTeam($text, $repository->team_id);
-                if ($vector !== null) {
-                    DB::statement(
-                        'UPDATE code_elements SET embedding = ? WHERE id = ?',
-                        [$this->embeddings->formatForPgvector($vector), $element->id],
-                    );
-                }
-            } catch (\Throwable $e) {
-                Log::debug('IndexRepositoryAction: embedding skipped', [
-                    'element_id' => $element->id,
-                    'error' => $e->getMessage(),
-                ]);
+    /**
+     * Set the PostgreSQL full-text search vector and (best-effort) the pgvector
+     * embedding for an element. Both are no-ops on SQLite / without a BYOK key —
+     * indexing must never abort because search or embedding is unavailable.
+     */
+    private function applySearchAndEmbedding(string $elementId, string $text, string $teamId): void
+    {
+        try {
+            DB::statement(
+                "UPDATE code_elements SET search_vector = to_tsvector('english', ?) WHERE id = ?",
+                [$text, $elementId],
+            );
+        } catch (\Throwable) {
+            // SQLite or non-PostgreSQL environment — tsvector not supported.
+        }
+
+        try {
+            $vector = $this->embeddings->embedForTeam($text, $teamId);
+            if ($vector !== null) {
+                DB::statement(
+                    'UPDATE code_elements SET embedding = ? WHERE id = ?',
+                    [$this->embeddings->formatForPgvector($vector), $elementId],
+                );
             }
+        } catch (\Throwable $e) {
+            Log::debug('IndexRepositoryAction: embedding skipped', [
+                'element_id' => $elementId,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

@@ -8,6 +8,7 @@ use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\CodeSkimmingService;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -61,6 +62,13 @@ class CodeSkimFileTool extends Tool
             $filePath,
         );
 
+        // Per-element call-graph "trail" counts (calls made / callers), so an agent
+        // surveying the file can spot hub symbols. Zero everywhere until code_edges
+        // is populated (today: non-PHP source via the polyglot extractor).
+        $elementIds = $elements->pluck('id')->all();
+        $callsOut = $this->edgeCounts($teamId, $elementIds, 'source_id');
+        $calledBy = $this->edgeCounts($teamId, $elementIds, 'target_id');
+
         $structured = $elements->map(fn ($el) => [
             'id' => $el->id,
             'element_type' => $el->element_type,
@@ -68,6 +76,8 @@ class CodeSkimFileTool extends Tool
             'line_start' => $el->line_start,
             'line_end' => $el->line_end,
             'signature' => $el->signature,
+            'calls_out' => (int) ($callsOut[$el->id] ?? 0),
+            'called_by' => (int) ($calledBy[$el->id] ?? 0),
         ])->values()->all();
 
         // Build compact text summary: "[line X] type: signature"
@@ -91,5 +101,29 @@ class CodeSkimFileTool extends Tool
             'summary' => $summary,
             'elements' => $structured,
         ]));
+    }
+
+    /**
+     * Count edges per element on the given column ('source_id' for outgoing calls,
+     * 'target_id' for incoming callers), filtered to call edges.
+     *
+     * @param  list<string>  $elementIds
+     * @return array<string, int> element id → count
+     */
+    private function edgeCounts(string $teamId, array $elementIds, string $column): array
+    {
+        if ($elementIds === []) {
+            return [];
+        }
+
+        return DB::table('code_edges')
+            ->where('team_id', $teamId)
+            ->where('edge_type', 'calls')
+            ->whereIn($column, $elementIds)
+            ->selectRaw("{$column} as element_id, count(*) as c")
+            ->groupBy($column)
+            ->pluck('c', 'element_id')
+            ->map(fn ($c) => (int) $c)
+            ->all();
     }
 }
