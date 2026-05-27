@@ -82,6 +82,18 @@ RUN apk add --no-cache nodejs npm \
     && ln -sf "$(npm prefix -g)/bin/claude" /usr/local/bin/claude \
     && claude --version
 
+# Install CodeGraph (npm package) — the polyglot code-index extractor used by
+# IndexRepositoryAction for NON-PHP source. Harmless if unused: the feature is
+# gated behind config('git_repository.polyglot_index') (default off) + a
+# `which codegraph` PATH check. Set CODEGRAPH_VERSION to enable/pin (e.g.
+# --build-arg CODEGRAPH_VERSION=latest). Node is already present (see above).
+ARG CODEGRAPH_VERSION=""
+RUN if [ -n "$CODEGRAPH_VERSION" ]; then \
+        npm install -g @colbymchenry/codegraph@${CODEGRAPH_VERSION} \
+        && ln -sf "$(npm prefix -g)/bin/codegraph" /usr/local/bin/codegraph \
+        && codegraph --version; \
+    fi
+
 WORKDIR /var/www
 
 # ---------- Development stage ----------
