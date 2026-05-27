@@ -485,154 +485,190 @@ class ToolTranslator
                 ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10, plan-capped)', required: false)
                 ->withStringParameter('headless', 'Run browser in headless mode. Pass "true" (default) or "false". Use "false" for sites with anti-bot detection (Reddit, Cloudflare challenges) — uses a real visible Chrome in a virtual display.', required: false)
                 ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null, ?string $headless = null) use ($mode, $toolModel): string {
-                    // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
-                    if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
-                        $gate = app('browser.plan_gate');
-                        if (! $gate($toolModel->team_id)) {
-                            return 'Error: Browser automation requires a paid plan (Starter or above). Please upgrade to continue.';
-                        }
+                    if ($denial = $this->browserPlanDenial($toolModel)) {
+                        return $denial;
                     }
 
-                    // Cap max_steps to the plan limit.
-                    $effectiveMaxSteps = $max_steps ?? 10;
-                    if ($toolModel->team_id && app()->bound('browser.max_steps_gate')) {
-                        $planMaxSteps = app('browser.max_steps_gate')($toolModel->team_id);
-                        if ($planMaxSteps > 0) {
-                            $effectiveMaxSteps = min($effectiveMaxSteps, $planMaxSteps);
-                        }
-                    }
+                    $options = $this->browserTaskOptions($toolModel, $mode, $start_url, $max_steps, $headless);
 
-                    // Resolve timeout from plan.
-                    $timeoutSeconds = 120;
-                    if ($toolModel->team_id && app()->bound('browser.timeout_gate')) {
-                        $planTimeout = app('browser.timeout_gate')($toolModel->team_id);
-                        if ($planTimeout > 0) {
-                            $timeoutSeconds = $planTimeout;
-                        }
-                    }
-
-                    $options = [
-                        'max_steps' => $effectiveMaxSteps,
-                        'timeout_seconds' => $timeoutSeconds,
-                    ];
-
-                    if ($start_url) {
-                        $options['start_url'] = $start_url;
-                    }
-
-                    // Network policy — restrict browser to an allowlist of hosts.
-                    // Stored per-tool as tools.network_policy.allowed_domains (JSONB).
-                    // Enforced at the browser-use level by the Python sidecar and the
-                    // browser-use Cloud API. Null/empty = no restriction (backward-compat).
-                    $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
-                    if (is_array($allowedDomains) && ! empty($allowedDomains)) {
-                        $options['allowed_domains'] = array_values(array_filter(
-                            $allowedDomains,
-                            fn ($d) => is_string($d) && $d !== '',
-                        ));
-                    }
-
-                    // Resolve API key from tool credentials or env fallback.
-                    /** @var array<string, mixed> $credentials */
-                    $credentials = (array) $toolModel->credentials;
-                    $apiKey = $credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
-
-                    // Resolve BYOK credentials for the sidecar LLM.
-                    if ($mode === 'sidecar' && $toolModel->team_id) {
-                        $byok = $this->resolveBrowserByok($toolModel->team_id);
-                        if ($byok) {
-                            $options['llm_api_key'] = $byok['api_key'];
-                            $options['llm_provider'] = $byok['provider'];
-                            $options['llm_model'] = $byok['model'];
-                        }
-                    }
-
-                    // Per-tool proxy — resolved from linked Credential (type: proxy).
-                    $proxyUrl = $this->resolveProxyUrl($toolModel);
-                    if ($proxyUrl) {
-                        $options['proxy_url'] = $proxyUrl;
-                    }
-
-                    // Remote browser via CDP (e.g. OpenClaw real Chrome).
-                    $cdpUrl = $toolModel->transport_config['cdp_url'] ?? null;
-                    if ($cdpUrl) {
-                        $options['cdp_url'] = $cdpUrl;
-                    }
-
-                    // Headless mode — agent-controlled, falls back to tool config default.
-                    if ($headless !== null && $headless !== '') {
-                        $options['headless'] = filter_var($headless, FILTER_VALIDATE_BOOLEAN);
-                    } elseif (isset($toolModel->transport_config['headless'])) {
-                        $options['headless'] = (bool) $toolModel->transport_config['headless'];
-                    }
-
-                    try {
-                        if ($mode === 'cloud') {
-                            $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
-                        } elseif ($mode === 'sidecar') {
-                            $result = app(BrowserSidecarClient::class)->run($task, $options);
-                        } else {
-                            return "Error: Unknown browser sandbox mode: {$mode}";
-                        }
-                    } catch (BrowserTaskTimeoutException $e) {
-                        return "Error: {$e->getMessage()}";
-                    } catch (BrowserTaskFailedException $e) {
-                        return "Error: {$e->getMessage()}";
-                    } catch (\Throwable $e) {
-                        Log::error('BrowserTool error', ['error' => $e->getMessage(), 'team_id' => $toolModel->team_id]);
-
-                        return 'Error: Browser task encountered an unexpected error. Please try again.';
-                    }
-
-                    // Capture screenshots as artifacts when available and experiment context is set.
-                    $screenshots = $result['screenshots'] ?? [];
-                    if (! empty($screenshots) && $toolModel->team_id && app()->bound('ai.current_experiment_id')) {
-                        try {
-                            app(CaptureScreenshotArtifactsAction::class)->execute(
-                                screenshots: $screenshots,
-                                teamId: $toolModel->team_id,
-                                experimentId: app('ai.current_experiment_id'),
-                                agentId: app()->bound('ai.current_agent_id') ? app('ai.current_agent_id') : null,
-                                stepIndex: 1,
-                            );
-                        } catch (\Throwable $e) {
-                            Log::warning('ToolTranslator: screenshot artifact capture failed', [
-                                'error' => $e->getMessage(),
-                                'team_id' => $toolModel->team_id,
-                            ]);
-                        }
-                    }
-
-                    // Audit every browser task in production.
-                    if (app()->environment('production') && $toolModel->team_id) {
-                        $ocsf = OcsfMapper::classify('browser.task_executed');
-                        AuditEntry::create([
-                            'team_id' => $toolModel->team_id,
-                            'event' => 'browser.task_executed',
-                            'ocsf_class_uid' => $ocsf['class_uid'],
-                            'ocsf_severity_id' => $ocsf['severity_id'],
-                            'properties' => [
-                                'task_preview' => substr($task, 0, 200),
-                                'status' => $result['status'],
-                                'duration_ms' => $result['duration_ms'],
-                                'steps_taken' => $result['steps_taken'],
-                                'mode' => $mode,
-                                'tool_id' => $toolModel->id,
-                            ],
-                            'created_at' => now(),
-                        ]);
-                    }
-
-                    $output = $result['output'];
-
-                    // Truncate to avoid context overflow (50k chars ≈ ~12k tokens).
-                    if (mb_strlen($output) > 50000) {
-                        $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
-                    }
-
-                    return $output ?: '(Task completed with no text output)';
+                    return $this->executeBrowserTask($toolModel, $mode, $task, $options);
                 }),
         ];
+    }
+
+    /**
+     * Execution-time plan gate for browser automation. Returns an error string to
+     * surface to the LLM when the team's plan disallows it, or null when allowed.
+     */
+    private function browserPlanDenial(Tool $toolModel): ?string
+    {
+        if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
+            $gate = app('browser.plan_gate');
+            if (! $gate($toolModel->team_id)) {
+                return 'Error: Browser automation requires a paid plan (Starter or above). Please upgrade to continue.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Build the browser-use run options for a task: plan-capped step/timeout limits,
+     * start URL, network allowlist, sidecar BYOK LLM creds, proxy, CDP, headless.
+     *
+     * @return array<string, mixed>
+     */
+    private function browserTaskOptions(Tool $toolModel, string $mode, ?string $startUrl, ?int $maxSteps, ?string $headless): array
+    {
+        // Cap max_steps to the plan limit.
+        $effectiveMaxSteps = $maxSteps ?? 10;
+        if ($toolModel->team_id && app()->bound('browser.max_steps_gate')) {
+            $planMaxSteps = app('browser.max_steps_gate')($toolModel->team_id);
+            if ($planMaxSteps > 0) {
+                $effectiveMaxSteps = min($effectiveMaxSteps, $planMaxSteps);
+            }
+        }
+
+        // Resolve timeout from plan.
+        $timeoutSeconds = 120;
+        if ($toolModel->team_id && app()->bound('browser.timeout_gate')) {
+            $planTimeout = app('browser.timeout_gate')($toolModel->team_id);
+            if ($planTimeout > 0) {
+                $timeoutSeconds = $planTimeout;
+            }
+        }
+
+        $options = [
+            'max_steps' => $effectiveMaxSteps,
+            'timeout_seconds' => $timeoutSeconds,
+        ];
+
+        if ($startUrl) {
+            $options['start_url'] = $startUrl;
+        }
+
+        // Network policy — restrict browser to an allowlist of hosts.
+        // Stored per-tool as tools.network_policy.allowed_domains (JSONB).
+        // Enforced at the browser-use level by the Python sidecar and the
+        // browser-use Cloud API. Null/empty = no restriction (backward-compat).
+        $allowedDomains = $toolModel->network_policy['allowed_domains'] ?? null;
+        if (is_array($allowedDomains) && ! empty($allowedDomains)) {
+            $options['allowed_domains'] = array_values(array_filter(
+                $allowedDomains,
+                fn ($d) => is_string($d) && $d !== '',
+            ));
+        }
+
+        // Resolve BYOK credentials for the sidecar LLM.
+        if ($mode === 'sidecar' && $toolModel->team_id) {
+            $byok = $this->resolveBrowserByok($toolModel->team_id);
+            if ($byok) {
+                $options['llm_api_key'] = $byok['api_key'];
+                $options['llm_provider'] = $byok['provider'];
+                $options['llm_model'] = $byok['model'];
+            }
+        }
+
+        // Per-tool proxy — resolved from linked Credential (type: proxy).
+        $proxyUrl = $this->resolveProxyUrl($toolModel);
+        if ($proxyUrl) {
+            $options['proxy_url'] = $proxyUrl;
+        }
+
+        // Remote browser via CDP (e.g. OpenClaw real Chrome).
+        $cdpUrl = $toolModel->transport_config['cdp_url'] ?? null;
+        if ($cdpUrl) {
+            $options['cdp_url'] = $cdpUrl;
+        }
+
+        // Headless mode — agent-controlled, falls back to tool config default.
+        if ($headless !== null && $headless !== '') {
+            $options['headless'] = filter_var($headless, FILTER_VALIDATE_BOOLEAN);
+        } elseif (isset($toolModel->transport_config['headless'])) {
+            $options['headless'] = (bool) $toolModel->transport_config['headless'];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Run a browser task via the configured backend (cloud/sidecar), capture any
+     * screenshots as artifacts, audit in production, and return truncated output.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function executeBrowserTask(Tool $toolModel, string $mode, string $task, array $options): string
+    {
+        // Resolve API key from tool credentials or env fallback.
+        /** @var array<string, mixed> $credentials */
+        $credentials = (array) $toolModel->credentials;
+        $apiKey = $credentials['api_key'] ?? config('agent.browser_use_cloud_api_key', '');
+
+        try {
+            if ($mode === 'cloud') {
+                $result = app(BrowserUseCloudClient::class, ['apiKey' => $apiKey])->run($task, $options);
+            } elseif ($mode === 'sidecar') {
+                $result = app(BrowserSidecarClient::class)->run($task, $options);
+            } else {
+                return "Error: Unknown browser sandbox mode: {$mode}";
+            }
+        } catch (BrowserTaskTimeoutException $e) {
+            return "Error: {$e->getMessage()}";
+        } catch (BrowserTaskFailedException $e) {
+            return "Error: {$e->getMessage()}";
+        } catch (\Throwable $e) {
+            Log::error('BrowserTool error', ['error' => $e->getMessage(), 'team_id' => $toolModel->team_id]);
+
+            return 'Error: Browser task encountered an unexpected error. Please try again.';
+        }
+
+        // Capture screenshots as artifacts when available and experiment context is set.
+        $screenshots = $result['screenshots'] ?? [];
+        if (! empty($screenshots) && $toolModel->team_id && app()->bound('ai.current_experiment_id')) {
+            try {
+                app(CaptureScreenshotArtifactsAction::class)->execute(
+                    screenshots: $screenshots,
+                    teamId: $toolModel->team_id,
+                    experimentId: app('ai.current_experiment_id'),
+                    agentId: app()->bound('ai.current_agent_id') ? app('ai.current_agent_id') : null,
+                    stepIndex: 1,
+                );
+            } catch (\Throwable $e) {
+                Log::warning('ToolTranslator: screenshot artifact capture failed', [
+                    'error' => $e->getMessage(),
+                    'team_id' => $toolModel->team_id,
+                ]);
+            }
+        }
+
+        // Audit every browser task in production.
+        if (app()->environment('production') && $toolModel->team_id) {
+            $ocsf = OcsfMapper::classify('browser.task_executed');
+            AuditEntry::create([
+                'team_id' => $toolModel->team_id,
+                'event' => 'browser.task_executed',
+                'ocsf_class_uid' => $ocsf['class_uid'],
+                'ocsf_severity_id' => $ocsf['severity_id'],
+                'properties' => [
+                    'task_preview' => substr($task, 0, 200),
+                    'status' => $result['status'],
+                    'duration_ms' => $result['duration_ms'],
+                    'steps_taken' => $result['steps_taken'],
+                    'mode' => $mode,
+                    'tool_id' => $toolModel->id,
+                ],
+                'created_at' => now(),
+            ]);
+        }
+
+        $output = $result['output'];
+
+        // Truncate to avoid context overflow (50k chars ≈ ~12k tokens).
+        if (mb_strlen($output) > 50000) {
+            $output = mb_substr($output, 0, 50000)."\n... [output truncated]";
+        }
+
+        return $output ?: '(Task completed with no text output)';
     }
 
     /**
