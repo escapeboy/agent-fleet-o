@@ -52,4 +52,20 @@ return [
         'mask_content' => (bool) env('PHOENIX_MASK_CONTENT', false),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Local-Agent Transcript Ingestion
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, a local CLI agent's own session transcript (e.g. Claude
+    | Code's JSONL) can be parsed and replayed into Phoenix as a trace — the
+    | per-turn tool calls and token usage that the cloud gateway never sees for
+    | bridge / claude-code-vps runs. Reuses the Phoenix export pipeline; no-op
+    | unless `phoenix.enabled` is also true. Default off.
+    |
+    */
+    'transcript_ingest' => [
+        'enabled' => (bool) env('LLM_TRANSCRIPT_INGEST_ENABLED', false),
+    ],
+
 ];
