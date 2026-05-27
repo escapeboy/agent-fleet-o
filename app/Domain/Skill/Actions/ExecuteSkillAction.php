@@ -44,15 +44,6 @@ class ExecuteSkillAction
         private readonly ExecuteSupabaseEdgeFunctionSkillAction $executeSupabaseEdgeFunction,
     ) {}
 
-    /**
-     * Execute a skill following the full pipeline:
-     * validate → reserve budget → call AI → validate output → record → settle budget
-     *
-     * @param  array  $input  The input data matching skill.input_schema
-     * @param  string|null  $provider  Override provider (agent → team default → platform)
-     * @param  string|null  $model  Override model
-     * @return array{execution: SkillExecution, output: array|string|null}
-     */
     public function execute(
         Skill $skill,
         array $input,
@@ -64,39 +55,11 @@ class ExecuteSkillAction
         ?string $model = null,
         string $purpose = 'run',
     ): array {
-        // CodeExecution has its own full pipeline (worktree + Docker sandbox + approval)
-        if ($skill->type === SkillType::CodeExecution->value) {
-            return $this->executeCodeExecution->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // Browser Automation calls Browserless REST API directly — no LLM, no budget reservation
-        if ($skill->type === SkillType::Browser->value) {
-            return $this->executeBrowserSkill->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // RunPod Endpoint calls RunPod REST API directly — no LLM, costs billed to user's RunPod account
-        if ($skill->type === SkillType::RunpodEndpoint->value) {
-            return $this->executeRunPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // RunPod Pod manages a full GPU pod lifecycle — create → wait → call → stop
-        if ($skill->type === SkillType::RunpodPod->value) {
-            return $this->executeRunPodPod->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // GpuCompute routes to the pluggable compute provider system
-        if ($skill->type === SkillType::GpuCompute->value) {
-            return $this->executeGpuCompute->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // BorunaScript runs a deterministic .ax script via the Boruna MCP stdio server — no LLM, no credits
-        if ($skill->type === SkillType::BorunaScript->value) {
-            return $this->executeBorunaScript->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
-        }
-
-        // Supabase Edge Function calls a Supabase Edge Function via REST — no LLM, costs billed to user's Supabase account
-        if ($skill->type === SkillType::SupabaseEdgeFunction->value) {
-            return $this->executeSupabaseEdgeFunction->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        // Specialized skill types (code/browser/runpod/gpu/boruna/supabase) own their
+        // full pipeline — delegate and return early when one matches.
+        $delegated = $this->delegateSpecializedType($skill, $input, $teamId, $userId, $agentId, $experimentId);
+        if ($delegated !== null) {
+            return $delegated;
         }
 
         // Plugin hook: allow plugins to inspect input or cancel skill execution
@@ -158,105 +121,20 @@ class ExecuteSkillAction
             // 4. Execute based on skill type
             $response = $this->executeByType($skill, $input, $resolvedProvider, $resolvedModel, $teamId, $userId, $agentId, $experimentId);
 
-            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
-
-            // 5. Validate output if schema defined — with retry-on-failure
-            //    for LLM-backed skill types (Sprint 14, mirrors Agent Sprint 12).
-            $output = $response->parsedOutput ?? json_decode($response->content, true);
-            $schemaValid = true;
-            $schemaRetryAttempts = 0;
-            $schemaRetryTrail = [];
-
-            if (! empty($skill->output_schema) && is_array($output)) {
-                $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
-                $schemaValid = $outputValidation['valid'];
-
-                if (! $schemaValid && $this->skillSupportsLlmRetry($skill)) {
-                    $maxRetries = $this->resolveMaxRetries($skill);
-                    while (! $schemaValid && $schemaRetryAttempts < $maxRetries) {
-                        $schemaRetryAttempts++;
-                        $schemaRetryTrail[] = [
-                            'attempt' => $schemaRetryAttempts,
-                            'errors' => array_slice($outputValidation['errors'], 0, 5),
-                        ];
-
-                        try {
-                            $retryResponse = $this->executeLlmRetry(
-                                skill: $skill,
-                                input: $input,
-                                provider: $resolvedProvider,
-                                model: $resolvedModel,
-                                teamId: $teamId,
-                                userId: $userId,
-                                agentId: $agentId,
-                                experimentId: $experimentId,
-                                previousOutput: (string) $response->content,
-                                errors: $outputValidation['errors'],
-                            );
-                        } catch (\Throwable $e) {
-                            Log::warning('ExecuteSkillAction: schema retry failed', [
-                                'skill_id' => $skill->id,
-                                'attempt' => $schemaRetryAttempts,
-                                'error' => $e->getMessage(),
-                            ]);
-                            break;
-                        }
-
-                        $response = $retryResponse;
-                        $output = $response->parsedOutput ?? json_decode($response->content, true);
-                        if (! is_array($output)) {
-                            break;
-                        }
-                        $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
-                        $schemaValid = $outputValidation['valid'];
-                    }
-                    $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
-                }
-            }
+            // 5. Validate output if schema defined — with retry-on-failure for
+            //    LLM-backed skill types (Sprint 14, mirrors Agent Sprint 12).
+            $validated = $this->validateOutputWithSchemaRetry(
+                $skill, $input, $resolvedProvider, $resolvedModel, $teamId, $userId, $agentId, $experimentId, $response, $startTime,
+            );
+            $response = $validated['response'];
+            $output = $validated['output'];
 
             // 6. Create execution record
-            $executionData = [
-                'skill_id' => $skill->id,
-                'agent_id' => $agentId,
-                'experiment_id' => $experimentId,
-                'team_id' => $teamId,
-                'status' => 'completed',
-                'input' => $input,
-                'output' => $output,
-                'duration_ms' => $durationMs,
-                'cost_credits' => $response->usage->costCredits,
-            ];
-
-            if ($skill->type === SkillType::MultiModelConsensus->value && is_array($output)) {
-                $executionData['confidence_score'] = $output['confidence_score'] ?? null;
-                $executionData['consensus_level'] = $output['consensus_level'] ?? null;
-                $executionData['peer_reviews'] = $output['peer_reviews'] ?? null;
-                $executionData['evaluation_method'] = 'multi_model_consensus';
-                $config = is_array($skill->configuration) ? $skill->configuration : [];
-                $executionData['judge_model'] = ($config['judge_model']['provider'] ?? 'anthropic')
-                    .'/'
-                    .($config['judge_model']['model'] ?? 'claude-sonnet-4-5');
-                // Store only the synthesized answer in output, not the metadata columns
-                $executionData['output'] = [
-                    'answer' => $output['answer'] ?? $response->content,
-                    'dissenting_view' => $output['dissenting_view'] ?? null,
-                ];
-            }
-
-            // Record schema retry trail so operators can see which outputs
-            // required self-correction (Sprint 14, mirrors Agent Sprint 12).
-            if ($schemaRetryAttempts > 0) {
-                $executionData['quality_details'] = array_merge($executionData['quality_details'] ?? [], [
-                    'output_schema_valid' => $schemaValid,
-                    'output_schema_retries' => $schemaRetryAttempts,
-                    'output_schema_retry_trail' => $schemaRetryTrail,
-                ]);
-            }
-
+            $executionData = $this->buildExecutionData($skill, $input, $output, $validated['durationMs'], $response, $agentId, $experimentId, $teamId, $validated['schemaValid'], $validated['attempts'], $validated['trail']);
             $execution = SkillExecution::create($executionData);
 
             // 7. Update skill stats
-            $skill->recordExecution(true, $durationMs);
+            $skill->recordExecution(true, $validated['durationMs']);
 
             // 7a. Increment quality counters
             $skill->increment('completed_count');
@@ -301,6 +179,168 @@ class ExecuteSkillAction
 
             return $failResult;
         }
+    }
+
+    /**
+     * Skill types that own their full execution pipeline (worktree/sandbox/REST/GPU)
+     * and bypass the LLM+budget flow. Returns the delegate's result, or null when
+     * the skill is a standard (LLM/connector/rule/consensus) type.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{execution: SkillExecution, output: array|string|null}|null
+     */
+    private function delegateSpecializedType(Skill $skill, array $input, string $teamId, string $userId, ?string $agentId, ?string $experimentId): ?array
+    {
+        $delegate = match ($skill->type) {
+            SkillType::CodeExecution->value => $this->executeCodeExecution,
+            SkillType::Browser->value => $this->executeBrowserSkill,
+            SkillType::RunpodEndpoint->value => $this->executeRunPod,
+            SkillType::RunpodPod->value => $this->executeRunPodPod,
+            SkillType::GpuCompute->value => $this->executeGpuCompute,
+            SkillType::BorunaScript->value => $this->executeBorunaScript,
+            SkillType::SupabaseEdgeFunction->value => $this->executeSupabaseEdgeFunction,
+            default => null,
+        };
+
+        return $delegate?->execute($skill, $input, $teamId, $userId, $agentId, $experimentId);
+    }
+
+    /**
+     * Validate the response output against the skill's output_schema, re-prompting
+     * the LLM up to max-retries when invalid (LLM-backed skill types only).
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{response: AiResponseDTO, output: mixed, schemaValid: bool, attempts: int, trail: array<int, array<string, mixed>>, durationMs: int}
+     */
+    private function validateOutputWithSchemaRetry(
+        Skill $skill,
+        array $input,
+        string $provider,
+        string $model,
+        string $teamId,
+        string $userId,
+        ?string $agentId,
+        ?string $experimentId,
+        AiResponseDTO $response,
+        int $startTime,
+    ): array {
+        $output = $response->parsedOutput ?? json_decode($response->content, true);
+        $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+        $schemaValid = true;
+        $attempts = 0;
+        $trail = [];
+
+        if (empty($skill->output_schema) || ! is_array($output)) {
+            return compact('response', 'output', 'schemaValid', 'attempts', 'trail', 'durationMs');
+        }
+
+        $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
+        $schemaValid = $outputValidation['valid'];
+
+        if (! $schemaValid && $this->skillSupportsLlmRetry($skill)) {
+            $maxRetries = $this->resolveMaxRetries($skill);
+            while (! $schemaValid && $attempts < $maxRetries) {
+                $attempts++;
+                $trail[] = [
+                    'attempt' => $attempts,
+                    'errors' => array_slice($outputValidation['errors'], 0, 5),
+                ];
+
+                try {
+                    $response = $this->executeLlmRetry(
+                        skill: $skill,
+                        input: $input,
+                        provider: $provider,
+                        model: $model,
+                        teamId: $teamId,
+                        userId: $userId,
+                        agentId: $agentId,
+                        experimentId: $experimentId,
+                        previousOutput: (string) $response->content,
+                        errors: $outputValidation['errors'],
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('ExecuteSkillAction: schema retry failed', [
+                        'skill_id' => $skill->id,
+                        'attempt' => $attempts,
+                        'error' => $e->getMessage(),
+                    ]);
+                    break;
+                }
+
+                $output = $response->parsedOutput ?? json_decode($response->content, true);
+                if (! is_array($output)) {
+                    break;
+                }
+                $outputValidation = $this->schemaValidator->validate($output, $skill->output_schema);
+                $schemaValid = $outputValidation['valid'];
+            }
+            $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+        }
+
+        return compact('response', 'output', 'schemaValid', 'attempts', 'trail', 'durationMs');
+    }
+
+    /**
+     * Assemble the SkillExecution attributes, including MultiModelConsensus quality
+     * columns and the schema-retry trail when self-correction occurred.
+     *
+     * @param  array<string, mixed>  $input
+     * @param  array<int, array<string, mixed>>  $schemaRetryTrail
+     * @return array<string, mixed>
+     */
+    private function buildExecutionData(
+        Skill $skill,
+        array $input,
+        mixed $output,
+        int $durationMs,
+        AiResponseDTO $response,
+        ?string $agentId,
+        ?string $experimentId,
+        string $teamId,
+        bool $schemaValid,
+        int $schemaRetryAttempts,
+        array $schemaRetryTrail,
+    ): array {
+        $executionData = [
+            'skill_id' => $skill->id,
+            'agent_id' => $agentId,
+            'experiment_id' => $experimentId,
+            'team_id' => $teamId,
+            'status' => 'completed',
+            'input' => $input,
+            'output' => $output,
+            'duration_ms' => $durationMs,
+            'cost_credits' => $response->usage->costCredits,
+        ];
+
+        if ($skill->type === SkillType::MultiModelConsensus->value && is_array($output)) {
+            $executionData['confidence_score'] = $output['confidence_score'] ?? null;
+            $executionData['consensus_level'] = $output['consensus_level'] ?? null;
+            $executionData['peer_reviews'] = $output['peer_reviews'] ?? null;
+            $executionData['evaluation_method'] = 'multi_model_consensus';
+            $config = is_array($skill->configuration) ? $skill->configuration : [];
+            $executionData['judge_model'] = ($config['judge_model']['provider'] ?? 'anthropic')
+                .'/'
+                .($config['judge_model']['model'] ?? 'claude-sonnet-4-5');
+            // Store only the synthesized answer in output, not the metadata columns
+            $executionData['output'] = [
+                'answer' => $output['answer'] ?? $response->content,
+                'dissenting_view' => $output['dissenting_view'] ?? null,
+            ];
+        }
+
+        // Record schema retry trail so operators can see which outputs required
+        // self-correction (Sprint 14, mirrors Agent Sprint 12).
+        if ($schemaRetryAttempts > 0) {
+            $executionData['quality_details'] = array_merge($executionData['quality_details'] ?? [], [
+                'output_schema_valid' => $schemaValid,
+                'output_schema_retries' => $schemaRetryAttempts,
+                'output_schema_retry_trail' => $schemaRetryTrail,
+            ]);
+        }
+
+        return $executionData;
     }
 
     /**
