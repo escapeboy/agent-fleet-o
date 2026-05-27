@@ -70,7 +70,7 @@ class RunSkillLiftEvaluationAction
             return $this->fail($evaluation, 'Skill lift A/B supports LLM skills only.');
         }
 
-        $cases = $this->resolveCases($datasetId ?? $skill->eval_dataset_id);
+        $cases = $this->resolveCases($datasetId ?? $skill->eval_dataset_id, $teamId);
         if ($cases->isEmpty()) {
             return $this->fail($evaluation, 'No evaluation dataset/cases linked to this skill.');
         }
@@ -215,13 +215,16 @@ class RunSkillLiftEvaluationAction
     /**
      * @return Collection<int, EvaluationCase>
      */
-    private function resolveCases(?string $datasetId): Collection
+    private function resolveCases(?string $datasetId, string $teamId): Collection
     {
         if (! $datasetId) {
             return collect();
         }
 
-        $dataset = EvaluationDataset::withoutGlobalScopes()->find($datasetId);
+        // Scope to the team — never read another tenant's dataset cases.
+        $dataset = EvaluationDataset::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->find($datasetId);
 
         return $dataset ? $dataset->cases()->get() : collect();
     }
