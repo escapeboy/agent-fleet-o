@@ -498,9 +498,15 @@ class ProviderResolver
                 continue;
             }
 
-            // Cloud providers: only show if a platform API key or team BYOK key is configured
+            // Cloud providers: only show if a platform API key, a team BYOK key,
+            // or (for sub-program teams) a dedicated sub-program key is configured.
+            // Sub-program teams (finance, etc.) have an intentionally-empty platform
+            // key — their spend resolves from services.sub_program_api_keys. Without
+            // counting it, the provider is dropped and enforceAvailability() reroutes
+            // the request to a different provider that returns an empty completion.
             $platformKey = config("services.platform_api_keys.{$key}");
-            if (! $platformKey && ! isset($teamByokProviders[$key])) {
+            $subProgramKey = $this->teamHasSubProgramKey($team, $key);
+            if (! $platformKey && ! $subProgramKey && ! isset($teamByokProviders[$key])) {
                 unset($providers[$key]);
             }
         }
@@ -766,6 +772,21 @@ class ProviderResolver
         }
 
         throw new DataClassificationException($agent->id, $classification->value);
+    }
+
+    /**
+     * Whether a sub-program team (finance, etc.) has a dedicated key configured
+     * for this provider. Strictly gated to sub-program teams (sub_program_slug
+     * != 'cloud') so it NEVER widens provider availability for a regular cloud
+     * BYOK team.
+     */
+    protected function teamHasSubProgramKey(?Team $team, string $provider): bool
+    {
+        if (! $team || ($team->sub_program_slug ?? 'cloud') === 'cloud') {
+            return false;
+        }
+
+        return (bool) config("services.sub_program_api_keys.{$provider}");
     }
 
     /**
