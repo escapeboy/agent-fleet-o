@@ -196,14 +196,6 @@ class WorkflowGraphExecutor
         $this->dispatchNodeBatch($experiment, $executableNodeIds, $graph, $steps);
     }
 
-    /**
-     * Resolve which nodes are actually executable from a set of candidate node IDs.
-     * Traverses through conditional nodes to find agent/end nodes.
-     *
-     * @param  bool  $allowLoopReset  When true, completed steps may be reset for loop re-execution.
-     *                                When false, completed steps are traversed through to find pending ones.
-     *                                Use false for initial/retry execution, true for back-edge loops.
-     */
     private function resolveExecutableNodes(
         array $candidateNodeIds,
         array $nodeMap,
@@ -214,463 +206,384 @@ class WorkflowGraphExecutor
         int $maxLoopIterations,
         bool $allowLoopReset = true,
     ): array {
-        $executable = [];
-        $visited = [];
+        $ctx = new WorkflowTraversalContext($nodeMap, $edgeMap, $adjacency, $steps, $experiment, $maxLoopIterations);
 
         foreach ($candidateNodeIds as $nodeId) {
-            $this->resolveNode(
-                $nodeId, $nodeMap, $edgeMap, $adjacency, $steps, $experiment,
-                $maxLoopIterations, $executable, $visited, $allowLoopReset,
-            );
+            $this->resolveNode($nodeId, $ctx, $allowLoopReset);
         }
 
-        return array_unique($executable);
+        return array_unique($ctx->executable);
     }
 
-    private function resolveNode(
-        string $nodeId,
-        array $nodeMap,
-        array $edgeMap,
-        array $adjacency,
-        $steps,
-        Experiment $experiment,
-        int $maxLoopIterations,
-        array &$executable,
-        array &$visited,
-        bool $allowLoopReset = true,
-    ): void {
-        if (isset($visited[$nodeId])) {
+    private function resolveNode(string $nodeId, WorkflowTraversalContext $ctx, bool $allowLoopReset = true): void
+    {
+        if (isset($ctx->visited[$nodeId])) {
             return;
         }
-        $visited[$nodeId] = true;
+        $ctx->visited[$nodeId] = true;
 
-        $node = $nodeMap[$nodeId] ?? null;
+        $node = $ctx->nodeMap[$nodeId] ?? null;
 
         if (! $node) {
             return;
         }
 
-        $type = $node['type'];
+        match ($node['type']) {
+            'agent', 'crew', 'human_task', 'time_gate', 'sub_workflow', 'boruna_step',
+            'llm', 'http_request', 'parameter_extractor', 'variable_aggregator',
+            'template_transform', 'knowledge_retrieval' => $this->resolveExecutableStepNode($nodeId, $ctx, $allowLoopReset),
+            'workflow_ref' => $this->resolveWorkflowRefNode($nodeId, $ctx),
+            'conditional' => $this->resolveConditionalNode($nodeId, $ctx),
+            'switch' => $this->resolveSwitchNode($nodeId, $ctx),
+            'dynamic_fork' => $this->resolveDynamicForkNode($nodeId, $ctx),
+            'do_while' => $this->resolveDoWhileNode($nodeId, $ctx),
+            'iteration' => $this->resolveIterationNode($nodeId, $ctx),
+            'signal_route' => $this->resolveSignalRouteNode($nodeId, $ctx),
+            'merge', 'start' => $this->traverseSuccessors($nodeId, $ctx),
+            default => null, // end, annotation, and unknown types are terminal no-ops
+        };
+    }
 
-        if ($type === 'end') {
+    /**
+     * Executable step node (agent/crew/human_task/… ): queue it, or on a back-edge
+     * loop reset it for re-execution, or traverse through it on initial/retry passes.
+     */
+    private function resolveExecutableStepNode(string $nodeId, WorkflowTraversalContext $ctx, bool $allowLoopReset): void
+    {
+        $step = $ctx->steps[$nodeId] ?? null;
+
+        if (! $step) {
             return;
         }
 
-        if ($type === 'annotation') {
-            return;
-        }
-
-        if ($type === 'workflow_ref') {
-            // Execute a referenced workflow inline and inject its output into the experiment context.
-            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
-            $refWorkflowId = $config['ref_workflow_id'] ?? null;
-
-            if (! $refWorkflowId) {
-                Log::warning('WorkflowGraphExecutor: workflow_ref node missing ref_workflow_id', [
-                    'node_id' => $nodeId,
-                    'experiment_id' => $experiment->id,
+        if ($step->isCompleted()) {
+            if ($allowLoopReset && $step->loop_count < $ctx->maxLoopIterations) {
+                // Back-edge loop: reset for re-execution
+                $step->update([
+                    'status' => 'pending',
+                    'output' => null,
+                    'error_message' => null,
+                    'duration_ms' => null,
+                    'cost_credits' => null,
+                    'started_at' => null,
+                    'completed_at' => null,
+                    'loop_count' => $step->loop_count + 1,
                 ]);
-
-                return;
-            }
-
-            $refWorkflow = Workflow::withoutGlobalScopes()
-                ->where('id', $refWorkflowId)
-                ->where('team_id', $experiment->team_id)
-                ->first();
-
-            if (! $refWorkflow) {
-                Log::warning('WorkflowGraphExecutor: workflow_ref target not found', [
-                    'ref_workflow_id' => $refWorkflowId,
-                    'experiment_id' => $experiment->id,
-                ]);
-
-                return;
-            }
-
-            // Resolve input from input_mapping (dot-notation into accumulated step outputs)
-            $context = $this->buildNodeContext($steps, $experiment);
-            $inputMapping = $config['input_mapping'] ?? [];
-            $subInput = [];
-            foreach ($inputMapping as $targetKey => $sourcePath) {
-                $subInput[$targetKey] = data_get($context, $sourcePath);
-            }
-
-            try {
-                $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, 0);
-                $outputKey = $config['output_key'] ?? 'sub_workflow_output';
-
-                // Store result so downstream nodes can reference it
-                $step = $steps[$nodeId] ?? null;
-                if ($step) {
-                    $step->update([
-                        'status' => 'completed',
-                        'output' => [$outputKey => $subOutput],
-                        'completed_at' => now(),
-                    ]);
-                    $executable[] = $nodeId;
-                }
-            } catch (\Throwable $e) {
-                Log::error('WorkflowGraphExecutor: workflow_ref execution failed', [
-                    'node_id' => $nodeId,
-                    'ref_workflow_id' => $refWorkflowId,
-                    'error' => $e->getMessage(),
-                ]);
-                $step = $steps[$nodeId] ?? null;
-                if ($step) {
-                    $step->update([
-                        'status' => 'failed',
-                        'error_message' => 'Sub-workflow failed: '.$e->getMessage(),
-                        'completed_at' => now(),
-                    ]);
-                }
-            }
-
-            return;
-        }
-
-        if ($type === 'agent' || $type === 'crew' || $type === 'human_task' || $type === 'time_gate' || $type === 'sub_workflow' || $type === 'boruna_step'
-            || $type === 'llm' || $type === 'http_request' || $type === 'parameter_extractor'
-            || $type === 'variable_aggregator' || $type === 'template_transform' || $type === 'knowledge_retrieval') {
-            $step = $steps[$nodeId] ?? null;
-
-            if (! $step) {
-                return;
-            }
-
-            if ($step->isCompleted()) {
-                if ($allowLoopReset && $step->loop_count < $maxLoopIterations) {
-                    // Back-edge loop: reset for re-execution
-                    $step->update([
-                        'status' => 'pending',
-                        'output' => null,
-                        'error_message' => null,
-                        'duration_ms' => null,
-                        'cost_credits' => null,
-                        'started_at' => null,
-                        'completed_at' => null,
-                        'loop_count' => $step->loop_count + 1,
-                    ]);
-                    $executable[] = $nodeId;
-                } elseif (! $allowLoopReset) {
-                    // Initial/retry traversal: skip completed steps and continue to successors
-                    foreach ($adjacency[$nodeId] ?? [] as $successor) {
-                        $this->resolveNode(
-                            $successor, $nodeMap, $edgeMap, $adjacency,
-                            $steps, $experiment, $maxLoopIterations, $executable, $visited, $allowLoopReset,
-                        );
-                    }
-                } else {
-                    // Max iterations reached — skip this path
-                    Log::info('WorkflowGraphExecutor: Max loop iterations reached', [
-                        'experiment_id' => $experiment->id,
-                        'node_id' => $nodeId,
-                        'loop_count' => $step->loop_count,
-                    ]);
-                }
-
-                return;
-            }
-
-            if ($step->isPending()) {
-                $executable[] = $nodeId;
-            }
-
-            return;
-        }
-
-        if ($type === 'conditional') {
-            // Evaluate conditions on outgoing edges to find next path
-            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])
-                ->sortBy('sort_order');
-
-            // Build context from completed steps
-            $context = $this->buildNodeContext($steps, $experiment);
-
-            // Find predecessors of this conditional node for default field resolution
-            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
-
-            $matched = false;
-            foreach ($outgoingEdges as $edge) {
-                if ($edge['is_default'] ?? false) {
-                    continue;
-                }
-
-                $condition = $edge['condition'] ?? null;
-
-                if ($this->conditionEvaluator->evaluate($condition, $context, $predecessorNodeId)) {
-                    $matched = true;
-                    $this->resolveNode(
-                        $edge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-
-                    break;
-                }
-            }
-
-            // No condition matched — use default edge
-            if (! $matched) {
-                $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
-
-                if ($defaultEdge) {
-                    $this->resolveNode(
-                        $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-                }
-            }
-
-            return;
-        }
-
-        if ($type === 'switch') {
-            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
-            $context = $this->buildNodeContext($steps, $experiment);
-            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
-
-            $expressionField = $node['expression'] ?? null;
-
-            if ($expressionField) {
-                $switchValue = $this->conditionEvaluator->evaluateSwitch(
-                    $expressionField, $context, $predecessorNodeId,
-                );
-
-                // Find edge with matching case_value
-                $matchedEdge = $outgoingEdges->first(function ($edge) use ($switchValue) {
-                    return ! ($edge['is_default'] ?? false) && ($edge['case_value'] ?? null) === $switchValue;
-                });
-
-                if ($matchedEdge) {
-                    $this->resolveNode(
-                        $matchedEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-
-                    return;
-                }
-            }
-
-            // Fallback to default edge
-            $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
-            if ($defaultEdge) {
-                $this->resolveNode(
-                    $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                );
-            }
-
-            return;
-        }
-
-        if ($type === 'dynamic_fork') {
-            // Resolve the array to fork over from predecessor output
-            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
-            $forkSource = $config['fork_source'] ?? null;
-            $context = $this->buildNodeContext($steps, $experiment);
-            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
-
-            $arrayData = [];
-            if ($forkSource && $predecessorNodeId && isset($context[$predecessorNodeId])) {
-                $resolved = data_get($context[$predecessorNodeId], $forkSource);
-                if (is_array($resolved)) {
-                    $arrayData = $resolved;
-                }
-            }
-
-            // Enforce max_parallel_branches limit
-            $maxBranches = max(1, (int) ($config['max_parallel_branches'] ?? 50));
-            $arrayData = array_slice($arrayData, 0, $maxBranches);
-
-            $forkVariableName = $config['fork_variable_name'] ?? 'fork_item';
-            $forkMode = $config['fork_execution_mode'] ?? 'inline';
-
-            // Get the single outgoing edge (the template path)
-            $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
-
-            if (! $outgoingEdge || empty($arrayData)) {
-                // Nothing to fork — traverse the template path once or skip
-                if ($outgoingEdge) {
-                    $this->resolveNode(
-                        $outgoingEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-                }
-
-                return;
-            }
-
-            // The template path's target is the node to execute N times
-            $templateNodeId = $outgoingEdge['target_node_id'];
-            $templateStep = $steps[$templateNodeId] ?? null;
-
-            if ($forkMode === 'sub_workflow' && $templateStep && $templateStep->isPending()) {
-                // Fan-out: spawn one child experiment per array element
-                app(DynamicForkFanOutAction::class)->execute(
-                    step: $templateStep,
-                    parent: $experiment,
-                    forkItems: array_values($arrayData),
-                    forkVariableName: $forkVariableName,
-                    nodeData: $nodeMap[$templateNodeId] ?? [],
-                );
-            } elseif ($templateStep && $templateStep->isPending()) {
-                // Inline (default): inject fork data into the template step for the executor to iterate
-                $templateStep->update([
-                    'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
-                        '_fork_items' => array_values($arrayData),
-                        '_fork_source' => $forkSource,
-                        '_fork_variable' => $forkVariableName,
-                    ]),
-                ]);
-                $executable[] = $templateNodeId;
-            }
-
-            return;
-        }
-
-        if ($type === 'do_while') {
-            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
-            $breakCondition = $config['break_condition'] ?? null;
-            $context = $this->buildNodeContext($steps, $experiment);
-            $predecessorNodeId = $this->findPredecessor($nodeId, $edgeMap);
-
-            $shouldBreak = false;
-            if ($breakCondition) {
-                $shouldBreak = $this->conditionEvaluator->evaluateBreakCondition(
-                    $breakCondition, $context, $predecessorNodeId,
-                );
-            }
-
-            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
-
-            if ($shouldBreak) {
-                // Take the default/exit edge
-                $exitEdge = $outgoingEdges->firstWhere('is_default', true);
-                if ($exitEdge) {
-                    $this->resolveNode(
-                        $exitEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
+                $ctx->executable[] = $nodeId;
+            } elseif (! $allowLoopReset) {
+                // Initial/retry traversal: skip completed steps and continue to successors
+                foreach ($ctx->adjacency[$nodeId] ?? [] as $successor) {
+                    $this->resolveNode($successor, $ctx, $allowLoopReset);
                 }
             } else {
-                // Take the loop body edge (non-default)
-                $loopEdge = $outgoingEdges->first(fn ($e) => ! ($e['is_default'] ?? false));
-                if ($loopEdge) {
-                    $this->resolveNode(
-                        $loopEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-                }
+                // Max iterations reached — skip this path
+                Log::info('WorkflowGraphExecutor: Max loop iterations reached', [
+                    'experiment_id' => $ctx->experiment->id,
+                    'node_id' => $nodeId,
+                    'loop_count' => $step->loop_count,
+                ]);
             }
 
             return;
         }
 
-        if ($type === 'iteration') {
-            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
-            $sourceExpression = $config['source_expression'] ?? null;
-            $itemVariable = $config['item_variable'] ?? 'item';
-            $maxParallel = max(1, (int) ($config['max_parallel'] ?? 5));
+        if ($step->isPending()) {
+            $ctx->executable[] = $nodeId;
+        }
+    }
 
-            $context = $this->buildNodeContext($steps, $experiment);
-            $items = $sourceExpression ? data_get($context, $sourceExpression) : null;
+    /** Execute a referenced workflow inline and inject its output into the experiment context. */
+    private function resolveWorkflowRefNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+        $refWorkflowId = $config['ref_workflow_id'] ?? null;
 
-            $outgoingEdge = collect($edgeMap[$nodeId] ?? [])->first();
+        if (! $refWorkflowId) {
+            Log::warning('WorkflowGraphExecutor: workflow_ref node missing ref_workflow_id', [
+                'node_id' => $nodeId,
+                'experiment_id' => $ctx->experiment->id,
+            ]);
 
-            if (! $outgoingEdge || ! is_array($items) || empty($items)) {
-                if ($outgoingEdge) {
-                    $this->resolveNode(
-                        $outgoingEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                        $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                    );
-                }
+            return;
+        }
+
+        $refWorkflow = Workflow::withoutGlobalScopes()
+            ->where('id', $refWorkflowId)
+            ->where('team_id', $ctx->experiment->team_id)
+            ->first();
+
+        if (! $refWorkflow) {
+            Log::warning('WorkflowGraphExecutor: workflow_ref target not found', [
+                'ref_workflow_id' => $refWorkflowId,
+                'experiment_id' => $ctx->experiment->id,
+            ]);
+
+            return;
+        }
+
+        // Resolve input from input_mapping (dot-notation into accumulated step outputs)
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $inputMapping = $config['input_mapping'] ?? [];
+        $subInput = [];
+        foreach ($inputMapping as $targetKey => $sourcePath) {
+            $subInput[$targetKey] = data_get($context, $sourcePath);
+        }
+
+        try {
+            $subOutput = app(ExecuteSubWorkflowAction::class)->execute($refWorkflow, $subInput, 0);
+            $outputKey = $config['output_key'] ?? 'sub_workflow_output';
+
+            // Store result so downstream nodes can reference it
+            $step = $ctx->steps[$nodeId] ?? null;
+            if ($step) {
+                $step->update([
+                    'status' => 'completed',
+                    'output' => [$outputKey => $subOutput],
+                    'completed_at' => now(),
+                ]);
+                $ctx->executable[] = $nodeId;
+            }
+        } catch (\Throwable $e) {
+            Log::error('WorkflowGraphExecutor: workflow_ref execution failed', [
+                'node_id' => $nodeId,
+                'ref_workflow_id' => $refWorkflowId,
+                'error' => $e->getMessage(),
+            ]);
+            $step = $ctx->steps[$nodeId] ?? null;
+            if ($step) {
+                $step->update([
+                    'status' => 'failed',
+                    'error_message' => 'Sub-workflow failed: '.$e->getMessage(),
+                    'completed_at' => now(),
+                ]);
+            }
+        }
+    }
+
+    /** Conditional node: evaluate outgoing edge conditions, route to the first match or the default. */
+    private function resolveConditionalNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $outgoingEdges = collect($ctx->edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $predecessorNodeId = $this->findPredecessor($nodeId, $ctx->edgeMap);
+
+        foreach ($outgoingEdges as $edge) {
+            if ($edge['is_default'] ?? false) {
+                continue;
+            }
+
+            if ($this->conditionEvaluator->evaluate($edge['condition'] ?? null, $context, $predecessorNodeId)) {
+                $this->resolveNode($edge['target_node_id'], $ctx);
 
                 return;
             }
-
-            $templateNodeId = $outgoingEdge['target_node_id'];
-            $templateStep = $steps[$templateNodeId] ?? null;
-
-            if ($templateStep && $templateStep->isPending()) {
-                $chunks = array_chunk(array_values($items), $maxParallel);
-                $templateStep->update([
-                    'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
-                        '_iteration_items' => array_values($items),
-                        '_iteration_variable' => $itemVariable,
-                        '_iteration_chunks' => $chunks,
-                    ]),
-                ]);
-                $executable[] = $templateNodeId;
-            }
-
-            return;
         }
 
-        if ($type === 'signal_route') {
-            // Route based on a field in the experiment's signal metadata.
-            // Config: { "attribute": "priority", "edges": [{"value": "critical", "case_value": "..."}] }
-            $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
-            $attribute = $config['attribute'] ?? null;
+        // No condition matched — use default edge
+        $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+        if ($defaultEdge) {
+            $this->resolveNode($defaultEdge['target_node_id'], $ctx);
+        }
+    }
 
-            // Resolve signal metadata from experiment context
-            $signalData = [];
-            if ($experiment->signal_id) {
-                $signal = Signal::withoutGlobalScopes()
-                    ->find($experiment->signal_id);
-                $signalData = $signal->metadata ?? [];
-            }
+    /** Switch node: evaluate the expression and route to the matching case edge or the default. */
+    private function resolveSwitchNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $outgoingEdges = collect($ctx->edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $predecessorNodeId = $this->findPredecessor($nodeId, $ctx->edgeMap);
 
-            $attributeValue = $attribute ? data_get($signalData, $attribute) : null;
+        $expressionField = $node['expression'] ?? null;
 
-            $outgoingEdges = collect($edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+        if ($expressionField) {
+            $switchValue = $this->conditionEvaluator->evaluateSwitch($expressionField, $context, $predecessorNodeId);
 
-            $matchedEdge = $outgoingEdges->first(function ($edge) use ($attributeValue) {
-                return ! ($edge['is_default'] ?? false)
-                    && isset($edge['case_value'])
-                    && (string) $edge['case_value'] === (string) $attributeValue;
-            });
+            $matchedEdge = $outgoingEdges->first(
+                fn ($edge) => ! ($edge['is_default'] ?? false) && ($edge['case_value'] ?? null) === $switchValue,
+            );
 
             if ($matchedEdge) {
-                $this->resolveNode(
-                    $matchedEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                );
+                $this->resolveNode($matchedEdge['target_node_id'], $ctx);
 
                 return;
             }
+        }
 
-            $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
-            if ($defaultEdge) {
-                $this->resolveNode(
-                    $defaultEdge['target_node_id'], $nodeMap, $edgeMap, $adjacency,
-                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                );
+        $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+        if ($defaultEdge) {
+            $this->resolveNode($defaultEdge['target_node_id'], $ctx);
+        }
+    }
+
+    /** Dynamic fork: resolve the array to fan out over and either spawn child experiments or inline-iterate. */
+    private function resolveDynamicForkNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+        $forkSource = $config['fork_source'] ?? null;
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $predecessorNodeId = $this->findPredecessor($nodeId, $ctx->edgeMap);
+
+        $arrayData = [];
+        if ($forkSource && $predecessorNodeId && isset($context[$predecessorNodeId])) {
+            $resolved = data_get($context[$predecessorNodeId], $forkSource);
+            if (is_array($resolved)) {
+                $arrayData = $resolved;
+            }
+        }
+
+        // Enforce max_parallel_branches limit
+        $maxBranches = max(1, (int) ($config['max_parallel_branches'] ?? 50));
+        $arrayData = array_slice($arrayData, 0, $maxBranches);
+
+        $forkVariableName = $config['fork_variable_name'] ?? 'fork_item';
+        $forkMode = $config['fork_execution_mode'] ?? 'inline';
+
+        // Get the single outgoing edge (the template path)
+        $outgoingEdge = collect($ctx->edgeMap[$nodeId] ?? [])->first();
+
+        if (! $outgoingEdge || empty($arrayData)) {
+            // Nothing to fork — traverse the template path once or skip
+            if ($outgoingEdge) {
+                $this->resolveNode($outgoingEdge['target_node_id'], $ctx);
             }
 
             return;
         }
 
-        // Merge node — OR fan-in: pass through to successors immediately.
-        // filterReadyNodes handles the OR semantics (any predecessor complete).
-        if ($type === 'merge') {
-            foreach ($adjacency[$nodeId] ?? [] as $successor) {
-                $this->resolveNode(
-                    $successor, $nodeMap, $edgeMap, $adjacency,
-                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                );
+        // The template path's target is the node to execute N times
+        $templateNodeId = $outgoingEdge['target_node_id'];
+        $templateStep = $ctx->steps[$templateNodeId] ?? null;
+
+        if ($forkMode === 'sub_workflow' && $templateStep && $templateStep->isPending()) {
+            // Fan-out: spawn one child experiment per array element
+            app(DynamicForkFanOutAction::class)->execute(
+                step: $templateStep,
+                parent: $ctx->experiment,
+                forkItems: array_values($arrayData),
+                forkVariableName: $forkVariableName,
+                nodeData: $ctx->nodeMap[$templateNodeId] ?? [],
+            );
+        } elseif ($templateStep && $templateStep->isPending()) {
+            // Inline (default): inject fork data into the template step for the executor to iterate
+            $templateStep->update([
+                'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
+                    '_fork_items' => array_values($arrayData),
+                    '_fork_source' => $forkSource,
+                    '_fork_variable' => $forkVariableName,
+                ]),
+            ]);
+            $ctx->executable[] = $templateNodeId;
+        }
+    }
+
+    /** do_while node: take the exit edge when the break condition holds, else the loop-body edge. */
+    private function resolveDoWhileNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+        $breakCondition = $config['break_condition'] ?? null;
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $predecessorNodeId = $this->findPredecessor($nodeId, $ctx->edgeMap);
+
+        $shouldBreak = $breakCondition
+            ? $this->conditionEvaluator->evaluateBreakCondition($breakCondition, $context, $predecessorNodeId)
+            : false;
+
+        $outgoingEdges = collect($ctx->edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+
+        $edge = $shouldBreak
+            ? $outgoingEdges->firstWhere('is_default', true)
+            : $outgoingEdges->first(fn ($e) => ! ($e['is_default'] ?? false));
+
+        if ($edge) {
+            $this->resolveNode($edge['target_node_id'], $ctx);
+        }
+    }
+
+    /** Iteration node: chunk the source array and inject it into the template step for parallel iteration. */
+    private function resolveIterationNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+        $sourceExpression = $config['source_expression'] ?? null;
+        $itemVariable = $config['item_variable'] ?? 'item';
+        $maxParallel = max(1, (int) ($config['max_parallel'] ?? 5));
+
+        $context = $this->buildNodeContext($ctx->steps, $ctx->experiment);
+        $items = $sourceExpression ? data_get($context, $sourceExpression) : null;
+
+        $outgoingEdge = collect($ctx->edgeMap[$nodeId] ?? [])->first();
+
+        if (! $outgoingEdge || ! is_array($items) || empty($items)) {
+            if ($outgoingEdge) {
+                $this->resolveNode($outgoingEdge['target_node_id'], $ctx);
             }
 
             return;
         }
 
-        // Start node — just traverse to successors
-        if ($type === 'start') {
-            foreach ($adjacency[$nodeId] ?? [] as $successor) {
-                $this->resolveNode(
-                    $successor, $nodeMap, $edgeMap, $adjacency,
-                    $steps, $experiment, $maxLoopIterations, $executable, $visited,
-                );
-            }
+        $templateNodeId = $outgoingEdge['target_node_id'];
+        $templateStep = $ctx->steps[$templateNodeId] ?? null;
+
+        if ($templateStep && $templateStep->isPending()) {
+            $templateStep->update([
+                'input_mapping' => array_merge($templateStep->input_mapping ?? [], [
+                    '_iteration_items' => array_values($items),
+                    '_iteration_variable' => $itemVariable,
+                    '_iteration_chunks' => array_chunk(array_values($items), $maxParallel),
+                ]),
+            ]);
+            $ctx->executable[] = $templateNodeId;
+        }
+    }
+
+    /** signal_route node: route on a field of the experiment's signal metadata. */
+    private function resolveSignalRouteNode(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        $node = $ctx->nodeMap[$nodeId];
+        $config = is_string($node['config'] ?? null) ? json_decode($node['config'], true) : ($node['config'] ?? []);
+        $attribute = $config['attribute'] ?? null;
+
+        // Resolve signal metadata from experiment context
+        $signalData = [];
+        if ($ctx->experiment->signal_id) {
+            $signal = Signal::withoutGlobalScopes()->find($ctx->experiment->signal_id);
+            $signalData = $signal->metadata ?? [];
+        }
+
+        $attributeValue = $attribute ? data_get($signalData, $attribute) : null;
+
+        $outgoingEdges = collect($ctx->edgeMap[$nodeId] ?? [])->sortBy('sort_order');
+
+        $matchedEdge = $outgoingEdges->first(
+            fn ($edge) => ! ($edge['is_default'] ?? false)
+                && isset($edge['case_value'])
+                && (string) $edge['case_value'] === (string) $attributeValue,
+        );
+
+        if ($matchedEdge) {
+            $this->resolveNode($matchedEdge['target_node_id'], $ctx);
+
+            return;
+        }
+
+        $defaultEdge = $outgoingEdges->firstWhere('is_default', true);
+        if ($defaultEdge) {
+            $this->resolveNode($defaultEdge['target_node_id'], $ctx);
+        }
+    }
+
+    /**
+     * Pass-through traversal for start and merge nodes — resolve every successor.
+     * Merge OR fan-in semantics are handled separately by filterReadyNodes.
+     */
+    private function traverseSuccessors(string $nodeId, WorkflowTraversalContext $ctx): void
+    {
+        foreach ($ctx->adjacency[$nodeId] ?? [] as $successor) {
+            $this->resolveNode($successor, $ctx);
         }
     }
 
