@@ -40,19 +40,19 @@ class LocalAgentCustomManageToolTest extends TestCase
 
         $response = (new LocalAgentCustomManageTool)->handle(new Request([
             'action' => 'register',
-            'key' => 'copilot',
-            'name' => 'GitHub Copilot CLI',
-            'binary' => 'copilot',
+            'key' => 'acme-cli',
+            'name' => 'Acme CLI',
+            'binary' => 'acme',
             'execute_flags' => ['-p', '--allow-all-tools'],
             'capabilities' => ['code_generation'],
         ]));
 
         $this->assertFalse($response->isError(), (string) $response->content());
-        $this->assertSame('copilot', $this->decode($response)['registered']);
+        $this->assertSame('acme-cli', $this->decode($response)['registered']);
 
         // Persisted and visible to the discovery registry / gateway resolution.
-        $this->assertArrayHasKey('copilot', GlobalSetting::get('local_agents_custom', []));
-        $this->assertNotNull(app(LocalAgentDiscovery::class)->agentConfig('copilot'));
+        $this->assertArrayHasKey('acme-cli', GlobalSetting::get('local_agents_custom', []));
+        $this->assertNotNull(app(LocalAgentDiscovery::class)->agentConfig('acme-cli'));
     }
 
     public function test_register_rejects_bad_key_binary_and_missing_flags(): void
