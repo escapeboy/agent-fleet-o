@@ -125,6 +125,26 @@ class TranscriptIngestorTest extends TestCase
         $this->assertSame('[REDACTED]', $this->prop($tool, 'attributes')['tool.parameters']);
     }
 
+    public function test_caps_total_spans_and_flags_truncation(): void
+    {
+        // One assistant turn with far more tool calls than the span ceiling.
+        $blocks = [['type' => 'text', 'text' => 'go']];
+        for ($i = 0; $i < TranscriptIngestor::MAX_SPANS + 100; $i++) {
+            $blocks[] = ['type' => 'tool_use', 'id' => "t$i", 'name' => 'Bash', 'input' => ['command' => 'x']];
+        }
+        $line = (string) json_encode([
+            'type' => 'assistant',
+            'timestamp' => '2026-05-27T10:00:00.000Z',
+            'message' => ['role' => 'assistant', 'model' => 'm', 'content' => $blocks, 'usage' => ['output_tokens' => 1]],
+        ]);
+
+        $result = $this->ingestor()->ingest($line);
+
+        $this->assertTrue($result['truncated']);
+        $this->assertSame(TranscriptIngestor::MAX_SPANS, $result['spans_emitted']);
+        Bus::assertDispatchedTimes(ExportToPhoenixJob::class, TranscriptIngestor::MAX_SPANS);
+    }
+
     public function test_uses_provided_trace_id(): void
     {
         $trace = str_repeat('a', 32);

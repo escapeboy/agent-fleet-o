@@ -2,9 +2,12 @@
 
 namespace App\Mcp\Tools\Phoenix;
 
+use App\Domain\Agent\Models\Agent;
+use App\Domain\Experiment\Models\Experiment;
 use App\Infrastructure\AI\Services\TranscriptIngestor;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -64,10 +67,22 @@ class LocalAgentTranscriptIngestTool extends Tool
 
         $teamId = app()->bound('mcp.team_id') ? app('mcp.team_id') : auth()->user()?->current_team_id;
 
+        // Authorize the attribution ids against the caller's team so a caller
+        // cannot stamp a trace with another team's agent/experiment id.
+        $agentId = $validated['agent_id'] ?? null;
+        if ($agentId !== null && ! $this->belongsToTeam(Agent::class, $agentId, $teamId)) {
+            return Response::error('agent_id does not belong to your team');
+        }
+
+        $experimentId = $validated['experiment_id'] ?? null;
+        if ($experimentId !== null && ! $this->belongsToTeam(Experiment::class, $experimentId, $teamId)) {
+            return Response::error('experiment_id does not belong to your team');
+        }
+
         $context = [
             'source' => $validated['source'] ?? 'claude-code',
-            'agent_id' => $validated['agent_id'] ?? null,
-            'experiment_id' => $validated['experiment_id'] ?? null,
+            'agent_id' => $agentId,
+            'experiment_id' => $experimentId,
             'team_id' => $teamId,
         ];
 
@@ -78,5 +93,20 @@ class LocalAgentTranscriptIngestTool extends Tool
         $result = $this->ingestor->ingest($validated['transcript'], $context);
 
         return Response::text((string) json_encode($result));
+    }
+
+    /**
+     * @param  class-string<Model>  $model
+     */
+    private function belongsToTeam(string $model, string $id, ?string $teamId): bool
+    {
+        if ($teamId === null) {
+            return false;
+        }
+
+        return $model::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->whereKey($id)
+            ->exists();
     }
 }

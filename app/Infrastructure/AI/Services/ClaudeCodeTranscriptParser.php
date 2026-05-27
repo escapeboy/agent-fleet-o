@@ -19,13 +19,26 @@ use App\Infrastructure\AI\DTOs\TranscriptTurn;
  */
 class ClaudeCodeTranscriptParser
 {
+    /**
+     * Hard ceiling on parsed turns. Bounds the work an oversized or hostile
+     * transcript can amplify into downstream span dispatches — the byte-length
+     * cap on the tool input does not bound turn/tool count on its own.
+     */
+    public const MAX_TURNS = 2000;
+
     public function parse(string $jsonl): ParsedTranscript
     {
         $turns = [];
         $sessionId = null;
         $index = 0;
+        $truncated = false;
 
         foreach (preg_split('/\r\n|\n|\r/', $jsonl) ?: [] as $line) {
+            if ($index >= self::MAX_TURNS) {
+                $truncated = true;
+                break;
+            }
+
             $line = trim($line);
             if ($line === '') {
                 continue;
@@ -60,7 +73,7 @@ class ClaudeCodeTranscriptParser
             );
         }
 
-        return new ParsedTranscript($sessionId, $turns);
+        return new ParsedTranscript($sessionId, $turns, $truncated);
     }
 
     /**

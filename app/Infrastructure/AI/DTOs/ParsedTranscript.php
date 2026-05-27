@@ -12,10 +12,12 @@ class ParsedTranscript
 {
     /**
      * @param  list<TranscriptTurn>  $turns
+     * @param  bool  $truncated  true when the transcript exceeded the parser's turn cap and was cut short
      */
     public function __construct(
         public readonly ?string $sessionId,
         public readonly array $turns,
+        public readonly bool $truncated = false,
     ) {}
 
     public function turnCount(): int

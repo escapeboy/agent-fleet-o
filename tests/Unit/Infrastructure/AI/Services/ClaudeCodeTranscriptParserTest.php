@@ -63,6 +63,17 @@ class ClaudeCodeTranscriptParserTest extends TestCase
         $this->assertSame([], $parsed->turns[0]->toolCalls);
     }
 
+    public function test_caps_turns_and_flags_truncation(): void
+    {
+        $line = '{"type":"user","message":{"role":"user","content":"x"}}';
+        $jsonl = implode("\n", array_fill(0, ClaudeCodeTranscriptParser::MAX_TURNS + 50, $line));
+
+        $parsed = (new ClaudeCodeTranscriptParser)->parse($jsonl);
+
+        $this->assertSame(ClaudeCodeTranscriptParser::MAX_TURNS, $parsed->turnCount());
+        $this->assertTrue($parsed->truncated);
+    }
+
     public function test_empty_input_yields_no_turns(): void
     {
         $parsed = (new ClaudeCodeTranscriptParser)->parse("\n  \n");

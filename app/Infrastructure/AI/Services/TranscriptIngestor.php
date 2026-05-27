@@ -19,6 +19,13 @@ use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
  */
 class TranscriptIngestor
 {
+    /**
+     * Hard ceiling on spans emitted per ingest call. The parser already caps
+     * turns, but tool calls per turn are unbounded — this bounds total queue
+     * dispatches so one call can't amplify into thousands of export jobs.
+     */
+    public const MAX_SPANS = 5000;
+
     public function __construct(private readonly ClaudeCodeTranscriptParser $parser) {}
 
     /**
@@ -62,6 +69,7 @@ class TranscriptIngestor
 
         [$turnStart, $turnEnd] = $this->turnWindows($parsed->turns);
         $spans = 0;
+        $truncated = $parsed->truncated;
 
         // Session root span (no parent — same shape as PhoenixTraceContext root).
         $this->dispatch($endpoint, 'local_agent.session', array_merge($meta, [
@@ -76,6 +84,10 @@ class TranscriptIngestor
 
         foreach ($parsed->turns as $i => $turn) {
             if ($turn->isAssistant()) {
+                if ($spans >= self::MAX_SPANS) {
+                    $truncated = true;
+                    break;
+                }
                 $this->dispatch($endpoint, 'local_agent.turn', array_merge($meta, [
                     OpenInferenceAttributes::SPAN_KIND => 'LLM',
                     OpenInferenceAttributes::LLM_MODEL => $turn->model,
@@ -92,6 +104,10 @@ class TranscriptIngestor
             }
 
             foreach ($turn->toolCalls as $call) {
+                if ($spans >= self::MAX_SPANS) {
+                    $truncated = true;
+                    break 2;
+                }
                 $this->dispatch($endpoint, 'local_agent.tool.'.$call['name'], array_merge($meta, [
                     OpenInferenceAttributes::SPAN_KIND => 'TOOL',
                     'tool.name' => $call['name'],
@@ -111,6 +127,7 @@ class TranscriptIngestor
             'tool_calls' => $parsed->toolCallCount(),
             'prompt_tokens' => $parsed->totalPromptTokens(),
             'completion_tokens' => $parsed->totalCompletionTokens(),
+            'truncated' => $truncated,
         ];
     }
 
