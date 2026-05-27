@@ -99,6 +99,24 @@ class PolyglotCodeExtractorTest extends TestCase
         $this->assertCount(3, $result->edges);
     }
 
+    public function test_rejects_unsafe_relative_paths(): void
+    {
+        $extractor = new PolyglotCodeExtractor;
+
+        // Safe.
+        $this->assertTrue($extractor->isSafeRelativePath('src/app/Widget.ts'));
+        $this->assertTrue($extractor->isSafeRelativePath('a/b/c.py'));
+
+        // Unsafe: traversal, absolute, null byte, dot segments, empty.
+        $this->assertFalse($extractor->isSafeRelativePath('../../etc/cron.d/x'));
+        $this->assertFalse($extractor->isSafeRelativePath('a/../../b.ts'));
+        $this->assertFalse($extractor->isSafeRelativePath('/etc/passwd'));
+        $this->assertFalse($extractor->isSafeRelativePath("a/b\0.ts"));
+        $this->assertFalse($extractor->isSafeRelativePath('./x.ts'));
+        $this->assertFalse($extractor->isSafeRelativePath('a/..'));
+        $this->assertFalse($extractor->isSafeRelativePath(''));
+    }
+
     public function test_extract_is_noop_without_binary_or_flag(): void
     {
         config(['git_repository.polyglot_index' => false]);

@@ -182,6 +182,15 @@ class PolyglotCodeExtractor
                 continue;
             }
 
+            // Path-traversal guard: tree paths come from an external repo and are
+            // untrusted. Reject absolute paths, null bytes, and any `.`/`..` segment
+            // so a crafted entry like `../../etc/cron.d/x` can't escape $workdir.
+            if (! $this->isSafeRelativePath($path)) {
+                Log::warning('PolyglotCodeExtractor: rejected unsafe tree path', ['path' => $path]);
+
+                continue;
+            }
+
             try {
                 $content = $client->readFile($path);
             } catch (\Throwable $e) {
@@ -202,6 +211,18 @@ class PolyglotCodeExtractor
             if (! is_dir($dir)) {
                 mkdir($dir, 0o755, true);
             }
+
+            // Defence in depth: confirm the resolved directory is still inside
+            // $workdir before writing (catches symlink / edge cases the string
+            // check above could miss).
+            $realDir = realpath($dir);
+            $realRoot = realpath($workdir);
+            if ($realDir === false || $realRoot === false || ! str_starts_with($realDir.'/', $realRoot.'/')) {
+                Log::warning('PolyglotCodeExtractor: resolved path escaped workdir', ['path' => $path]);
+
+                continue;
+            }
+
             file_put_contents($target, $content);
             $written++;
         }
@@ -228,6 +249,19 @@ class PolyglotCodeExtractor
                 'stderr' => mb_substr($index->getErrorOutput(), 0, 500),
             ]);
         }
+    }
+
+    /**
+     * Whether a repo-supplied relative path is safe to materialize under $workdir:
+     * no null byte, not absolute, and no `.`/`..` path segment.
+     */
+    public function isSafeRelativePath(string $path): bool
+    {
+        if ($path === '' || str_contains($path, "\0") || str_starts_with($path, '/')) {
+            return false;
+        }
+
+        return preg_match('#(^|/)\.\.?(/|$)#', $path) !== 1;
     }
 
     private function makeTempDir(): string
