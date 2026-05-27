@@ -28,10 +28,27 @@ class OpenAiCompatibleController extends Controller
     /**
      * GET /v1/models — List available models (agents + crews + raw providers).
      */
+    /**
+     * Resolve the team this request operates on.
+     *
+     * For partner / sub-program Sanctum tokens, ScopeTokenToTeam (pushed to the
+     * `api` middleware group) rebinds the in-memory `currentTeam` relation to the
+     * token's membership-checked `team:<uuid>` ability — WITHOUT mutating the
+     * `users.current_team_id` column (the human owner's UI-active team). We must
+     * read the token-scoped team here, not the column, otherwise an agent and its
+     * AI credentials resolve against the owner's UI team instead of the team the
+     * token (and the agent) actually belong to. Falls back to the column for
+     * session (web) auth where no token ability is present.
+     */
+    private function resolveRequestTeamId(Request $request): ?string
+    {
+        return $request->user()->currentTeam?->getKey() ?? $request->user()->current_team_id;
+    }
+
     public function listModels(Request $request): JsonResponse
     {
         $user = $request->user();
-        $teamId = $user->current_team_id;
+        $teamId = $this->resolveRequestTeamId($request);
 
         $models = [];
 
@@ -79,7 +96,7 @@ class OpenAiCompatibleController extends Controller
     public function retrieveModel(Request $request, string $model): JsonResponse
     {
         $user = $request->user();
-        $teamId = $user->current_team_id;
+        $teamId = $this->resolveRequestTeamId($request);
 
         $resolved = $this->requestTranslator->resolveModel($model, $teamId);
 
@@ -135,7 +152,7 @@ class OpenAiCompatibleController extends Controller
         ]);
 
         $user = $request->user();
-        $teamId = $user->current_team_id;
+        $teamId = $this->resolveRequestTeamId($request);
         $modelId = $validated['model'];
 
         // Resolve model namespace
@@ -193,6 +210,14 @@ class OpenAiCompatibleController extends Controller
         /** @var Agent $agent */
         $agent = $resolved['entity'];
 
+        // The agent's own team is authoritative for execution and AI-credential
+        // resolution (sub-program key lookup keys off teams.sub_program_slug).
+        // resolveModel() already scoped the lookup to $teamId, so $agent->team_id
+        // is guaranteed to equal the token-scoped team — never wider. Using the
+        // agent's team_id directly ensures applyTeamCredentials resolves against
+        // the team the agent belongs to, not the owner's UI-active team.
+        $executionTeamId = $agent->team_id ?? $teamId;
+
         // Extract user message from the last user message in the messages array
         $lastUserMessage = '';
         foreach (array_reverse($validated['messages']) as $msg) {
@@ -205,7 +230,7 @@ class OpenAiCompatibleController extends Controller
         $result = $this->executeAgent->execute(
             agent: $agent,
             input: ['task' => $lastUserMessage, 'raw_messages' => $validated['messages']],
-            teamId: $teamId,
+            teamId: $executionTeamId,
             userId: $user->id,
         );
 
