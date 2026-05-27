@@ -60,4 +60,33 @@ return [
         'similarity_threshold' => (float) env('SKILLS_AUTO_PROPOSE_SIMILARITY', 0.85),
         'daily_cap' => (int) env('SKILLS_AUTO_PROPOSE_DAILY_CAP', 5),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Skill Lift Evaluation (ZooEval borrow)
+    |--------------------------------------------------------------------------
+    | Blind A/B: runs a skill's LLM output WITH the skill vs a baseline WITHOUT
+    | it over an evaluation dataset, judged by LlmJudge. Gated per-team via
+    | team.settings['skill_lift_eval_enabled'] (default off).
+    */
+    'lift_eval' => [
+        'default_criteria' => ['correctness', 'relevance'],
+        'judge_model' => env('SKILLS_LIFT_JUDGE_MODEL'), // null → LlmJudge config default
+        'baseline_system_prompt' => 'You are a helpful assistant. Answer the request directly and accurately.',
+        'thresholds' => [
+            'highly' => (float) env('SKILLS_LIFT_HIGHLY', 1.5),
+            'recommended' => (float) env('SKILLS_LIFT_RECOMMENDED', 0.5),
+            'conditional' => (float) env('SKILLS_LIFT_CONDITIONAL', 0.1),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Skill Quality Lint (ZooEval failure-mode taxonomy)
+    |--------------------------------------------------------------------------
+    | Advisory, read-only authoring-time lint. Never blocks create/update.
+    */
+    'lint' => [
+        'bloat_token_threshold' => (int) env('SKILLS_LINT_BLOAT_TOKENS', 1500),
+    ],
 ];
