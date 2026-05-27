@@ -268,6 +268,7 @@ use App\Mcp\Tools\FounderMode\FounderModeInstallTool;
 use App\Mcp\Tools\FounderMode\FounderModeStatusTool;
 use App\Mcp\Tools\Framework\FrameworkListTool;
 use App\Mcp\Tools\GitRepository\CodeCallChainTool;
+use App\Mcp\Tools\GitRepository\CodeImpactTool;
 use App\Mcp\Tools\GitRepository\CodeSearchTool;
 use App\Mcp\Tools\GitRepository\CodeSkimFileTool;
 use App\Mcp\Tools\GitRepository\CodeStructureTool;
@@ -1361,6 +1362,7 @@ class AgentFleetServer extends Server
         CodeSearchTool::class,
         CodeStructureTool::class,
         CodeCallChainTool::class,
+        CodeImpactTool::class,
         CodeSkimFileTool::class,
         ExperimentRepoMapTool::class,
         RepoTestRatchetCheckTool::class,
