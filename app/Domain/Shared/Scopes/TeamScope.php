@@ -28,8 +28,19 @@ class TeamScope implements Scope
 
         $user = auth()->user();
 
-        if ($user && $user->current_team_id) {
-            $teamId = $user->current_team_id;
+        // Prefer the request-bound team published by the cloud ScopeTokenToTeam
+        // middleware: partner / sub-program Sanctum tokens pin a request to their
+        // own `team:<uuid>` ability (already membership-checked) without mutating
+        // `users.current_team_id` (the human owner's UI-active team). Reading the
+        // bound team here keeps tenant isolation anchored on the TOKEN's team, so
+        // a partner request sees its own team's rows — not the owner's UI team.
+        // This only ever NARROWS to the validated token team; it never widens.
+        // Falls back to the column for session (web) auth where nothing is bound.
+        $boundTeamId = app()->bound('currentTeam') ? app('currentTeam')?->getKey() : null;
+        $effectiveTeamId = $boundTeamId ?? $user?->current_team_id;
+
+        if ($user && $effectiveTeamId) {
+            $teamId = $effectiveTeamId;
             $table = $model->getTable();
 
             // Wrap in closure so OR does not leak into other WHERE clauses
