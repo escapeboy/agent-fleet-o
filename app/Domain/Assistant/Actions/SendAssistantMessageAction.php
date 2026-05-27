@@ -270,6 +270,8 @@ class SendAssistantMessageAction
             }
 
             $this->saveIntermediatePass($conversation, $passResponse, $passes, $maxPasses, $placeholderMessageId);
+            // The placeholder is consumed by the first intermediate save; later passes create fresh messages.
+            $placeholderMessageId = null;
 
             Log::info('SendAssistantMessageAction: auto-continuing autonomous task', [
                 'conversation_id' => $conversation->id,
@@ -323,14 +325,15 @@ class SendAssistantMessageAction
     /**
      * Persist an intermediate auto-continuation pass so the next pass sees it in
      * history. The async-mode placeholder is consumed by the first intermediate
-     * save (set to null by-reference); later passes always create fresh messages.
+     * save; later passes always create fresh messages. Returns the placeholder id
+     * to use for the next pass (always null — it is consumed on first save).
      */
     private function saveIntermediatePass(
         AssistantConversation $conversation,
         AiResponseDTO $passResponse,
         int $passes,
         int $maxPasses,
-        ?string &$placeholderMessageId,
+        ?string $placeholderMessageId,
     ): void {
         $intermediateContent = $passResponse->content !== ''
             ? $passResponse->content
@@ -354,17 +357,18 @@ class SendAssistantMessageAction
                 'token_usage' => json_encode($tokenUsage),
                 'metadata' => json_encode($metadata),
             ]);
-            $placeholderMessageId = null;
-        } else {
-            $this->conversationManager->addMessage(
-                conversation: $conversation,
-                role: 'assistant',
-                content: $intermediateContent,
-                toolCalls: $passResponse->toolResults,
-                tokenUsage: $tokenUsage,
-                metadata: $metadata,
-            );
+
+            return;
         }
+
+        $this->conversationManager->addMessage(
+            conversation: $conversation,
+            role: 'assistant',
+            content: $intermediateContent,
+            toolCalls: $passResponse->toolResults,
+            tokenUsage: $tokenUsage,
+            metadata: $metadata,
+        );
     }
 
     /**

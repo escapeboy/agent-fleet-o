@@ -333,11 +333,12 @@ class ExecuteSkillAction
         // Record schema retry trail so operators can see which outputs required
         // self-correction (Sprint 14, mirrors Agent Sprint 12).
         if ($schemaRetryAttempts > 0) {
-            $executionData['quality_details'] = array_merge($executionData['quality_details'] ?? [], [
+            // quality_details is not set elsewhere in this freshly-built array.
+            $executionData['quality_details'] = [
                 'output_schema_valid' => $schemaValid,
                 'output_schema_retries' => $schemaRetryAttempts,
                 'output_schema_retry_trail' => $schemaRetryTrail,
-            ]);
+            ];
         }
 
         return $executionData;
