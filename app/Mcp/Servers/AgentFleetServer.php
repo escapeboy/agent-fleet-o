@@ -343,6 +343,7 @@ use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigSaveTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigTestTool;
 use App\Mcp\Tools\Outbound\NtfySendTool;
+use App\Mcp\Tools\Phoenix\LocalAgentTranscriptIngestTool;
 use App\Mcp\Tools\Phoenix\PhoenixProjectListTool;
 use App\Mcp\Tools\Phoenix\PhoenixSpanSearchTool;
 use App\Mcp\Tools\Phoenix\PhoenixTraceGetTool;
@@ -1157,6 +1158,7 @@ class AgentFleetServer extends Server
         PhoenixTraceListTool::class,
         PhoenixTraceGetTool::class,
         PhoenixSpanSearchTool::class,
+        LocalAgentTranscriptIngestTool::class,
         MemoryUpdateTool::class,
         MemoryExportTool::class,
         MemoryGetTool::class,

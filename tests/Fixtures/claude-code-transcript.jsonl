@@ -1,0 +1,6 @@
+{"type":"user","sessionId":"sess-abc","timestamp":"2026-05-27T10:00:00.000Z","message":{"role":"user","content":"deploy to prod"}}
+{"type":"assistant","sessionId":"sess-abc","timestamp":"2026-05-27T10:00:02.000Z","message":{"role":"assistant","model":"claude-opus-4-7","content":[{"type":"text","text":"Running deploy."},{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"git push origin master"}}],"usage":{"input_tokens":1200,"output_tokens":40,"cache_read_input_tokens":800}}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text",
+{"type":"user","sessionId":"sess-abc","timestamp":"2026-05-27T10:00:05.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Everything up-to-date"}]}}
+{"type":"assistant","sessionId":"sess-abc","timestamp":"2026-05-27T10:00:06.000Z","message":{"role":"assistant","model":"claude-opus-4-7","content":[{"type":"text","text":"Done."}],"usage":{"input_tokens":1300,"output_tokens":10}}}
+{"type":"summary","summary":"deploy session"}
