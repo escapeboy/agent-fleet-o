@@ -489,11 +489,15 @@ class FallbackAiGateway implements AiGatewayInterface
 
         // config/ai.php declares providers as `'key' => env(...)`; keep `.api_key`
         // as a fallback for forks that already standardised on that field name.
+        // Sub-program teams (finance, etc.) resolve their credentials from a
+        // dedicated key in applyTeamCredentials(); count it here too, otherwise
+        // this team-blind gate skips the provider before credentials are applied.
         $candidates = [
             config("ai.providers.{$providerName}.key"),
             config("ai.providers.{$providerName}.api_key"),
             config("services.{$providerName}.key"),
             config("services.{$providerName}"),
+            config("services.sub_program_api_keys.{$providerName}"),
         ];
 
         foreach ($candidates as $candidate) {
