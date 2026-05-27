@@ -79,6 +79,9 @@ class LocalAgentGatewayBridgeMcpTest extends ApiTestCase
         ]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        // complete() resolves the agent config (vps_only guard) before the bridge
+        // branch — return a non-vps config so it routes through the bridge.
+        $discovery->shouldReceive('agentConfig')->andReturn(['name' => 'Claude Code', 'binary' => 'claude']);
         $discovery->shouldReceive('isBridgeMode')->andReturn(true);
         $discovery->shouldReceive('bridgeUrl')->andReturn('http://bridge.test:9000');
         $discovery->shouldReceive('bridgeSecret')->andReturn('test-secret');
@@ -135,6 +138,9 @@ class LocalAgentGatewayBridgeMcpTest extends ApiTestCase
         $agent = Agent::factory()->create(['team_id' => $this->team->id]);
 
         $discovery = Mockery::mock(LocalAgentDiscovery::class);
+        // complete() resolves the agent config (vps_only guard) before the bridge
+        // branch — return a non-vps config so it routes through the bridge.
+        $discovery->shouldReceive('agentConfig')->andReturn(['name' => 'Claude Code', 'binary' => 'claude']);
         $discovery->shouldReceive('isBridgeMode')->andReturn(true);
         $discovery->shouldReceive('bridgeUrl')->andReturn('http://bridge.test:9000');
         $discovery->shouldReceive('bridgeSecret')->andReturn('test-secret');

@@ -21,7 +21,7 @@ class EgressAllowlist
     {
         $hosts = [];
         foreach ($upstreamHosts as $host) {
-            if (is_string($host) && $host !== '') {
+            if ($host !== '') {
                 $hosts[] = strtolower($host);
             }
         }

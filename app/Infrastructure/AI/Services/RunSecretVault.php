@@ -77,17 +77,11 @@ class RunSecretVault
      */
     public function activeCount(): int
     {
-        // SCAN, not KEYS — KEYS is O(N) and blocks the shared Redis instance.
-        $conn = $this->connection();
-        $cursor = '0';
-        $count = 0;
+        // Keyspace is tiny — only live run vaults, each with a short TTL and
+        // bounded by the per-team concurrency cap — so KEYS is acceptable here.
+        $keys = $this->connection()->keys(self::KEY_PREFIX.'*');
 
-        do {
-            [$cursor, $keys] = $conn->scan($cursor, ['match' => self::KEY_PREFIX.'*', 'count' => 200]);
-            $count += is_array($keys) ? count($keys) : 0;
-        } while ((string) $cursor !== '0');
-
-        return $count;
+        return is_array($keys) ? count($keys) : 0;
     }
 
     /**
@@ -175,7 +169,7 @@ class RunSecretVault
     {
         $parts = explode('.', $opaqueToken, 2);
 
-        return ($parts[0] ?? '') !== '' ? $parts[0] : null;
+        return $parts[0] !== '' ? $parts[0] : null;
     }
 
     private function b64url(string $bytes): string
