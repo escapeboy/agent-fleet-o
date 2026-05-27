@@ -482,7 +482,9 @@ use App\Mcp\Tools\Skill\SkillGenerateImprovementTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
 use App\Mcp\Tools\Skill\SkillImportAgentSkillsTool;
 use App\Mcp\Tools\Skill\SkillImportGitHubTool;
+use App\Mcp\Tools\Skill\SkillLiftEvalTool;
 use App\Mcp\Tools\Skill\SkillLineageTool;
+use App\Mcp\Tools\Skill\SkillLintTool;
 use App\Mcp\Tools\Skill\SkillListTool;
 use App\Mcp\Tools\Skill\SkillPlaygroundTestTool;
 use App\Mcp\Tools\Skill\SkillQualityTool;
@@ -870,7 +872,7 @@ class AgentFleetServer extends Server
         PlanWithKnowledgeTool::class,
         ReasoningBankSearchTool::class,
 
-        // Skill (20)
+        // Skill (22)
         SkillListTool::class,
         SkillGetTool::class,
         SkillCreateTool::class,
@@ -878,6 +880,8 @@ class AgentFleetServer extends Server
         SkillDeleteTool::class,
         SkillVersionsTool::class,
         SkillQualityTool::class,
+        SkillLiftEvalTool::class,
+        SkillLintTool::class,
         SkillSearchTool::class,
         SkillLineageTool::class,
         SkillDegradationReportTool::class,

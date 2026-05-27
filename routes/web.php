@@ -13,6 +13,7 @@ use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
 use App\Http\Controllers\ReleaseKeysController;
 use App\Http\Controllers\SkillExportController;
+use App\Http\Controllers\SkillQualityLeaderboardController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UseCasesController;
 use App\Http\Controllers\WebsiteDeploymentDownloadController;
@@ -196,6 +197,10 @@ Route::get('/llms-full.txt', [LlmsTxtController::class, 'full'])
 // Public experiment share (no auth)
 Route::get('/share/{shareToken}', [PublicExperimentController::class, 'show'])->name('experiments.share');
 Route::get('/share/release/{shareToken}', [PublicReleaseController::class, 'show'])->name('releases.share');
+
+// Public skill-quality leaderboard (no auth) — ranks published skills by community
+// quality score + ZooEval blind A/B lift.
+Route::get('/skills/quality', SkillQualityLeaderboardController::class)->name('skills.quality');
 
 // Public JWKS endpoint — release signing public keys (no auth, throttled).
 // Prometheus scrape target — internal network only (Docker bridge 172.16/12 + localhost
