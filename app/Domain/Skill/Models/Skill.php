@@ -51,6 +51,7 @@ class Skill extends Model
         'evaluation_sample_rate',
         'evaluation_model',
         'evaluation_criteria',
+        'eval_dataset_id',
         'risk_level',
         'input_schema',
         'output_schema',
@@ -117,6 +118,16 @@ class Skill extends Model
     public function embedding(): HasOne
     {
         return $this->hasOne(SkillEmbedding::class);
+    }
+
+    public function liftEvaluations(): HasMany
+    {
+        return $this->hasMany(SkillLiftEvaluation::class)->orderByDesc('created_at');
+    }
+
+    public function latestLiftEvaluation(): HasOne
+    {
+        return $this->hasOne(SkillLiftEvaluation::class)->latestOfMany();
     }
 
     public function agents(): BelongsToMany
