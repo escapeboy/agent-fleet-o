@@ -37,6 +37,8 @@ class ProviderHasApiKeyTest extends TestCase
             'services.gemini' => null,
             'services.google.key' => null,
             'services.google' => null,
+            'services.sub_program_api_keys.anthropic' => null,
+            'services.sub_program_api_keys.openai' => null,
         ]);
     }
 
@@ -75,6 +77,15 @@ class ProviderHasApiKeyTest extends TestCase
         config(['services.openai.key' => 'sk-services-test']);
 
         $this->assertTrue($this->invoke('openai'));
+    }
+
+    public function test_returns_true_when_only_sub_program_key_is_configured(): void
+    {
+        // Sub-program teams (finance) use a dedicated key; the platform key is
+        // intentionally empty. The team-blind gate must still admit the provider.
+        config(['services.sub_program_api_keys.anthropic' => 'sk-ant-subprogram-test']);
+
+        $this->assertTrue($this->invoke('anthropic'));
     }
 
     public function test_returns_false_when_no_key_or_api_key_configured(): void
