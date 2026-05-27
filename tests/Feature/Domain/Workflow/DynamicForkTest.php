@@ -13,6 +13,7 @@ use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowGraphExecutor;
+use App\Domain\Workflow\Services\WorkflowTraversalContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -123,15 +124,13 @@ class DynamicForkTest extends TestCase
             $predNode->id => $predStep,
         ]);
 
-        $executable = [];
-        $visited = [];
+        $ctx = new WorkflowTraversalContext(
+            $nodeMap, $edgeMap, $adjacency, $steps, $this->parentExperiment, 10,
+        );
 
-        $resolveNode->invokeArgs($executor, [
-            $forkNode->id, $nodeMap, $edgeMap, $adjacency,
-            $steps, $this->parentExperiment, 10, &$executable, &$visited,
-        ]);
+        $resolveNode->invokeArgs($executor, [$forkNode->id, $ctx]);
 
-        $this->assertContains($templateNode->id, $executable, 'Template node should be executable');
+        $this->assertContains($templateNode->id, $ctx->executable, 'Template node should be executable');
 
         $templateStep->refresh();
         $this->assertSame(['a', 'b', 'c'], $templateStep->input_mapping['_fork_items']);
@@ -203,13 +202,11 @@ class DynamicForkTest extends TestCase
         $adjacency = [$forkNode->id => [$templateNode->id], $predNode->id => [$forkNode->id]];
         $steps = collect([$forkNode->id => null, $templateNode->id => $templateStep, $predNode->id => $predStep]);
 
-        $executable = [];
-        $visited = [];
+        $ctx = new WorkflowTraversalContext(
+            $nodeMap, $edgeMap, $adjacency, $steps, $this->parentExperiment, 10,
+        );
 
-        $resolveNode->invokeArgs($executor, [
-            $forkNode->id, $nodeMap, $edgeMap, $adjacency,
-            $steps, $this->parentExperiment, 10, &$executable, &$visited,
-        ]);
+        $resolveNode->invokeArgs($executor, [$forkNode->id, $ctx]);
 
         $templateStep->refresh();
         $this->assertCount(2, $templateStep->input_mapping['_fork_items'], 'Should cap at max_parallel_branches=2');

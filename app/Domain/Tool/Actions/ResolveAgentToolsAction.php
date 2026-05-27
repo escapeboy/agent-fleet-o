@@ -46,15 +46,6 @@ class ResolveAgentToolsAction
         private readonly ToolFederationResolver $federationResolver,
     ) {}
 
-    /**
-     * Resolve all PrismPHP Tool objects available for an agent execution.
-     *
-     * @param  int  $agentToolDepth  Current nesting depth for agent-as-tool calls
-     * @param  string[]|null  $allowedToolIds  Crew-member-level tool allowlist (BroodMind worker permissions).
-     *                                         When non-empty, only tools whose IDs are in this list are included,
-     *                                         after project-level restrictions have been applied.
-     * @return array<\Prism\Prism\Tool>
-     */
     public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null, ?string $semanticQuery = null, ?array $allowedToolIds = null): array
     {
         $workspace = ($executionId && $agent->team_id)
@@ -70,10 +61,48 @@ class ResolveAgentToolsAction
             ->get();
 
         // Auto-attach tools declared by the agent's environment preset.
-        // Environment is a convenience dropdown: Coding → bash+filesystem, Browsing → browser+web_search, etc.
-        // Tools are matched by slug within the agent's team and merged uniquely by ID.
         $agentTools = $this->mergeEnvironmentTools($agent, $agentTools);
 
+        // Narrow by pivot/deny-list/project/crew/tag permissions.
+        $agentTools = $this->filterAgentTools($agentTools, $agent, $project, $allowedToolIds);
+
+        // Broaden by federation/toolsets/search, then re-narrow by watcher mode + semantic RAG.
+        $agentTools = $this->expandToolSources($agentTools, $agent, $project, $semanticQuery, $executionId);
+
+        // Translate the resolved Tool models into PrismPHP tools (with credential injection).
+        $prismTools = $this->translateToPrismTools($agentTools, $agent, $workspace);
+
+        // Inject git tools for repositories configured on the agent
+        $gitRepoIds = $agent->config['git_repository_ids'] ?? [];
+        if (! empty($gitRepoIds)) {
+            $repos = GitRepository::where('team_id', $agent->team_id)
+                ->whereIn('id', $gitRepoIds)
+                ->where('status', 'active')
+                ->get();
+
+            foreach ($repos as $repo) {
+                $prismTools = array_merge($prismTools, $this->gitToolBuilder->build($repo));
+            }
+        }
+
+        // Inject agent-as-tool and workflow-as-tool wrappers (if within depth limit)
+        $prismTools = array_merge($prismTools, $this->buildAgentAsTools($agent, $agentToolDepth, $userId));
+        $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
+
+        // Restrict tools to the groups defined in the agent's profile.
+        return $this->applyToolProfile($prismTools, $agent);
+    }
+
+    /**
+     * Apply permission narrowing to the agent's tool set: pivot approval_mode=deny,
+     * per-agent deny list, project allowlist, crew-member allowlist, and role tags.
+     *
+     * @param  Collection<int, Tool>  $agentTools
+     * @param  array<int, string>|null  $allowedToolIds
+     * @return Collection<int, Tool>
+     */
+    private function filterAgentTools(Collection $agentTools, Agent $agent, ?Project $project, ?array $allowedToolIds): Collection
+    {
         // Filter out tools with approval_mode = 'deny' on the pivot
         $agentTools = $agentTools->filter(function (Tool $tool) {
             $mode = $tool->pivot->approval_mode ?? null;
@@ -85,11 +114,10 @@ class ResolveAgentToolsAction
             return ($mode ?? 'auto') !== ToolApprovalMode::Deny->value;
         });
 
-        // Per-agent tool deny list — operator-managed allowlist of tool IDs
-        // the agent is explicitly forbidden from using regardless of pivot.
-        // The cast on Agent.tool_deny_list returns array|null; phpstan can't
-        // see the cast through the magic property and infers string|null,
-        // hence the explicit array narrowing here.
+        // Per-agent tool deny list — operator-managed forbidden tool IDs.
+        // The cast on Agent.tool_deny_list returns array|null; phpstan can't see
+        // the cast through the magic property and infers string|null, hence the
+        // explicit array narrowing here.
         /** @var array<int, string>|null $denyListRaw */
         $denyListRaw = $agent->getAttribute('tool_deny_list');
         $denyList = is_array($denyListRaw) ? $denyListRaw : [];
@@ -112,8 +140,8 @@ class ResolveAgentToolsAction
             );
         }
 
-        // Role-based tag filtering — narrow tool set when agent declares tool_tags in config.
-        // A tool passes if it has no tags (unrestricted) or shares at least one tag with the agent.
+        // Role-based tag filtering — narrow when the agent declares tool_tags.
+        // A tool passes if it has no tags (unrestricted) or shares at least one tag.
         // Fallback: if filtering would leave fewer than 3 tools, skip and log a warning.
         $agentToolTags = $agent->config['tool_tags'] ?? [];
         if (! empty($agentToolTags)) {
@@ -134,8 +162,19 @@ class ResolveAgentToolsAction
             }
         }
 
-        // Tool federation: merge team-wide tool pool when enabled on the agent.
-        // Federation is opt-in (use_tool_federation flag defaults to false).
+        return $agentTools;
+    }
+
+    /**
+     * Broaden the tool set with federation, toolsets, and semantic search, then
+     * re-narrow by watcher execution mode and a RAG-style semantic pre-filter.
+     *
+     * @param  Collection<int, Tool>  $agentTools
+     * @return Collection<int, Tool>
+     */
+    private function expandToolSources(Collection $agentTools, Agent $agent, ?Project $project, ?string $semanticQuery, ?string $executionId): Collection
+    {
+        // Tool federation: merge team-wide tool pool when enabled on the agent (opt-in).
         $federatedTools = $this->federationResolver->resolve($agent);
         if ($federatedTools->isNotEmpty()) {
             $agentTools = $agentTools->merge($federatedTools)->unique('id');
@@ -154,9 +193,7 @@ class ResolveAgentToolsAction
             }
         }
 
-        // Tool search: auto-discover team-wide tools via semantic match when enabled.
-        // Opt-in via use_tool_search config flag; requires a semanticQuery to be provided.
-        // Merges up to tool_search_top_k (default 5) new tools, deduplicated against existing.
+        // Tool search: auto-discover team-wide tools via semantic match when enabled (opt-in).
         $agentTools = $this->mergeSearchedTools($agent, $agentTools, $semanticQuery, $executionId);
 
         // Filter by execution mode: watcher projects only get safe/read tools
@@ -168,9 +205,8 @@ class ResolveAgentToolsAction
             );
         }
 
-        // RAG-style pre-filter: narrow the Tool model collection before expensive translation.
-        // Runs keyword match → fuzzy name match → semantic pgvector (stages 1-3).
-        // Only kicks in when a semantic query is provided and tool count exceeds the threshold.
+        // RAG-style pre-filter: keyword → fuzzy → semantic pgvector, only when a
+        // semantic query is provided and the tool count exceeds the threshold.
         $threshold = SemanticToolSelector::threshold();
         if ($semanticQuery !== null && $agentTools->count() > $threshold) {
             $agentTools = $this->toolRagSelector->select(
@@ -182,14 +218,25 @@ class ResolveAgentToolsAction
             );
         }
 
+        return $agentTools;
+    }
+
+    /**
+     * Translate the resolved Tool models into PrismPHP tools, injecting credentials
+     * (platform activation overrides, team secrets, bash CRED_* env) per tool.
+     *
+     * @param  Collection<int, Tool>  $agentTools
+     * @return array<\Prism\Prism\Tool>
+     */
+    private function translateToPrismTools(Collection $agentTools, Agent $agent, ?SandboxedWorkspace $workspace): array
+    {
         // Read org-level command security policy from GlobalSettings
         $orgPolicy = GlobalSetting::get('org_security_policy', []) ?: null;
 
         // Pre-load activations for platform tools to avoid N+1
-        $teamId = $agent->team_id;
         $platformToolIds = $agentTools->filter(fn (Tool $t) => $t->isPlatformTool())->pluck('id');
         $activations = $platformToolIds->isNotEmpty()
-            ? TeamToolActivation::where('team_id', $teamId)
+            ? TeamToolActivation::where('team_id', $agent->team_id)
                 ->whereIn('tool_id', $platformToolIds)
                 ->get()
                 ->keyBy('tool_id')
@@ -197,102 +244,116 @@ class ResolveAgentToolsAction
 
         $prismTools = [];
         foreach ($agentTools as $tool) {
+            // Overrides come from the original pivot, before any credential clone.
             $overrides = $tool->pivot->overrides ?? [];
 
-            // For platform tools: inject team-specific credentials into transport_config env vars
-            if ($tool->isPlatformTool()) {
-                $activation = $activations->get($tool->id);
+            $prepared = $this->prepareToolForTranslation($tool, $agent, $activations);
+            if ($prepared === null) {
+                continue; // platform tool deactivated for this team
+            }
 
-                // Skip platform tools that are deactivated for this team
-                if ($activation && ! $activation->isActive()) {
-                    continue;
-                }
+            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace));
+        }
 
-                // Merge team credential overrides into the tool's transport_config env vars
-                if ($activation && ! empty($activation->credential_overrides)) {
-                    $tool = clone $tool;
-                    $config = $tool->transport_config ?? [];
-                    $config['env'] = array_merge(
-                        $config['env'] ?? [],
-                        $activation->credential_overrides,
-                    );
+        return $prismTools;
+    }
+
+    /**
+     * Inject credentials into a tool for translation. Returns a (cloned) tool with
+     * env vars merged, or null when a platform tool is deactivated for the team.
+     *
+     * @param  Collection<string, TeamToolActivation>  $activations
+     */
+    private function prepareToolForTranslation(Tool $tool, Agent $agent, Collection $activations): ?Tool
+    {
+        // For platform tools: inject team-specific credentials into transport_config env vars
+        if ($tool->isPlatformTool()) {
+            $activation = $activations->get($tool->id);
+
+            // Skip platform tools that are deactivated for this team
+            if ($activation && ! $activation->isActive()) {
+                return null;
+            }
+
+            // Merge team credential overrides into the tool's transport_config env vars
+            if ($activation && ! empty($activation->credential_overrides)) {
+                $tool = clone $tool;
+                $config = $tool->transport_config ?? [];
+                $config['env'] = array_merge(
+                    $config['env'] ?? [],
+                    $activation->credential_overrides,
+                );
+                $tool->transport_config = $config;
+            }
+        } else {
+            // For team-owned tools: inject credentials from credential_id or inline credentials
+            $resolvedSecret = $this->resolveToolCredential($tool);
+
+            if ($resolvedSecret !== null) {
+                $tool = clone $tool;
+                $config = $tool->transport_config ?? [];
+                $envKey = $config['credential_env_var'] ?? 'API_KEY';
+                $secretValue = $resolvedSecret['api_key']
+                    ?? $resolvedSecret['token']
+                    ?? $resolvedSecret['password']
+                    ?? $resolvedSecret['access_token']
+                    ?? '';
+
+                if ($secretValue !== '') {
+                    $config['env'] = array_merge($config['env'] ?? [], [$envKey => $secretValue]);
                     $tool->transport_config = $config;
                 }
-            } else {
-                // For team-owned tools: inject credentials from credential_id or inline credentials
-                $resolvedSecret = $this->resolveToolCredential($tool);
-
-                if ($resolvedSecret !== null) {
-                    $tool = clone $tool;
-                    $config = $tool->transport_config ?? [];
-                    $envKey = $config['credential_env_var'] ?? 'API_KEY';
-                    $secretValue = $resolvedSecret['api_key']
-                        ?? $resolvedSecret['token']
-                        ?? $resolvedSecret['password']
-                        ?? $resolvedSecret['access_token']
-                        ?? '';
-
-                    if ($secretValue !== '') {
-                        $config['env'] = array_merge($config['env'] ?? [], [$envKey => $secretValue]);
-                        $tool->transport_config = $config;
-                    }
-                }
-            }
-
-            // For bash built-in tools: inject all agent credentials as CRED_* env vars
-            // so scripts can authenticate with external services without the LLM seeing secret values.
-            if ($tool->isBuiltIn() && BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash') === BuiltInToolKind::Bash) {
-                $credentialEnv = $this->resolveCredentials->resolveAsEnvMap($agent->id);
-                if (! empty($credentialEnv)) {
-                    $tool = clone $tool;
-                    $tool->transport_config = array_merge($tool->transport_config ?? [], [
-                        'env' => array_merge($tool->transport_config['env'] ?? [], $credentialEnv),
-                    ]);
-                }
-            }
-
-            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($tool, $overrides, $orgPolicy, $workspace));
-        }
-
-        // Inject git tools for repositories configured on the agent
-        $gitRepoIds = $agent->config['git_repository_ids'] ?? [];
-        if (! empty($gitRepoIds)) {
-            $repos = GitRepository::where('team_id', $agent->team_id)
-                ->whereIn('id', $gitRepoIds)
-                ->where('status', 'active')
-                ->get();
-
-            foreach ($repos as $repo) {
-                $prismTools = array_merge($prismTools, $this->gitToolBuilder->build($repo));
             }
         }
 
-        // Inject agent-as-tool wrappers for callable agents (if within depth limit)
-        $prismTools = array_merge($prismTools, $this->buildAgentAsTools($agent, $agentToolDepth, $userId));
+        // For bash built-in tools: inject all agent credentials as CRED_* env vars
+        // so scripts can authenticate without the LLM seeing secret values.
+        if ($tool->isBuiltIn() && BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash') === BuiltInToolKind::Bash) {
+            $credentialEnv = $this->resolveCredentials->resolveAsEnvMap($agent->id);
+            if (! empty($credentialEnv)) {
+                $tool = clone $tool;
+                $tool->transport_config = array_merge($tool->transport_config ?? [], [
+                    'env' => array_merge($tool->transport_config['env'] ?? [], $credentialEnv),
+                ]);
+            }
+        }
 
-        // Inject workflow-as-tool wrappers for callable workflows (if within depth limit)
-        $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
+        return $tool;
+    }
 
-        // Apply tool profile filtering — restrict tools to groups defined in the agent's profile
+    /**
+     * Restrict the translated tools to the groups defined in the agent's tool
+     * profile (and cap to max_tools), or return them unchanged when unprofiled.
+     *
+     * @param  array<\Prism\Prism\Tool>  $prismTools
+     * @return array<\Prism\Prism\Tool>
+     */
+    private function applyToolProfile(array $prismTools, Agent $agent): array
+    {
         $profile = $agent->tool_profile;
-        if ($profile) {
-            $profileConfig = config("tool_profiles.profiles.{$profile}");
-            if ($profileConfig && ($profileConfig['tool_groups'] ?? []) !== ['*']) {
-                $allowedGroups = $profileConfig['tool_groups'];
-                $prismTools = array_values(array_filter($prismTools, function ($tool) use ($allowedGroups) {
-                    $toolName = method_exists($tool, 'name') ? $tool->name() : ($tool->name ?? '');
-                    foreach ($allowedGroups as $group) {
-                        if (str_starts_with($toolName, $group.'_')) {
-                            return true;
-                        }
-                    }
+        if (! $profile) {
+            return $prismTools;
+        }
 
-                    return false;
-                }));
-                if ($profileConfig['max_tools'] ?? null) {
-                    $prismTools = array_slice($prismTools, 0, $profileConfig['max_tools']);
+        $profileConfig = config("tool_profiles.profiles.{$profile}");
+        if (! $profileConfig || ($profileConfig['tool_groups'] ?? []) === ['*']) {
+            return $prismTools;
+        }
+
+        $allowedGroups = $profileConfig['tool_groups'];
+        $prismTools = array_values(array_filter($prismTools, function ($tool) use ($allowedGroups) {
+            $toolName = method_exists($tool, 'name') ? $tool->name() : ($tool->name ?? '');
+            foreach ($allowedGroups as $group) {
+                if (str_starts_with($toolName, $group.'_')) {
+                    return true;
                 }
             }
+
+            return false;
+        }));
+
+        if ($profileConfig['max_tools'] ?? null) {
+            $prismTools = array_slice($prismTools, 0, $profileConfig['max_tools']);
         }
 
         return $prismTools;
