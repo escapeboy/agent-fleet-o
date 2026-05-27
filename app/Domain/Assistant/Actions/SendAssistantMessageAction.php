@@ -3,6 +3,7 @@
 namespace App\Domain\Assistant\Actions;
 
 use App\Domain\Approval\Actions\CreateActionProposalAction;
+use App\Domain\Assistant\DTOs\AssistantTarget;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\AssistantArtifactsFeatureFlag;
@@ -24,6 +25,7 @@ use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\GlobalSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Prism\Prism\Tool;
 use Prism\Prism\Tool as PrismToolObject;
 use Sentry\Severity;
 use Sentry\State\Scope;
@@ -46,13 +48,6 @@ class SendAssistantMessageAction
         private readonly CreateActionProposalAction $createActionProposal,
     ) {}
 
-    /**
-     * Execute with tool calling (synchronous, non-streaming).
-     *
-     * When $placeholderMessageId is provided (async job mode), the user message has already
-     * been saved by the caller and the placeholder assistant message is updated in-place
-     * instead of creating a new one.
-     */
     public function execute(
         AssistantConversation $conversation,
         string $userMessage,
@@ -69,6 +64,316 @@ class SendAssistantMessageAction
             $this->conversationManager->addMessage($conversation, 'user', $userMessage);
         }
 
+        // Resolve provider/model + local-agent capabilities (relay rewrite, MCP, tool loop).
+        $target = $this->resolveAssistantTarget($user, $provider, $model);
+        $provider = $target->provider;
+        $model = $target->model;
+
+        // Always resolve tools regardless of provider
+        $tools = $this->toolRegistry->getTools($user, $conversation);
+        $tools = $this->wrapToolsWithSlowModeGate($tools, $user, $conversation);
+
+        // Build system prompt with context and tool info.
+        $context = $this->contextResolver->resolve($contextType, $contextId);
+        $uiArtifactsEnabled = $this->artifactsFeatureFlag->isEnabledForTeam($user->currentTeam);
+        $systemPrompt = AssistantPromptBuilder::buildSystemPrompt(
+            $context,
+            $user,
+            $target->supportsToolLoop,
+            $target->canExecuteTools,
+            $tools,
+            $target->supportsMcpNatively,
+            $uiArtifactsEnabled,
+        );
+
+        // Append tool budget hint when any tool approaches its throttle threshold.
+        $budgetHint = $this->toolUsageTracker->buildBudgetHint($conversation->id);
+        if ($budgetHint !== null) {
+            $systemPrompt .= "\n\n".$budgetHint;
+        }
+
+        // Build conversation history
+        $history = $this->conversationManager->buildMessageHistory($conversation);
+        $userPrompt = $this->buildUserPrompt($history, $userMessage);
+
+        if ($target->supportsToolLoop && ! empty($tools)) {
+            // Claude Code (local or via bridge): text-based <tool_call> loop.
+            // For bridge mode, each tool-loop step goes through the bridge daemon
+            // (up to 3 round-trips). Server-side execution resolves FleetQ tools.
+            $response = $this->localToolLoopExecutor->execute(
+                provider: $provider,
+                model: $model,
+                systemPrompt: $systemPrompt,
+                userPrompt: $userPrompt,
+                tools: $tools,
+                user: $user,
+                onChunk: $onChunk,
+            );
+        } elseif ($target->isLocal) {
+            // Other local agents (codex): no tool calling, conversational only
+            $request = new AiRequestDTO(
+                provider: $provider,
+                model: $model,
+                systemPrompt: $systemPrompt,
+                userPrompt: $userPrompt,
+                maxTokens: 4096,
+                userId: $user->id,
+                teamId: $user->current_team_id,
+                purpose: 'platform_assistant',
+                temperature: 0.3,
+            );
+
+            $response = $this->gateway->complete($request);
+        } else {
+            // Cloud providers: PrismPHP handles tool calling natively, with bounded
+            // autonomous auto-continuation across passes.
+            $response = $this->runCloudToolLoop(
+                $conversation, $user, $userMessage, $provider, $model,
+                $systemPrompt, $userPrompt, $tools, $onChunk, $placeholderMessageId,
+            );
+        }
+
+        $this->persistAssistantReply($conversation, $response, $user, $provider, $model, $uiArtifactsEnabled, $placeholderMessageId);
+
+        return $response;
+    }
+
+    /**
+     * Cloud-provider tool-calling path with bounded auto-continuation.
+     *
+     * Prism's tool loop stops after maxStepsPerPass tool calls; for long autonomous
+     * tasks the model is often mid-loop when it returns. We detect the "stopped
+     * mid-loop" signal (empty final text + pending tool calls) and run another pass
+     * with freshly-saved history, capped at maxPasses cycles. Intermediate passes
+     * are persisted so the next pass sees them; $placeholderMessageId is consumed by
+     * the first intermediate save (hence by-reference), then reused for the final
+     * save by the caller.
+     *
+     * @param  array<Tool>  $tools
+     */
+    private function runCloudToolLoop(
+        AssistantConversation $conversation,
+        User $user,
+        string $userMessage,
+        string $provider,
+        ?string $model,
+        string $systemPrompt,
+        string $userPrompt,
+        array $tools,
+        ?callable $onChunk,
+        ?string &$placeholderMessageId,
+    ): AiResponseDTO {
+        // Use intent classification to force toolChoice='any' when the message
+        // requires a platform action — this ensures models like Gemini call the
+        // tool instead of generating the content as text.
+        $toolChoice = null;
+        if (! empty($tools)) {
+            $needsTool = $this->intentClassifier->requiresToolCall(
+                message: $userMessage,
+                tools: $tools,
+                provider: $provider,
+                model: $model,
+                userId: $user->id,
+                teamId: $user->current_team_id,
+            );
+            // Force toolChoice='any' for providers that support it.
+            // anthropic/google: natively support 'any' (Anthropic API / Gemini API).
+            // openai/openrouter: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+            // openai_compatible/custom_endpoint: may or may not support it — excluded.
+            $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai', 'openrouter'], true);
+            $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
+        }
+
+        // Wrap tool closures to emit progress events when PrismPHP calls them.
+        $wrappedTools = $tools;
+        if ($onChunk && ! empty($tools)) {
+            $wrappedTools = $this->wrapToolsWithProgress($tools, $onChunk);
+        }
+
+        // Hard ceilings prevent runaway:
+        //   - maxStepsPerPass = 50  (tool calls per Prism invocation)
+        //   - maxPasses       = 5   (auto-continue cycles)
+        //   - total tool calls capped at 250 per user message
+        //   - BudgetEnforcement middleware still runs each pass — if the team's
+        //     budget is exhausted, the next pass fails fast.
+        $maxStepsPerPass = 50;
+        $maxPasses = 5;
+        $passes = 0;
+        $aggregatedContent = '';
+        $aggregatedToolResults = [];
+        $aggregatedPromptTokens = 0;
+        $aggregatedCompletionTokens = 0;
+        $aggregatedCostCredits = 0;
+        $aggregatedToolCallsCount = 0;
+        $aggregatedStepsCount = 0;
+        $passResponse = null;
+
+        while ($passes < $maxPasses) {
+            $passes++;
+            $isFirstPass = ($passes === 1);
+
+            if ($isFirstPass) {
+                $passUserPrompt = $userPrompt;
+                $passToolChoice = $toolChoice;
+            } else {
+                // Reload history so this pass sees the assistant message we
+                // just persisted from the previous pass.
+                $history = $this->conversationManager->buildMessageHistory($conversation);
+
+                // Build an explicit "already done" summary from the aggregated tool
+                // results so the model doesn't re-issue identical calls.
+                $alreadyDone = $this->summariseToolResultsForContinuation($aggregatedToolResults);
+                $continuationInstruction = 'Continue executing the previous task. Do NOT duplicate any tool call you already made. Do NOT restart from scratch. Do NOT summarise what you did so far. Resume from exactly where you left off and stop only when the original goal is fully achieved.';
+                if ($alreadyDone !== '') {
+                    $continuationInstruction .= "\n\nTool calls already completed in this task (do NOT repeat these):\n".$alreadyDone;
+                }
+
+                $passUserPrompt = $this->buildUserPrompt($history, $continuationInstruction);
+                // After the first pass we let the model decide whether to call
+                // tools — forcing toolChoice='any' on every pass can confuse it.
+                $passToolChoice = null;
+            }
+
+            $request = new AiRequestDTO(
+                provider: $provider,
+                model: $model,
+                systemPrompt: $systemPrompt,
+                userPrompt: $passUserPrompt,
+                maxTokens: 8192,
+                userId: $user->id,
+                teamId: $user->current_team_id,
+                purpose: 'platform_assistant',
+                tools: $wrappedTools ?: null,
+                maxSteps: $maxStepsPerPass,
+                temperature: 0.3,
+                toolChoice: $passToolChoice,
+            );
+
+            // Use stream() for progressive updates — gateway handles tool+stream hybrid
+            $passResponse = $this->gateway->stream($request, $onChunk);
+
+            // Aggregate counters across passes.
+            if ($passResponse->content !== '') {
+                $aggregatedContent .= ($aggregatedContent === '' ? '' : "\n\n").$passResponse->content;
+            }
+            if ($passResponse->toolResults) {
+                $aggregatedToolResults = array_merge($aggregatedToolResults, $passResponse->toolResults);
+            }
+            $aggregatedPromptTokens += $passResponse->usage->promptTokens;
+            $aggregatedCompletionTokens += $passResponse->usage->completionTokens;
+            $aggregatedCostCredits += $passResponse->usage->costCredits;
+            $aggregatedToolCallsCount += $passResponse->toolCallsCount;
+            $aggregatedStepsCount += $passResponse->stepsCount;
+
+            if ($passes >= $maxPasses || ! $this->shouldAutoContinue($passResponse, $maxStepsPerPass)) {
+                break;
+            }
+
+            $this->saveIntermediatePass($conversation, $passResponse, $passes, $maxPasses, $placeholderMessageId);
+
+            Log::info('SendAssistantMessageAction: auto-continuing autonomous task', [
+                'conversation_id' => $conversation->id,
+                'pass' => $passes,
+                'max_passes' => $maxPasses,
+                'aggregate_tool_calls' => $aggregatedToolCallsCount,
+                'aggregate_steps' => $aggregatedStepsCount,
+            ]);
+        }
+
+        // If the model never produced final text, surface a fallback instead of
+        // saving an empty message (hit the cap, or finished tools without a summary).
+        if ($aggregatedContent === '') {
+            if ($passes >= $maxPasses) {
+                $aggregatedContent = sprintf(
+                    'I reached the autonomous continuation cap (%d passes × %d steps = %d tool calls) without finishing. The task is still in progress — send `continue` to pick up where I left off.',
+                    $maxPasses,
+                    $maxStepsPerPass,
+                    $aggregatedToolCallsCount,
+                );
+            } else {
+                $aggregatedContent = $aggregatedToolCallsCount > 0
+                    ? sprintf('Done. Completed %d tool call%s.', $aggregatedToolCallsCount, $aggregatedToolCallsCount === 1 ? '' : 's')
+                    : 'Done.';
+            }
+        }
+
+        // Build the final response from aggregated state.
+        return new AiResponseDTO(
+            content: $aggregatedContent,
+            parsedOutput: $passResponse->parsedOutput ?? null,
+            usage: new AiUsageDTO(
+                promptTokens: $aggregatedPromptTokens,
+                completionTokens: $aggregatedCompletionTokens,
+                costCredits: $aggregatedCostCredits,
+            ),
+            provider: $passResponse->provider,
+            model: $passResponse->model,
+            latencyMs: $passResponse->latencyMs,
+            schemaValid: $passResponse->schemaValid,
+            cached: false,
+            toolResults: $aggregatedToolResults ?: $passResponse->toolResults,
+            steps: $passResponse->steps,
+            toolCallsCount: $aggregatedToolCallsCount,
+            stepsCount: $aggregatedStepsCount,
+            reasoningChain: $passResponse->reasoningChain,
+            loopAnalysis: $passResponse->loopAnalysis,
+        );
+    }
+
+    /**
+     * Persist an intermediate auto-continuation pass so the next pass sees it in
+     * history. The async-mode placeholder is consumed by the first intermediate
+     * save (set to null by-reference); later passes always create fresh messages.
+     */
+    private function saveIntermediatePass(
+        AssistantConversation $conversation,
+        AiResponseDTO $passResponse,
+        int $passes,
+        int $maxPasses,
+        ?string &$placeholderMessageId,
+    ): void {
+        $intermediateContent = $passResponse->content !== ''
+            ? $passResponse->content
+            : sprintf('[autonomous task — pass %d of %d in progress]', $passes, $maxPasses);
+
+        $tokenUsage = [
+            'prompt_tokens' => $passResponse->usage->promptTokens,
+            'completion_tokens' => $passResponse->usage->completionTokens,
+            'cost_credits' => $passResponse->usage->costCredits,
+        ];
+        $metadata = [
+            'status' => 'continuing',
+            'autonomous_pass' => $passes,
+            'autonomous_max_passes' => $maxPasses,
+        ];
+
+        if ($placeholderMessageId !== null) {
+            AssistantMessage::where('id', $placeholderMessageId)->update([
+                'content' => $intermediateContent,
+                'tool_calls' => $passResponse->toolResults ? json_encode($passResponse->toolResults) : null,
+                'token_usage' => json_encode($tokenUsage),
+                'metadata' => json_encode($metadata),
+            ]);
+            $placeholderMessageId = null;
+        } else {
+            $this->conversationManager->addMessage(
+                conversation: $conversation,
+                role: 'assistant',
+                content: $intermediateContent,
+                toolCalls: $passResponse->toolResults,
+                tokenUsage: $tokenUsage,
+                metadata: $metadata,
+            );
+        }
+    }
+
+    /**
+     * Resolve the effective provider/model and local-agent capability flags for a
+     * turn: team/global defaults, local detection, relay rewrite to bridge_agent,
+     * and MCP/tool-loop capability inference.
+     */
+    private function resolveAssistantTarget(User $user, ?string $provider, ?string $model): AssistantTarget
+    {
         // Resolve provider/model: team.settings → GlobalSetting → hardcoded default
         $teamSettings = $user->currentTeam->settings ?? [];
         $provider = $provider
@@ -127,281 +432,35 @@ class SendAssistantMessageAction
             }
         }
 
-        // Always resolve tools regardless of provider
-        $tools = $this->toolRegistry->getTools($user, $conversation);
-        $tools = $this->wrapToolsWithSlowModeGate($tools, $user, $conversation);
-
-        // Build system prompt with context and tool info.
         // canExecuteTools: cloud providers use PrismPHP tools, claude-code (local or bridge) uses
         // <tool_call> text format, codex uses MCP tools natively (FleetQ MCP server connected).
         $canExecuteTools = ! $isLocal || $supportsToolLoop || $supportsMcpNatively;
-        $context = $this->contextResolver->resolve($contextType, $contextId);
-        $uiArtifactsEnabled = $this->artifactsFeatureFlag->isEnabledForTeam($user->currentTeam);
-        $systemPrompt = AssistantPromptBuilder::buildSystemPrompt(
-            $context,
-            $user,
-            $supportsToolLoop,
-            $canExecuteTools,
-            $tools,
-            $supportsMcpNatively,
-            $uiArtifactsEnabled,
+
+        return new AssistantTarget(
+            provider: $provider,
+            model: $model,
+            isLocal: $isLocal,
+            supportsToolLoop: $supportsToolLoop,
+            supportsMcpNatively: $supportsMcpNatively,
+            canExecuteTools: $canExecuteTools,
         );
+    }
 
-        // Append tool budget hint when any tool approaches its throttle threshold.
-        $budgetHint = $this->toolUsageTracker->buildBudgetHint($conversation->id);
-        if ($budgetHint !== null) {
-            $systemPrompt .= "\n\n".$budgetHint;
-        }
-
-        // Build conversation history
-        $history = $this->conversationManager->buildMessageHistory($conversation);
-        $userPrompt = $this->buildUserPrompt($history, $userMessage);
-
-        if ($supportsToolLoop && ! empty($tools)) {
-            // Claude Code (local or via bridge): text-based <tool_call> loop.
-            // For bridge mode, each tool-loop step goes through the bridge daemon
-            // (up to 3 round-trips). Server-side execution resolves FleetQ tools.
-            $response = $this->localToolLoopExecutor->execute(
-                provider: $provider,
-                model: $model,
-                systemPrompt: $systemPrompt,
-                userPrompt: $userPrompt,
-                tools: $tools,
-                user: $user,
-                onChunk: $onChunk,
-            );
-        } elseif ($isLocal) {
-            // Other local agents (codex): no tool calling, conversational only
-            $request = new AiRequestDTO(
-                provider: $provider,
-                model: $model,
-                systemPrompt: $systemPrompt,
-                userPrompt: $userPrompt,
-                maxTokens: 4096,
-                userId: $user->id,
-                teamId: $user->current_team_id,
-                purpose: 'platform_assistant',
-                temperature: 0.3,
-            );
-
-            $response = $this->gateway->complete($request);
-        } else {
-            // Cloud providers: PrismPHP handles tool calling natively.
-            // Use intent classification to force toolChoice='any' when the message
-            // requires a platform action — this ensures models like Gemini call the
-            // tool instead of generating the content as text.
-            $toolChoice = null;
-            if (! empty($tools)) {
-                $needsTool = $this->intentClassifier->requiresToolCall(
-                    message: $userMessage,
-                    tools: $tools,
-                    provider: $provider,
-                    model: $model,
-                    userId: $user->id,
-                    teamId: $user->current_team_id,
-                );
-                // Force toolChoice='any' for providers that support it.
-                // anthropic/google: natively support 'any' (Anthropic API / Gemini API).
-                // openai/openrouter: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
-                // openai_compatible/custom_endpoint: may or may not support it — excluded.
-                $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai', 'openrouter'], true);
-                $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
-            }
-
-            // Wrap tool closures to emit progress events when PrismPHP calls them.
-            $wrappedTools = $tools;
-            if ($onChunk && ! empty($tools)) {
-                $wrappedTools = $this->wrapToolsWithProgress($tools, $onChunk);
-            }
-
-            // Autonomous tool loop with bounded auto-continuation.
-            //
-            // Prism's tool loop stops after maxStepsPerPass tool calls. For long
-            // autonomous tasks (e.g. "build me an online store") that often isn't
-            // enough — the model is mid-loop when Prism returns. Instead of leaving
-            // the user with a half-finished task, we detect the "stopped mid-loop"
-            // signal (empty final text + pending tool calls) and run another pass
-            // with the freshly-saved conversation history.
-            //
-            // Hard ceilings prevent runaway:
-            //   - maxStepsPerPass = 50  (tool calls per Prism invocation)
-            //   - maxPasses       = 5   (auto-continue cycles)
-            //   - total tool calls capped at 250 per user message
-            //   - BudgetEnforcement middleware still runs each pass — if the team's
-            //     budget is exhausted, the next pass fails fast.
-            $maxStepsPerPass = 50;
-            $maxPasses = 5;
-            $passes = 0;
-            $aggregatedContent = '';
-            $aggregatedToolResults = [];
-            $aggregatedPromptTokens = 0;
-            $aggregatedCompletionTokens = 0;
-            $aggregatedCostCredits = 0;
-            $aggregatedToolCallsCount = 0;
-            $aggregatedStepsCount = 0;
-            $passResponse = null;
-
-            while ($passes < $maxPasses) {
-                $passes++;
-                $isFirstPass = ($passes === 1);
-
-                if ($isFirstPass) {
-                    $passUserPrompt = $userPrompt;
-                    $passToolChoice = $toolChoice;
-                } else {
-                    // Reload history so this pass sees the assistant message we
-                    // just persisted from the previous pass.
-                    $history = $this->conversationManager->buildMessageHistory($conversation);
-
-                    // Build an explicit "already done" summary from the
-                    // aggregated tool results so the model doesn't re-issue
-                    // identical calls. Without this, we've seen the model
-                    // duplicate work it already completed in the prior pass.
-                    $alreadyDone = $this->summariseToolResultsForContinuation($aggregatedToolResults);
-                    $continuationInstruction = 'Continue executing the previous task. Do NOT duplicate any tool call you already made. Do NOT restart from scratch. Do NOT summarise what you did so far. Resume from exactly where you left off and stop only when the original goal is fully achieved.';
-                    if ($alreadyDone !== '') {
-                        $continuationInstruction .= "\n\nTool calls already completed in this task (do NOT repeat these):\n".$alreadyDone;
-                    }
-
-                    $passUserPrompt = $this->buildUserPrompt($history, $continuationInstruction);
-                    // After the first pass we let the model decide whether to call
-                    // tools — forcing toolChoice='any' on every pass can confuse it.
-                    $passToolChoice = null;
-                }
-
-                $request = new AiRequestDTO(
-                    provider: $provider,
-                    model: $model,
-                    systemPrompt: $systemPrompt,
-                    userPrompt: $passUserPrompt,
-                    maxTokens: 8192,
-                    userId: $user->id,
-                    teamId: $user->current_team_id,
-                    purpose: 'platform_assistant',
-                    tools: $wrappedTools ?: null,
-                    maxSteps: $maxStepsPerPass,
-                    temperature: 0.3,
-                    toolChoice: $passToolChoice,
-                );
-
-                // Use stream() for progressive updates — gateway handles tool+stream hybrid
-                $passResponse = $this->gateway->stream($request, $onChunk);
-
-                // Aggregate counters across passes.
-                if ($passResponse->content !== '') {
-                    $aggregatedContent .= ($aggregatedContent === '' ? '' : "\n\n").$passResponse->content;
-                }
-                if ($passResponse->toolResults) {
-                    $aggregatedToolResults = array_merge($aggregatedToolResults, $passResponse->toolResults);
-                }
-                $aggregatedPromptTokens += $passResponse->usage->promptTokens;
-                $aggregatedCompletionTokens += $passResponse->usage->completionTokens;
-                $aggregatedCostCredits += $passResponse->usage->costCredits;
-                $aggregatedToolCallsCount += $passResponse->toolCallsCount;
-                $aggregatedStepsCount += $passResponse->stepsCount;
-
-                if ($passes >= $maxPasses || ! $this->shouldAutoContinue($passResponse, $maxStepsPerPass)) {
-                    break;
-                }
-
-                // Persist this intermediate pass so the next pass picks it up in
-                // history. The placeholder (async streaming flow) is consumed by
-                // the very first intermediate save; later passes always create
-                // fresh messages.
-                $intermediateContent = $passResponse->content !== ''
-                    ? $passResponse->content
-                    : sprintf('[autonomous task — pass %d of %d in progress]', $passes, $maxPasses);
-
-                if ($placeholderMessageId !== null) {
-                    AssistantMessage::where('id', $placeholderMessageId)->update([
-                        'content' => $intermediateContent,
-                        'tool_calls' => $passResponse->toolResults ? json_encode($passResponse->toolResults) : null,
-                        'token_usage' => json_encode([
-                            'prompt_tokens' => $passResponse->usage->promptTokens,
-                            'completion_tokens' => $passResponse->usage->completionTokens,
-                            'cost_credits' => $passResponse->usage->costCredits,
-                        ]),
-                        'metadata' => json_encode([
-                            'status' => 'continuing',
-                            'autonomous_pass' => $passes,
-                            'autonomous_max_passes' => $maxPasses,
-                        ]),
-                    ]);
-                    $placeholderMessageId = null;
-                } else {
-                    $this->conversationManager->addMessage(
-                        conversation: $conversation,
-                        role: 'assistant',
-                        content: $intermediateContent,
-                        toolCalls: $passResponse->toolResults,
-                        tokenUsage: [
-                            'prompt_tokens' => $passResponse->usage->promptTokens,
-                            'completion_tokens' => $passResponse->usage->completionTokens,
-                            'cost_credits' => $passResponse->usage->costCredits,
-                        ],
-                        metadata: [
-                            'status' => 'continuing',
-                            'autonomous_pass' => $passes,
-                            'autonomous_max_passes' => $maxPasses,
-                        ],
-                    );
-                }
-
-                Log::info('SendAssistantMessageAction: auto-continuing autonomous task', [
-                    'conversation_id' => $conversation->id,
-                    'pass' => $passes,
-                    'max_passes' => $maxPasses,
-                    'aggregate_tool_calls' => $aggregatedToolCallsCount,
-                    'aggregate_steps' => $aggregatedStepsCount,
-                ]);
-            }
-
-            // If the model never produced final text, surface a fallback instead
-            // of saving an empty message. Two cases:
-            //   1. Hit the hard cap — task likely still unfinished, prompt user to continue.
-            //   2. Stopped mid-loop with no text and no more tool calls — the model completed
-            //      its tool calls silently (common with Claude after multi-step actions) but
-            //      forgot to write a summary. Show a minimal completion notice.
-            if ($aggregatedContent === '') {
-                if ($passes >= $maxPasses) {
-                    $aggregatedContent = sprintf(
-                        'I reached the autonomous continuation cap (%d passes × %d steps = %d tool calls) without finishing. The task is still in progress — send `continue` to pick up where I left off.',
-                        $maxPasses,
-                        $maxStepsPerPass,
-                        $aggregatedToolCallsCount,
-                    );
-                } else {
-                    $aggregatedContent = $aggregatedToolCallsCount > 0
-                        ? sprintf('Done. Completed %d tool call%s.', $aggregatedToolCallsCount, $aggregatedToolCallsCount === 1 ? '' : 's')
-                        : 'Done.';
-                }
-            }
-
-            // Build the final response from aggregated state. The save block
-            // below this branch persists this single AiResponseDTO as the
-            // user-visible "reply" message.
-            $response = new AiResponseDTO(
-                content: $aggregatedContent,
-                parsedOutput: $passResponse->parsedOutput ?? null,
-                usage: new AiUsageDTO(
-                    promptTokens: $aggregatedPromptTokens,
-                    completionTokens: $aggregatedCompletionTokens,
-                    costCredits: $aggregatedCostCredits,
-                ),
-                provider: $passResponse->provider,
-                model: $passResponse->model,
-                latencyMs: $passResponse->latencyMs,
-                schemaValid: $passResponse->schemaValid,
-                cached: false,
-                toolResults: $aggregatedToolResults ?: $passResponse->toolResults,
-                steps: $passResponse->steps,
-                toolCallsCount: $aggregatedToolCallsCount,
-                stepsCount: $aggregatedStepsCount,
-                reasoningChain: $passResponse->reasoningChain,
-                loopAnalysis: $passResponse->loopAnalysis,
-            );
-        }
-
+    /**
+     * Post-process and persist the assistant reply: audit/track tool usage, handle
+     * empty-bridge fallback, extract A2UI surfaces + UI artifacts + grounded
+     * citations, save (or update the placeholder) message, persist artifacts, and
+     * trigger title generation + periodic memory autosave.
+     */
+    private function persistAssistantReply(
+        AssistantConversation $conversation,
+        AiResponseDTO $response,
+        User $user,
+        string $provider,
+        ?string $model,
+        bool $uiArtifactsEnabled,
+        ?string $placeholderMessageId,
+    ): void {
         // Log tool executions for audit and track usage for throttling
         if ($response->toolCallsCount > 0) {
             $this->logToolExecutions($conversation, $response, $user);
@@ -527,8 +586,6 @@ class SendAssistantMessageAction
                 $user->id,
             );
         }
-
-        return $response;
     }
 
     /**
