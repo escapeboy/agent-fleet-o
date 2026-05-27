@@ -187,4 +187,20 @@ class RunSkillLiftEvaluationActionTest extends TestCase
         $this->assertSame(SkillLiftStatus::Failed, $eval->status);
         $this->assertStringContainsString('dataset', (string) $eval->error);
     }
+
+    public function test_cross_team_dataset_is_not_readable(): void
+    {
+        $this->bindGateway(9.0, 4.0);
+        $team = $this->team();
+        $otherTeam = Team::factory()->create(['settings' => ['skill_lift_eval_enabled' => true]]);
+        $otherDataset = $this->datasetWithCases($otherTeam);
+
+        // Skill belongs to $team but points at another team's dataset.
+        $skill = $this->llmSkill($team, $otherDataset->id);
+
+        $eval = $this->runEval($skill, $team);
+
+        $this->assertSame(SkillLiftStatus::Failed, $eval->status);
+        $this->assertStringContainsString('dataset', (string) $eval->error);
+    }
 }
