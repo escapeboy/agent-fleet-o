@@ -33,6 +33,10 @@ class OpenAiResponseTranslator
                 'prompt_tokens' => $response->usage->promptTokens,
                 'completion_tokens' => $response->usage->completionTokens,
                 'total_tokens' => $response->usage->totalTokens(),
+                // Backward-compatible extension: FleetQ-credit cost of this call
+                // (sum of reservation minus released excess, already persisted to
+                // credit_ledgers). Partners read this to track per-call spend.
+                'cost_credits' => $response->usage->costCredits,
             ],
             'system_fingerprint' => 'fleetq-v1',
         ];
@@ -119,6 +123,7 @@ class OpenAiResponseTranslator
                 'prompt_tokens' => $response->usage->promptTokens,
                 'completion_tokens' => $response->usage->completionTokens,
                 'total_tokens' => $response->usage->totalTokens(),
+                'cost_credits' => $response->usage->costCredits,
             ],
         ];
 
