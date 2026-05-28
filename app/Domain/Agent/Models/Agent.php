@@ -183,6 +183,7 @@ class Agent extends Model
         return $this->hasOne(CircuitBreakerState::class);
     }
 
+    /** @return BelongsToMany<Skill, $this> */
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'agent_skill')
@@ -192,6 +193,7 @@ class Agent extends Model
             ->orderByPivot('priority');
     }
 
+    /** @return BelongsToMany<Tool, $this> */
     public function tools(): BelongsToMany
     {
         return $this->belongsToMany(Tool::class, 'agent_tool')

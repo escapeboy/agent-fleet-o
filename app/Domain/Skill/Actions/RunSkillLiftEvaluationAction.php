@@ -177,7 +177,7 @@ class RunSkillLiftEvaluationAction
             temperature: $temperature,
         ));
 
-        $cost += (int) ($response->usage->costCredits ?? 0);
+        $cost += $response->usage->costCredits;
 
         return (string) $response->content;
     }

@@ -3,6 +3,8 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Skill\Models\Skill;
+use App\Domain\Tool\Models\Tool;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -47,7 +49,7 @@ class AgentWorkspacePage extends Component
      * Lazily computed — only resolved when the script tab is active to keep the rest
      * of the page fast.
      *
-     * @return array{system_prompt: string, skills: array<int, array{name: string, type: string|null}>, tools: array<int, array{name: string, type: string}>, provider: string|null, model: string|null}
+     * @return array{system_prompt: string, skills: array<int, array{name: string, type: string}>, tools: array<int, array{name: string, type: string}>, provider: string|null, model: string|null}
      */
     public function getScriptProperty(): array
     {
@@ -55,13 +57,13 @@ class AgentWorkspacePage extends Component
 
         return [
             'system_prompt' => $this->composeSystemPrompt($agent),
-            'skills' => $agent->skills->map(fn ($s) => [
+            'skills' => $agent->skills->map(fn (Skill $s) => [
                 'name' => (string) $s->name,
-                'type' => method_exists($s, 'getRawOriginal') ? $s->getRawOriginal('type') : null,
+                'type' => $s->type->value,
             ])->all(),
-            'tools' => $agent->tools->map(fn ($t) => [
+            'tools' => $agent->tools->map(fn (Tool $t) => [
                 'name' => (string) $t->name,
-                'type' => $t->type?->value ?? '',
+                'type' => $t->type->value,
             ])->all(),
             'provider' => $agent->provider,
             'model' => $agent->model,

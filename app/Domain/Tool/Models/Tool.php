@@ -19,6 +19,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Enum and complex-cast @property hints — see Skill.php for context.
+ *
+ * @property ToolType $type
+ * @property ToolStatus $status
+ * @property ToolRiskLevel $risk_level
+ * @property array<string, mixed> $transport_config
+ * @property array<string, mixed>|null $credentials
+ * @property array<int, mixed> $tool_definitions
+ * @property array<string, mixed>|null $server_capabilities
+ * @property array<string, mixed>|null $settings
+ * @property array<string, mixed>|null $network_policy
+ * @property array<int, string>|null $tags
+ */
 class Tool extends Model
 {
     use BelongsToTeam, HasFactory, HasUuids, SoftDeletes;
