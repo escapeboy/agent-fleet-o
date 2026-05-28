@@ -203,4 +203,35 @@ class FallbackChainTest extends TestCase
         $this->expectExceptionMessage("Local agent provider 'codex' is not available");
         $fallbackGateway->complete($request);
     }
+
+    public function test_anthropic_401_auth_error_skips_to_next_provider_without_breaking_circuit(): void
+    {
+        // Sentry issue FLEETQ-8A: Anthropic 401 was breaking the circuit and
+        // surfacing to Sentry instead of silently advancing the chain.
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, [
+            'anthropic/claude-sonnet-4-5' => [
+                ['provider' => 'openai', 'model' => 'gpt-4o'],
+            ],
+        ]);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+
+        // CB must NOT receive a failure record for an auth error.
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $callCount = 0;
+        $this->gateway->method('complete')->willReturnCallback(function (AiRequestDTO $req) use (&$callCount) {
+            $callCount++;
+            if ($callCount === 1) {
+                // Mirrors Prism\Prism\Exceptions\PrismException's wire format
+                throw new RuntimeException('Anthropic Error [401]: authentication_error - x-api-key header is required');
+            }
+            $this->assertEquals('openai', $req->provider);
+
+            return $this->makeResponse('openai', 'gpt-4o');
+        });
+
+        $response = $fallbackGateway->complete($this->makeRequest('anthropic', 'claude-sonnet-4-5'));
+        $this->assertEquals('openai', $response->provider);
+    }
 }
