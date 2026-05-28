@@ -9,9 +9,11 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SentryContextWebMiddleware;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -70,6 +72,38 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
+
+        // ── Sentry noise filters (mirror parent bootstrap) ─────────────────
+        // OAuthServerException: legit 401 to unauthenticated MCP probers.
+        // VpsLocalAgentException::concurrencyCapReached: business-as-usual
+        // throttling — FallbackAiGateway routes to the next provider.
+        $exceptions->dontReport([
+            OAuthServerException::class,
+            VpsLocalAgentException::class,
+        ]);
+
+        $exceptions->reportable(function (Throwable $e): ?bool {
+            // Postgres connection_failure — rare container restart race.
+            if ($e instanceof QueryException && str_contains($e->getMessage(), 'SQLSTATE[08006]')) {
+                return false;
+            }
+
+            // Direct-IP probes (security scanners) — host is the raw IP.
+            if ($e instanceof ErrorException && str_contains($e->getMessage(), 'Cannot modify header information')) {
+                $host = request()?->getHttpHost();
+                if ($host === null || filter_var($host, FILTER_VALIDATE_IP) !== false) {
+                    return false;
+                }
+            }
+
+            // Anthropic auth_error / Prism 401 — fallback gateway already
+            // handles by trying the next provider; not a reportable error.
+            if (str_contains($e->getMessage(), 'authentication_error') && str_contains($e->getMessage(), 'x-api-key')) {
+                return false;
+            }
+
+            return null;
+        });
 
         // Force JSON responses for all API routes
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
