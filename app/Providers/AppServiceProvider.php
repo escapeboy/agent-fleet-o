@@ -128,6 +128,7 @@ use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
+use App\Infrastructure\AI\Middleware\SafetyClassifier;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
@@ -315,6 +316,7 @@ class AppServiceProvider extends ServiceProvider
             IdempotencyCheck::class,
             SemanticCache::class,
             SchemaValidation::class,
+            SafetyClassifier::class,
             UsageTracking::class,
         ], 'fleet.ai.middleware');
 
