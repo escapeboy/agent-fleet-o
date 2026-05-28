@@ -69,10 +69,16 @@ class OpenAiCompatibleController extends Controller
             return ['prompt' => 0, 'completion' => 0];
         }
 
-        $windowStart = $execution->created_at->copy()->subSeconds(1);
-        $windowEnd = $execution->created_at->copy()
-            ->addMilliseconds(max(1000, (int) ($execution->duration_ms ?? 0)))
-            ->addSeconds(2);
+        // AgentExecution::create() runs AFTER the LLM call completes, so the row's
+        // created_at marks the END of the call window. Walk backwards by the
+        // recorded duration_ms (plus a small floor + a few seconds of slack for
+        // tool-loop prefetch and clock skew) to capture every llm_request_logs
+        // row produced by this execution.
+        $durationMs = max(1000, (int) ($execution->duration_ms ?? 0));
+        $windowStart = $execution->created_at->copy()
+            ->subMilliseconds($durationMs)
+            ->subSeconds(5);
+        $windowEnd = $execution->created_at->copy()->addSeconds(2);
 
         $row = LlmRequestLog::withoutGlobalScopes()
             ->where('agent_id', $execution->agent_id)
