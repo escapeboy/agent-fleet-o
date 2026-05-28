@@ -1020,7 +1020,14 @@ class ExecuteAgentAction
             }
         }
 
-        $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';
+        // Closing instruction — phrase changes based on whether the agent has tools,
+        // so we don't tell a tool-less agent to "use the available tools" (which made
+        // it invent tool-call prose).
+        if ($agent->tools()->withoutGlobalScopes()->exists()) {
+            $parts[] = 'Use the available tools to accomplish the task. Be thorough but efficient.';
+        } else {
+            $parts[] = 'Be thorough but efficient.';
+        }
 
         return implode("\n\n", $parts);
     }
