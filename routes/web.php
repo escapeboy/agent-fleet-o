@@ -30,6 +30,7 @@ use App\Livewire\AgentChat\AgentverseBrowsePage;
 use App\Livewire\AgentChat\ExternalAgentDetailPage;
 use App\Livewire\AgentChat\ExternalAgentListPage;
 use App\Livewire\Agents\AgentDetailPage;
+use App\Livewire\Agents\AgentWorkspacePage;
 use App\Livewire\Agents\AgentListPage;
 use App\Livewire\Agents\AgentTemplateGalleryPage;
 use App\Livewire\Agents\CreateAgentForm;
@@ -126,6 +127,7 @@ use App\Livewire\Telegram\TelegramBotsPage;
 use App\Livewire\Tools\CreateToolForm;
 use App\Livewire\Tools\FederationGroupsPage;
 use App\Livewire\Tools\McpMarketplacePage;
+use App\Livewire\Tools\RegistryAdminPage;
 use App\Livewire\Tools\ToolDetailPage;
 use App\Livewire\Tools\ToolListPage;
 use App\Livewire\Tools\ToolSearchHistoryPage;
@@ -339,6 +341,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/quick', QuickAgentForm::class)->name('agents.quick');
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
+    Route::get('/agents/{agent}/workspace', AgentWorkspacePage::class)->name('agents.workspace');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');
 
     Route::get('/external-agents', ExternalAgentListPage::class)->name('external-agents.index');
@@ -360,6 +363,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tools/create', CreateToolForm::class)->name('tools.create');
     Route::get('/tools/templates', ToolTemplateCatalogPage::class)->name('tools.templates');
     Route::get('/tools/marketplace', McpMarketplacePage::class)->name('tools.marketplace');
+    Route::get('/tools/registry', RegistryAdminPage::class)->name('tools.registry');
     Route::get('/tools/federation-groups', FederationGroupsPage::class)->name('tools.federation-groups');
     Route::get('/tools/search-history', ToolSearchHistoryPage::class)->name('tools.search-history');
     Route::get('/tools/{tool}', ToolDetailPage::class)->name('tools.show');
