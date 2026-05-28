@@ -111,7 +111,10 @@ class SteeringInjection implements AiMiddlewareInterface
     {
         $ocsf = OcsfMapper::classify('experiment.steering_consumed');
 
+        // team_id is the multi-tenancy column (NOT NULL); experiment_id stays in
+        // properties so the JSONB query path still reads it for replay tooling.
         AuditEntry::create([
+            'team_id' => $experiment->team_id,
             'user_id' => $queuedBy,
             'event' => 'experiment.steering_consumed',
             'ocsf_class_uid' => $ocsf['class_uid'],
@@ -120,7 +123,6 @@ class SteeringInjection implements AiMiddlewareInterface
             'subject_id' => $experiment->id,
             'properties' => [
                 'experiment_id' => $experiment->id,
-                'team_id' => $experiment->team_id,
                 'message_length' => mb_strlen($message),
             ],
             'created_at' => now(),

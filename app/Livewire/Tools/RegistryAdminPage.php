@@ -6,6 +6,7 @@ use App\Domain\Tool\Actions\CreateMcpRegistryEntryAction;
 use App\Domain\Tool\Actions\InstallFromRegistryAction;
 use App\Domain\Tool\Enums\RegistryTrustLevel;
 use App\Domain\Tool\Models\McpServerRegistry;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -50,6 +51,8 @@ class RegistryAdminPage extends Component
 
     public function save(CreateMcpRegistryEntryAction $action): void
     {
+        Gate::authorize('edit-content');
+
         $this->validate();
 
         $connection = $this->transport === 'mcp_http'
@@ -70,6 +73,8 @@ class RegistryAdminPage extends Component
 
     public function toggleActive(string $id): void
     {
+        Gate::authorize('edit-content');
+
         $entry = McpServerRegistry::query()->findOrFail($id);
         $entry->update(['is_active' => ! $entry->is_active]);
     }
