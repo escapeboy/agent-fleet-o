@@ -173,10 +173,10 @@ class PolyglotCodeExtractor
             if ($written >= $maxFiles) {
                 break;
             }
-            if (($entry['type'] ?? '') !== 'blob') {
+            if ($entry['type'] !== 'blob') {
                 continue;
             }
-            $path = (string) ($entry['path'] ?? '');
+            $path = $entry['path'];
             $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
             if ($ext === '' || ! in_array($ext, $extensions, true)) {
                 continue;
