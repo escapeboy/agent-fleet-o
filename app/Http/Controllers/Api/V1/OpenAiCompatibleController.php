@@ -9,6 +9,7 @@ use App\Domain\Crew\Models\Crew;
 use App\Exceptions\ClientDisconnectedException;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Translators\OpenAiRequestTranslator;
 use App\Infrastructure\AI\Translators\OpenAiResponseTranslator;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,46 @@ class OpenAiCompatibleController extends Controller
     private function resolveRequestTeamId(Request $request): ?string
     {
         return $request->user()->currentTeam?->getKey() ?? $request->user()->current_team_id;
+    }
+
+    /**
+     * Aggregate the LLM token counts for an agent execution.
+     *
+     * `agent_executions` only stores cost_credits / step counters; the real
+     * per-call prompt/completion tokens are persisted to `llm_request_logs`
+     * by the gateway. We sum the rows that belong to this execution — matched
+     * on agent_id within the execution's wall-clock window — so the OpenAI
+     * usage block can return real numbers instead of zeros. The window comes
+     * from the row's own created_at + duration_ms with a small floor, which is
+     * tight enough for synchronous HTTP calls and tolerates multi-step tool
+     * loops that produce several llm_request_logs rows for one execution.
+     *
+     * Team-scoped by `agent_id` (an agent belongs to exactly one team), so this
+     * never crosses tenants.
+     *
+     * @return array{prompt: int, completion: int}
+     */
+    private function aggregateExecutionTokens(mixed $execution): array
+    {
+        if (! $execution || empty($execution->agent_id) || empty($execution->created_at)) {
+            return ['prompt' => 0, 'completion' => 0];
+        }
+
+        $windowStart = $execution->created_at->copy()->subSeconds(1);
+        $windowEnd = $execution->created_at->copy()
+            ->addMilliseconds(max(1000, (int) ($execution->duration_ms ?? 0)))
+            ->addSeconds(2);
+
+        $row = LlmRequestLog::withoutGlobalScopes()
+            ->where('agent_id', $execution->agent_id)
+            ->whereBetween('created_at', [$windowStart, $windowEnd])
+            ->selectRaw('COALESCE(SUM(input_tokens), 0) AS p, COALESCE(SUM(output_tokens), 0) AS c')
+            ->first();
+
+        return [
+            'prompt' => (int) ($row->p ?? 0),
+            'completion' => (int) ($row->c ?? 0),
+        ];
     }
 
     public function listModels(Request $request): JsonResponse
@@ -171,7 +212,13 @@ class OpenAiCompatibleController extends Controller
         }
 
         $isStream = $validated['stream'] ?? false;
-        $includeUsage = $validated['stream_options']['include_usage'] ?? false;
+        // Force-include usage on the SSE final chunk for partner / sub-program
+        // tokens (api_source is set by ScopeTokenToTeam only for real Sanctum
+        // partner tokens). Partners need per-call cost_credits to mirror spend;
+        // OpenAI clients that don't ask for it still get a backward-compatible
+        // extra field.
+        $includeUsage = ($validated['stream_options']['include_usage'] ?? false)
+            || $request->attributes->has('api_source');
 
         try {
             // Route based on type
@@ -266,9 +313,14 @@ class OpenAiCompatibleController extends Controller
         }
 
         $execution = $result['execution'];
+        // The `agent_executions` table doesn't store token counts (only cost +
+        // tool/step counters); the real per-call tokens live in `llm_request_logs`.
+        // Aggregate the rows that belong to this execution (matched by agent_id +
+        // the execution's time window) so the usage block reports real numbers.
+        $tokens = $this->aggregateExecutionTokens($execution);
 
         if ($isStream) {
-            return $this->streamContent($modelId, $content, $includeUsage, $execution);
+            return $this->streamContent($modelId, $content, $includeUsage, $execution, $tokens);
         }
 
         $id = 'chatcmpl-'.Str::ulid();
@@ -286,9 +338,13 @@ class OpenAiCompatibleController extends Controller
                 ],
             ],
             'usage' => [
-                'prompt_tokens' => $execution->input_tokens ?? 0,
-                'completion_tokens' => $execution->output_tokens ?? 0,
-                'total_tokens' => ($execution->input_tokens ?? 0) + ($execution->output_tokens ?? 0),
+                'prompt_tokens' => $tokens['prompt'],
+                'completion_tokens' => $tokens['completion'],
+                'total_tokens' => $tokens['prompt'] + $tokens['completion'],
+                // Backward-compatible extension — agent path mirrors the
+                // OpenAiResponseTranslator's cost_credits surface. AgentExecution
+                // persists the same net cost (reservation minus excess release).
+                'cost_credits' => (int) ($execution->cost_credits ?? 0),
             ],
             'system_fingerprint' => 'fleetq-v1',
         ]);
@@ -360,12 +416,15 @@ class OpenAiCompatibleController extends Controller
 
     /**
      * Stream agent content character by character (simulated streaming).
+     *
+     * @param  array{prompt: int, completion: int}  $tokens  Real token counts
+     *                                                       aggregated from llm_request_logs (agent_executions doesn't store them).
      */
-    private function streamContent(string $modelId, string $content, bool $includeUsage, $execution): StreamedResponse
+    private function streamContent(string $modelId, string $content, bool $includeUsage, $execution, array $tokens): StreamedResponse
     {
         $streamId = 'chatcmpl-'.Str::ulid();
 
-        return $this->buildStreamedResponse(function () use ($streamId, $modelId, $content, $includeUsage, $execution) {
+        return $this->buildStreamedResponse(function () use ($streamId, $modelId, $content, $includeUsage, $execution, $tokens) {
             try {
                 echo $this->responseTranslator->formatStreamStart($streamId, $modelId);
                 ob_flush();
@@ -397,9 +456,10 @@ class OpenAiCompatibleController extends Controller
                         'model' => $modelId,
                         'choices' => [],
                         'usage' => [
-                            'prompt_tokens' => $execution->input_tokens ?? 0,
-                            'completion_tokens' => $execution->output_tokens ?? 0,
-                            'total_tokens' => ($execution->input_tokens ?? 0) + ($execution->output_tokens ?? 0),
+                            'prompt_tokens' => $tokens['prompt'],
+                            'completion_tokens' => $tokens['completion'],
+                            'total_tokens' => $tokens['prompt'] + $tokens['completion'],
+                            'cost_credits' => (int) ($execution->cost_credits ?? 0),
                         ],
                     ];
                     echo 'data: '.json_encode($usageChunk)."\n\n";

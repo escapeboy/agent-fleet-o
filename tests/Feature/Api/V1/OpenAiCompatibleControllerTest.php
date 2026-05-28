@@ -10,6 +10,7 @@ use App\Domain\Crew\Models\Crew;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Models\LlmRequestLog;
 use Mockery;
 
 class OpenAiCompatibleControllerTest extends ApiTestCase
@@ -219,17 +220,37 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
         $this->actingAsApiUser();
         $agent = $this->createAgent(['slug' => 'helper']);
 
-        $fakeExecution = new AgentExecution;
-        $fakeExecution->input_tokens = 15;
-        $fakeExecution->output_tokens = 25;
-
+        // `agent_executions` has no token columns; the controller now aggregates
+        // tokens from `llm_request_logs` over the execution window. Persist a real
+        // execution + matching log row so the assertion sees real numbers.
         $executeAction = Mockery::mock(ExecuteAgentAction::class);
         $executeAction->shouldReceive('execute')
             ->once()
-            ->andReturn([
-                'output' => 'Agent response here',
-                'execution' => $fakeExecution,
-            ]);
+            ->andReturnUsing(function () use ($agent) {
+                $execution = AgentExecution::create([
+                    'agent_id' => $agent->id,
+                    'team_id' => $agent->team_id,
+                    'status' => 'completed',
+                    'input' => ['task' => 'Help me'],
+                    'output' => ['result' => 'Agent response here'],
+                    'duration_ms' => 100,
+                    'cost_credits' => 0,
+                ]);
+                LlmRequestLog::create([
+                    'idempotency_key' => 'test-'.uniqid(),
+                    'agent_id' => $agent->id,
+                    'team_id' => $agent->team_id,
+                    'provider' => 'anthropic',
+                    'model' => 'claude-sonnet-4-5',
+                    'status' => 'completed',
+                    'input_tokens' => 15,
+                    'output_tokens' => 25,
+                    'cost_credits' => 0,
+                    'latency_ms' => 100,
+                ]);
+
+                return ['output' => 'Agent response here', 'execution' => $execution];
+            });
         $this->app->instance(ExecuteAgentAction::class, $executeAction);
 
         $response = $this->postJson('/v1/chat/completions', [
