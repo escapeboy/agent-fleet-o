@@ -21,6 +21,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Enum and complex-cast @property hints — Larastan v3 with
+ * parseModelCastsMethod=false can't introspect the casts() method, so it
+ * falls back to the column type (string) for enum casts. These overrides
+ * keep PHPStan honest about the runtime types.
+ *
+ * @property SkillType $type
+ * @property Framework|null $framework
+ * @property ExecutionType $execution_type
+ * @property SkillStatus $status
+ * @property RiskLevel $risk_level
+ * @property DataClassification|null $data_classification
+ * @property array<string, mixed>|null $configuration
+ * @property array<string, mixed>|null $cost_profile
+ * @property array<string, mixed>|null $safety_flags
+ * @property array<string, mixed>|null $input_schema
+ * @property array<string, mixed>|null $output_schema
+ * @property array<int, string>|null $evaluation_criteria
+ * @property array<string, mixed>|null $provider_requirements
+ * @property array<string, mixed>|null $meta
+ */
 class Skill extends Model
 {
     use BelongsToTeam, HasFactory, HasPluginMeta, HasUuids, SoftDeletes;

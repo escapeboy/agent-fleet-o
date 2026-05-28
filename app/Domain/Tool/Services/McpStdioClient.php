@@ -445,8 +445,6 @@ class McpStdioClient
      *
      * @param  array<string, mixed>  $extraEnv
      * @return array<string, string>
-     *
-     * @phpstan-ignore method.unused (called from openProcess; PHPStan can't see through the call due to mixed-typed transport_config)
      */
     private function resolveCredentialPlaceholders(Tool $tool, array $extraEnv): array
     {

@@ -19,6 +19,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Tool rows intact (nullOnDelete).
  *
  * Not team-scoped: this is a platform-tier concern.
+ *
+ * Enum and complex-cast @property hints — see Skill.php for context.
+ *
+ * @property RegistryTrustLevel|null $trust_level
+ * @property bool $is_active
+ * @property array<string, mixed> $connection
+ * @property array<int, string>|null $tool_allowlist
+ * @property array<string, mixed>|null $policy_rules
  */
 class McpServerRegistry extends Model
 {
