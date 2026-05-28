@@ -218,18 +218,42 @@ class OpenAiCompatibleController extends Controller
         // the team the agent belongs to, not the owner's UI-active team.
         $executionTeamId = $agent->team_id ?? $teamId;
 
-        // Extract user message from the last user message in the messages array
+        // Extract the partner-supplied system message(s) and prior turns from the
+        // OpenAI-shaped `messages` array. Partner sub-program clients (Finance,
+        // etc.) rely on the system slot for RAG / KPI context injection that
+        // MUST reach the model. The last user message remains $task for
+        // backward compatibility with workflow callers.
         $lastUserMessage = '';
-        foreach (array_reverse($validated['messages']) as $msg) {
-            if ($msg['role'] === 'user') {
-                $lastUserMessage = $msg['content'] ?? '';
+        $incomingSystem = [];
+        $priorMessages = []; // user/assistant/tool turns, excluding the trailing user message
+        foreach ($validated['messages'] as $msg) {
+            if (($msg['role'] ?? null) === 'system') {
+                $content = (string) ($msg['content'] ?? '');
+                if ($content !== '') {
+                    $incomingSystem[] = $content;
+                }
+
+                continue;
+            }
+            $priorMessages[] = $msg;
+        }
+        // Pop the trailing user message into $lastUserMessage so it isn't double-injected.
+        for ($i = count($priorMessages) - 1; $i >= 0; $i--) {
+            if (($priorMessages[$i]['role'] ?? null) === 'user') {
+                $lastUserMessage = (string) ($priorMessages[$i]['content'] ?? '');
+                array_splice($priorMessages, $i, 1);
                 break;
             }
         }
 
         $result = $this->executeAgent->execute(
             agent: $agent,
-            input: ['task' => $lastUserMessage, 'raw_messages' => $validated['messages']],
+            input: [
+                'task' => $lastUserMessage,
+                'raw_messages' => $validated['messages'],
+                'incoming_system' => $incomingSystem,
+                'prior_messages' => $priorMessages,
+            ],
             teamId: $executionTeamId,
             userId: $user->id,
         );

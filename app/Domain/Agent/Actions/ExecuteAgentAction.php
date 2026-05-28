@@ -303,9 +303,12 @@ class ExecuteAgentAction
             return $this->requestClarification($ctx, $stepId);
         }
 
-        // Workflow-driven execution: if input has a 'task' key (from workflow node prompt),
-        // execute directly with LLM instead of skill chain
-        if (! empty($input['task'])) {
+        // Workflow-driven execution: if input has a 'task' key (from workflow node prompt
+        // OR the OpenAI-compatible /v1/chat/completions agent path), execute directly
+        // with the LLM — UNLESS the agent has tools assigned, in which case enter the
+        // tool-loop branch so partner-shaped messages can still drive tool use.
+        $agentHasTools = $agent->tools()->withoutGlobalScopes()->exists();
+        if (! empty($input['task']) && ! $agentHasTools) {
             $result = $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
         } else {
             // Resolve tools for this agent (filtered by project restrictions).
@@ -463,6 +466,13 @@ class ExecuteAgentAction
             $effectiveMaxSteps = $maxStepsOverride ?? $tierConfig['max_steps'];
 
             $systemPrompt = $this->buildAgentSystemPrompt($agent, $project, $input, $systemPromptParts, array_merge($tierConfig, ['max_steps' => $effectiveMaxSteps]));
+
+            // Partner-supplied system messages reach the model here too (tool path).
+            // See executeDirectPrompt() for the rationale — same precedence rules apply.
+            $incomingSystem = $input['incoming_system'] ?? null;
+            if (is_array($incomingSystem) && $incomingSystem !== []) {
+                $systemPrompt .= "\n\n## Caller-supplied context\n".implode("\n\n", array_filter($incomingSystem, 'is_string'));
+            }
 
             // Tier preference applies only when agent model is set to 'auto' or not set
             $model = ($agent->model !== null && $agent->model !== 'auto')
@@ -653,6 +663,27 @@ class ExecuteAgentAction
         try {
             // Build user prompt from task + goal + context
             $userPromptParts = [];
+
+            // Partner conversation history (assistant/user/tool turns preceding the
+            // current question). The OpenAI controller strips the trailing user
+            // message into $task and the system messages into $incoming_system, so
+            // this only contains true prior turns. Flatten for the prompt.
+            $priorMessages = $input['prior_messages'] ?? null;
+            if (is_array($priorMessages) && $priorMessages !== []) {
+                $historyLines = [];
+                foreach ($priorMessages as $msg) {
+                    $role = (string) ($msg['role'] ?? '');
+                    $content = (string) ($msg['content'] ?? '');
+                    if ($content === '' || $role === '') {
+                        continue;
+                    }
+                    $historyLines[] = strtoupper($role).': '.$content;
+                }
+                if ($historyLines !== []) {
+                    $userPromptParts[] = "## Conversation so far\n".implode("\n\n", $historyLines);
+                }
+            }
+
             if (! empty($input['task'])) {
                 $userPromptParts[] = "## Task\n".$input['task'];
             }
@@ -668,6 +699,16 @@ class ExecuteAgentAction
             $tierConfig = $this->resolveTierConfig->execute($agent);
             // Direct prompt has no tool loop — suppress the budget section (max_steps irrelevant)
             $systemPrompt = $this->buildAgentSystemPrompt($agent, null, $input, $systemPromptParts, array_merge($tierConfig, ['max_steps' => 0]));
+
+            // Partner-supplied system messages MUST reach the model — they carry
+            // RAG context (e.g. Finance KPIs, aging, deadlines). Appended AFTER the
+            // agent's own identity/safety so the agent's instructions remain
+            // anchoring; the partner block is an additional, scoped context layer.
+            // The token's team scope already constrains who can inject this.
+            $incomingSystem = $input['incoming_system'] ?? null;
+            if (is_array($incomingSystem) && $incomingSystem !== []) {
+                $systemPrompt .= "\n\n## Caller-supplied context\n".implode("\n\n", array_filter($incomingSystem, 'is_string'));
+            }
 
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
@@ -903,12 +944,18 @@ class ExecuteAgentAction
             $parts[] = $strategySection;
         }
 
-        // Explicit tool-selection chain-of-thought — improves traceability and reduces incorrect selections
-        $parts[] = implode("\n", [
-            '## Tool Selection',
-            'Before each tool call, output one line:',
-            '"I need [outcome] — calling [tool_name] because [reason]."',
-        ]);
+        // Explicit tool-selection chain-of-thought — improves traceability and reduces
+        // incorrect selections. Only inject when the agent actually has tools assigned:
+        // without tools, this preamble made the model emit tool names as PROSE (e.g.
+        // "I need to check unpaid invoices — calling get_unpaid_invoices because…"),
+        // then apologise that the tool was unavailable.
+        if ($agent->tools()->withoutGlobalScopes()->exists()) {
+            $parts[] = implode("\n", [
+                '## Tool Selection',
+                'Before each tool call, output one line:',
+                '"I need [outcome] — calling [tool_name] because [reason]."',
+            ]);
+        }
 
         // Browser tool usage policy — inject only if agent has a browser tool
         $hasBrowserTool = $agent->tools()
