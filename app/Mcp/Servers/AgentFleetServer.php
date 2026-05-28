@@ -523,6 +523,9 @@ use App\Mcp\Tools\Tool\ToolFederationGroupCreateTool;
 use App\Mcp\Tools\Tool\ToolFederationGroupListTool;
 use App\Mcp\Tools\Tool\ToolFederationStatusTool;
 use App\Mcp\Tools\Tool\ToolGetTool;
+use App\Mcp\Tools\Tool\McpRegistryCreateTool;
+use App\Mcp\Tools\Tool\McpRegistryInstallTool;
+use App\Mcp\Tools\Tool\McpRegistryListTool;
 use App\Mcp\Tools\Tool\ToolImportMcpTool;
 use App\Mcp\Tools\Tool\ToolListTool;
 use App\Mcp\Tools\Tool\ToolMiddlewareConfigTool;
@@ -917,6 +920,10 @@ class AgentFleetServer extends Server
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
         ToolProbeRemoteMcpTool::class,
+        // Platform-curated MCP server registry (Agentforce-borrowed sprint 2026-05-28)
+        McpRegistryListTool::class,
+        McpRegistryCreateTool::class,
+        McpRegistryInstallTool::class,
         ToolSshFingerprintsTool::class,
         ToolBashPolicyTool::class,
         ToolEmbeddingManageTool::class,

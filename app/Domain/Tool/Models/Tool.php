@@ -31,6 +31,7 @@ class Tool extends Model
     protected $fillable = [
         'team_id',
         'credential_id',
+        'registry_server_id',
         'is_platform',
         'name',
         'slug',

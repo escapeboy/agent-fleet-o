@@ -18,6 +18,7 @@ use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
 use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
 use App\Infrastructure\AI\Middleware\RateLimiting;
+use App\Infrastructure\AI\Middleware\SafetyClassifier;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\SteeringInjection;
@@ -83,6 +84,10 @@ class AiServiceProvider extends ServiceProvider
                 $app->make(SemanticCache::class),
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
+                // Gateway-level safety net — inspects request input and response output
+                // for jailbreak / configured rule packs. Runs BEFORE UsageTracking so
+                // refused (zero-token) responses don't pollute the cost ledger.
+                $app->make(SafetyClassifier::class),
                 $app->make(UsageTracking::class),
                 // Always registered — handles its own enabled check via GlobalSetting / env
                 $app->make(LangfuseExportMiddleware::class),
