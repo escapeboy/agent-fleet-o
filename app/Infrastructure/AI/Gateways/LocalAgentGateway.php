@@ -599,13 +599,28 @@ class LocalAgentGateway implements AiGatewayInterface
         int $startTime,
         string $stderr,
     ): void {
+        // audit_entries.team_id is NOT NULL (multi-tenancy invariant). When the
+        // VPS invocation happened outside any team context (super-admin shell,
+        // background job without a tenant) we have nowhere to attribute the
+        // entry — skip and log the gap instead of poisoning every webhook with
+        // a 23502 violation. Caller still gets a successful response.
+        if (! $team) {
+            Log::info('LocalAgentGateway: skipping VPS audit entry — no team context', [
+                'model' => $request->model,
+                'user_id' => $user?->id,
+                'exit_code' => $exitCode,
+            ]);
+
+            return;
+        }
+
         try {
             AuditEntry::create([
-                'team_id' => $team?->id,
+                'team_id' => $team->id,
                 'user_id' => $user?->id,
                 'event' => 'claude_code_vps.invoke',
-                'subject_type' => $team ? Team::class : null,
-                'subject_id' => $team?->id,
+                'subject_type' => Team::class,
+                'subject_id' => $team->id,
                 'properties' => [
                     'model' => $request->model,
                     'prompt_length' => strlen($request->userPrompt),
