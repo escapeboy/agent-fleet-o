@@ -204,6 +204,19 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
+                // Auth errors (401 / missing or revoked key) are config errors disguised
+                // as provider failures — let the chain advance without breaking the
+                // circuit. Mirrors the \RuntimeException branch above.
+                if ($this->isAuthError($e)) {
+                    $firstException ??= $e;
+                    $lastException = $e;
+                    Log::warning("AI Gateway fallback: {$providerName}/{$modelName} auth error (not recording CB failure)", [
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
                 $firstException ??= $e;
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
@@ -382,6 +395,16 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
+                if ($this->isAuthError($e)) {
+                    $firstException ??= $e;
+                    $lastException = $e;
+                    Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} auth error (not recording CB failure)", [
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
                 $firstException ??= $e;
                 $lastException = $e;
                 $this->circuitBreaker->recordFailure($providerName);
@@ -507,6 +530,26 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return false;
+    }
+
+    /**
+     * Classify a provider exception as an authentication failure (revoked /
+     * missing / wrong key). Provider SDKs throw various concrete classes for
+     * 401s, so we sniff the message rather than the class hierarchy. Treated
+     * the same as a config error: skip the provider without breaking the
+     * circuit, advance the fallback chain.
+     */
+    private function isAuthError(Throwable $e): bool
+    {
+        $msg = $e->getMessage();
+
+        return str_contains($msg, 'authentication_error')
+            || str_contains($msg, 'x-api-key header is required')
+            || str_contains($msg, 'Incorrect API key')
+            || str_contains($msg, 'Invalid API Key')
+            || str_contains($msg, 'API key not valid')
+            || (str_contains($msg, '[401]') && str_contains($msg, 'Anthropic'))
+            || (str_contains($msg, 'status code 401'));
     }
 
     /**

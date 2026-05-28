@@ -128,4 +128,27 @@ class DistillTeamEventsActionTest extends TestCase
 
         $this->assertSame(1, $result['events']);
     }
+
+    public function test_skips_silently_when_gateway_reports_no_available_providers(): void
+    {
+        // Sentry issue FLEETQ-81: without this guard, the hourly cron lets the
+        // gateway's "No available providers in fallback chain" escape Sentry as
+        // an error. The action should treat it as a no-op and advance the
+        // watermark so the same window isn't rescanned indefinitely.
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->once()
+            ->andThrow(new \RuntimeException('No available providers in fallback chain'));
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldNotReceive('execute');
+
+        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id);
+
+        $this->assertSame(1, $result['events']);
+        $this->assertSame(0, $result['stored']);
+        $this->assertNotNull($this->team->fresh()->settings['memory']['last_event_distill_at'] ?? null);
+    }
 }

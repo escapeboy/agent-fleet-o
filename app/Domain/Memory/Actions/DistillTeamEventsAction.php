@@ -11,6 +11,8 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 /**
  * Distils one team's recent audit-entry stream into a small set of durable,
@@ -59,7 +61,25 @@ PROMPT;
             return $result;
         }
 
-        $summary = $this->distil($events, $teamId);
+        // Catch the "no provider" path the AI Gateway throws when the team has
+        // no BYOK and the platform has no key for the distillation provider.
+        // Without this guard the hourly cron fires hundreds of Sentry errors
+        // per night on free-tier teams. Sentry issue FLEETQ-81.
+        try {
+            $summary = $this->distil($events, $teamId);
+        } catch (RuntimeException $e) {
+            if (! str_contains($e->getMessage(), 'No available providers in fallback chain')) {
+                throw $e;
+            }
+            Log::info('DistillTeamEventsAction: skipping team (no provider credentials)', [
+                'team_id' => $teamId,
+                'error' => $e->getMessage(),
+            ]);
+            $this->advanceWatermark($team);
+
+            return $result;
+        }
+
         if ($summary === '') {
             // Nothing worth remembering — still advance the watermark so the
             // window doesn't keep re-scanning the same consumed events.
