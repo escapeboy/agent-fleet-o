@@ -24,6 +24,7 @@ use Laravel\Passport\Http\Middleware\CheckToken;
 use Laravel\Passport\Http\Middleware\CheckTokenForAnyScope;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Sentry\Laravel\Integration;
+use Symfony\Component\Console\Exception\CommandNotFoundException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -80,6 +81,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReport([
             OAuthServerException::class,
             VpsLocalAgentException::class,
+            CommandNotFoundException::class,
         ]);
 
         $exceptions->reportable(function (Throwable $e): ?bool {
@@ -99,6 +101,30 @@ $app = Application::configure(basePath: dirname(__DIR__))
             // Anthropic auth_error / Prism 401 — fallback gateway already
             // handles by trying the next provider; not a reportable error.
             if (str_contains($e->getMessage(), 'authentication_error') && str_contains($e->getMessage(), 'x-api-key')) {
+                return false;
+            }
+
+            // routes-v7.php TOCTOU during route:cache rebuild (deploy.sh retries 3x).
+            if ($e instanceof ErrorException
+                && str_contains($e->getMessage(), 'routes-v7.php')
+                && str_contains($e->getMessage(), 'Failed to open stream')) {
+                return false;
+            }
+
+            // Deprecated artisan CLI flags from autonomous agents using stale knowledge.
+            if ($e instanceof \Symfony\Component\Console\Exception\RuntimeException
+                && (str_contains($e->getMessage(), 'option does not exist')
+                    || str_contains($e->getMessage(), 'argument does not exist'))) {
+                return false;
+            }
+
+            // MaxAttemptsExceededException for RunSentryWatchdogJob — the job
+            // ran over the supervisor timeout once. Unstamped signals are
+            // re-picked up by the next scheduled tick (signals are status-
+            // based, not time-windowed). Not actionable; was the loudest
+            // single Sentry source. (FLEETQ-35 #561)
+            if ($e instanceof \Illuminate\Queue\MaxAttemptsExceededException
+                && str_contains($e->getMessage(), 'RunSentryWatchdogJob')) {
                 return false;
             }
 
