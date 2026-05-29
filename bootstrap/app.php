@@ -13,7 +13,6 @@ use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -84,52 +83,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
             CommandNotFoundException::class,
         ]);
 
-        $exceptions->reportable(function (Throwable $e): ?bool {
-            // Postgres connection_failure — rare container restart race.
-            if ($e instanceof QueryException && str_contains($e->getMessage(), 'SQLSTATE[08006]')) {
-                return false;
-            }
-
-            // Direct-IP probes (security scanners) — host is the raw IP.
-            if ($e instanceof ErrorException && str_contains($e->getMessage(), 'Cannot modify header information')) {
-                $host = request()?->getHttpHost();
-                if ($host === null || filter_var($host, FILTER_VALIDATE_IP) !== false) {
-                    return false;
-                }
-            }
-
-            // Anthropic auth_error / Prism 401 — fallback gateway already
-            // handles by trying the next provider; not a reportable error.
-            if (str_contains($e->getMessage(), 'authentication_error') && str_contains($e->getMessage(), 'x-api-key')) {
-                return false;
-            }
-
-            // routes-v7.php TOCTOU during route:cache rebuild (deploy.sh retries 3x).
-            if ($e instanceof ErrorException
-                && str_contains($e->getMessage(), 'routes-v7.php')
-                && str_contains($e->getMessage(), 'Failed to open stream')) {
-                return false;
-            }
-
-            // Deprecated artisan CLI flags from autonomous agents using stale knowledge.
-            if ($e instanceof \Symfony\Component\Console\Exception\RuntimeException
-                && (str_contains($e->getMessage(), 'option does not exist')
-                    || str_contains($e->getMessage(), 'argument does not exist'))) {
-                return false;
-            }
-
-            // MaxAttemptsExceededException for RunSentryWatchdogJob — the job
-            // ran over the supervisor timeout once. Unstamped signals are
-            // re-picked up by the next scheduled tick (signals are status-
-            // based, not time-windowed). Not actionable; was the loudest
-            // single Sentry source. (FLEETQ-35 #561)
-            if ($e instanceof \Illuminate\Queue\MaxAttemptsExceededException
-                && str_contains($e->getMessage(), 'RunSentryWatchdogJob')) {
-                return false;
-            }
-
-            return null;
-        });
+        // NOTE: message-pattern filters live in config/sentry.php's before_send
+        // because reportable() callbacks register AFTER Sentry's
+        // Integration::handles() — by the time they return false, Sentry has
+        // already captured. before_send is the only hook where pattern
+        // filters reliably win.
 
         // Force JSON responses for all API routes
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
