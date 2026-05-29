@@ -77,11 +77,14 @@ class IndexKnowledgeSourceJob implements ShouldQueue
         $data = $source->source_data ?? [];
         $path = $data['path'] ?? null;
 
-        if (! $path || ! Storage::exists($path)) {
+        $disk = app(\App\Infrastructure\Storage\TenantStorageManager::class)
+            ->disk(\App\Infrastructure\Storage\TenantStorageManager::VISIBILITY_PRIVATE);
+
+        if (! $path || ! $disk->exists($path)) {
             throw new \RuntimeException("Document file not found: {$path}");
         }
 
-        $content = Storage::get($path);
+        $content = $disk->get($path);
 
         return $this->chunkText($content);
     }

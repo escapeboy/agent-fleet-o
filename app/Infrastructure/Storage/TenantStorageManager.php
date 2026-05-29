@@ -125,7 +125,7 @@ class TenantStorageManager
         return $ext ? "{$uuid}.{$ext}" : $uuid;
     }
 
-    private function diskName(string $visibility): string
+    public function diskName(string $visibility): string
     {
         return match ($visibility) {
             self::VISIBILITY_PUBLIC => config('tenant_storage.public_disk', 'public'),
