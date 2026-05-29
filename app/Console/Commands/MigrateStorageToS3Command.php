@@ -45,6 +45,8 @@ class MigrateStorageToS3Command extends Command
                 continue;
             }
 
+            $bytes += $from->size($key);
+
             if ($dryRun) {
                 $this->line("would copy: {$key}");
                 $copied++;
@@ -53,12 +55,16 @@ class MigrateStorageToS3Command extends Command
             }
 
             $stream = $from->readStream($key);
-            $to->writeStream($key, $stream);
-            if (is_resource($stream)) {
-                fclose($stream);
+            if (! is_resource($stream)) {
+                $this->warn("unreadable, skipped: {$key}");
+                $skipped++;
+
+                continue;
             }
 
-            $bytes += $from->size($key);
+            $to->writeStream($key, $stream);
+            fclose($stream);
+
             $copied++;
         }
 

@@ -77,14 +77,22 @@ class IndexKnowledgeSourceJob implements ShouldQueue
         $data = $source->source_data ?? [];
         $path = $data['path'] ?? null;
 
+        if (! $path) {
+            throw new \RuntimeException('Document file not found: (no path)');
+        }
+
         $disk = app(\App\Infrastructure\Storage\TenantStorageManager::class)
             ->disk(\App\Infrastructure\Storage\TenantStorageManager::VISIBILITY_PRIVATE);
 
-        if (! $path || ! $disk->exists($path)) {
+        if ($disk->exists($path)) {
+            $content = $disk->get($path);
+        } elseif (Storage::exists($path)) {
+            // Pre-migration sources were written to the default disk; read them
+            // there until storage:migrate-to-s3 backfills the tenant prefix.
+            $content = Storage::get($path);
+        } else {
             throw new \RuntimeException("Document file not found: {$path}");
         }
-
-        $content = $disk->get($path);
 
         return $this->chunkText($content);
     }

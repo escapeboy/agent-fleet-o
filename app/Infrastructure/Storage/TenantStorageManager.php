@@ -105,8 +105,11 @@ class TenantStorageManager
         }
 
         $segments = explode('/', $key);
+        $teamId = $segments[1] ?? null;
 
-        return $segments[1] ?? null;
+        // A present-but-empty segment (e.g. "tenants//x") is a malformed key,
+        // not a valid team — return null so callers reject rather than 403.
+        return ($teamId === null || $teamId === '') ? null : $teamId;
     }
 
     private function directory(string $teamId, string $category): string
