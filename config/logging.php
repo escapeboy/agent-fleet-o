@@ -71,6 +71,11 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            // 0664 (group-writable) lets every container's php-fpm worker
+            // append to the daily file regardless of which one created it.
+            // Pairs with deploy.sh's chown www-data:www-data on storage/.
+            // (FLEETQ-67 #683 / FLEETQ-89 #778)
+            'permission' => 0664,
             'replace_placeholders' => true,
         ],
 

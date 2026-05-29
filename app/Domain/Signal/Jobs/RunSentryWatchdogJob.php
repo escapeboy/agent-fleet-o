@@ -33,7 +33,11 @@ class RunSentryWatchdogJob implements ShouldQueue
 
     public function __construct(public readonly string $integrationId)
     {
-        $this->onQueue('default');
+        // `default` supervisor timeout is 30s — too tight for batch triage
+        // that includes 5-15 LLM calls. `experiments` supervisor has 300s,
+        // matching our triage budget and ending the steady stream of
+        // MaxAttemptsExceededException Sentry events (FLEETQ-35 #561).
+        $this->onQueue('experiments');
     }
 
     /**
