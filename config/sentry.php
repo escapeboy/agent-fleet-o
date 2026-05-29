@@ -48,66 +48,13 @@ return [
      * before_send runs at Sentry SDK level AFTER Laravel's reportable() callbacks.
      * Returning null drops the event before transport.
      *
-     * We use this for message-pattern filters because bootstrap/app.php's
-     * $exceptions->reportable() callback registers AFTER Sentry\Laravel\Integration::handles()
-     * — by the time our callback returns false, Sentry has already captured (a new
-     * Sentry issue group fires for each occurrence). before_send is the only hook
-     * where pattern filters reliably win.
+     * Array callable (not a closure) so `php artisan config:cache` can
+     * var_export() this config. Closures throw "Closure::__set_state()" during
+     * cache serialization.
      *
-     * Class-based filters stay in bootstrap/app.php's $exceptions->dontReport()
-     * because Laravel checks that BEFORE any reportable callback fires.
+     * Implementation in App\Infrastructure\Sentry\BeforeSendFilter::filter.
      */
-    'before_send' => function (\Sentry\Event $event, ?\Sentry\EventHint $hint = null): ?\Sentry\Event {
-        if ($hint === null || $hint->exception === null) {
-            return $event;
-        }
-        $e = $hint->exception;
-        $msg = $e->getMessage();
-
-        // SQLSTATE[08006] — postgres connection_failure on container restart race.
-        if ($e instanceof \Illuminate\Database\QueryException && str_contains($msg, 'SQLSTATE[08006]')) {
-            return null;
-        }
-
-        // Anthropic auth_error / Prism 401 — FallbackAiGateway::isAuthError already
-        // routes around it without recording a circuit-breaker failure.
-        if (str_contains($msg, 'authentication_error') && str_contains($msg, 'x-api-key')) {
-            return null;
-        }
-
-        // routes-v7.php TOCTOU during `php artisan route:cache` — deploy.sh retries
-        // 3x; remaining noise is concurrent HTTP requests hitting the gap.
-        if ($e instanceof \ErrorException
-            && str_contains($msg, 'routes-v7.php')
-            && str_contains($msg, 'Failed to open stream')) {
-            return null;
-        }
-
-        // Deprecated artisan flags from autonomous agents using stale knowledge.
-        if ($e instanceof \Symfony\Component\Console\Exception\RuntimeException
-            && (str_contains($msg, 'option does not exist')
-                || str_contains($msg, 'argument does not exist'))) {
-            return null;
-        }
-
-        // RunSentryWatchdogJob max-attempts — known-slow batch background work.
-        // Unstamped signals are re-picked up by the next scheduled tick.
-        if ($e instanceof \Illuminate\Queue\MaxAttemptsExceededException
-            && str_contains($msg, 'RunSentryWatchdogJob')) {
-            return null;
-        }
-
-        // "Cannot modify header information" only on direct-IP probes (host
-        // is the raw VPS IP, not a domain) — security scanners.
-        if ($e instanceof \ErrorException && str_contains($msg, 'Cannot modify header information')) {
-            $host = request()?->getHttpHost();
-            if ($host === null || filter_var($host, FILTER_VALIDATE_IP) !== false) {
-                return null;
-            }
-        }
-
-        return $event;
-    },
+    'before_send' => [\App\Infrastructure\Sentry\BeforeSendFilter::class, 'filter'],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions
     'ignore_transactions' => [
