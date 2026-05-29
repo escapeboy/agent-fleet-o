@@ -43,11 +43,13 @@ return [
     | max_signals_per_run — cap on Sentry signals triaged in a single watchdog
     |   run. Each triage is a ~30s LLM call, so an uncapped run over a large
     |   backlog would exceed the job timeout. Remaining signals carry over to
-    |   the next run.
+    |   the next run. Default lowered 15 → 8 after the experiments-queue move
+    |   so a run reliably finishes inside the 300s supervisor timeout even
+    |   when triage hits the slow path (FLEETQ-35 #561).
     |
     */
 
-    'max_signals_per_run' => (int) env('SENTRY_WATCHDOG_MAX_SIGNALS_PER_RUN', 15),
+    'max_signals_per_run' => (int) env('SENTRY_WATCHDOG_MAX_SIGNALS_PER_RUN', 8),
 
     /*
     |--------------------------------------------------------------------------
