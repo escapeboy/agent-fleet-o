@@ -286,7 +286,13 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
-            Log::error('BaseStageJob: Exception in process()', [
+            // Log::warning (not error): we re-throw the exception below, and
+            // Horizon will route the actual throwable through this job's
+            // failed() callback, which calls SentryEventCapturer with the
+            // real exception + sentryContext. A Log::error here would create
+            // a parallel generic Sentry event titled "BaseStageJob: Exception
+            // in process()" with no inApp frames. (FLEETQ-86 #775)
+            Log::warning('BaseStageJob: caught exception, re-throwing for failed() reporting', [
                 'experiment_id' => $this->experimentId,
                 'stage' => $this->stageType()->value,
                 'attempt' => $this->attempts(),
