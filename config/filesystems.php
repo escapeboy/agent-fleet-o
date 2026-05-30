@@ -66,6 +66,47 @@ return [
             'report' => false,
         ],
 
+        // Tenant uploads — private. Block-all-public bucket; objects reached
+        // only via SecureFileController stream or presigned temporaryUrl().
+        's3_private' => [
+            'driver' => 's3',
+            'key' => env('AWS_UPLOADS_KEY'),
+            'secret' => env('AWS_UPLOADS_SECRET'),
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'bucket' => env('S3_UPLOADS_PRIVATE_BUCKET'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
+        // Tenant uploads — public. Bucket policy grants anonymous GetObject;
+        // ONLY files explicitly flagged public may be written here.
+        's3_public' => [
+            'driver' => 's3',
+            'key' => env('AWS_UPLOADS_KEY'),
+            'secret' => env('AWS_UPLOADS_SECRET'),
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'bucket' => env('S3_UPLOADS_PUBLIC_BUCKET'),
+            'url' => env('S3_UPLOADS_PUBLIC_URL'),
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => false,
+        ],
+
+        // spatie/laravel-backup destination. Separate IAM (fleetq-backup) with
+        // no access to the upload buckets; write-only posture under prod/fleetq/.
+        's3_backup' => [
+            'driver' => 's3',
+            'key' => env('AWS_BACKUP_KEY'),
+            'secret' => env('AWS_BACKUP_SECRET'),
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'bucket' => env('S3_BACKUP_BUCKET'),
+            'root' => env('S3_BACKUP_PREFIX', 'prod/fleetq'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

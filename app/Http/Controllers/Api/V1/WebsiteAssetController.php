@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Website\Models\Website;
 use App\Domain\Website\Models\WebsiteAsset;
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Storage\TenantStorageManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,17 +37,21 @@ class WebsiteAssetController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('website-assets/'.$website->id);
-
-        $url = Storage::url($path);
+        $storage = app(TenantStorageManager::class);
+        $key = $storage->put(
+            $file,
+            'website-assets/'.$website->id,
+            TenantStorageManager::VISIBILITY_PUBLIC,
+            $website->team_id,
+        );
 
         $asset = WebsiteAsset::create([
             'website_id' => $website->id,
             'team_id' => $website->team_id,
             'filename' => $file->getClientOriginalName(),
-            'disk' => config('filesystems.default'),
-            'path' => $path,
-            'url' => $url,
+            'disk' => $storage->diskName(TenantStorageManager::VISIBILITY_PUBLIC),
+            'path' => $key,
+            'url' => $storage->publicUrl($key),
             'mime_type' => $file->getMimeType(),
             'size_bytes' => $file->getSize(),
         ]);
