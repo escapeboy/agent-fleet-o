@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Widget;
 
 use App\Domain\Signal\Actions\AddSignalCommentAction;
 use App\Domain\Signal\Enums\CommentAuthorType;
+use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\CommentAttachmentIngester;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Widget\Concerns\ResolvesWidgetAccess;
@@ -83,7 +84,11 @@ class BugReportCommentsCreateController extends Controller
             'body' => $comment->body,
             'author_type' => $comment->author_type,
             'created_at' => $comment->created_at?->toISOString(),
-            'attachments' => $this->serializeAttachments($comment->fresh()->getMedia('attachments')),
+            'attachments' => $this->serializeAttachments(
+                $signalModel,
+                $comment->fresh()->getMedia('attachments'),
+                $validated['team_public_key'],
+            ),
         ], 201));
     }
 
@@ -91,15 +96,15 @@ class BugReportCommentsCreateController extends Controller
      * @param  iterable<Media>  $media
      * @return array<int, array{url: string, thumb_url: string, mime: ?string, size: int}>
      */
-    private function serializeAttachments(iterable $media): array
+    private function serializeAttachments(Signal $signal, iterable $media, string $publicKey): array
     {
         $out = [];
         foreach ($media as $m) {
-            $full = $m->getFullUrl();
-            $thumb = $m->hasGeneratedConversion('thumb') ? $m->getFullUrl('thumb') : $full;
             $out[] = [
-                'url' => $full,
-                'thumb_url' => $thumb,
+                'url' => $this->widgetMediaUrl($signal, $m, $publicKey),
+                'thumb_url' => $m->hasGeneratedConversion('thumb')
+                    ? $this->widgetMediaUrl($signal, $m, $publicKey, 'thumb')
+                    : $this->widgetMediaUrl($signal, $m, $publicKey),
                 'mime' => $m->mime_type,
                 'size' => (int) $m->size,
             ];
