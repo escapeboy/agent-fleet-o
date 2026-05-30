@@ -29,6 +29,7 @@ use App\Http\Controllers\Widget\BugReportCommentsCreateController;
 use App\Http\Controllers\Widget\BugReportCommentsListController;
 use App\Http\Controllers\Widget\BugReportConfirmController;
 use App\Http\Controllers\Widget\BugReportListController;
+use App\Http\Controllers\Widget\BugReportMediaController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
@@ -50,6 +51,14 @@ Route::get('/public/widget/bug-report/{signal}/comments', BugReportCommentsListC
     ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
     ->whereUuid('signal')
     ->name('widget.bug-report.comments.list');
+
+// Streams attachment media for the public widget (key + signal scoped), so
+// attachments stay reachable even when media lives on a private S3 disk.
+Route::get('/public/widget/bug-report/{signal}/media/{media}', BugReportMediaController::class)
+    ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
+    ->whereUuid('signal')
+    ->whereNumber('media') // spatie Media uses a bigint auto-increment id, not a UUID
+    ->name('widget.bug-report.media');
 
 Route::post('/public/widget/bug-report/{signal}/comments', BugReportCommentsCreateController::class)
     ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class])
