@@ -78,6 +78,14 @@ final class BeforeSendFilter
             }
         }
 
+        // Partner webhook delivered to a failing remote endpoint (non-2xx) on a
+        // non-final attempt. DeliverPartnerWebhookJob rethrows to trigger the
+        // queue backoff; the remote is failing, not FleetQ. Permanent failure
+        // (attempts exhausted) is recorded via Log::warning, not this path.
+        if (str_contains($msg, 'Webhook delivery failed')) {
+            return null;
+        }
+
         return $event;
     }
 }
