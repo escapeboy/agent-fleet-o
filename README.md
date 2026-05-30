@@ -470,6 +470,65 @@ Remove a fingerprint when a host's SSH key is legitimately rotated — the next 
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    subgraph Clients["Operators & external agents"]
+        UI["Admin UI — Livewire 4 + Alpine"]
+        MCPCLI["MCP clients (Claude Desktop, Cursor, Codex, Claude Code)"]
+        APIC["REST clients — /api/v1/* (Sanctum)"]
+        SIG["Inbound signals (webhook / RSS / IMAP / Slack / Telegram)"]
+    end
+
+    UI --> WEB
+    APIC --> API
+    MCPCLI -->|HTTP/SSE or stdio| MCP
+    SIG --> INGEST
+
+    subgraph App["FleetQ app (Laravel 13 / PHP 8.4)"]
+        WEB["Web routes (auth:web)"] --> DOM
+        API["/api/v1/* — Sanctum tokens"] --> DOM
+        MCP["AgentFleetServer — 200+ MCP tools / 31 domains"] --> DOM
+        INGEST["SignalWebhookController / IngestSignalAction"] --> TRIG["TriggerRule evaluator"]
+        TRIG --> DOM
+
+        DOM["Domain layer — Agent / Crew / Experiment / Workflow / Project / Approval / Budget / Tool / Credential / Skill / Outbound"]
+        DOM --> SM["ExperimentStateMachine (20 states)"]
+        SM --> EVT(("ExperimentTransitioned event"))
+        EVT --> STAGE["BaseStageJob + PlaybookExecutor"]
+        STAGE --> GATEWAY["AI Gateway (PrismPHP) — 6-layer middleware + circuit breakers"]
+        GATEWAY --> LLM["Providers: Anthropic / OpenAI / Google / Ollama / vLLM / Codex / Claude Code"]
+        STAGE --> TOOLS["ToolTranslator — MCP stdio/HTTP, bash, filesystem, browser, SSH (TOFU)"]
+        STAGE --> APPR["ApprovalRequest / HumanTask (auth:web inbox)"]
+        STAGE --> OUT["Outbound connectors — Email / Telegram / Slack / Webhook / ntfy"]
+        STAGE --> ARTI[("Artifact + ArtifactVersion")]
+
+        DOM --> DB[("Postgres 17 + pgvector — semantic cache, UUIDv7, JSONB+GIN")]
+        STAGE --> QUEUE[("Redis 7 — 6 Horizon queues, cache, locks")]
+        APPR --> DB
+        ARTI --> DB
+    end
+
+    subgraph Optional["Optional Docker profiles"]
+        REVERB["Reverb — WebSocket live team graph"]
+        BROWSER["browserless (Chromium)"]
+        SEARX["searxng"]
+        VOICE["voice-worker (LiveKit / Deepgram)"]
+        SANDBOX["bash_sidecar (sandboxed shell)"]
+        RELAY["fleetq-bridge relay"]
+        JAEGER["Jaeger — OTLP traces (--profile observability)"]
+    end
+
+    App -.OTLP spans.-> JAEGER
+    UI <-->|WebSocket| REVERB
+    TOOLS -.->|browser tools| BROWSER
+    TOOLS -.->|web search skill| SEARX
+    TOOLS -.->|bash skill| SANDBOX
+    App <-->|relay| RELAY
+    DOM <--> VOICE
+```
+
+The platform is a single Laravel 13 monolith that exposes three coequal control surfaces over the same domain layer: the Livewire admin UI, a Sanctum-authenticated REST API at `/api/v1/*` (~175 endpoints), and `AgentFleetServer` — an MCP server with 200+ tools across 31 domains served over both HTTP/SSE and local stdio. Inbound signals (webhook, RSS, IMAP, Slack, Telegram, and the rest of the 20+ connectors) flow through `IngestSignalAction` and the `TriggerRule` evaluator into the domain layer, where the `ExperimentStateMachine` walks a 20-state pipeline by emitting `ExperimentTransitioned` events whose listeners dispatch the next `BaseStageJob` onto Horizon-managed Redis queues. Stage jobs talk to LLMs through the PrismPHP-backed AI Gateway (rate-limit, budget, idempotency, semantic-cache, schema-validation, usage-tracking middleware + circuit breakers + provider fallbacks), invoke `Tool` instances translated to PrismPHP tool calls (MCP stdio/HTTP, built-in bash/filesystem/browser, SSH with TOFU fingerprints), park `ApprovalRequest`/`HumanTask` records for the human-in-the-loop inbox, and persist `Artifact` versions plus deliver outbound messages over Email/Telegram/Slack/Webhook/ntfy. State and tenant data live in Postgres 17 with pgvector (semantic cache, UUIDv7 primary keys, JSONB+GIN indexes); Redis 7 carries the six Horizon queues, application cache, and pessimistic budget locks. Optional Docker Compose profiles add Reverb for the live team-graph WebSocket, browserless for browser tools, searxng for web search, a voice worker (LiveKit/Deepgram), a sandboxed bash sidecar, the fleetq-bridge relay, and Jaeger for OpenTelemetry tracing via `--profile observability`.
+
 Built with Laravel 12, Livewire 4, and Tailwind CSS. Domain-driven design with 33 bounded contexts — table below shows the 17 primary domains:
 
 | Domain | Purpose |
