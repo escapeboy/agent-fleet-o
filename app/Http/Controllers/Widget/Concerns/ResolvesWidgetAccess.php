@@ -7,6 +7,7 @@ use App\Domain\Signal\Models\Signal;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\RateLimiter;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 trait ResolvesWidgetAccess
 {
@@ -58,5 +59,26 @@ trait ResolvesWidgetAccess
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             ->header('Access-Control-Allow-Headers', 'Content-Type');
+    }
+
+    /**
+     * Build the public, key-scoped URL for a widget media item. Used instead of
+     * Media::getFullUrl() so attachments stay reachable on the unauthenticated
+     * widget even when media lives on a private disk (served via the streaming
+     * BugReportMediaController, not a disk URL).
+     */
+    protected function widgetMediaUrl(Signal $signal, Media $media, string $publicKey, ?string $conversion = null): string
+    {
+        $params = [
+            'signal' => $signal->id,
+            'media' => $media->id,
+            'team_public_key' => $publicKey,
+        ];
+
+        if ($conversion !== null) {
+            $params['conversion'] = $conversion;
+        }
+
+        return route('widget.bug-report.media', $params);
     }
 }

@@ -19,7 +19,8 @@ class BugReportCommentsListController extends Controller
             'team_public_key' => ['required', 'string'],
         ]);
 
-        $team = $this->resolveTeam($request->query('team_public_key'));
+        $publicKey = $request->query('team_public_key');
+        $team = $this->resolveTeam($publicKey);
         $signalModel = $this->resolveBugReportSignal($team, $signal);
 
         $this->throttle('widget-comments-list:'.$signalModel->id, 30);
@@ -41,8 +42,10 @@ class BugReportCommentsListController extends Controller
                 'created_at' => $c->created_at?->toISOString(),
                 'attachments' => $c->getMedia('attachments')
                     ->map(fn (Media $m) => [
-                        'url' => $m->getFullUrl(),
-                        'thumb_url' => $m->hasGeneratedConversion('thumb') ? $m->getFullUrl('thumb') : $m->getFullUrl(),
+                        'url' => $this->widgetMediaUrl($signalModel, $m, $publicKey),
+                        'thumb_url' => $m->hasGeneratedConversion('thumb')
+                            ? $this->widgetMediaUrl($signalModel, $m, $publicKey, 'thumb')
+                            : $this->widgetMediaUrl($signalModel, $m, $publicKey),
                         'mime' => $m->mime_type,
                         'size' => (int) $m->size,
                     ])
