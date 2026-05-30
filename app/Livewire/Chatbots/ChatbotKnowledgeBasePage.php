@@ -10,6 +10,7 @@ use App\Domain\Chatbot\Jobs\IndexKnowledgeSourceJob;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
+use App\Infrastructure\Storage\TenantStorageManager;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -77,9 +78,14 @@ class ChatbotKnowledgeBasePage extends Component
         ];
 
         if ($this->sourceType === 'document' && $this->sourceFile) {
-            $path = $this->sourceFile->store('chatbot-knowledge/'.$this->chatbot->id, 'local');
+            $key = app(TenantStorageManager::class)->put(
+                $this->sourceFile,
+                'chatbot-kb/'.$this->chatbot->id,
+                TenantStorageManager::VISIBILITY_PRIVATE,
+                $this->chatbot->team_id,
+            );
             $data['source_data'] = [
-                'path' => $path,
+                'path' => $key,
                 'mime_type' => $this->sourceFile->getMimeType(),
                 'original_name' => $this->sourceFile->getClientOriginalName(),
                 'size' => $this->sourceFile->getSize(),
