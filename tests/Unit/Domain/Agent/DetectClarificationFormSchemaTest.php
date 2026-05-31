@@ -253,7 +253,7 @@ class DetectClarificationFormSchemaTest extends TestCase
         $this->app->instance(AiGatewayInterface::class, $gateway);
 
         $resolver = Mockery::mock(ProviderResolver::class);
-        $resolver->shouldReceive('resolve')->andReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5']);
+        $resolver->shouldReceive('resolveInternal')->andReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5']);
         $this->app->instance(ProviderResolver::class, $resolver);
     }
 
