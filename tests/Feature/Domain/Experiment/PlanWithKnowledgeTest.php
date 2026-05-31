@@ -50,7 +50,7 @@ class PlanWithKnowledgeTest extends TestCase
         ));
 
         $mockResolver = $this->createMock(ProviderResolver::class);
-        $mockResolver->method('resolve')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
+        $mockResolver->method('resolveInternal')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
 
         $mockKgSearch = $this->createMock(SearchKgFactsAction::class);
         $mockKgSearch->method('execute')->willReturn(collect());
@@ -85,7 +85,7 @@ class PlanWithKnowledgeTest extends TestCase
         ));
 
         $mockResolver = $this->createMock(ProviderResolver::class);
-        $mockResolver->method('resolve')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
+        $mockResolver->method('resolveInternal')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
 
         $mockKgSearch = $this->createMock(SearchKgFactsAction::class);
         $mockKgSearch->method('execute')->willReturn(collect());
@@ -115,7 +115,7 @@ class PlanWithKnowledgeTest extends TestCase
         ));
 
         $mockResolver = $this->createMock(ProviderResolver::class);
-        $mockResolver->method('resolve')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
+        $mockResolver->method('resolveInternal')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
 
         $mockKgSearch = $this->createMock(SearchKgFactsAction::class);
         $mockKgSearch->method('execute')->willThrowException(new \RuntimeException('KG not configured'));
@@ -134,7 +134,7 @@ class PlanWithKnowledgeTest extends TestCase
         $mockGateway->method('complete')->willThrowException(new \RuntimeException('LLM unavailable'));
 
         $mockResolver = $this->createMock(ProviderResolver::class);
-        $mockResolver->method('resolve')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
+        $mockResolver->method('resolveInternal')->willReturn(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001']);
 
         $mockKgSearch = $this->createMock(SearchKgFactsAction::class);
         $mockKgSearch->method('execute')->willReturn(collect());
