@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Events\SafetyViolationDetected;
 use Closure;
 use Illuminate\Support\Facades\Cache;
@@ -196,7 +197,7 @@ class SafetyClassifier implements AiMiddlewareInterface
         return new AiResponseDTO(
             content: $refusal,
             parsedOutput: null,
-            usage: new \App\Infrastructure\AI\DTOs\AiUsageDTO(
+            usage: new AiUsageDTO(
                 promptTokens: 0,
                 completionTokens: 0,
                 costCredits: 0,

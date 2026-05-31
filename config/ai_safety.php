@@ -31,7 +31,7 @@ return [
     */
     'refusal_message' => env(
         'AI_SAFETY_REFUSAL_MESSAGE',
-        'This response was blocked by your team\'s AI safety policy.'
+        'This response was blocked by your team\'s AI safety policy.',
     ),
 
     /*

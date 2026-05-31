@@ -20,8 +20,6 @@ class SummarizeContext
 {
     private const CONTEXT_CHAR_THRESHOLD = 12_000;
 
-    private const SUMMARIZE_MODEL = 'claude-haiku-4-5';
-
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly ProviderResolver $providerResolver,
@@ -42,12 +40,14 @@ class SummarizeContext
 
         try {
             $team = Team::find($ctx->teamId);
-            $resolved = $this->providerResolver->resolve(agent: $ctx->agent, team: $team);
+            // Cheap internal call — BYOK-aware provider/model the team holds a key
+            // for, instead of forcing anthropic/claude-haiku-4-5 (401 on no-Anthropic
+            // teams). This is metadata work, not the main task.
+            $resolved = $this->providerResolver->resolveInternal($team, 'cheap');
 
-            // Use fast/cheap haiku model — this is metadata work, not the main task
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $resolved['provider'],
-                model: self::SUMMARIZE_MODEL,
+                model: $resolved['model'],
                 systemPrompt: 'You are a context summarizer. Compress the following JSON input into the key facts needed to complete the task. Be concise and preserve all actionable information.',
                 userPrompt: $encoded,
                 maxTokens: 512,

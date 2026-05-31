@@ -1,5 +1,7 @@
 <?php
 
+use App\Infrastructure\Sentry\BeforeSendFilter;
+
 /**
  * Sentry Laravel SDK configuration file.
  *
@@ -54,7 +56,7 @@ return [
      *
      * Implementation in App\Infrastructure\Sentry\BeforeSendFilter::filter.
      */
-    'before_send' => [\App\Infrastructure\Sentry\BeforeSendFilter::class, 'filter'],
+    'before_send' => [BeforeSendFilter::class, 'filter'],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions
     'ignore_transactions' => [
