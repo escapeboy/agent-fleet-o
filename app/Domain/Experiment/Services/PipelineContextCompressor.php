@@ -102,7 +102,10 @@ class PipelineContextCompressor
     {
         try {
             // BYOK-aware provider/model instead of hard-coded anthropic/claude-haiku-4-5.
-            $resolved = app(ProviderResolver::class)->resolveInternal($experiment->team, 'cheap');
+            $resolved = app(ProviderResolver::class)->resolveInternal(
+                Team::withoutGlobalScopes()->find($experiment->team_id),
+                'cheap',
+            );
 
             $response = app(AiGatewayInterface::class)->complete(new AiRequestDTO(
                 provider: $resolved['provider'],

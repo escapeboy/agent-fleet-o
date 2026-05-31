@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Services;
 
 use App\Domain\Experiment\DTOs\DoneVerdict;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -41,7 +42,7 @@ class DoneConditionJudge
         } else {
             // BYOK-aware default instead of hard-coded anthropic/claude-haiku-4-5,
             // which 401s on teams without an Anthropic key.
-            $internal = app(ProviderResolver::class)->resolveInternal($experiment->team, 'cheap');
+            $internal = app(ProviderResolver::class)->resolveInternal(Team::find($experiment->team_id), 'cheap');
             $provider = $internal['provider'];
             $model = $internal['model'];
         }
