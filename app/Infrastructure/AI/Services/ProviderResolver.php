@@ -813,6 +813,72 @@ class ProviderResolver
     }
 
     /**
+     * Resolve a provider/model for internal utility LLM calls (memory extraction,
+     * context summarisation/compression, pre-execution scout, done-condition judge,
+     * first-principles planning enrichment) that historically hard-coded
+     * `anthropic/claude-haiku-4-5`.
+     *
+     * Honours BYOK availability: a team with no Anthropic key but an active
+     * OpenAI/Google/OpenRouter key resolves to that provider's tier model instead
+     * of dying with a 401. Without this, the hard-coded anthropic sub-calls throw
+     * `x-api-key header is required` on no-Anthropic teams and abort the whole
+     * experiment pipeline (prod incident 2026-05-30, team PriceX: every run died
+     * before any stage was created).
+     *
+     * Resolution order:
+     *   1. The team's configured default provider, when the tier has a model for it
+     *      and the team holds a key (platform key or active BYOK credential).
+     *   2. The first provider in the tier table the team has a key for.
+     *   3. enforceAvailability() over the tier's first provider — picks from
+     *      whatever the team genuinely has, or returns it unchanged so the caller
+     *      fails loudly downstream instead of silently hanging.
+     *
+     * @param  'cheap'|'standard'|'expensive'  $tier
+     * @return array{provider: string, model: string}
+     */
+    public function resolveInternal(?Team $team, string $tier = 'cheap'): array
+    {
+        /** @var array<string, string>|null $tierModels */
+        $tierModels = config("experiments.model_tiers.{$tier}");
+
+        // 'standard' tier (or an unknown tier) carries no concrete map — fall back
+        // to the platform default, still subjected to availability enforcement.
+        if (! is_array($tierModels) || $tierModels === []) {
+            return $this->enforceAvailability([
+                'provider' => (string) config('llm_pricing.default_provider', 'anthropic'),
+                'model' => (string) config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            ], $team);
+        }
+
+        // 1. Prefer the team's configured default provider when the tier has a
+        //    model for it and the team actually holds a key.
+        $teamProvider = is_array($team?->settings) ? ($team->settings['default_llm_provider'] ?? null) : null;
+        if (
+            is_string($teamProvider)
+            && isset($tierModels[$teamProvider])
+            && $this->teamHasProvider($team, $teamProvider)
+        ) {
+            return ['provider' => $teamProvider, 'model' => $tierModels[$teamProvider]];
+        }
+
+        // 2. First tier provider the team has a key for.
+        foreach ($tierModels as $provider => $model) {
+            if ($this->teamHasProvider($team, $provider)) {
+                return ['provider' => $provider, 'model' => $model];
+            }
+        }
+
+        // 3. Nothing in the tier table is available — let enforceAvailability pick
+        //    from whatever the team genuinely has (or fail loudly downstream).
+        $firstProvider = (string) array_key_first($tierModels);
+
+        return $this->enforceAvailability([
+            'provider' => $firstProvider,
+            'model' => (string) $tierModels[$firstProvider],
+        ], $team);
+    }
+
+    /**
      * Attempt to resolve a local provider for the given agent/team context.
      *
      * Returns a (provider, model) array when a local provider is available,

@@ -69,7 +69,7 @@ class DrainSecretProxyAudit extends Command
             ]);
         }
 
-        $this->info("secret-proxy: persisted {$persisted} denied-egress event(s)" . ($skipped > 0 ? " (skipped {$skipped}, no team)" : '') . '.');
+        $this->info("secret-proxy: persisted {$persisted} denied-egress event(s)".($skipped > 0 ? " (skipped {$skipped}, no team)" : '').'.');
 
         return self::SUCCESS;
     }

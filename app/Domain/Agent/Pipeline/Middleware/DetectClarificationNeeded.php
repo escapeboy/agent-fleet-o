@@ -27,8 +27,6 @@ class DetectClarificationNeeded
 
     private const DEFAULT_THRESHOLD = 0.75;
 
-    private const DETECT_MODEL = 'claude-haiku-4-5';
-
     /**
      * Whitelist of form field types the renderer knows how to display.
      * Anything not in this set is silently dropped from LLM-generated schemas.
@@ -60,11 +58,12 @@ class DetectClarificationNeeded
 
         try {
             $team = Team::find($ctx->teamId);
-            $resolved = $this->providerResolver->resolve(agent: $ctx->agent, team: $team);
+            // Cheap internal call — BYOK-aware provider/model (see resolveInternal).
+            $resolved = $this->providerResolver->resolveInternal($team, 'cheap');
 
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $resolved['provider'],
-                model: self::DETECT_MODEL,
+                model: $resolved['model'],
                 systemPrompt: <<<'PROMPT'
                 Analyze the task input for ambiguity. Return ONLY valid JSON (no markdown, no prose).
 

@@ -8,6 +8,7 @@ use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -100,11 +101,17 @@ class PipelineContextCompressor
     private function llmSummarize(Experiment $experiment, Collection $stages): ?string
     {
         try {
-            $response = app(AiGatewayInterface::class)->execute(new AiRequestDTO(
-                provider: 'anthropic',
-                model: 'claude-haiku-4-5',
+            // BYOK-aware provider/model instead of hard-coded anthropic/claude-haiku-4-5.
+            $resolved = app(ProviderResolver::class)->resolveInternal(
+                Team::withoutGlobalScopes()->find($experiment->team_id),
+                'cheap',
+            );
+
+            $response = app(AiGatewayInterface::class)->complete(new AiRequestDTO(
+                provider: $resolved['provider'],
+                model: $resolved['model'],
                 systemPrompt: 'Summarize these experiment stages into a structured progress report. Preserve: key decisions made, outputs produced, errors encountered. Drop: raw data, verbose tool results, repeated information.',
-                userMessage: json_encode($stages->toArray()),
+                userPrompt: json_encode($stages->toArray()),
                 teamId: $experiment->team_id,
                 purpose: 'context_compression',
                 maxTokens: 2048,

@@ -7,6 +7,7 @@ use App\Domain\Chatbot\Enums\KnowledgeSourceType;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Integration\Services\WebclawResolver;
+use App\Infrastructure\Storage\TenantStorageManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -81,8 +82,8 @@ class IndexKnowledgeSourceJob implements ShouldQueue
             throw new \RuntimeException('Document file not found: (no path)');
         }
 
-        $disk = app(\App\Infrastructure\Storage\TenantStorageManager::class)
-            ->disk(\App\Infrastructure\Storage\TenantStorageManager::VISIBILITY_PRIVATE);
+        $disk = app(TenantStorageManager::class)
+            ->disk(TenantStorageManager::VISIBILITY_PRIVATE);
 
         if ($disk->exists($path)) {
             $content = $disk->get($path);

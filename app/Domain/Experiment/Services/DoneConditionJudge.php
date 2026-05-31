@@ -4,8 +4,10 @@ namespace App\Domain\Experiment\Services;
 
 use App\Domain\Experiment\DTOs\DoneVerdict;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -34,8 +36,16 @@ class DoneConditionJudge
         array|string $evidence,
         ?array $override = null,
     ): DoneVerdict {
-        $provider = $override['provider'] ?? 'anthropic';
-        $model = $override['model'] ?? 'claude-haiku-4-5';
+        if (! empty($override['provider']) && ! empty($override['model'])) {
+            $provider = $override['provider'];
+            $model = $override['model'];
+        } else {
+            // BYOK-aware default instead of hard-coded anthropic/claude-haiku-4-5,
+            // which 401s on teams without an Anthropic key.
+            $internal = app(ProviderResolver::class)->resolveInternal(Team::find($experiment->team_id), 'cheap');
+            $provider = $internal['provider'];
+            $model = $internal['model'];
+        }
 
         $featuresJson = json_encode($features, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $evidenceText = is_string($evidence)

@@ -80,15 +80,19 @@ class PreExecutionScout
     private function runScout(AgentExecutionContext $ctx, string $inputText): array
     {
         $team = Team::find($ctx->teamId);
-        $resolved = $this->providerResolver->resolve(agent: $ctx->agent, team: $team);
+        // BYOK-aware cheap-tier resolution: returns a cloud provider/model the team
+        // holds a key for, instead of forcing anthropic/claude-haiku (401 on teams
+        // with no Anthropic key). Local providers carry no cheap-tier cloud model,
+        // so the scout is skipped for them below.
+        $resolved = $this->providerResolver->resolveInternal($team, 'cheap');
 
         // Only cloud providers support the structured JSON scout call.
         // Local agents (codex, claude-code) are skipped — fall through gracefully.
-        $scoutModel = self::SCOUT_MODELS[$resolved['provider']] ?? null;
-
-        if ($scoutModel === null) {
+        if (! isset(self::SCOUT_MODELS[$resolved['provider']])) {
             return [];
         }
+
+        $scoutModel = $resolved['model'];
 
         $systemPrompt = 'You are a planning assistant. Given a task description, identify the specific knowledge needed to perform it well. '
             .'Return 3-5 targeted search queries whose answers would make an AI agent most effective at this task. '

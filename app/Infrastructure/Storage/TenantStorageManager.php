@@ -152,7 +152,7 @@ class TenantStorageManager
         if (! $teamId) {
             throw new RuntimeException(
                 'TenantStorageManager: cannot resolve team_id for storage access. '
-                .'Pass an explicit $teamId in queue/MCP contexts.'
+                .'Pass an explicit $teamId in queue/MCP contexts.',
             );
         }
 

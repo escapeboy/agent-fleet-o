@@ -136,11 +136,14 @@ Be specific. Flag anything the conventional approach would miss.
 Output JSON: {"insights": ["...", "..."], "risks": ["..."], "key_questions": ["..."]}
 TEXT;
 
-            $resolved = $this->providerResolver->resolve(team: null);
+            // BYOK-aware cheap-tier resolution scoped to the team. Was previously
+            // resolve(team: null) + hard-coded anthropic/claude-haiku, which 401s
+            // on teams without an Anthropic key and aborted planning enrichment.
+            $resolved = $this->providerResolver->resolveInternal(Team::find($teamId), 'cheap');
 
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $resolved['provider'],
-                model: 'claude-haiku-4-5-20251001',
+                model: $resolved['model'],
                 systemPrompt: 'You are a strategic planning assistant. Analyze goals using first-principles thinking. Always output valid JSON.',
                 userPrompt: $userPrompt,
                 maxTokens: 1024,
