@@ -28,6 +28,7 @@ class BugReportSignalTest extends ApiTestCase
         $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class]);
         Queue::fake();
         Event::fake();
+        config(['media-library.disk_name' => 'local']);
         Storage::fake('local');
     }
 
