@@ -157,42 +157,6 @@ parameters:
 			path: app/Console/Commands/RecoverStuckTasks.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpHttp is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpStdio is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
-			message: '#^Offset ''url'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between null and null will always evaluate to false\.$#'
-			identifier: notIdentical.alwaysFalse
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Console/Commands/RefreshToolDefinitionsCommand.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -229,78 +193,6 @@ parameters:
 			path: app/Console/Commands/SendWeeklyDigest.php
 
 		-
-			message: '#^Dead catch \- Throwable is never thrown in the try block\.$#'
-			identifier: catch.neverThrown
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Method App\\Console\\Commands\\ToolHealthCheckCommand\:\:buildHeaders\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Method App\\Console\\Commands\\ToolHealthCheckCommand\:\:defsMatch\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''api_key'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''api_key'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''headers'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''headers'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''token'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''token'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Console/Commands/ToolHealthCheckCommand.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model&object\{pivot\: Illuminate\\Database\\Eloquent\\Relations\\Pivot\}\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -321,12 +213,6 @@ parameters:
 		-
 			message: '#^Method App\\Domain\\Agent\\Actions\\ExecuteAgentAction\:\:validateAgentOutput\(\) never returns array\{valid\: bool, errors\: list\<string\>\} so it can be removed from the return type\.$#'
 			identifier: return.unusedType
-			count: 1
-			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: non\-falsy\-string, Closure\(App\\Domain\\Skill\\Models\\Skill\)\: non\-falsy\-string given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
 
@@ -361,15 +247,9 @@ parameters:
 			path: app/Domain/Agent/Actions/ExecuteAgentAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
 			count: 1
-			path: app/Domain/Agent/Actions/ExportAgentWorkspaceAction.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 2
 			path: app/Domain/Agent/Actions/ExportAgentWorkspaceAction.php
 
 		-
@@ -421,8 +301,8 @@ parameters:
 			path: app/Domain/Agent/Actions/ExportAgentWorkspaceAction.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Domain/Agent/Actions/ExportAgentWorkspaceAction.php
 
@@ -485,6 +365,18 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Domain/Agent/Jobs/ExecuteAgentHeartbeatJob.php
+
+		-
+			message: '#^Method App\\Domain\\Agent\\Models\\Agent\:\:skills\(\) should return Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Domain\\Skill\\Models\\Skill, \$this\(App\\Domain\\Agent\\Models\\Agent\), Illuminate\\Database\\Eloquent\\Relations\\Pivot, ''pivot''\> but returns Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Domain\\Skill\\Models\\Skill, \$this\(App\\Domain\\Agent\\Models\\Agent\), App\\Domain\\Agent\\Models\\AgentSkillPivot, ''pivot''\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Agent/Models/Agent.php
+
+		-
+			message: '#^Method App\\Domain\\Agent\\Models\\Agent\:\:tools\(\) should return Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Domain\\Tool\\Models\\Tool, \$this\(App\\Domain\\Agent\\Models\\Agent\), Illuminate\\Database\\Eloquent\\Relations\\Pivot, ''pivot''\> but returns Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Domain\\Tool\\Models\\Tool, \$this\(App\\Domain\\Agent\\Models\\Agent\), App\\Domain\\Agent\\Models\\AgentToolPivot, ''pivot''\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Agent/Models/Agent.php
 
 		-
 			message: '#^Offset ''fields'' on array\{fields\: list\<array\<string, mixed\>\>\} on left side of \?\? always exists and is not nullable\.$#'
@@ -919,6 +811,30 @@ parameters:
 			path: app/Domain/Approval/Models/ApprovalRequest.php
 
 		-
+			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Domain/Approval/Services/ApprovalSummarizer.php
+
+		-
+			message: '#^Offset ''experiment_thesis'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Approval/Services/ApprovalSummarizer.php
+
+		-
+			message: '#^Offset ''experiment_title'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Approval/Services/ApprovalSummarizer.php
+
+		-
+			message: '#^Offset ''type'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Approval/Services/ApprovalSummarizer.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1078,12 +994,6 @@ parameters:
 			message: '#^Call to an undefined method Laravel\\Ai\\Tools\\Request\:\:get\(\)\.$#'
 			identifier: method.notFound
 			count: 5
-			path: app/Domain/Assistant/AgentTools/CreateSkillTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
 			path: app/Domain/Assistant/AgentTools/CreateSkillTool.php
 
 		-
@@ -1438,18 +1348,6 @@ parameters:
 			message: '#^Call to an undefined method Laravel\\Ai\\Tools\\Request\:\:get\(\)\.$#'
 			identifier: method.notFound
 			count: 3
-			path: app/Domain/Assistant/AgentTools/ListSkillsTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Domain/Assistant/AgentTools/ListSkillsTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
 			path: app/Domain/Assistant/AgentTools/ListSkillsTool.php
 
 		-
@@ -1845,7 +1743,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 9
+			count: 7
 			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
 
 		-
@@ -1874,12 +1772,6 @@ parameters:
 
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Project\\Models\\Project\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Domain/Assistant/Tools/ListEntitiesTools.php
@@ -1917,7 +1809,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 5
+			count: 4
 			path: app/Domain/Assistant/Tools/Mutations/WorkflowMutationTools.php
 
 		-
@@ -3559,26 +3451,8 @@ parameters:
 			path: app/Domain/Experiment/Services/PipelineContextCompressor.php
 
 		-
-			message: '#^Call to an undefined method App\\Infrastructure\\AI\\Gateways\\FallbackAiGateway\:\:execute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Domain/Experiment/Services/PipelineContextCompressor.php
-
-		-
-			message: '#^Missing parameter \$userPrompt \(string\) in call to App\\Infrastructure\\AI\\DTOs\\AiRequestDTO constructor\.$#'
-			identifier: argument.missing
-			count: 1
-			path: app/Domain/Experiment/Services/PipelineContextCompressor.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 1
-			path: app/Domain/Experiment/Services/PipelineContextCompressor.php
-
-		-
-			message: '#^Unknown parameter \$userMessage in call to App\\Infrastructure\\AI\\DTOs\\AiRequestDTO constructor\.$#'
-			identifier: argument.unknown
 			count: 1
 			path: app/Domain/Experiment/Services/PipelineContextCompressor.php
 
@@ -4143,7 +4017,7 @@ parameters:
 		-
 			message: '#^Offset ''output_schema'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
+			count: 2
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
 
 		-
@@ -4166,6 +4040,12 @@ parameters:
 
 		-
 			message: '#^Offset ''provider'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
+
+		-
+			message: '#^Offset ''reasoning_strategy'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
@@ -4246,12 +4126,6 @@ parameters:
 			message: '#^Call to function method_exists\(\) with App\\Domain\\Agent\\Models\\Agent and ''skills'' will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
-			path: app/Domain/Marketplace/Actions/PublishBundleAction.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
 			path: app/Domain/Marketplace/Actions/PublishBundleAction.php
 
 		-
@@ -4341,13 +4215,19 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 3
+			count: 2
 			path: app/Domain/Marketplace/Actions/PublishToMarketplaceAction.php
 
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 2
+			path: app/Domain/Marketplace/Actions/PublishToMarketplaceAction.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
 			path: app/Domain/Marketplace/Actions/PublishToMarketplaceAction.php
 
 		-
@@ -5533,66 +5413,6 @@ parameters:
 			path: app/Domain/Signal/Actions/ClassifySignalIntentAction.php
 
 		-
-			message: '#^Property App\\Domain\\Signal\\Models\\Signal\:\:\$metadata \(string\|null\) does not accept array\<string, string\>\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Domain/Signal/Actions/ClassifySignalIntentAction.php
-
-		-
-			message: '#^Offset ''affected_user'' does not exist on array\{\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''affected_user'' on array\{\} in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''ai_extracted'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''ai_tags'' does not exist on string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''ai_tags'' on string\|null in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''component'' does not exist on array\{\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''component'' on array\{\} in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''steps_to_reproduce'' does not exist on array\{\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
-			message: '#^Offset ''steps_to_reproduce'' on array\{\} in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Signal/Actions/DelegateBugReportToAgentAction.php
-
-		-
 			message: '#^Parameter \#1 \$array \(list\<non\-falsy\-string\>\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
 			count: 1
@@ -5707,12 +5527,6 @@ parameters:
 			path: app/Domain/Signal/Connectors/TelegramSignalConnector.php
 
 		-
-			message: '#^Offset ''inferred_intent'' on array\{\}\|string in isset\(\) does not exist\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Domain/Signal/Jobs/ClassifySignalIntentJob.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isActive\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -5765,30 +5579,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 2
 			path: app/Domain/Signal/Jobs/StructureBugReportJob.php
-
-		-
-			message: '#^Property App\\Domain\\Signal\\Models\\Signal\:\:\$metadata \(string\|null\) does not accept array\<mixed, mixed\>\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Domain/Signal/Jobs/StructureBugReportJob.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
-
-		-
-			message: '#^Cannot call method isTerminal\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Signal\\Enums\\SignalStatus\:\:Resolved will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Signal/Listeners/CloseBugReportOnPrMergeListener.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$experiment_id\.$#'
@@ -5929,220 +5719,22 @@ parameters:
 			path: app/Domain/Skill/Actions/CancelSkillBenchmarkAction.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteBorunaScriptSkillAction\:\:fetchCapabilitySetHash\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteBorunaScriptSkillAction\:\:normalisePolicy\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteBorunaScriptSkillAction\:\:resolveTool\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteBorunaScriptSkillAction\:\:\$cache is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBorunaScriptSkillAction.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
-
-		-
-			message: '#^Offset ''action'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
-
-		-
-			message: '#^Offset ''url'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
-
-		-
 			message: '#^Variable \$url on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.variable
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteBrowserSkillAction.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:execute\(\) should return array\{execution\: App\\Domain\\Skill\\Models\\SkillExecution, output\: array\|null\} but returns array\{execution\: App\\Domain\\Skill\\Models\\SkillExecution, output\: string\|null\}\.$#'
+			identifier: return.type
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
 
 		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
+			message: '#^Variable \$repoPath on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.variable
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Offset ''base_branch'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Offset ''git_repo_path'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Offset ''sandbox'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Offset ''timeout_seconds'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$filesystemGuard is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$sandbox is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteCodeExecutionSkillAction\:\:\$worktreeManager is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteCodeExecutionSkillAction.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:runAsync\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Offset ''endpoint_id'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Offset ''provider'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$credentialResolver is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Actions\\ExecuteGpuComputeSkillAction\:\:\$manager is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteGpuComputeSkillAction.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:buildPodPayload\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:calculateCostCredits\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:resolveApiKey\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
 
 		-
 			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
@@ -6151,64 +5743,10 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
 
 		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:sendPodRequest\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodPodSkillAction\:\:waitForPodRunning\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
 			message: '#^Offset ''api_key'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Offset ''gpu_type_id'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Offset ''image_name'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodPodSkillAction.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:applyInputMapping\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:resolveApiKey\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
 
 		-
 			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:resolveApiKey\(\) never returns string so it can be removed from the return type\.$#'
@@ -6217,238 +5755,82 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
 
 		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:runAsynchronous\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteRunPodSkillAction\:\:runSynchronous\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
 			message: '#^Offset ''api_key'' on string\|null on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
 
 		-
-			message: '#^Offset ''endpoint_id'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
-
-		-
-			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Domain\\Skill\\Enums\\SkillType\:\:Llm, App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid, App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\} and true will always evaluate to false\.$#'
-			identifier: function.impossibleType
+			message: '#^Cannot call method execute\(\) on null\.$#'
+			identifier: method.nonObject
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 2
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''boruna_script'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Browser is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''browser'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''code_execution'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Connector is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''gpu_compute'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''runpod_endpoint'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''runpod_pod'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid is always false\.$#'
+			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''supabase_edge…'' is always false\.$#'
 			identifier: match.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Llm is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:Rule is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: string$#'
+			message: '#^Match expression does not handle remaining values\: App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction$#'
 			identifier: match.unhandled
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Offset ''judge_model'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 3
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Offset ''max_tokens'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 4
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Offset ''models'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
+			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteSkillAction\:\:delegateSpecializedType\(\) never returns array\{execution\: App\\Domain\\Skill\\Models\\SkillExecution, output\: array\|string\|null\} so it can be removed from the return type\.$#'
+			identifier: return.unusedType
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Offset ''prompt_template'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
 		-
-			message: '#^Offset ''quality_details'' on array\{skill_id\: string, agent_id\: string\|null, experiment_id\: string\|null, team_id\: string, status\: ''completed'', input\: array, output\: array\{answer\: mixed, dissenting_view\: mixed\}, duration_ms\: int, \.\.\.\}\|array\{skill_id\: string, agent_id\: string\|null, experiment_id\: string\|null, team_id\: string, status\: ''completed'', input\: array, output\: mixed, duration_ms\: int, \.\.\.\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
+			message: '#^Strict comparison using \=\=\= between App\\Domain\\Skill\\Enums\\SkillType and ''multi_model…'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Offset ''rules'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Offset ''task'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Offset ''temperature'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Parameter \#2 \$schema of method App\\Domain\\Skill\\Services\\SchemaValidator\:\:validate\(\) expects array, string given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteSupabaseEdgeFunctionSkillAction\:\:resolveServiceRoleKey\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 2
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Offset ''credential_id'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Offset ''function_name'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Offset ''project_url'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSupabaseEdgeFunctionSkillAction.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -6483,12 +5865,6 @@ parameters:
 		-
 			message: '#^Missing parameter \$userPrompt \(string\) in call to App\\Infrastructure\\AI\\DTOs\\AiRequestDTO constructor\.$#'
 			identifier: argument.missing
-			count: 1
-			path: app/Domain/Skill/Actions/ProposeNewSkillFromExperimentAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Skill\\Enums\\SkillStatus\:\:Draft will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Domain/Skill/Actions/ProposeNewSkillFromExperimentAction.php
 
@@ -6565,24 +5941,6 @@ parameters:
 			path: app/Domain/Skill/Jobs/AnalyzeExecutionForEvolutionJob.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Skill/Jobs/AnalyzeExecutionForEvolutionJob.php
-
-		-
-			message: '#^Offset ''properties'' does not exist on string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Skill/Jobs/GenerateSkillEmbeddingJob.php
-
-		-
-			message: '#^Offset ''properties'' on string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Skill/Jobs/GenerateSkillEmbeddingJob.php
-
-		-
 			message: '#^Cannot call method isTerminal\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -6643,12 +6001,6 @@ parameters:
 			path: app/Domain/Skill/Services/AutoSkillCreationService.php
 
 		-
-			message: '#^Offset ''script'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Services/BorunaResultCache.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:users\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -6667,66 +6019,6 @@ parameters:
 			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
 
 		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Offset ''required_providers'' on non\-falsy\-string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Offset ''requires_structured…'' on non\-falsy\-string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Offset ''tested_models'' on non\-falsy\-string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Variable \$missing in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Variable \$testedModels in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Domain/Skill/Services/SkillCompatibilityChecker.php
-
-		-
-			message: '#^Offset ''fixed_cost_credits'' on array\{\}\|string in isset\(\) does not exist\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Domain/Skill/Services/SkillCostCalculator.php
-
-		-
-			message: '#^Offset ''max_tokens'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Services/SkillCostCalculator.php
-
-		-
-			message: '#^Offset ''max_tokens'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Skill/Services/SkillCostCalculator.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
 			identifier: property.notFound
 			count: 1
@@ -6737,6 +6029,12 @@ parameters:
 			identifier: instanceof.alwaysFalse
 			count: 1
 			path: app/Domain/Telegram/Actions/ProcessTelegramMessageAction.php
+
+		-
+			message: '#^Offset ''is_active'' on array\{name\: string, description\?\: string\|null, transport\: string, connection\: array\<string, mixed\>, trust_level\?\: string, tool_allowlist\?\: array\<int, string\>\|null, policy_rules\?\: array\<string, mixed\>\} on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Tool/Actions/CreateMcpRegistryEntryAction.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -6751,44 +6049,86 @@ parameters:
 			path: app/Domain/Tool/Actions/DeployToolTemplateAction.php
 
 		-
-			message: '#^Cannot call method isMcp\(\) on string\.$#'
-			identifier: method.nonObject
+			message: '#^Call to function method_exists\(\) with Prism\\Prism\\Tool and ''name'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
 			count: 1
-			path: app/Domain/Tool/Models/Tool.php
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
-			message: '#^Instanceof between string and App\\Domain\\Tool\\Enums\\ToolType will always evaluate to false\.$#'
+			message: '#^Instanceof between string\|null and App\\Domain\\Agent\\Enums\\AgentEnvironment will always evaluate to false\.$#'
 			identifier: instanceof.alwaysFalse
 			count: 1
-			path: app/Domain/Tool/Models/Tool.php
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
-			message: '#^Offset ''command'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, string given\.$#'
+			identifier: argument.type
 			count: 1
-			path: app/Domain/Tool/Models/Tool.php
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$arrays of function array_merge expects array, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Property App\\Domain\\Tool\\Actions\\ResolveAgentToolsAction\:\:\$semanticSelector is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Property Prism\\Prism\\Tool\:\:\$name \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Workflow\\Enums\\WorkflowStatus\:\:Active will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Domain\\Tool\\Enums\\ToolRiskLevel and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Project\\Enums\\ProjectExecutionMode\:\:Watcher will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Undefined variable\: \$parentAgent$#'
+			identifier: variable.undefined
+			count: 1
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
 			count: 2
-			path: app/Domain/Tool/Models/Tool.php
+			path: app/Domain/Tool/Actions/ResolveAgentToolsAction.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between '''' and '''' will always evaluate to false\.$#'
-			identifier: notIdentical.alwaysFalse
-			count: 1
-			path: app/Domain/Tool/Models/Tool.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Tool/Models/Tool.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolType\:\:BuiltIn will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
+			message: '#^Instanceof between App\\Domain\\Tool\\Enums\\ToolType and App\\Domain\\Tool\\Enums\\ToolType will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
 			count: 1
 			path: app/Domain/Tool/Models/Tool.php
 
@@ -6853,12 +6193,6 @@ parameters:
 			path: app/Domain/Tool/Services/McpBridgeClient.php
 
 		-
-			message: '#^Offset ''bridge_server_name'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/McpBridgeClient.php
-
-		-
 			message: '#^Offset ''chunk'' on array\{chunk\: string, done\: bool, usage\: array\|null\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 2
@@ -6871,152 +6205,14 @@ parameters:
 			path: app/Domain/Tool/Services/McpBridgeClient.php
 
 		-
-			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/McpBridgeClient.php
-
-		-
-			message: '#^Method App\\Domain\\Tool\\Services\\McpStdioClient\:\:buildEnv\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Method App\\Domain\\Tool\\Services\\McpStdioClient\:\:validateArgs\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Method App\\Domain\\Tool\\Services\\McpStdioClient\:\:validateBinaryAllowlist\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Offset ''command'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Domain/Tool/Services/McpStdioClient.php
-
-		-
-			message: '#^Call to function is_array\(\) with null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Call to function is_string\(\) with \*NEVER\* will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Elseif condition is always false\.$#'
-			identifier: elseif.alwaysFalse
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Expression on left side of \?\? is always null\.$#'
-			identifier: nullCoalesce.expr
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Left side of && is always false\.$#'
-			identifier: booleanAnd.leftAlwaysFalse
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Match arm comparison between ''openai'' and ''openai'' is always true\.$#'
 			identifier: match.alwaysTrue
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Match arm comparison between App\\Domain\\Tool\\Enums\\BuiltInToolKind\:\:Bash and App\\Domain\\Tool\\Enums\\BuiltInToolKind\:\:Bash is always true\.$#'
-			identifier: match.alwaysTrue
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 4
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''API_KEY'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''allowed_commands'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''allowed_domains'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''allowed_paths'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Offset ''api_key'' does not exist on string\.$#'
 			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''api_key'' on array\{string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''api_key'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
@@ -7027,55 +6223,7 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Offset ''bearer_token'' on array\{string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''cdp_url'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''credential_id'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Offset ''duration_ms'' on array\{status\: string, output\: string, steps_taken\: int, duration_ms\: int, screenshots\: array\<string\>, urls_visited\: array\<string\>, error\: string\|null\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''env'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''headers'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''headless'' on string in isset\(\) does not exist\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''host'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''kind'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
@@ -7083,30 +6231,6 @@ parameters:
 		-
 			message: '#^Offset ''model'' does not exist on array\{api_key\: string, provider\: string\}\.$#'
 			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''port'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''proxy_credential_id'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''proxy_url'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''read_only'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
@@ -7129,99 +6253,21 @@ parameters:
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Offset ''username'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Parameter \#1 \$array \(array\{\}\) to function array_values is empty, call has no effect\.$#'
-			identifier: arrayValues.empty
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Parameter \#5 \$networkPolicy of method App\\Domain\\Agent\\Services\\DockerSandboxExecutor\:\:execute\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Parameter \$screenshots of method App\\Domain\\Experiment\\Actions\\CaptureScreenshotArtifactsAction\:\:execute\(\) expects array\<int, array\{base64\?\: string, label\?\: string\}\>, non\-empty\-array\<string\> given\.$#'
 			identifier: argument.type
 			count: 2
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
-			message: '#^Property App\\Domain\\Tool\\Services\\ToolTranslator\:\:\$sshExecutor is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 3
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
 			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between \*NEVER\* and '''' will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 2
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between non\-falsy\-string and '''' will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpBridge will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpStdio will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Ternary operator condition is always false\.$#'
-			identifier: ternary.alwaysFalse
-			count: 6
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 2
-			path: app/Domain/Tool/Services/ToolTranslator.php
-
-		-
-			message: '#^Variable \$allowedDomains in empty\(\) is never defined\.$#'
-			identifier: empty.variable
-			count: 2
 			path: app/Domain/Tool/Services/ToolTranslator.php
 
 		-
@@ -8211,7 +7257,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 2
+			count: 1
 			path: app/Domain/Workflow/Services/WorkflowSuggestionEngine.php
 
 		-
@@ -8257,6 +7303,12 @@ parameters:
 			path: app/Http/Controllers/Api/V1/AgentChatController.php
 
 		-
+			message: '#^Access to an undefined property App\\Domain\\Tool\\Models\\Tool\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AgentController.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -8270,18 +7322,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$output\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/AgentController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/V1/AgentController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Api/V1/AgentController.php
@@ -8435,12 +7475,6 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/Api/V1/BudgetController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/Api/V1/BugReportSignalController.php
 
 		-
 			message: '#^Offset ''prefix'' does not exist on array\{token\: string, model\: App\\Domain\\Chatbot\\Models\\ChatbotToken\}\.$#'
@@ -8601,7 +7635,7 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 4
+			count: 2
 			path: app/Http/Controllers/Api/V1/ToolTemplateController.php
 
 		-
@@ -8729,12 +7763,6 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Http/Controllers/ArtifactPreviewController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/BugReportWidgetController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -8875,14 +7903,20 @@ parameters:
 			path: app/Http/Controllers/Widget/BugReportCommentsCreateController.php
 
 		-
-			message: '#^Instanceof between string and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to false\.$#'
-			identifier: instanceof.alwaysFalse
+			message: '#^Instanceof between App\\Domain\\Signal\\Enums\\SignalStatus and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
 			count: 2
 			path: app/Http/Controllers/Widget/BugReportConfirmController.php
 
 		-
-			message: '#^Instanceof between string and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to false\.$#'
-			identifier: instanceof.alwaysFalse
+			message: '#^Instanceof between App\\Domain\\Signal\\Enums\\SignalStatus and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Widget/BugReportListController.php
+
+		-
+			message: '#^Offset ''agent_fixing''\|''delegated_to_agent''\|''dismissed''\|''in_progress''\|''received''\|''resolved''\|''review''\|''triaged'' on array\{received\: ''not_started'', triaged\: ''not_started'', in_progress\: ''in_progress'', delegated_to_agent\: ''in_progress'', agent_fixing\: ''in_progress'', review\: ''in_progress'', resolved\: ''done'', dismissed\: ''done''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Http/Controllers/Widget/BugReportListController.php
 
@@ -11377,12 +10411,6 @@ parameters:
 			path: app/Infrastructure/AI/Gateways/LocalAgentGateway.php
 
 		-
-			message: '#^Parameter \#1 \$tools of method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:build\(\) expects Illuminate\\Support\\Collection\<int, App\\Domain\\Tool\\Models\\Tool\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Infrastructure/AI/Gateways/LocalAgentGateway.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between non\-empty\-string and false will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -11521,140 +10549,8 @@ parameters:
 			path: app/Infrastructure/AI/Services/CircuitBreaker.php
 
 		-
-			message: '#^Call to function is_string\(\) with null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 3
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
-			count: 3
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpHttp is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Domain\\Tool\\Enums\\ToolType\:\:McpStdio is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:buildHttpEntry\(\) never returns array\<string, mixed\> so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:buildStdioEntry\(\) never returns array\<string, mixed\> so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:mergeCredentialAuth\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:mergeCredentialEnv\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:normalizeMcpUrl\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ClaudeCodeMcpConfigBuilder\:\:serverName\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Offset ''api_key'' on array\{string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Offset ''bearer_token'' on array\{string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Offset ''command'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Offset ''url'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Parameter \#1 \$string of function strtoupper expects string, int given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 2
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between \*NEVER\* and '''' will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between \*NEVER\* and '''' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between array\{string\} and array\{\} will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between array\{\} and array\{\} will always evaluate to true\.$#'
-			identifier: identical.alwaysTrue
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between null and null will always evaluate to true\.$#'
-			identifier: identical.alwaysTrue
-			count: 1
-			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
 			count: 3
 			path: app/Infrastructure/AI/Services/ClaudeCodeMcpConfigBuilder.php
 
@@ -11773,33 +10669,9 @@ parameters:
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
-			message: '#^Offset ''build_model''\|''run_model'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
 			message: '#^Offset ''default_model'' on array\{name\: string, version\: string, path\: string\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Offset ''model'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Offset ''model'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 2
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Offset ''model_selection_mode'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
@@ -11809,21 +10681,9 @@ parameters:
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
-			message: '#^Offset ''provider'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
 			message: '#^Offset ''provider'' on array\{name\: string, version\: string, path\: string\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Offset ''provider'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
@@ -11833,21 +10693,9 @@ parameters:
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 2
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
 			message: '#^Result of \|\| is always true\.$#'
 			identifier: booleanOr.alwaysTrue
 			count: 1
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between ''unified'' and ''split'' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
@@ -12095,6 +10943,18 @@ parameters:
 			identifier: method.unused
 			count: 1
 			path: app/Infrastructure/RAGFlow/RAGFlowClient.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Infrastructure/Sentry/BeforeSendFilter.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Infrastructure/Sentry/BeforeSendFilter.php
 
 		-
 			message: '#^Access to undefined constant OpenTelemetry\\SemConv\\ResourceAttributes\:\:DEPLOYMENT_ENVIRONMENT\.$#'
@@ -12967,18 +11827,6 @@ parameters:
 			path: app/Livewire/Insights/InsightsPage.php
 
 		-
-			message: '#^Offset ''last_synced_at'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Integrations/IntegrationDetailPage.php
-
-		-
-			message: '#^Ternary operator condition is always false\.$#'
-			identifier: ternary.alwaysFalse
-			count: 1
-			path: app/Livewire/Integrations/IntegrationDetailPage.php
-
-		-
 			message: '#^Cannot call method toDateTimeString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 3
@@ -13291,12 +12139,6 @@ parameters:
 			path: app/Livewire/Skills/CreateSkillForm.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
 			message: '#^Empty array passed to foreach\.$#'
 			identifier: foreach.emptyArray
 			count: 1
@@ -13309,44 +12151,8 @@ parameters:
 			path: app/Livewire/Skills/SkillDetailPage.php
 
 		-
-			message: '#^Offset ''max_tokens'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
-			message: '#^Offset ''model'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
 			message: '#^Offset ''models'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
-			message: '#^Offset ''prompt_template'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
-			message: '#^Offset ''provider'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
-			message: '#^Offset ''temperature'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Skills/SkillDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Skill\\Enums\\SkillStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Livewire/Skills/SkillDetailPage.php
 
@@ -13439,60 +12245,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Tools/McpMarketplacePage.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Cannot unset offset ''proxy_credential_id'' on array\{\}\|string\.$#'
-			identifier: unset.offset
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Offset ''env'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Offset ''proxy_credential_id'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Offset ''timeout'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Offset \*NEVER\* on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Tools/ToolDetailPage.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Tool\\Enums\\ToolStatus\:\:Active will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Livewire/Tools/ToolListPage.php
 
 		-
 			message: '#^Cannot call method isActive\(\) on string\.$#'
@@ -13939,6 +12691,12 @@ parameters:
 			path: app/Mcp/Tools/Approval/ActionProposalListTool.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Approval/ApprovalApproveTool.php
+
+		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -14131,44 +12889,8 @@ parameters:
 			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 2
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
 			message: '#^Match expression does not handle remaining value\: mixed$#'
 			identifier: match.unhandled
-			count: 1
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
-			message: '#^Offset ''boruna_tool_id'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
-			message: '#^Offset ''policy'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
-			message: '#^Offset ''script'' on array\{\} in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
-
-		-
-			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Tools/Boruna/BorunaSkillManageTool.php
 
@@ -15085,42 +13807,6 @@ parameters:
 			path: app/Mcp/Tools/GitRepository/VersionBumpTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
-			message: '#^Offset ''activepieces_piece…'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
-			message: '#^Offset ''activepieces…'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
-			message: '#^Offset ''last_synced_at'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
-			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Tool\\Models\\Tool\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Integration/ActivepiecesListPiecesTool.php
-
-		-
 			message: '#^Property App\\Mcp\\Tools\\Integration\\IntegrationListTool\:\:\$manager is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
@@ -16009,9 +14695,15 @@ parameters:
 			path: app/Mcp/Tools/Shared/TermsAcceptanceStatusTool.php
 
 		-
-			message: '#^Instanceof between string and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to false\.$#'
-			identifier: instanceof.alwaysFalse
+			message: '#^Instanceof between App\\Domain\\Signal\\Enums\\SignalStatus and App\\Domain\\Signal\\Enums\\SignalStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
 			count: 2
+			path: app/Mcp/Tools/Signal/BugReportConfirmResolutionTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Signal\\Enums\\SignalStatus\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
 			path: app/Mcp/Tools/Signal/BugReportConfirmResolutionTool.php
 
 		-
@@ -16039,55 +14731,25 @@ parameters:
 			path: app/Mcp/Tools/Signal/BugReportDetailTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Signal/BugReportDetailTool.php
-
-		-
-			message: '#^Offset ''ai_extracted'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Signal/BugReportDetailTool.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Signal/BugReportDetailTool.php
 
 		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Signal\\Enums\\SignalStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Signal/BugReportDetailTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Signal/BugReportListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Signal\\Models\\Signal\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Signal/BugReportListTool.php
-
-		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Signal\\Enums\\SignalStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Signal/BugReportListTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Signal/BugReportUpdateStatusTool.php
-
-		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Signal\\Enums\\SignalStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Signal/BugReportUpdateStatusTool.php
@@ -16303,18 +14965,6 @@ parameters:
 			path: app/Mcp/Tools/Signal/SignalGetTool.php
 
 		-
-			message: '#^Cannot unset offset ''inferred_intent'' on array\{\}\|string\.$#'
-			identifier: unset.offset
-			count: 1
-			path: app/Mcp/Tools/Signal/SignalIntentReclassifyTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
-
-		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
@@ -16333,7 +14983,7 @@ parameters:
 			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
 
 		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Signal\\Enums\\SignalStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Mcp/Tools/Signal/SignalListByRelevanceTool.php
@@ -16357,18 +15007,6 @@ parameters:
 			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
-			message: '#^Offset ''action'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
 			message: '#^Offset ''action'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -16387,12 +15025,6 @@ parameters:
 			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
 
 		-
-			message: '#^Offset ''url'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
 			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -16405,88 +15037,16 @@ parameters:
 			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
 
 		-
-			message: '#^Offset ''viewport_height'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
-			message: '#^Offset ''viewport_width'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
-			message: '#^Offset ''wait_for'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\SkillExecution\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Skill/BrowserSkillTool.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
 			message: '#^Instanceof between string and App\\Domain\\Approval\\Enums\\ApprovalStatus will always evaluate to false\.$#'
 			identifier: instanceof.alwaysFalse
 			count: 1
 			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
-			message: '#^Offset ''base_branch'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
-			message: '#^Offset ''git_repo_path'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
-			message: '#^Offset ''script'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
-			message: '#^Offset ''timeout_seconds'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/CodeExecutionTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Skill/GuardrailTool.php
-
-		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 2
-			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
-
-		-
-			message: '#^Offset ''judge_model'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
-
-		-
-			message: '#^Offset ''models'' on array\{\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/MultiModelConsensusTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -16597,82 +15157,28 @@ parameters:
 			path: app/Mcp/Tools/Skill/SkillBenchmarkStatusTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillCloneTool.php
-
-		-
-			message: '#^Property App\\Domain\\Skill\\Models\\Skill\:\:\$status \(string\) does not accept App\\Domain\\Skill\\Enums\\SkillStatus\:\:Draft\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillCloneTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillCreateTool.php
-
-		-
 			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Skill/SkillGenerateImprovementTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: app/Mcp/Tools/Skill/SkillGetTool.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillGetTool.php
-
-		-
-			message: '#^Offset ''prompt_template'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillGetTool.php
-
-		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Skill\\Enums\\ExecutionType\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 2
+			count: 1
 			path: app/Mcp/Tools/Skill/SkillGetTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: app/Mcp/Tools/Skill/SkillListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Skill\\Enums\\RiskLevel\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
-			path: app/Mcp/Tools/Skill/SkillListTool.php
+			path: app/Mcp/Tools/Skill/SkillGetTool.php
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Skill/SkillPlaygroundTestTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillSearchTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\Skill\\Models\\Skill\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Skill/SkillSearchTool.php
 
 		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
@@ -16753,9 +15259,9 @@ parameters:
 			path: app/Mcp/Tools/Tool/ToolActivateTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Tool\\Enums\\ToolRiskLevel\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
 			path: app/Mcp/Tools/Tool/ToolCreateTool.php
 
 		-
@@ -16771,28 +15277,10 @@ parameters:
 			path: app/Mcp/Tools/Tool/ToolFederationGroupListTool.php
 
 		-
-			message: '#^Call to function is_array\(\) with string will always evaluate to false\.$#'
-			identifier: function.impossibleType
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
 			count: 1
 			path: app/Mcp/Tools/Tool/ToolGetTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/Tool/ToolGetTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Mcp/Tools/Tool/ToolListTool.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Tool\\Models\\Tool\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Mcp/Tools/Tool/ToolListTool.php
 
 		-
 			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:number\(\)\.$#'
@@ -16813,12 +15301,6 @@ parameters:
 			path: app/Mcp/Tools/Tool/ToolMiddlewareConfigTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Tool/ToolPoolListTool.php
-
-		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -16834,36 +15316,6 @@ parameters:
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 2
-			path: app/Mcp/Tools/Tool/ToolProbeRemoteMcpTool.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: app/Mcp/Tools/Tool/ToolProbeRemoteMcpTool.php
-
-		-
-			message: '#^Offset ''url'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Mcp/Tools/Tool/ToolProbeRemoteMcpTool.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Mcp/Tools/Tool/ToolProbeRemoteMcpTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: app/Mcp/Tools/Tool/ToolTemplateManageTool.php
-
-		-
-			message: '#^Offset ''provider'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
 			path: app/Mcp/Tools/Tool/ToolTemplateManageTool.php
 
 		-
@@ -16873,9 +15325,9 @@ parameters:
 			path: app/Mcp/Tools/Tool/ToolTemplateManageTool.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Tool\\Enums\\ToolRiskLevel\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
 			path: app/Mcp/Tools/Tool/ToolUpdateTool.php
 
 		-
@@ -17303,39 +15755,3 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Providers/FleetPluginServiceProvider.php
-
-		-
-			message: '#^Access to an undefined property App\\Domain\\Approval\\Models\\ApprovalRequest\:\:\$team_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Domain/Approval/Services/ApprovalSummarizer.php
-
-		-
-			message: '#^Offset ''experiment_thesis'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Approval/Services/ApprovalSummarizer.php
-
-		-
-			message: '#^Offset ''experiment_title'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Approval/Services/ApprovalSummarizer.php
-
-		-
-			message: '#^Offset ''type'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Domain/Approval/Services/ApprovalSummarizer.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/Approval/ApprovalApproveTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 6
-			path: app/Domain/Skill/Actions/ExportSkillToAgentSkillsAction.php
