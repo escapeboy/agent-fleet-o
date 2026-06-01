@@ -339,6 +339,8 @@ use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
 use App\Mcp\Tools\Migration\MigrationExecuteTool;
 use App\Mcp\Tools\Migration\MigrationListTool;
 use App\Mcp\Tools\Migration\MigrationStatusTool;
+use App\Mcp\Tools\Orchestration\CrewCostEstimateTool;
+use App\Mcp\Tools\Orchestration\OrchestrationRecommendTierTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigDeleteTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigGetTool;
 use App\Mcp\Tools\Outbound\ConnectorConfigListTool;
@@ -1322,6 +1324,8 @@ class AgentFleetServer extends Server
         MetricsModelComparisonTool::class,
         RocsSummaryTool::class,
         MetricTagValueTool::class,
+        CrewCostEstimateTool::class,
+        OrchestrationRecommendTierTool::class,
 
         // Chatbot (10)
         ChatbotListTool::class,

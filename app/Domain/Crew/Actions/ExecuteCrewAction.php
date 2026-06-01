@@ -9,19 +9,37 @@ use App\Domain\Crew\Events\CrewExecuting;
 use App\Domain\Crew\Jobs\ExecuteCrewJob;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Orchestration\Exceptions\CostGateExceededException;
+use App\Domain\Orchestration\Services\OrchestrationCostEstimator;
+use App\Domain\Orchestration\Services\OrchestrationCostGate;
+use App\Domain\Shared\Models\Team;
 use InvalidArgumentException;
 
 class ExecuteCrewAction
 {
+    /**
+     * @param  bool  $costConfirmed  Caller has acknowledged the projected fan-out
+     *                               cost; bypasses the pre-flight cost gate.
+     *
+     * @throws CostGateExceededException
+     */
     public function execute(
         Crew $crew,
         string $goal,
         string $teamId,
         ?string $experimentId = null,
+        bool $costConfirmed = false,
     ): CrewExecution {
         if ($crew->status !== CrewStatus::Active) {
             throw new InvalidArgumentException('Crew must be active to execute.');
         }
+
+        // Pre-flight fan-out cost gate (no-op unless enabled and over threshold).
+        app(OrchestrationCostGate::class)->assertConfirmed(
+            app(OrchestrationCostEstimator::class)->estimateCrew($crew),
+            $costConfirmed,
+            Team::withoutGlobalScopes()->find($teamId),
+        );
 
         // Plugin hook: allow plugins to inspect or cancel crew execution
         $executing = new CrewExecuting($crew, ['goal' => $goal]);

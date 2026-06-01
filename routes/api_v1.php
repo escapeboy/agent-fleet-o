@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\LangfuseConfigController;
 use App\Http\Controllers\Api\V1\MarketplaceController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\MetricsController;
+use App\Http\Controllers\Api\V1\OrchestrationController;
 use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
@@ -224,6 +225,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Crews
     Route::apiResource('crews', CrewController::class);
     Route::post('/crews/{crew}/execute', [CrewController::class, 'execute']);
+    Route::get('/crews/{crew}/cost-estimate', [CrewController::class, 'costEstimate']);
     Route::get('/crews/{crew}/executions', [CrewController::class, 'executions']);
     Route::get('/crews/{crew}/executions/{execution}', [CrewController::class, 'showExecution']);
 
@@ -369,6 +371,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/knowledge-graph/search', [KnowledgeGraphController::class, 'search']);
     Route::post('/knowledge-graph/facts', [KnowledgeGraphController::class, 'store']);
     Route::delete('/knowledge-graph/facts/{factId}', [KnowledgeGraphController::class, 'destroy']);
+
+    // Orchestration
+    Route::post('/orchestration/recommend-tier', [OrchestrationController::class, 'recommendTier']);
 
     // Metrics
     Route::get('/metrics', [MetricsController::class, 'index']);

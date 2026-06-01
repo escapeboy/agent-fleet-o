@@ -9,6 +9,9 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Orchestration\Exceptions\CostGateExceededException;
+use App\Domain\Orchestration\Services\OrchestrationCostEstimator;
+use App\Domain\Orchestration\Services\OrchestrationCostGate;
 use App\Http\Controllers\Api\V1\Concerns\DocumentsResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CrewExecutionResource;
@@ -176,19 +179,46 @@ class CrewController extends Controller
         $request->validate([
             'goal' => ['required', 'string', 'max:2000'],
             'experiment_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('experiments', 'id')->where('team_id', $request->user()?->current_team_id)],
+            'confirm_cost' => ['sometimes', 'boolean'],
         ]);
 
-        $execution = $action->execute(
-            crew: $crew,
-            goal: $request->goal,
-            teamId: $request->user()->current_team_id,
-            experimentId: $request->input('experiment_id'),
-        );
+        try {
+            $execution = $action->execute(
+                crew: $crew,
+                goal: $request->goal,
+                teamId: $request->user()->current_team_id,
+                experimentId: $request->input('experiment_id'),
+                costConfirmed: $request->boolean('confirm_cost'),
+            );
+        } catch (CostGateExceededException $e) {
+            return response()->json([
+                'error' => 'cost_confirmation_required',
+                'message' => $e->getMessage(),
+                'projected_credits' => $e->projectedCredits,
+                'threshold_credits' => $e->thresholdCredits,
+                'hint' => 'Re-submit with confirm_cost=true to proceed.',
+            ], 402);
+        }
 
         return (new CrewExecutionResource($execution))
             ->invalidates('crews')
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function costEstimate(Request $request, Crew $crew, OrchestrationCostEstimator $estimator, OrchestrationCostGate $gate): JsonResponse
+    {
+        $projected = $estimator->estimateCrew($crew);
+        $team = $request->user()?->currentTeam;
+
+        return response()->json([
+            'data' => [
+                'projected_credits' => $projected,
+                'threshold_credits' => $gate->thresholdFor($team),
+                'gate_enabled' => $gate->enabled(),
+                'requires_confirmation' => $gate->requiresConfirmation($projected, $team),
+            ],
+        ]);
     }
 
     public function executions(Request $request, Crew $crew): AnonymousResourceCollection
