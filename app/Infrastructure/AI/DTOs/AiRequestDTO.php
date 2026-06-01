@@ -71,6 +71,13 @@ final readonly class AiRequestDTO
          */
         public ?string $parentTraceId = null,
         public ?string $parentSpanId = null,
+        /**
+         * Caller-specified hard ceiling, in platform_credits, for THIS single call.
+         * Enforced before the provider is hit (alongside the standing per-call cap):
+         * the effective cap is the lower of this and the team/agent standing cap.
+         * Null = no per-request ceiling (standing cap still applies).
+         */
+        public ?int $maxCostCredits = null,
     ) {}
 
     public function isStructured(): bool

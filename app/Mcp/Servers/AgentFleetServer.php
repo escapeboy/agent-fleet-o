@@ -333,6 +333,8 @@ use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
 use App\Mcp\Tools\Memory\MemoryUpdateTool;
 use App\Mcp\Tools\Memory\MemoryUploadKnowledgeTool;
 use App\Mcp\Tools\Memory\SupabaseProvisionMemoryTool;
+use App\Mcp\Tools\Metrics\MetricTagValueTool;
+use App\Mcp\Tools\Metrics\RocsSummaryTool;
 use App\Mcp\Tools\Migration\MigrationDetectSchemaTool;
 use App\Mcp\Tools\Migration\MigrationExecuteTool;
 use App\Mcp\Tools\Migration\MigrationListTool;
@@ -1318,6 +1320,8 @@ class AgentFleetServer extends Server
         LangfuseConfigTool::class,
         MetricsAggregationsTool::class,
         MetricsModelComparisonTool::class,
+        RocsSummaryTool::class,
+        MetricTagValueTool::class,
 
         // Chatbot (10)
         ChatbotListTool::class,

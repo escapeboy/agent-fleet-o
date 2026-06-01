@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Metrics\Actions\TagOutcomeValueAction;
 use App\Domain\Metrics\Models\Metric;
 use App\Domain\Metrics\Models\MetricAggregation;
+use App\Domain\Metrics\Services\RocsCalculator;
 use App\Http\Controllers\Controller;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -109,5 +112,53 @@ class MetricsController extends Controller
             'totals' => $totals,
             'by_model' => $byModel,
         ]);
+    }
+
+    /**
+     * Return on Cognitive Spend: spend vs. delivered value (ROI) per experiment,
+     * per agent, and team totals for the given window (default: last 30 days).
+     */
+    public function rocs(Request $request, RocsCalculator $calculator): JsonResponse
+    {
+        $request->validate([
+            'from' => ['sometimes', 'date'],
+            'to' => ['sometimes', 'date'],
+        ]);
+
+        $teamId = $request->user()->current_team_id;
+        $since = $request->filled('from') ? Carbon::parse($request->input('from')) : now()->subDays(30);
+        $until = $request->filled('to') ? Carbon::parse($request->input('to')) : null;
+
+        return response()->json(['data' => $calculator->forTeam($teamId, $since, $until)]);
+    }
+
+    /**
+     * Tag an experiment with realised business value (an outcome "receipt").
+     * Feeds the value side of the ROCS report.
+     */
+    public function tagValue(Request $request, TagOutcomeValueAction $action): JsonResponse
+    {
+        $validated = $request->validate([
+            'experiment_id' => ['required', 'string'],
+            'value_usd' => ['required', 'numeric', 'min:0'],
+            'outcome' => ['sometimes', 'nullable', 'in:success,partial,failure'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'source' => ['sometimes', 'nullable', 'string', 'max:64'],
+        ]);
+
+        $metric = $action->execute(
+            experimentId: $validated['experiment_id'],
+            valueUsd: (float) $validated['value_usd'],
+            teamId: $request->user()->current_team_id,
+            outcome: $validated['outcome'] ?? null,
+            note: $validated['note'] ?? null,
+            source: $validated['source'] ?? 'api',
+        );
+
+        if ($metric === null) {
+            return response()->json(['message' => 'Experiment not found for this team.'], 404);
+        }
+
+        return response()->json(['data' => $metric], 201);
     }
 }
