@@ -55,7 +55,9 @@ class CrewCostEstimateTool extends Tool
 
         $estimator = app(OrchestrationCostEstimator::class);
         $gate = app(OrchestrationCostGate::class);
-        $team = Team::withoutGlobalScopes()->find($teamId);
+        // Team has no TeamScope (it is the tenant root), so a plain primary-key
+        // lookup of the caller's own team is tenant-safe.
+        $team = Team::find($teamId);
 
         $projected = $estimator->estimateCrew($crew);
 
