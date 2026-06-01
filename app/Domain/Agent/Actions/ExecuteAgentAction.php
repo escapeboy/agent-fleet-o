@@ -875,6 +875,12 @@ class ExecuteAgentAction
             $parts[] = "Background: {$agent->backstory}";
         }
 
+        // Taste & judgment persona axis — how the agent chooses among acceptable
+        // options (tone, what "good" looks like). Always applied when set.
+        if (! empty($agent->taste)) {
+            $parts[] = "## Taste & Judgment\n{$agent->taste}";
+        }
+
         // Inject personality traits (SOUL.md)
         if (! empty($agent->personality)) {
             /** @var array<string, mixed> $personality */

@@ -15,6 +15,7 @@ class AgentResource extends FleetQResource
             'role' => $this->role,
             'goal' => $this->goal,
             'backstory' => $this->backstory,
+            'taste' => $this->taste,
             'provider' => $this->provider,
             'model' => $this->model,
             'status' => $this->status->value,

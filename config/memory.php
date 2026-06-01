@@ -205,6 +205,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Deep Relevance Judgment (tier-2)
+    |--------------------------------------------------------------------------
+    |
+    | Optional second pass over retrieved memories: a cheap LLM re-scores each
+    | candidate for task-specific relevance and drops sub-threshold ones before
+    | injection (contextrie's shallow→deep cascade). Trades one cheap call for a
+    | tighter, smaller injected context. Off by default; only runs when the
+    | candidate set is at least 'min_candidates'. Fails open.
+    |
+    */
+    'deep_judgment' => [
+        'enabled' => (bool) env('MEMORY_DEEP_JUDGMENT_ENABLED', false),
+        'model' => env('MEMORY_DEEP_JUDGMENT_MODEL', 'claude-haiku-4-5'),
+        'threshold' => (float) env('MEMORY_DEEP_JUDGMENT_THRESHOLD', 0.5),
+        'min_candidates' => (int) env('MEMORY_DEEP_JUDGMENT_MIN_CANDIDATES', 4),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Contextual RAG
     |--------------------------------------------------------------------------
     |

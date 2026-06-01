@@ -28,6 +28,7 @@ class CreateAgentTool implements Tool
             'role' => $schema->string()->description('Agent role description'),
             'goal' => $schema->string()->description('Agent goal'),
             'backstory' => $schema->string()->description('Agent backstory'),
+            'taste' => $schema->string()->description('Agent taste — aesthetic/judgment preferences (tone, what "good" looks like).'),
             'provider' => $schema->string()->description('LLM provider key (e.g. anthropic, openai, google). Defaults to the team\'s configured provider. If passed but the team has no credentials for it, the team default is used instead.'),
             'model' => $schema->string()->description('LLM model name. Defaults to the team\'s configured model.'),
         ];
@@ -63,6 +64,7 @@ class CreateAgentTool implements Tool
                 role: $request->get('role'),
                 goal: $request->get('goal'),
                 backstory: $request->get('backstory'),
+                taste: $request->get('taste'),
                 teamId: $teamId,
             );
 

@@ -46,6 +46,13 @@ return [
         ],
         // Requests with this many tools are never downgraded below standard
         'min_tools_for_standard' => 5,
+        // Output-verbosity directive injected alongside the model downgrade:
+        // under pressure >= min_level, the agent is told to minimize output tokens.
+        // Stretches a fixed credit pool by trimming response length, not just model cost.
+        'concise_directive' => [
+            'enabled' => (bool) env('AI_BUDGET_CONCISE_ENABLED', true),
+            'min_level' => env('AI_BUDGET_CONCISE_MIN_LEVEL', 'medium'), // low|medium|high
+        ],
     ],
 
     /*

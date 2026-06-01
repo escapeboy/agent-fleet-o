@@ -67,6 +67,7 @@ class AgentPromptCompiler
             'agent.name' => $agent->name,
             'agent.role' => $agent->role ?? '',
             'agent.goal' => $agent->goal ?? '',
+            'agent.taste' => $agent->taste ?? '',
             'current_date' => now()->toDateString(),
             'current_datetime' => now()->toDateTimeString(),
         ];

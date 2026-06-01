@@ -26,6 +26,8 @@ class CreateAgentForm extends Component
 
     public string $backstory = '';
 
+    public string $taste = '';
+
     // Personality traits
     public string $personalityTone = '';
 
@@ -102,6 +104,7 @@ class CreateAgentForm extends Component
                 $this->role = $template['role'] ?? '';
                 $this->goal = $template['goal'] ?? '';
                 $this->backstory = $template['backstory'] ?? '';
+                $this->taste = $template['taste'] ?? '';
                 $personality = $template['personality'] ?? [];
                 $this->personalityTone = $personality['tone'] ?? '';
                 $this->personalityCommunicationStyle = $personality['communication_style'] ?? '';
@@ -216,6 +219,7 @@ class CreateAgentForm extends Component
             role: $this->role,
             goal: $this->goal,
             backstory: $this->backstory ?: null,
+            taste: $this->taste ?: null,
             budgetCapCredits: $this->budgetCapCredits,
             skillIds: $this->selectedSkillIds,
             toolIds: $this->selectedToolIds,

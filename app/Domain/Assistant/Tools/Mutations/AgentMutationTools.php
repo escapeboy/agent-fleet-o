@@ -42,9 +42,10 @@ final class AgentMutationTools
             ->withStringParameter('role', 'Agent role description')
             ->withStringParameter('goal', 'Agent goal')
             ->withStringParameter('backstory', 'Agent backstory')
+            ->withStringParameter('taste', 'Agent taste — aesthetic/judgment preferences (tone, what "good" looks like).')
             ->withStringParameter('provider', 'LLM provider key (e.g. anthropic, openai, google). Defaults to the team\'s configured provider. If passed but the team has no credentials for it, the team default is used instead.')
             ->withStringParameter('model', 'LLM model name. Defaults to the team\'s configured model.')
-            ->using(function (string $name, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $provider = null, ?string $model = null) {
+            ->using(function (string $name, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $taste = null, ?string $provider = null, ?string $model = null) {
                 try {
                     $teamId = auth()->user()->current_team_id;
                     $team = Team::find($teamId);
@@ -71,6 +72,7 @@ final class AgentMutationTools
                         role: $role,
                         goal: $goal,
                         backstory: $backstory,
+                        taste: $taste,
                         teamId: $teamId,
                     );
 
@@ -96,10 +98,11 @@ final class AgentMutationTools
             ->withStringParameter('role', 'New role description')
             ->withStringParameter('goal', 'New goal')
             ->withStringParameter('backstory', 'New backstory')
+            ->withStringParameter('taste', 'New taste — aesthetic/judgment preferences (tone, what "good" looks like).')
             ->withStringParameter('provider', 'LLM provider to switch to (anthropic, openai, google, claude-code, codex)')
             ->withStringParameter('model', 'LLM model name (e.g. claude-sonnet-4-5, claude-opus-4-6, gpt-4o, gemini-2.5-pro)')
             ->withNumberParameter('budget_cap_credits', 'Per-agent budget cap in credits. Set to 0 to remove cap.')
-            ->using(function (string $agent_id, ?string $name = null, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $provider = null, ?string $model = null, ?float $budget_cap_credits = null) {
+            ->using(function (string $agent_id, ?string $name = null, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $taste = null, ?string $provider = null, ?string $model = null, ?float $budget_cap_credits = null) {
                 $agent = Agent::find($agent_id);
                 if (! $agent) {
                     return json_encode(['error' => 'Agent not found.']);
@@ -110,6 +113,7 @@ final class AgentMutationTools
                     'role' => $role,
                     'goal' => $goal,
                     'backstory' => $backstory,
+                    'taste' => $taste,
                     'provider' => $provider,
                     'model' => $model,
                 ], fn ($v) => $v !== null);

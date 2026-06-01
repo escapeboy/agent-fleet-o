@@ -37,6 +37,8 @@ class AgentUpdateTool extends Tool
                 ->description('New goal'),
             'backstory' => $schema->string()
                 ->description('New backstory'),
+            'taste' => $schema->string()
+                ->description('New taste — aesthetic/judgment preferences (tone, what "good" looks like).'),
             'personality' => $schema->object()
                 ->description('New personality traits: {tone, communication_style, traits[], behavioral_rules[], response_format_preference}'),
             'provider' => $schema->string()
@@ -83,6 +85,7 @@ class AgentUpdateTool extends Tool
             'role' => 'nullable|string',
             'goal' => 'nullable|string',
             'backstory' => 'nullable|string',
+            'taste' => 'nullable|string',
             'personality' => 'nullable|array',
             'provider' => 'nullable|string',
             'model' => 'nullable|string',
@@ -128,6 +131,7 @@ class AgentUpdateTool extends Tool
             'role' => $validated['role'] ?? null,
             'goal' => $validated['goal'] ?? null,
             'backstory' => $validated['backstory'] ?? null,
+            'taste' => $validated['taste'] ?? null,
             'personality' => $validated['personality'] ?? null,
             'provider' => $validated['provider'] ?? null,
             'model' => $validated['model'] ?? null,
