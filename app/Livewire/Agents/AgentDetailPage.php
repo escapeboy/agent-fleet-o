@@ -52,6 +52,8 @@ class AgentDetailPage extends Component
 
     public string $editBackstory = '';
 
+    public string $editTaste = '';
+
     public string $editProvider = '';
 
     public string $editModel = '';
@@ -240,6 +242,7 @@ class AgentDetailPage extends Component
         $this->editRole = $this->agent->role ?? '';
         $this->editGoal = $this->agent->goal ?? '';
         $this->editBackstory = $this->agent->backstory ?? '';
+        $this->editTaste = $this->agent->taste ?? '';
         $this->editProvider = $this->agent->provider;
         $this->editModel = $this->agent->model;
         $this->editBudgetCap = $this->agent->budget_cap_credits;
@@ -416,6 +419,7 @@ class AgentDetailPage extends Component
             'role' => $this->editRole,
             'goal' => $this->editGoal,
             'backstory' => $this->editBackstory ?: null,
+            'taste' => $this->editTaste ?: null,
             'personality' => ! empty($personality) ? $personality : null,
             'provider' => $this->editProvider,
             'model' => $this->editModel,

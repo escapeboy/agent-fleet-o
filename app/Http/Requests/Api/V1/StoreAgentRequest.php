@@ -26,6 +26,7 @@ class StoreAgentRequest extends FormRequest
             'role' => ['sometimes', 'nullable', 'string', 'max:255'],
             'goal' => ['sometimes', 'nullable', 'string'],
             'backstory' => ['sometimes', 'nullable', 'string'],
+            'taste' => ['sometimes', 'nullable', 'string'],
             'capabilities' => ['sometimes', 'array'],
             'config' => ['sometimes', 'array'],
             'config.callable_agent_ids' => ['sometimes', 'array', 'max:10'],

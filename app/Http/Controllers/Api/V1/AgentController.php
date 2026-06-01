@@ -71,6 +71,7 @@ class AgentController extends Controller
             role: $request->role,
             goal: $request->goal,
             backstory: $request->backstory,
+            taste: $request->taste,
             constraints: $request->input('constraints', []),
             budgetCapCredits: $request->budget_cap_credits,
             skillIds: $request->input('skill_ids', []),

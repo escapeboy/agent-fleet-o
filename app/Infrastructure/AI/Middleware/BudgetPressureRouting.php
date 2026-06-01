@@ -88,7 +88,7 @@ class BudgetPressureRouting implements AiMiddlewareInterface
         return $next(new AiRequestDTO(
             provider: $resolved['provider'] ?? $request->provider,
             model: $resolved['model'] ?? $request->model,
-            systemPrompt: $request->systemPrompt,
+            systemPrompt: $this->maybeInjectConciseDirective($request->systemPrompt, $pressure),
             userPrompt: $request->userPrompt,
             maxTokens: $request->maxTokens,
             outputSchema: $request->outputSchema,
@@ -187,5 +187,44 @@ class BudgetPressureRouting implements AiMiddlewareInterface
         $firstProvider = array_key_first($tierModels);
 
         return ['provider' => $firstProvider, 'model' => $tierModels[$firstProvider]];
+    }
+
+    /**
+     * Under budget pressure, prepend an output-verbosity directive so the agent
+     * spends fewer output tokens. Complements the model-tier downgrade above:
+     * downgrade controls which model runs, this controls how much it writes.
+     * No-op below the configured minimum pressure level or when disabled.
+     */
+    private function maybeInjectConciseDirective(string $systemPrompt, BudgetPressureLevel $pressure): string
+    {
+        if (! config('ai_routing.budget_pressure.concise_directive.enabled', true)) {
+            return $systemPrompt;
+        }
+
+        $minLevel = BudgetPressureLevel::tryFrom(
+            (string) config('ai_routing.budget_pressure.concise_directive.min_level', 'medium'),
+        ) ?? BudgetPressureLevel::Medium;
+
+        if ($this->levelRank($pressure) < $this->levelRank($minLevel)) {
+            return $systemPrompt;
+        }
+
+        $block = implode("\n", [
+            '## Budget-Conscious Mode (active)',
+            'Budget is constrained. Minimize output tokens: no preamble or restating the task,',
+            'no filler, deliver only the essential result. Prefer the shortest correct answer.',
+        ]);
+
+        return $systemPrompt === '' ? $block : $block."\n\n---\n\n".$systemPrompt;
+    }
+
+    private function levelRank(BudgetPressureLevel $level): int
+    {
+        return match ($level) {
+            BudgetPressureLevel::None => 0,
+            BudgetPressureLevel::Low => 1,
+            BudgetPressureLevel::Medium => 2,
+            BudgetPressureLevel::High => 3,
+        };
     }
 }

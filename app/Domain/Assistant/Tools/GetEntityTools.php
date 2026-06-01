@@ -108,6 +108,7 @@ class GetEntityTools
                     'role' => $agent->role,
                     'goal' => $agent->goal,
                     'backstory' => $agent->backstory,
+                    'taste' => $agent->taste,
                     'provider' => $agent->provider,
                     'model' => $agent->model,
                     'status' => $agent->status->value,

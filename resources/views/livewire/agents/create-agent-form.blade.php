@@ -17,6 +17,9 @@
             <x-form-textarea wire:model="backstory" label="Backstory (optional)" rows="3" placeholder="Background context for the agent..."
                 toolparamdescription="Background context that shapes the agent's behavior and expertise" />
 
+            <x-form-textarea wire:model="taste" label="Taste & Judgment (optional)" rows="3" placeholder="How should it choose among acceptable options? Tone, what 'good' looks like..."
+                toolparamdescription="Aesthetic and judgment preferences: how the agent picks among acceptable options, tone, what good looks like" />
+
             {{-- Behavioral Constraint Rules --}}
             <div
                 x-data="{

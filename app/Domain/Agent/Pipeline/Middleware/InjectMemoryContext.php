@@ -28,6 +28,7 @@ class InjectMemoryContext
             input: $input,
             projectId: $ctx->project?->id,
             teamId: $ctx->teamId,
+            userId: $ctx->userId,
         );
 
         if ($memoryContext) {

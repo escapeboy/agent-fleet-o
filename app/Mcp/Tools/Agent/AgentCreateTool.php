@@ -36,6 +36,8 @@ class AgentCreateTool extends Tool
                 ->description('Agent goal'),
             'backstory' => $schema->string()
                 ->description('Agent backstory'),
+            'taste' => $schema->string()
+                ->description('Agent taste — aesthetic/judgment preferences: how it chooses among acceptable options, tone, what "good" looks like.'),
             'provider' => $schema->string()
                 ->description('LLM provider key (e.g. anthropic, openai, google, claude-code). Defaults to platform default.'),
             'model' => $schema->string()
@@ -78,6 +80,7 @@ class AgentCreateTool extends Tool
             'role' => 'nullable|string',
             'goal' => 'nullable|string',
             'backstory' => 'nullable|string',
+            'taste' => 'nullable|string',
             'provider' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'personality' => 'nullable|array',
@@ -129,6 +132,7 @@ class AgentCreateTool extends Tool
                 role: $validated['role'] ?? null,
                 goal: $validated['goal'] ?? null,
                 backstory: $validated['backstory'] ?? null,
+                taste: $validated['taste'] ?? null,
                 teamId: $teamId,
                 personality: $validated['personality'] ?? null,
                 dataClassification: $validated['data_classification'] ?? null,

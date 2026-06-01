@@ -22,7 +22,7 @@ Core CRUD for AI agents in the caller's team. For runtime inspection, rollback, 
 Actions:
 - list (read) — optional: status, limit (default 50), cursor.
 - get (read) — agent_id.
-- create (write) — name, role, goal; optional: backstory, provider, model, skill_ids[], tool_ids[].
+- create (write) — name, role, goal; optional: backstory, taste, provider, model, skill_ids[], tool_ids[].
 - update (write) — agent_id + any creatable field. Partial updates allowed.
 - delete (DESTRUCTIVE) — agent_id, confirm=true. Soft-deletes; recoverable for 30 days.
 - toggle_status (write) — agent_id. Flips active ↔ disabled.

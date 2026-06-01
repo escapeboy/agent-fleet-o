@@ -24,6 +24,7 @@ class UpdateAgentRequest extends FormRequest
             'role' => ['sometimes', 'nullable', 'string', 'max:255'],
             'goal' => ['sometimes', 'nullable', 'string'],
             'backstory' => ['sometimes', 'nullable', 'string'],
+            'taste' => ['sometimes', 'nullable', 'string'],
             'provider' => ['sometimes', 'string', 'max:50'],
             'model' => ['sometimes', 'string', 'max:100'],
             'capabilities' => ['sometimes', 'array'],

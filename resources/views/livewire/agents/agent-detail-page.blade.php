@@ -43,6 +43,8 @@
                 {{-- Backstory --}}
                 <x-form-textarea wire:model="editBackstory" label="Backstory (optional)" rows="3" />
 
+                <x-form-textarea wire:model="editTaste" label="Taste & Judgment (optional)" rows="3" />
+
                 {{-- Provider / Model / Budget --}}
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <x-form-select wire:model.live="editProvider" label="Provider"

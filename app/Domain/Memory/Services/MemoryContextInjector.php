@@ -7,12 +7,14 @@ use App\Domain\Memory\Actions\UnifiedMemorySearchAction;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class MemoryContextInjector
 {
     public function __construct(
         private readonly RetrieveRelevantMemoriesAction $retrieveMemories,
         private readonly ?UnifiedMemorySearchAction $unifiedSearch = null,
+        private readonly ?MemoryRelevanceJudge $judge = null,
     ) {}
 
     /**
@@ -31,6 +33,7 @@ class MemoryContextInjector
         mixed $input,
         ?string $projectId = null,
         ?string $teamId = null,
+        ?string $userId = null,
     ): ?string {
         if (! config('memory.enabled', true) || empty($input)) {
             return null;
@@ -40,10 +43,10 @@ class MemoryContextInjector
 
         // Try unified search first (RRF fusion across vector + KG + keyword)
         if ($this->unifiedSearch && config('memory.unified_search.enabled', true) && $teamId) {
-            $context = $this->buildUnifiedContext($teamId, $queryText, $agentId, $projectId);
+            $context = $this->buildUnifiedContext($teamId, $queryText, $agentId, $projectId, $userId);
         } else {
             // Fallback to vector-only search
-            $context = $this->buildVectorOnlyContext($agentId, $queryText, $projectId, $teamId);
+            $context = $this->buildVectorOnlyContext($agentId, $queryText, $projectId, $teamId, $userId);
         }
 
         // Append failure lessons for the team so agents avoid known failure patterns.
@@ -55,6 +58,51 @@ class MemoryContextInjector
         }
 
         return $context;
+    }
+
+    /**
+     * Optional tier-2 deep judgment: re-score retrieved items for task relevance
+     * and drop sub-threshold ones before formatting. Off by default; only runs
+     * when the candidate set is large enough to be worth a cheap LLM call.
+     * Fails open (returns the input unchanged) when disabled, unavailable, or
+     * lacking an acting user.
+     *
+     * @template T
+     *
+     * @param  Collection<int, T>  $items
+     * @param  callable(T): string  $contentOf
+     * @return Collection<int, T>
+     */
+    private function applyDeepJudgment(
+        Collection $items,
+        callable $contentOf,
+        string $query,
+        ?string $teamId,
+        ?string $userId,
+    ): Collection {
+        if ($this->judge === null
+            || ! config('memory.deep_judgment.enabled', false)
+            || ! $teamId
+            || ! $userId) {
+            return $items;
+        }
+
+        $minCandidates = (int) config('memory.deep_judgment.min_candidates', 4);
+        if ($items->count() < $minCandidates) {
+            return $items;
+        }
+
+        // Reference each item by positional index so the judge works uniformly
+        // across memory rows and KG facts (which lack a shared id shape).
+        $candidates = $items->values()
+            ->map(fn ($item, $i) => ['id' => (string) $i, 'content' => $contentOf($item)])
+            ->all();
+
+        $keptIds = array_flip($this->judge->judge($query, $candidates, $teamId, $userId));
+
+        return $items->values()
+            ->filter(fn ($item, $i) => isset($keptIds[(string) $i]))
+            ->values();
     }
 
     /**
@@ -104,6 +152,7 @@ class MemoryContextInjector
         string $query,
         ?string $agentId,
         ?string $projectId,
+        ?string $userId = null,
     ): ?string {
         $results = $this->unifiedSearch->execute(
             teamId: $teamId,
@@ -115,6 +164,14 @@ class MemoryContextInjector
         if ($results->isEmpty()) {
             return null;
         }
+
+        $results = $this->applyDeepJudgment(
+            $results,
+            fn ($item) => (string) ($item['content'] ?? ''),
+            $query,
+            $teamId,
+            $userId,
+        );
 
         $lines = $results->map(fn ($item, $i) => $this->formatResultWithAttribution($item, $i + 1))->implode("\n\n");
 
@@ -206,6 +263,7 @@ class MemoryContextInjector
         string $query,
         ?string $projectId,
         ?string $teamId,
+        ?string $userId = null,
     ): ?string {
         $scope = $projectId ? 'project' : 'agent';
 
@@ -220,6 +278,14 @@ class MemoryContextInjector
         if ($memories->isEmpty()) {
             return null;
         }
+
+        $memories = $this->applyDeepJudgment(
+            $memories,
+            fn ($m) => (string) $m->content,
+            $query,
+            $teamId,
+            $userId,
+        );
 
         $lines = $memories->map(function ($m, $i) {
             $sourceType = $m->source_type ?? 'unknown';

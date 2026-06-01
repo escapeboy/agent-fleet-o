@@ -12,7 +12,7 @@ class RecordAgentConfigRevisionAction
      * risk_score) are not considered meaningful "config" changes.
      */
     private const TRACKED_KEYS = [
-        'name', 'role', 'goal', 'backstory', 'personality',
+        'name', 'role', 'goal', 'backstory', 'taste', 'personality',
         'provider', 'model', 'config', 'capabilities', 'constraints',
         'budget_cap_credits', 'evaluation_enabled', 'evaluation_model', 'evaluation_criteria',
     ];

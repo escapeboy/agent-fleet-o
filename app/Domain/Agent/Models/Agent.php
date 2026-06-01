@@ -70,6 +70,7 @@ class Agent extends Model
         'role',
         'goal',
         'backstory',
+        'taste',
         'personality',
         'provider',
         'model',
