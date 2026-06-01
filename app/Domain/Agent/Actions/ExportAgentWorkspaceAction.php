@@ -34,6 +34,7 @@ class ExportAgentWorkspaceAction
                 'role' => $agent->role,
                 'goal' => $agent->goal,
                 'backstory' => $agent->backstory,
+                'taste' => $agent->taste,
                 'personality' => $agent->personality,
                 'provider' => $agent->provider,
                 'model' => $agent->model,
