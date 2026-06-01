@@ -4099,6 +4099,12 @@ parameters:
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
 
 		-
+			message: '#^Offset ''taste'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
+
+		-
 			message: '#^Parameter \#2 \$snapshot of method App\\Domain\\Marketplace\\Actions\\InstallFromMarketplaceAction\:\:cloneWorkflowFromSnapshot\(\) expects array, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -8054,6 +8060,12 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$tool_profile\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Api/V1/AgentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$taste\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/AgentResource.php
@@ -12643,7 +12655,7 @@ parameters:
 			path: app/Mcp/Tools/Agent/AgentUpdateTool.php
 
 		-
-			message: '#^Offset ''config'' on array\{name\?\: mixed, role\?\: mixed, goal\?\: mixed, backstory\?\: mixed, personality\?\: mixed, provider\?\: mixed, model\?\: mixed, data_classification\?\: mixed, \.\.\.\} on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''config'' on array\{name\?\: mixed, role\?\: mixed, goal\?\: mixed, backstory\?\: mixed, taste\?\: mixed, personality\?\: mixed, provider\?\: mixed, model\?\: mixed, \.\.\.\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Mcp/Tools/Agent/AgentUpdateTool.php
