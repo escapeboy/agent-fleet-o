@@ -26,7 +26,10 @@ class TranscriptIngestor
      */
     public const MAX_SPANS = 5000;
 
-    public function __construct(private readonly ClaudeCodeTranscriptParser $parser) {}
+    public function __construct(
+        private readonly ClaudeCodeTranscriptParser $parser,
+        private readonly PhoenixProjectResolver $projectResolver,
+    ) {}
 
     /**
      * @param  array{source?: string, agent_id?: ?string, experiment_id?: ?string, team_id?: ?string, trace_id?: ?string, mask?: bool}  $context
@@ -52,7 +55,9 @@ class TranscriptIngestor
 
         $endpoint = (string) config('llmops.phoenix.endpoint', '');
         $apiKey = (string) config('llmops.phoenix.api_key', '');
-        $project = (string) config('llmops.phoenix.project', 'fleetq');
+        $project = $this->projectResolver->resolve(
+            is_string($context['team_id'] ?? null) ? $context['team_id'] : null,
+        );
 
         $traceId = (is_string($context['trace_id'] ?? null) && strlen($context['trace_id']) === 32)
             ? $context['trace_id']

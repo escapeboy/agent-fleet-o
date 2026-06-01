@@ -7,6 +7,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
 use App\Infrastructure\AI\Services\OpenInferenceAttributes;
+use App\Infrastructure\AI\Services\PhoenixProjectResolver;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use Closure;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,7 @@ class PhoenixExportMiddleware implements AiMiddlewareInterface
     public function __construct(
         private readonly OpenInferenceAttributes $attributes,
         private readonly PhoenixTraceContext $traceContext,
+        private readonly PhoenixProjectResolver $projectResolver,
     ) {}
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
@@ -73,7 +75,7 @@ class PhoenixExportMiddleware implements AiMiddlewareInterface
                 startNanos: $startNanos,
                 endNanos: $endNanos,
                 apiKey: (string) config('llmops.phoenix.api_key', ''),
-                project: (string) config('llmops.phoenix.project', 'fleetq'),
+                project: $this->projectResolver->resolve($request->teamId),
                 traceId: $traceId,
                 spanId: $spanId,
                 parentSpanId: $parentSpanId,

@@ -8,6 +8,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
 use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
 use App\Infrastructure\AI\Services\OpenInferenceAttributes;
+use App\Infrastructure\AI\Services\PhoenixProjectResolver;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use Illuminate\Support\Facades\Bus;
 use Mockery;
@@ -23,6 +24,7 @@ class PhoenixExportMiddlewareTest extends TestCase
         $this->middleware = new PhoenixExportMiddleware(
             new OpenInferenceAttributes,
             new PhoenixTraceContext,
+            app(PhoenixProjectResolver::class),
         );
     }
 
@@ -89,6 +91,28 @@ class PhoenixExportMiddlewareTest extends TestCase
         });
     }
 
+    public function test_project_name_comes_from_resolver(): void
+    {
+        config([
+            'llmops.phoenix.enabled' => true,
+            'llmops.phoenix.endpoint' => 'http://phoenix:6006',
+            'llmops.phoenix.sample_rate' => 1.0,
+        ]);
+        Bus::fake();
+
+        $resolver = Mockery::mock(PhoenixProjectResolver::class);
+        $resolver->shouldReceive('resolve')->once()->andReturn('fleetq-acme');
+
+        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, new PhoenixTraceContext, $resolver);
+        $middleware->handle($this->request(), fn () => $this->response());
+
+        Bus::assertDispatched(ExportToPhoenixJob::class, function (ExportToPhoenixJob $job) {
+            $project = (new \ReflectionClass($job))->getProperty('project')->getValue($job);
+
+            return $project === 'fleetq-acme';
+        });
+    }
+
     public function test_swallows_attribute_building_errors(): void
     {
         config(['llmops.phoenix.enabled' => true, 'llmops.phoenix.endpoint' => 'http://phoenix:6006']);
@@ -97,7 +121,7 @@ class PhoenixExportMiddlewareTest extends TestCase
         $brokenAttrs = Mockery::mock(OpenInferenceAttributes::class);
         $brokenAttrs->shouldReceive('forLlmCall')->andThrow(new \RuntimeException('boom'));
 
-        $middleware = new PhoenixExportMiddleware($brokenAttrs, new PhoenixTraceContext);
+        $middleware = new PhoenixExportMiddleware($brokenAttrs, new PhoenixTraceContext, app(PhoenixProjectResolver::class));
         $response = $this->response();
 
         $result = $middleware->handle($this->request(), fn () => $response);
@@ -134,7 +158,7 @@ class PhoenixExportMiddlewareTest extends TestCase
         // only care about the IDs here).
         $traceCtx->push('test.root', ['metadata.test' => 'parent']);
 
-        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx);
+        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx, app(PhoenixProjectResolver::class));
         $middleware->handle($this->request(), fn () => $this->response());
 
         $traceCtx->reset();
@@ -158,7 +182,7 @@ class PhoenixExportMiddlewareTest extends TestCase
         $traceCtx = new PhoenixTraceContext;
         $traceCtx->push('ignored.root', []);
 
-        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx);
+        $middleware = new PhoenixExportMiddleware(new OpenInferenceAttributes, $traceCtx, app(PhoenixProjectResolver::class));
 
         $request = new AiRequestDTO(
             provider: 'anthropic',

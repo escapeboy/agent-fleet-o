@@ -44,6 +44,10 @@ return [
         'api_key' => env('PHOENIX_API_KEY', ''),
         'allow_http' => (bool) env('PHOENIX_ALLOW_HTTP', false),
         'project' => env('PHOENIX_PROJECT_NAME', 'fleetq'),
+        // When true, each team's traces land in their own Phoenix project
+        // (`<project>-<team-slug>`) instead of sharing one. Useful for
+        // multi-team installs; single-team installs can leave it off.
+        'project_per_team' => (bool) env('PHOENIX_PROJECT_PER_TEAM', false),
         // Head sampling for root spans (0.0..1.0). Children of a sampled-in
         // root always emit so trace hierarchies stay intact.
         'sample_rate' => (float) env('PHOENIX_SAMPLE_RATE', 1.0),
