@@ -374,6 +374,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/metrics', [MetricsController::class, 'index']);
     Route::get('/metrics/aggregations', [MetricsController::class, 'aggregations']);
     Route::get('/metrics/model-comparison', [MetricsController::class, 'modelComparison']);
+    Route::get('/metrics/rocs', [MetricsController::class, 'rocs']);
+    Route::post('/metrics/tag-value', [MetricsController::class, 'tagValue']);
 
     // Voice Sessions — LiveKit room management, token issuance, and transcript
     Route::get('/voice-sessions', [VoiceSessionController::class, 'index']);

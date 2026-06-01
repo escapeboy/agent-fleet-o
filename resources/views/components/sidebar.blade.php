@@ -180,6 +180,7 @@
                     <x-sidebar-link href="{{ route('audit-console.index') }}" :active="request()->routeIs('audit-console.*')" icon="shield-check">Audit Console</x-sidebar-link>
                 @endif
                 <x-sidebar-link href="{{ route('metrics.models') }}" :active="request()->routeIs('metrics.models')" icon="scale">Model Comparison</x-sidebar-link>
+                <x-sidebar-link href="{{ route('metrics.rocs') }}" :active="request()->routeIs('metrics.rocs')" icon="credit-card">Return on Spend</x-sidebar-link>
                 <x-sidebar-link href="{{ route('metrics.ai-routing') }}" :active="request()->routeIs('metrics.ai-routing')" icon="arrow-path">AI Routing</x-sidebar-link>
                 <x-sidebar-link href="{{ route('insights') }}" :active="request()->routeIs('insights')" icon="light-bulb">Insights</x-sidebar-link>
                 @if(auth()->user()?->is_super_admin)

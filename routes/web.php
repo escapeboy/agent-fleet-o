@@ -87,6 +87,7 @@ use App\Livewire\Memory\KnowledgeSourcesPage;
 use App\Livewire\Memory\MemoryBrowserPage;
 use App\Livewire\Metrics\AiRoutingPage;
 use App\Livewire\Metrics\ModelComparisonPage;
+use App\Livewire\Metrics\RocsPage;
 use App\Livewire\Metrics\TimeHorizonPage;
 use App\Livewire\OutboundConnectors\NotificationOutboundPage;
 use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
@@ -422,6 +423,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/contacts/{contact}', ContactDetailPage::class)->name('contacts.show');
 
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
+    Route::get('/metrics/rocs', RocsPage::class)->name('metrics.rocs');
     Route::get('/metrics/ai-routing', AiRoutingPage::class)->name('metrics.ai-routing');
     Route::get('/metrics/time-horizon', TimeHorizonPage::class)->name('metrics.time-horizon');
 

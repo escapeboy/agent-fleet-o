@@ -21,6 +21,12 @@ class EnforceMaxCreditsPerCallAction
         private readonly CostCalculator $costCalculator,
     ) {}
 
+    /**
+     * @param  int|null  $perRequestCap  Caller-specified ceiling for this single call.
+     *                                   The effective cap is the lower of this and the
+     *                                   team/agent standing cap; either alone applies if
+     *                                   the other is null.
+     */
     public function execute(
         string $teamId,
         string $provider,
@@ -29,6 +35,7 @@ class EnforceMaxCreditsPerCallAction
         int $estimatedInputTokens = 500,
         ?string $cacheStrategy = null,
         ?string $agentId = null,
+        ?int $perRequestCap = null,
     ): void {
         if ($teamId === '') {
             return;
@@ -41,10 +48,12 @@ class EnforceMaxCreditsPerCallAction
 
         if ($agentId !== null) {
             $agent = Agent::withoutGlobalScopes()->find($agentId);
-            $cap = $agent ? $agent->effectiveMaxCreditsPerCall($team) : $team->effectiveMaxCreditsPerCall();
+            $standingCap = $agent ? $agent->effectiveMaxCreditsPerCall($team) : $team->effectiveMaxCreditsPerCall();
         } else {
-            $cap = $team->effectiveMaxCreditsPerCall();
+            $standingCap = $team->effectiveMaxCreditsPerCall();
         }
+
+        $cap = $this->effectiveCap($standingCap, $perRequestCap);
 
         if ($cap === null) {
             return;
@@ -63,9 +72,21 @@ class EnforceMaxCreditsPerCallAction
 
         if ($estimate > $cap) {
             throw new InsufficientBudgetException(
-                "Estimated {$estimate} platform_credits exceeds team cap of {$cap}. ".
-                'Increase max_credits_per_call in team settings or use a cheaper model.',
+                "Estimated {$estimate} platform_credits exceeds the per-call cap of {$cap}. ".
+                'Raise max_credits_per_call (team/agent) or the request max-cost, or use a cheaper model.',
             );
         }
+    }
+
+    /**
+     * The lower of the two caps; either alone when the other is null.
+     */
+    private function effectiveCap(?int $standingCap, ?int $perRequestCap): ?int
+    {
+        return match (true) {
+            $standingCap === null => $perRequestCap,
+            $perRequestCap === null => $standingCap,
+            default => min($standingCap, $perRequestCap),
+        };
     }
 }
