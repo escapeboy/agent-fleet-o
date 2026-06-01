@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Crew;
 
 use App\Domain\Crew\Actions\ExecuteCrewAction;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Orchestration\Exceptions\CostGateExceededException;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -31,6 +32,8 @@ class CrewExecuteTool extends Tool
             'goal' => $schema->string()
                 ->description('The goal/task for the crew to accomplish')
                 ->required(),
+            'confirm_cost' => $schema->boolean()
+                ->description('Acknowledge the projected fan-out cost to bypass the pre-flight cost gate.'),
         ];
     }
 
@@ -39,6 +42,7 @@ class CrewExecuteTool extends Tool
         $validated = $request->validate([
             'crew_id' => 'required|string',
             'goal' => 'required|string',
+            'confirm_cost' => 'sometimes|boolean',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -55,16 +59,20 @@ class CrewExecuteTool extends Tool
             $execution = app(ExecuteCrewAction::class)->execute(
                 crew: $crew,
                 goal: $validated['goal'],
-                teamId: auth()->user()->current_team_id,
+                teamId: $teamId,
+                costConfirmed: (bool) ($validated['confirm_cost'] ?? false),
             );
-
-            return Response::text(json_encode([
-                'success' => true,
-                'execution_id' => $execution->id,
-                'status' => $execution->status->value,
-            ]));
-        } catch (\Throwable $e) {
-            throw $e;
+        } catch (CostGateExceededException $e) {
+            return $this->failedPreconditionError(
+                "Projected {$e->projectedCredits} credits exceeds the cost-gate threshold of ".
+                "{$e->thresholdCredits}. Re-run with confirm_cost=true to proceed.",
+            );
         }
+
+        return Response::text(json_encode([
+            'success' => true,
+            'execution_id' => $execution->id,
+            'status' => $execution->status->value,
+        ]));
     }
 }

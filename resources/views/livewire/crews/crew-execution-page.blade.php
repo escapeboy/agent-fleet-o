@@ -59,6 +59,48 @@
                 placeholder="e.g. Research the top 5 competitors in the SaaS market and produce a competitive analysis report with recommendations..."
                 rows="5"
                 :error="$errors->first('goal')" />
+
+            @if($tierSelectorEnabled)
+                <div class="mt-3">
+                    <button type="button" wire:click="recommendTier"
+                        class="text-xs font-medium text-primary-600 hover:text-primary-700">
+                        ✦ Suggest orchestration structure
+                    </button>
+                    @if($tierRecommendation)
+                        <div class="mt-2 rounded-lg border border-primary-100 bg-primary-50 p-3 text-xs text-gray-700">
+                            <p class="font-semibold text-primary-800">
+                                Suggested: {{ ucwords(str_replace('_', ' ', $tierRecommendation['tier'])) }}
+                                @if($tierRecommendation['process_type'])
+                                    · {{ ucwords(str_replace('_', ' ', $tierRecommendation['process_type'])) }}
+                                @endif
+                                <span class="ml-1 font-normal text-gray-400">({{ $tierRecommendation['confidence'] }} confidence)</span>
+                            </p>
+                            @if(!empty($tierRecommendation['reasoning']))
+                                <ul class="mt-1 list-inside list-disc text-gray-500">
+                                    @foreach($tierRecommendation['reasoning'] as $reason)
+                                        <li>{{ $reason }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                            <p class="mt-1 text-gray-400">Recommendation only — your current crew is unchanged.</p>
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+
+        {{-- Cost pre-flight --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500">Projected fan-out cost</span>
+                <span class="font-semibold text-gray-900">≈ {{ number_format($costProjected) }} credits</span>
+            </div>
+            @if($costGateEnabled && $costRequiresConfirmation)
+                <label class="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                    <input type="checkbox" wire:model="costConfirmed" class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                    <span>This run is projected to exceed the {{ number_format($costThreshold) }}-credit cost gate. Confirm you want to proceed.</span>
+                </label>
+            @endif
         </div>
 
         <div class="flex items-center justify-end gap-3">
