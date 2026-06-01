@@ -35,6 +35,27 @@ class ClaudeCodeTranscriptParserTest extends TestCase
         $this->assertGreaterThan(0, $assistantTurn->timestampNanos);
     }
 
+    public function test_accepts_snake_case_session_id_from_stream_json(): void
+    {
+        // --output-format stream-json emits `session_id` (snake_case), unlike
+        // the persisted JSONL transcript which uses `sessionId`.
+        $jsonl = (string) json_encode([
+            'type' => 'assistant',
+            'session_id' => 'stream-xyz',
+            'message' => [
+                'role' => 'assistant',
+                'model' => 'claude-opus-4-7',
+                'content' => [['type' => 'text', 'text' => 'hi']],
+                'usage' => ['input_tokens' => 5, 'output_tokens' => 2],
+            ],
+        ]);
+
+        $parsed = (new ClaudeCodeTranscriptParser)->parse($jsonl);
+
+        $this->assertSame('stream-xyz', $parsed->sessionId);
+        $this->assertSame(1, $parsed->turnCount());
+    }
+
     public function test_skips_malformed_lines_but_keeps_valid_ones(): void
     {
         $jsonl = implode("\n", [

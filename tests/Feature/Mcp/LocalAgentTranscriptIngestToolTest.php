@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
 use App\Infrastructure\AI\Services\ClaudeCodeTranscriptParser;
+use App\Infrastructure\AI\Services\PhoenixProjectResolver;
 use App\Infrastructure\AI\Services\TranscriptIngestor;
 use App\Mcp\Tools\Phoenix\LocalAgentTranscriptIngestTool;
 use App\Models\User;
@@ -38,7 +39,7 @@ class LocalAgentTranscriptIngestToolTest extends TestCase
 
     private function tool(): LocalAgentTranscriptIngestTool
     {
-        return new LocalAgentTranscriptIngestTool(new TranscriptIngestor(new ClaudeCodeTranscriptParser));
+        return new LocalAgentTranscriptIngestTool(new TranscriptIngestor(new ClaudeCodeTranscriptParser, app(PhoenixProjectResolver::class)));
     }
 
     private function transcript(): string

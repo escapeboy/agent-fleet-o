@@ -4,6 +4,7 @@ namespace Tests\Unit\Infrastructure\AI\Services;
 
 use App\Infrastructure\AI\Jobs\ExportToPhoenixJob;
 use App\Infrastructure\AI\Services\ClaudeCodeTranscriptParser;
+use App\Infrastructure\AI\Services\PhoenixProjectResolver;
 use App\Infrastructure\AI\Services\TranscriptIngestor;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
@@ -25,7 +26,7 @@ class TranscriptIngestorTest extends TestCase
 
     private function ingestor(): TranscriptIngestor
     {
-        return new TranscriptIngestor(new ClaudeCodeTranscriptParser);
+        return new TranscriptIngestor(new ClaudeCodeTranscriptParser, app(PhoenixProjectResolver::class));
     }
 
     private function fixture(): string

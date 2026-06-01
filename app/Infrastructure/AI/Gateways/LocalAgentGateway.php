@@ -17,6 +17,7 @@ use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\RunSecretVault;
 use App\Infrastructure\AI\Services\SecretProxyInjector;
+use App\Infrastructure\AI\Services\TranscriptIngestor;
 use App\Models\User;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
@@ -222,6 +223,34 @@ class LocalAgentGateway implements AiGatewayInterface
     }
 
     /**
+     * Replay a local-agent run's stream-json stdout into Phoenix as a trace, so
+     * the per-turn tool calls + token usage the cloud gateway never sees become
+     * observable. No-op unless transcript ingest + Phoenix export are enabled
+     * (gated inside TranscriptIngestor); fire-and-forget — observability must
+     * never break the run it observes.
+     */
+    private function maybeIngestTranscript(string $rawOutput, AiRequestDTO $request, string $source): void
+    {
+        if ($rawOutput === '') {
+            return;
+        }
+
+        try {
+            app(TranscriptIngestor::class)->ingest($rawOutput, [
+                'source' => $source,
+                'agent_id' => $request->agentId,
+                'experiment_id' => $request->experimentId,
+                'team_id' => $request->teamId,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: transcript ingest failed, swallowing', [
+                'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Execute an agent via the host bridge HTTP server.
      */
     /**
@@ -360,6 +389,12 @@ class LocalAgentGateway implements AiGatewayInterface
             }
 
             $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
+
+            // Non-assistant VPS runs use --output-format stream-json, so $stdout
+            // IS the transcript. Assistant chat doesn't, so skip it there.
+            if (! $isAssistant) {
+                $this->maybeIngestTranscript($stdout, $request, 'claude-code-vps');
+            }
 
             return new AiResponseDTO(
                 content: $parsed['content'],
@@ -768,6 +803,8 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $output = $data['output'] ?? '';
 
+        $this->maybeIngestTranscript($output, $request, 'bridge_agent');
+
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
 
         return new AiResponseDTO(
@@ -1009,6 +1046,9 @@ class LocalAgentGateway implements AiGatewayInterface
 
         // Use the done event's output (complete), fall back to streamed output
         $finalOutput = $stdout !== '' ? $stdout : trim($fullOutput);
+
+        $this->maybeIngestTranscript($finalOutput, $request, 'bridge_agent');
+
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $finalOutput);
 
         return new AiResponseDTO(

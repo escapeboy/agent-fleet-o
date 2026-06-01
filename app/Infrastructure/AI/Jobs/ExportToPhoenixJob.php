@@ -98,6 +98,10 @@ class ExportToPhoenixJob implements ShouldQueue
 
         $resource = ResourceInfoFactory::defaultResource()->merge(
             ResourceInfo::create(Attributes::create([
+                // Phoenix routes spans into projects by this resource attribute.
+                // Without it everything lands in the catch-all `default` project,
+                // regardless of service.name (which Phoenix ignores for routing).
+                'openinference.project.name' => $this->project,
                 'service.name' => $this->project,
                 'service.namespace' => 'fleetq',
             ])),

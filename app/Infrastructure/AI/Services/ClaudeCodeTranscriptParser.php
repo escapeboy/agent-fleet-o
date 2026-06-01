@@ -49,8 +49,13 @@ class ClaudeCodeTranscriptParser
                 continue;
             }
 
-            if ($sessionId === null && is_string($record['sessionId'] ?? null)) {
-                $sessionId = $record['sessionId'];
+            // Persisted JSONL uses `sessionId`; `--output-format stream-json`
+            // emits `session_id`. Accept either so VPS/bridge stdout parses too.
+            if ($sessionId === null) {
+                $sid = $record['sessionId'] ?? $record['session_id'] ?? null;
+                if (is_string($sid)) {
+                    $sessionId = $sid;
+                }
             }
 
             $type = $record['type'] ?? null;
