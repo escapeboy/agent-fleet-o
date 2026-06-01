@@ -60,6 +60,7 @@ class PublishToMarketplaceAction
                 'role' => $item->role,
                 'goal' => $item->goal,
                 'backstory' => $item->backstory,
+                'taste' => $item->taste,
                 'personality' => $item->personality,
                 'system_prompt_template' => $item->system_prompt_template,
                 'provider' => $item->provider,
