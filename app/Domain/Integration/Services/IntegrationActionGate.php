@@ -3,6 +3,7 @@
 namespace App\Domain\Integration\Services;
 
 use App\Domain\Approval\Actions\CreateActionProposalAction;
+use App\Domain\Approval\Services\GatePolicyOverlay;
 use App\Domain\Integration\Exceptions\IntegrationActionProposedException;
 use App\Domain\Integration\Exceptions\IntegrationActionRefusedException;
 use App\Domain\Integration\Models\Integration;
@@ -53,6 +54,15 @@ class IntegrationActionGate
         $policy = $this->resolvePolicy($team);
         $risk = self::classifyAction($action);
         $decision = $policy[$risk] ?? 'auto';
+
+        // A versioned AgentPolicy may only raise this decision (auto→ask/reject).
+        $decision = app(GatePolicyOverlay::class)->decide(
+            (string) $integration->team_id,
+            'integration_action',
+            $risk,
+            [],
+            $decision,
+        );
 
         if ($decision === 'auto') {
             return;

@@ -2,10 +2,13 @@
 
 namespace App\Domain\Approval\Actions;
 
+use App\Domain\Approval\DTOs\ProposalContext;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
+use App\Domain\Approval\Services\AgentPolicyResolver;
 use App\Domain\Approval\Services\DecisionRubric;
+use App\Domain\Approval\Services\PolicyEvaluator;
 use App\Domain\Assistant\Models\AssistantConversation;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
@@ -69,9 +72,60 @@ class CreateActionProposalAction
         $rubric = app(DecisionRubric::class);
         $score = $rubric->evaluate($proposal);
 
+        $breakdown = $score->toArray();
+
+        // Policy-governed autonomy (idea B/A): when a versioned AgentPolicy
+        // governs this scope it is authoritative for routing — it can only
+        // narrow autonomy (deny / hold), never widen the rubric's verdict.
+        // The version in force is pinned for replay (idea C). With the flag
+        // off / no enabled policy the resolver returns null and the legacy
+        // global-rubric routing below is unchanged.
+        $resolved = app(AgentPolicyResolver::class)->resolve(
+            (string) $proposal->team_id,
+            $proposal->actor_agent_id,
+        );
+
+        if ($resolved !== null) {
+            $verdict = app(PolicyEvaluator::class)->evaluate(
+                $resolved,
+                $this->buildContext($proposal, $score->total),
+            );
+            $breakdown['policy_decision'] = $verdict->toArray();
+
+            $proposal->update([
+                'rubric_score' => $score->total,
+                'rubric_breakdown' => $breakdown,
+                'agent_policy_version_id' => $resolved->version->id,
+            ]);
+
+            if ($verdict->isDeny()) {
+                $proposal->update([
+                    'status' => ActionProposalStatus::Rejected,
+                    'decided_at' => now(),
+                    'decision_reason' => "Denied by agent policy: {$verdict->reason}",
+                ]);
+
+                return $proposal->refresh();
+            }
+
+            if ($verdict->isAllowAuto()) {
+                $proposal->update([
+                    'status' => ActionProposalStatus::Approved,
+                    'decided_at' => now(),
+                    'decision_reason' => "Auto-approved by agent policy: {$verdict->reason}",
+                ]);
+                ActionProposalApproved::dispatch($proposal->refresh());
+
+                return $proposal->refresh();
+            }
+
+            // require_human → stay pending for the approval inbox.
+            return $proposal->refresh();
+        }
+
         $proposal->update([
             'rubric_score' => $score->total,
-            'rubric_breakdown' => $score->toArray(),
+            'rubric_breakdown' => $breakdown,
         ]);
 
         if ($score->recommendation === DecisionRubric::AUTO_EXECUTE) {
@@ -90,6 +144,41 @@ class CreateActionProposalAction
         }
 
         return $proposal->refresh();
+    }
+
+    /**
+     * Derive the policy-evaluation context from the proposal. Paths are
+     * pulled from the common payload shapes (git writeFile args, an explicit
+     * paths list) so sensitive-path rules can match; estimated credits feed
+     * the spend cap.
+     */
+    private function buildContext(ActionProposal $proposal, int $rubricTotal): ProposalContext
+    {
+        $payload = $proposal->payload;
+
+        $paths = [];
+        $argPath = $payload['args']['path'] ?? null;
+        if (is_string($argPath) && $argPath !== '') {
+            $paths[] = $argPath;
+        }
+        if (is_array($payload['paths'] ?? null)) {
+            foreach ($payload['paths'] as $p) {
+                if (is_string($p)) {
+                    $paths[] = $p;
+                }
+            }
+        }
+
+        $credits = $payload['estimated_credits'] ?? null;
+
+        return new ProposalContext(
+            targetType: (string) $proposal->target_type,
+            riskLevel: (string) $proposal->risk_level,
+            estimatedCredits: is_numeric($credits) ? (float) $credits : null,
+            paths: $paths,
+            agentId: $proposal->actor_agent_id,
+            rubricTotal: $rubricTotal,
+        );
     }
 
     /**

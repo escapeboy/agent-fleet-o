@@ -3,6 +3,7 @@
 namespace App\Domain\GitRepository\Services;
 
 use App\Domain\Approval\Actions\CreateActionProposalAction;
+use App\Domain\Approval\Services\GatePolicyOverlay;
 use App\Domain\GitRepository\Exceptions\GitOperationProposedException;
 use App\Domain\GitRepository\Exceptions\GitOperationRefusedException;
 use App\Domain\GitRepository\Models\GitRepository;
@@ -78,6 +79,16 @@ class GitOperationGate
         $policy = $this->resolvePolicy($team);
         $risk = self::classifyMethod($method);
         $decision = $policy[$risk] ?? 'auto';
+
+        // A versioned AgentPolicy may only raise this decision (auto→ask/reject).
+        $path = $args['path'] ?? null;
+        $decision = app(GatePolicyOverlay::class)->decide(
+            (string) $repo->team_id,
+            'git_push',
+            $risk,
+            is_string($path) && $path !== '' ? [$path] : [],
+            $decision,
+        );
 
         if ($decision === 'auto') {
             return;
