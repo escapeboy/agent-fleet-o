@@ -25,6 +25,7 @@ class SemanticCacheEntry extends Model
         'team_id',
         'provider',
         'model',
+        'embedding_model',
         'prompt_hash',
         'request_text',
         'response_content',

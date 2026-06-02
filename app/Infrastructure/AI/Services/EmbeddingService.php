@@ -3,15 +3,34 @@
 namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Facades\Prism;
 
-class EmbeddingService
+class EmbeddingService implements EmbeddingProviderInterface
 {
     public function __construct(
         private readonly string $provider = 'openai',
         private readonly string $model = 'text-embedding-3-small',
     ) {}
+
+    /**
+     * Vector dimensionality emitted by the configured model. Mirrors the
+     * pgvector column size (config('memory.embedding_dimensions')).
+     */
+    public function dimensions(): int
+    {
+        return (int) config('memory.embedding_dimensions', 1536);
+    }
+
+    /**
+     * Stable namespace key for vectors this provider produces, e.g.
+     * "openai:text-embedding-3-small".
+     */
+    public function identifier(): string
+    {
+        return "{$this->provider}:{$this->model}";
+    }
 
     /**
      * Generate an embedding vector for the given text.

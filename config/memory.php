@@ -15,6 +15,13 @@ return [
 
     'embedding_model' => env('MEMORY_EMBEDDING_MODEL', 'text-embedding-3-small'),
 
+    // Embedding backend driver. 'cloud' (default) routes through Prism to the
+    // provider/model above. 'local' is the extension point for a future
+    // on-box embedding backend (FFI/embedding.cpp); it is not implemented yet
+    // and selecting it throws LocalEmbeddingNotConfiguredException. Resolved
+    // via EmbeddingProviderInterface in AppServiceProvider.
+    'embedding_driver' => env('MEMORY_EMBEDDING_DRIVER', 'cloud'),
+
     // Hard input cap for a single embedding call, in tokens. OpenAI's
     // text-embedding-3-* models reject inputs over 8192 tokens with a 400
     // ("maximum input length is 8192 tokens"); query text is truncated to this
