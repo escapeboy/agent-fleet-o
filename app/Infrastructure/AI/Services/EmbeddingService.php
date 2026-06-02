@@ -22,10 +22,35 @@ class EmbeddingService
     {
         $response = Prism::embeddings()
             ->using($this->provider, $this->model)
-            ->fromInput($text)
+            ->fromInput($this->truncateToEmbeddingLimit($text))
             ->asEmbeddings();
 
         return $response->embeddings[0]->embedding;
+    }
+
+    /**
+     * Truncate embedding input to the model's token limit. OpenAI's
+     * text-embedding-3-* models reject inputs over 8192 tokens with a 400
+     * ("maximum input length is 8192 tokens"); a long input (e.g. a whole pasted
+     * document) would otherwise fail the embedding call. We estimate tokens via
+     * TokenEstimator's chars-per-token ratio and cut on a character budget,
+     * leaving a small safety margin so the estimate never undershoots the real
+     * tokenizer.
+     */
+    private function truncateToEmbeddingLimit(string $text): string
+    {
+        $maxTokens = (int) config('memory.embedding_max_input_tokens', 8192);
+
+        $estimator = app(TokenEstimator::class);
+        if ($estimator->estimate($text) <= $maxTokens) {
+            return $text;
+        }
+
+        // 4 chars/token matches TokenEstimator::CHARS_PER_TOKEN; 0.95 margin keeps
+        // the truncated string safely under the hard token cap.
+        $charBudget = (int) floor($maxTokens * 4 * 0.95);
+
+        return mb_substr($text, 0, $charBudget);
     }
 
     /**

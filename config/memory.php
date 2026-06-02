@@ -15,6 +15,13 @@ return [
 
     'embedding_model' => env('MEMORY_EMBEDDING_MODEL', 'text-embedding-3-small'),
 
+    // Hard input cap for a single embedding call, in tokens. OpenAI's
+    // text-embedding-3-* models reject inputs over 8192 tokens with a 400
+    // ("maximum input length is 8192 tokens"); query text is truncated to this
+    // limit before the embedding call so a long query degrades gracefully
+    // instead of failing the whole retrieval.
+    'embedding_max_input_tokens' => (int) env('MEMORY_EMBEDDING_MAX_INPUT_TOKENS', 8192),
+
     /*
     |--------------------------------------------------------------------------
     | Embedding Dimensions
