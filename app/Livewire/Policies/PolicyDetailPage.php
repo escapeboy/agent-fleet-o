@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\RollbackAgentPolicyAction;
 use App\Domain\Agent\Actions\UpdateAgentPolicyAction;
 use App\Domain\Agent\Models\AgentPolicy;
 use App\Domain\Agent\Models\AgentPolicyVersion;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class PolicyDetailPage extends Component
@@ -23,6 +24,8 @@ class PolicyDetailPage extends Component
 
     public function toggleEnabled(): void
     {
+        Gate::authorize('edit-content');
+
         app(UpdateAgentPolicyAction::class)->execute(
             policy: $this->policy,
             enabled: ! $this->policy->enabled,
@@ -33,6 +36,8 @@ class PolicyDetailPage extends Component
 
     public function rollback(string $versionId): void
     {
+        Gate::authorize('edit-content');
+
         app(RollbackAgentPolicyAction::class)->execute($this->policy, $versionId, auth()->id());
         $this->policy->refresh();
         session()->flash('status', 'Rolled back — a new version was minted.');

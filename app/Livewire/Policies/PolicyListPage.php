@@ -4,6 +4,7 @@ namespace App\Livewire\Policies;
 
 use App\Domain\Agent\Actions\UpdateAgentPolicyAction;
 use App\Domain\Agent\Models\AgentPolicy;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -22,6 +23,8 @@ class PolicyListPage extends Component
 
     public function toggleEnabled(string $policyId): void
     {
+        Gate::authorize('edit-content');
+
         // TeamScope already restricts to the current team; scope explicitly too
         // (defense-in-depth on a mutation path).
         $policy = AgentPolicy::where('team_id', auth()->user()->current_team_id)->find($policyId);

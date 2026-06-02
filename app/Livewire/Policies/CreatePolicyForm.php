@@ -4,6 +4,7 @@ namespace App\Livewire\Policies;
 
 use App\Domain\Agent\Actions\CreateAgentPolicyAction;
 use App\Domain\Agent\Models\Agent;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -37,6 +38,8 @@ class CreatePolicyForm extends Component
 
     public function save()
     {
+        Gate::authorize('edit-content');
+
         $this->validate([
             'name' => 'required|string|min:2|max:200',
             // The submitted agent id is attacker-controllable (not just the

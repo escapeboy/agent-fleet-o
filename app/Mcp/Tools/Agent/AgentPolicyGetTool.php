@@ -51,6 +51,7 @@ class AgentPolicyGetTool extends Tool
         }
 
         $versions = AgentPolicyVersion::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->where('agent_policy_id', $policy->id)
             ->orderBy('version')
             ->get()
