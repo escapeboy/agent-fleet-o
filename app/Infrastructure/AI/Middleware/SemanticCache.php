@@ -139,6 +139,7 @@ class SemanticCache implements AiMiddlewareInterface
             ->where('team_id', $teamId)
             ->where('provider', $provider)
             ->where('model', $model)
+            ->where('embedding_model', $this->activeEmbeddingModel())
             ->where('prompt_hash', $promptHash)
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->first();
@@ -150,6 +151,7 @@ class SemanticCache implements AiMiddlewareInterface
             ->where('team_id', $teamId)
             ->where('provider', $provider)
             ->where('model', $model)
+            ->where('embedding_model', $this->activeEmbeddingModel())
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->whereRaw('embedding IS NOT NULL AND (1 - (embedding <=> ?::vector)) >= ?', [$embedding, $threshold])
             ->orderByRaw('embedding <=> ?::vector', [$embedding])
@@ -164,6 +166,7 @@ class SemanticCache implements AiMiddlewareInterface
             'team_id' => $request->teamId,
             'provider' => $request->provider,
             'model' => $request->model,
+            'embedding_model' => $this->activeEmbeddingModel(),
             'prompt_hash' => $promptHash,
             'request_text' => substr($requestText, 0, config('semantic_cache.request_text_max_length', 10000)),
             'response_content' => $response->content,
@@ -194,5 +197,20 @@ class SemanticCache implements AiMiddlewareInterface
         return $this->embeddingService->formatForPgvector(
             $this->embeddingService->embed($text),
         );
+    }
+
+    /**
+     * Namespace key for the vectors in this cache, derived from the *same*
+     * embedding service that produces them (not from config — this middleware
+     * autowires the default EmbeddingService, so its identifier is the ground
+     * truth for what generated the vector). Lookups/writes filter on this so
+     * vectors from different embedding models are never compared (avoids
+     * meaningless cosine and dimension-mismatch errors if the backend changes).
+     * Existing rows were backfilled with the historical default identifier
+     * ("openai:text-embedding-3-small"), so a default deploy invalidates nothing.
+     */
+    private function activeEmbeddingModel(): string
+    {
+        return $this->embeddingService->identifier();
     }
 }
