@@ -281,6 +281,78 @@ class ProviderResolverTest extends TestCase
         $this->assertContains($result['source'], ['platform', 'config']);
     }
 
+    // ── model/provider mismatch (cloud-only flip guard) ───────────────────────
+
+    public function test_resolve_swaps_foreign_model_to_provider_default(): void
+    {
+        // Cloud-only deployment: only OpenAI has a key. An agent is still configured
+        // with a claude model on the openai provider (e.g. after a team flip to
+        // cloud-only). The foreign model must be swapped to an openai catalog model
+        // so the gateway never POSTs "claude-haiku-4-5" to the OpenAI endpoint.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', null);
+        Config::set('services.platform_api_keys.openai', 'sk-openai-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'openai',
+            'model' => 'claude-haiku-4-5',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('openai', $resolved['provider']);
+        $this->assertArrayHasKey(
+            $resolved['model'],
+            config('llm_providers.openai.models'),
+            'Resolved model must belong to the OpenAI catalog, not a foreign claude name.',
+        );
+    }
+
+    public function test_resolve_reroutes_anthropic_agent_without_key_to_openai(): void
+    {
+        // Agents configured anthropic/claude-* but the deployment only has an OpenAI
+        // key: enforceAvailability reroutes to openai, then the model guard swaps the
+        // claude model for an openai catalog model — a fully valid pair, no breaker hit.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', null);
+        Config::set('services.platform_api_keys.openai', 'sk-openai-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('openai', $resolved['provider']);
+        $this->assertArrayHasKey($resolved['model'], config('llm_providers.openai.models'));
+    }
+
+    public function test_resolve_keeps_valid_provider_model_pair_untouched(): void
+    {
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.openai', 'sk-openai-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'openai',
+            'model' => 'gpt-4o',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('openai', $resolved['provider']);
+        $this->assertSame('gpt-4o', $resolved['model']);
+    }
+
     public function test_model_label_matches_model_id_for_dynamically_discovered_ollama_models(): void
     {
         Config::set('local_llm.enabled', true);

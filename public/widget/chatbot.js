@@ -66,6 +66,11 @@
         '.msg.user { background: var(--tc); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }',
         '.msg.bot { background: #f3f4f6; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 4px; }',
         '.msg.bot.pending { opacity: .6; font-style: italic; }',
+        '.feedback { align-self: flex-start; display: flex; gap: 4px; margin-top: -4px; }',
+        '.feedback button { background: none; border: none; cursor: pointer; font-size: 14px; line-height: 1; opacity: .55; padding: 2px 4px; transition: opacity .15s; }',
+        '.feedback button:hover:not(:disabled) { opacity: 1; }',
+        '.feedback button.active { opacity: 1; }',
+        '.feedback button:disabled { cursor: default; }',
         '.footer { padding: 10px; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; }',
         '.footer input { flex: 1; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; }',
         '.footer input:focus { border-color: var(--tc); }',
@@ -180,6 +185,7 @@
           this._appendMessage('bot', data.escalation_message || 'Your message is under review. You will be notified when a response is ready.');
         } else {
           this._appendMessage('bot', data.content || '');
+          if (data.id) { this._appendFeedback(data.id); }
         }
       } catch (_) {
         thinkingEl.remove();
@@ -199,6 +205,7 @@
         try {
           const data = JSON.parse(e.data);
           this._appendMessage('bot', data.content || '');
+          if (data.id) { this._appendFeedback(data.id); }
         } catch (_) {}
       });
       es.onerror = () => { this._closeEventSource(); };
@@ -216,6 +223,38 @@
       this._messages.appendChild(div);
       this._messages.scrollTop = this._messages.scrollHeight;
       return div;
+    }
+
+    _appendFeedback(messageId) {
+      if (!messageId || !this._sessionId) { return; }
+      const wrap = document.createElement('div');
+      wrap.className = 'feedback';
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.setAttribute('aria-label', 'Helpful');
+      up.textContent = '👍';
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.setAttribute('aria-label', 'Not helpful');
+      down.textContent = '👎';
+      up.addEventListener('click', () => this._sendFeedback(messageId, 'thumbs_up', up, [up, down]));
+      down.addEventListener('click', () => this._sendFeedback(messageId, 'thumbs_down', down, [up, down]));
+      wrap.appendChild(up);
+      wrap.appendChild(down);
+      this._messages.appendChild(wrap);
+      this._messages.scrollTop = this._messages.scrollHeight;
+    }
+
+    async _sendFeedback(messageId, value, chosenBtn, allBtns) {
+      try {
+        const res = await this._apiFetch('POST', '/api/barsy/chatbot/message/' + messageId + '/feedback', {
+          feedback: value,
+          session_id: this._sessionId,
+        });
+        if (!res.ok) { return; }
+        chosenBtn.classList.add('active');
+        allBtns.forEach((b) => { b.disabled = true; });
+      } catch (_) {}
     }
 
     async _apiFetch(method, path, body) {

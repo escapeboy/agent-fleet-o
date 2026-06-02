@@ -40,6 +40,7 @@ class ProviderResolver
         $resolved = $this->resolveHierarchy($skill, $agent, $team, $purpose);
         $resolved = $this->enforceAllowedModels($resolved, $team);
         $resolved = $this->enforceAvailability($resolved, $team);
+        $resolved = $this->enforceModelBelongsToProvider($resolved, $team);
 
         return $this->enforceDataClassification($resolved, $agent, $team);
     }
@@ -108,6 +109,79 @@ class ProviderResolver
         return [
             'provider' => $firstProvider,
             'model' => (string) $firstModel,
+        ];
+    }
+
+    /**
+     * Ensure the resolved model actually belongs to the resolved provider's catalog.
+     *
+     * Bug class this guards against: a cloud-only deployment whose agents/teams are
+     * still configured with a foreign model name (e.g. an `anthropic` agent's
+     * `claude-haiku-4-5` model ending up paired with the `openai` provider after a
+     * team flip to cloud-only). The (provider, model) pair would pass
+     * enforceAvailability() — the provider IS available — but the foreign model name
+     * is then POSTed to that provider's endpoint, which rejects it with a 400
+     * ("model 'claude-haiku-4-5' does not exist"). That 400 is NOT a provider outage;
+     * it is a config error. Without this guard the FallbackAiGateway records it as a
+     * CircuitBreaker failure, and a handful of such calls trips the breaker for the
+     * only working cloud provider — short-circuiting every subsequent LLM call to an
+     * empty completion (prod incident 2026-06-02, Barsy chatbot cloud-only flip).
+     *
+     * Strategy: only applies to providers that expose a STATIC model catalog in
+     * config('llm_providers.{provider}.models') — i.e. cloud providers. Local, bridge
+     * and http_local providers carry dynamic/empty catalogs and are left untouched.
+     * When the resolved model is absent from that catalog, swap it for the team's
+     * first available model for that provider (falling back to the first catalog
+     * model), so the gateway never emits an invalid pair.
+     *
+     * @param  array{provider: string, model: string}  $resolved
+     * @return array{provider: string, model: string}
+     */
+    private function enforceModelBelongsToProvider(array $resolved, ?Team $team): array
+    {
+        $provider = $resolved['provider'];
+
+        // Local / bridge / http-local providers manage their own (often dynamic or
+        // compound "agent:model") model names — never validate against a static catalog.
+        if ($this->isLocalProvider($provider) || config("llm_providers.{$provider}.http_local")) {
+            return $resolved;
+        }
+
+        $catalog = config("llm_providers.{$provider}.models");
+
+        // No static catalog for this provider (e.g. custom endpoint) — nothing to validate.
+        if (! is_array($catalog) || $catalog === []) {
+            return $resolved;
+        }
+
+        if (isset($catalog[$resolved['model']])) {
+            return $resolved;
+        }
+
+        // The model does not belong to this provider. Prefer a model the team can
+        // actually use, then fall back to the provider's first catalog model.
+        $replacement = null;
+        if ($team !== null) {
+            try {
+                $available = $this->availableProviders($team);
+                $replacement = array_key_first($available[$provider]['models'] ?? []);
+            } catch (\Throwable) {
+                $replacement = null;
+            }
+        }
+
+        $replacement ??= array_key_first($catalog);
+
+        Log::warning('ProviderResolver: resolved model does not belong to provider — swapping to provider default', [
+            'team_id' => $team?->id,
+            'provider' => $provider,
+            'requested_model' => $resolved['model'],
+            'replacement_model' => $replacement,
+        ]);
+
+        return [
+            'provider' => $provider,
+            'model' => (string) $replacement,
         ];
     }
 
