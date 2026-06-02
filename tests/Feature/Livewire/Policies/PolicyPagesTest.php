@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire\Policies;
 
 use App\Domain\Agent\Actions\CreateAgentPolicyAction;
 use App\Domain\Agent\Actions\UpdateAgentPolicyAction;
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentPolicy;
 use App\Domain\Agent\Models\AgentPolicyVersion;
 use App\Domain\Shared\Models\Team;
@@ -13,6 +14,7 @@ use App\Livewire\Policies\PolicyListPage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class PolicyPagesTest extends TestCase
@@ -84,6 +86,41 @@ class PolicyPagesTest extends TestCase
             ->call('toggleEnabled');
 
         $this->assertTrue($policy->fresh()->enabled);
+    }
+
+    public function test_detail_aborts_403_for_other_teams_policy(): void
+    {
+        $otherUser = User::factory()->create();
+        $otherTeam = Team::create([
+            'name' => 'O '.bin2hex(random_bytes(3)),
+            'slug' => 'o-'.bin2hex(random_bytes(3)),
+            'owner_id' => $otherUser->id,
+            'settings' => [],
+        ]);
+        $foreign = app(CreateAgentPolicyAction::class)->execute(teamId: $otherTeam->id, name: 'Foreign');
+
+        // Invoke the ownership guard directly (harness-independent): mounting
+        // another team's policy must 403.
+        $this->expectException(HttpException::class);
+        (new PolicyDetailPage)->mount($foreign);
+    }
+
+    public function test_create_rejects_agent_id_from_another_team(): void
+    {
+        $otherUser = User::factory()->create();
+        $otherTeam = Team::create([
+            'name' => 'O '.bin2hex(random_bytes(3)),
+            'slug' => 'o-'.bin2hex(random_bytes(3)),
+            'owner_id' => $otherUser->id,
+            'settings' => [],
+        ]);
+        $foreignAgent = Agent::factory()->create(['team_id' => $otherTeam->id]);
+
+        Livewire::test(CreatePolicyForm::class)
+            ->set('name', 'X')
+            ->set('agentId', $foreignAgent->id)
+            ->call('save')
+            ->assertHasErrors('agentId');
     }
 
     public function test_detail_rollback_mints_new_version(): void

@@ -22,7 +22,9 @@ class PolicyListPage extends Component
 
     public function toggleEnabled(string $policyId): void
     {
-        $policy = AgentPolicy::find($policyId);
+        // TeamScope already restricts to the current team; scope explicitly too
+        // (defense-in-depth on a mutation path).
+        $policy = AgentPolicy::where('team_id', auth()->user()->current_team_id)->find($policyId);
         if ($policy) {
             app(UpdateAgentPolicyAction::class)->execute(
                 policy: $policy,
@@ -34,7 +36,9 @@ class PolicyListPage extends Component
 
     public function render()
     {
-        $query = AgentPolicy::query()->with(['currentVersion', 'agent']);
+        $query = AgentPolicy::query()
+            ->where('team_id', auth()->user()->current_team_id)
+            ->with(['currentVersion', 'agent']);
 
         if ($this->search) {
             $query->where('name', 'ilike', "%{$this->search}%");

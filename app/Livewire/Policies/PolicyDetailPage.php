@@ -12,6 +12,15 @@ class PolicyDetailPage extends Component
 {
     public AgentPolicy $policy;
 
+    // Route-model binding already applies TeamScope (foreign ids 404); assert
+    // ownership explicitly so the mutation methods below can't act on another
+    // team's policy even if the bound instance were ever set differently.
+    public function mount(AgentPolicy $policy): void
+    {
+        abort_unless($policy->team_id === auth()->user()->current_team_id, 403);
+        $this->policy = $policy;
+    }
+
     public function toggleEnabled(): void
     {
         app(UpdateAgentPolicyAction::class)->execute(

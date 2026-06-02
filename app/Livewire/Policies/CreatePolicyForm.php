@@ -4,6 +4,7 @@ namespace App\Livewire\Policies;
 
 use App\Domain\Agent\Actions\CreateAgentPolicyAction;
 use App\Domain\Agent\Models\Agent;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class CreatePolicyForm extends Component
@@ -38,7 +39,10 @@ class CreatePolicyForm extends Component
     {
         $this->validate([
             'name' => 'required|string|min:2|max:200',
-            'agentId' => 'nullable|string',
+            // The submitted agent id is attacker-controllable (not just the
+            // dropdown), so verify it belongs to the caller's team.
+            'agentId' => ['nullable', 'string', Rule::exists('agents', 'id')
+                ->where('team_id', auth()->user()->current_team_id)],
             'riskCeiling' => 'required|in:low,medium,high',
             'autoExecuteThreshold' => 'integer|min:0|max:25',
             'spendCapCredits' => 'nullable|integer|min:0',
@@ -97,7 +101,9 @@ class CreatePolicyForm extends Component
     public function render()
     {
         return view('livewire.policies.create-policy-form', [
-            'agents' => Agent::query()->orderBy('name')->get(['id', 'name']),
+            'agents' => Agent::query()
+                ->where('team_id', auth()->user()->current_team_id)
+                ->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app', ['header' => 'New Agent Policy']);
     }
 }
