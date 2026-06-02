@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Database\Factories\Domain\Agent\AgentPolicyVersionFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,8 +16,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * ActionProposal.agent_policy_version_id so a routing decision can always be
  * re-explained against the exact rules that were in force.
  *
+ * @property string $id
+ * @property string|null $team_id
+ * @property string $agent_policy_id
  * @property int $version
+ * @property string|null $created_by
  * @property array<string, mixed> $rules
+ * @property string|null $notes
+ * @property string|null $rolled_back_from_version_id
+ * @property CarbonInterface|null $created_at
  */
 class AgentPolicyVersion extends Model
 {

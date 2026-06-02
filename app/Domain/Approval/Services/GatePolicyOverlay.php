@@ -55,7 +55,9 @@ class GatePolicyOverlay
             default => 'ask',
         };
 
-        return (self::RANK[$policyDecision] ?? 0) > (self::RANK[$blobDecision] ?? 0)
+        // $policyDecision is always one of RANK's keys (from the match above);
+        // $blobDecision is an arbitrary caller string, so guard only that side.
+        return self::RANK[$policyDecision] > (self::RANK[$blobDecision] ?? 0)
             ? $policyDecision
             : $blobDecision;
     }

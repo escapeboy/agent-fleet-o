@@ -77,6 +77,9 @@ class ActionProposal extends Model
         return $this->belongsTo(User::class, 'decided_by_user_id');
     }
 
+    /**
+     * @return BelongsTo<AgentPolicyVersion, $this>
+     */
     public function agentPolicyVersion(): BelongsTo
     {
         return $this->belongsTo(AgentPolicyVersion::class, 'agent_policy_version_id');

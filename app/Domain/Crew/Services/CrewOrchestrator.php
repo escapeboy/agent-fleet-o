@@ -696,7 +696,7 @@ class CrewOrchestrator
             // Competitive arbitration (idea D): opt-in reduction that picks the
             // single best candidate deterministically instead of LLM-merging
             // all outputs. Off by default → unchanged synthesis behavior.
-            $arbitrate = (bool) ($execution->config_snapshot['settings']['arbitration_enabled'] ?? false);
+            $arbitrate = (bool) data_get($execution->config_snapshot, 'settings.arbitration_enabled', false);
             $result = $arbitrate
                 ? app(CompetitiveArbiter::class)->arbitrate($execution)
                 : $this->synthesizeResult->execute($execution);

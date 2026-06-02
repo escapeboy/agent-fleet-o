@@ -20,6 +20,7 @@ class ProposalExplainResolver
      */
     public function explain(ActionProposal $proposal): array
     {
+        /** @var array<string, mixed> $breakdown */
         $breakdown = $proposal->rubric_breakdown ?? [];
         $version = $proposal->agentPolicyVersion;
 

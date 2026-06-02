@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Models;
 use App\Domain\Agent\Enums\AgentPolicyStatus;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Carbon\CarbonInterface;
 use Database\Factories\Domain\Agent\AgentPolicyFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,10 +20,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * rollback-able event rather than an in-place mutation.
  *
  * @property string $id
+ * @property string|null $team_id
  * @property string|null $agent_id
+ * @property string $name
  * @property AgentPolicyStatus $status
  * @property bool $enabled
  * @property string|null $current_version_id
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
+ * @property-read AgentPolicyVersion|null $currentVersion
  */
 class AgentPolicy extends Model
 {

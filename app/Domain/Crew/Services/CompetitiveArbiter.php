@@ -49,7 +49,8 @@ class CompetitiveArbiter
         $winner = $ranked->first();
         $winnerTask = $winner['task'];
 
-        $result = is_array($winnerTask->output) ? $winnerTask->output : ['output' => $winnerTask->output];
+        /** @var array<string, mixed> $result */
+        $result = $winnerTask->output ?? [];
         $result['_arbitration'] = [
             'winner' => [
                 'task_id' => $winnerTask->id,
@@ -76,13 +77,21 @@ class CompetitiveArbiter
      */
     private function score(CrewTaskExecution $task): int
     {
+        // output is jsonb (cast 'array'); larastan widens it to string, so pin
+        // the working type to an open string-keyed array for safe offset access.
+        /** @var array<string, mixed> $output */
         $output = $task->output ?? [];
 
-        if (($output['error'] ?? null) || ($output['success'] ?? null) === false) {
+        // Capture the flags once up-front (offsets read while the type is a
+        // plain open array) and reuse them below.
+        $errorFlag = $output['error'] ?? null;
+        $successFlag = $output['success'] ?? null;
+
+        if ($errorFlag || $successFlag === false) {
             return 0;
         }
 
-        $text = is_array($output) ? (string) json_encode($output) : (string) $output;
+        $text = (string) json_encode($output);
         $len = strlen(trim($text));
 
         if ($len <= 2) {
@@ -97,7 +106,7 @@ class CompetitiveArbiter
             default => 1,
         };
 
-        if (($output['success'] ?? null) === true) {
+        if ($successFlag === true) {
             $score++;
         }
 
