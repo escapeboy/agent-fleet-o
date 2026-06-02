@@ -3,6 +3,7 @@
 namespace App\Domain\Approval\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentPolicyVersion;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -30,6 +31,7 @@ class ActionProposal extends Model
         'risk_level',
         'rubric_score',
         'rubric_breakdown',
+        'agent_policy_version_id',
         'status',
         'expires_at',
         'decided_by_user_id',
@@ -73,6 +75,11 @@ class ActionProposal extends Model
     public function decidedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by_user_id');
+    }
+
+    public function agentPolicyVersion(): BelongsTo
+    {
+        return $this->belongsTo(AgentPolicyVersion::class, 'agent_policy_version_id');
     }
 
     public function isPending(): bool

@@ -93,6 +93,9 @@ use App\Livewire\OutboundConnectors\NotificationOutboundPage;
 use App\Livewire\OutboundConnectors\OutboundConnectorsPage;
 use App\Livewire\OutboundConnectors\WebhookOutboundPage;
 use App\Livewire\OutboundConnectors\WhatsAppOutboundPage;
+use App\Livewire\Policies\CreatePolicyForm;
+use App\Livewire\Policies\PolicyDetailPage;
+use App\Livewire\Policies\PolicyListPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
@@ -341,6 +344,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agents/templates', AgentTemplateGalleryPage::class)->name('agents.templates');
     Route::get('/agents/create', CreateAgentForm::class)->name('agents.create');
     Route::get('/agents/quick', QuickAgentForm::class)->name('agents.quick');
+
+    // Agent Policies (policy-governed autonomy)
+    Route::get('/policies', PolicyListPage::class)->name('policies.index');
+    Route::get('/policies/create', CreatePolicyForm::class)->name('policies.create');
+    Route::get('/policies/{policy}', PolicyDetailPage::class)->name('policies.show');
     Route::get('/agents/{agent}/voice', VoiceSessionPage::class)->name('agents.voice');
     Route::get('/agents/{agent}/workspace', AgentWorkspacePage::class)->name('agents.workspace');
     Route::get('/agents/{agent}', AgentDetailPage::class)->name('agents.show');

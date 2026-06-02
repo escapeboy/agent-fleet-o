@@ -44,6 +44,11 @@ use App\Mcp\Tools\Agent\AgentHookDeleteTool;
 use App\Mcp\Tools\Agent\AgentHookListTool;
 use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentPolicyCreateTool;
+use App\Mcp\Tools\Agent\AgentPolicyGetTool;
+use App\Mcp\Tools\Agent\AgentPolicyListTool;
+use App\Mcp\Tools\Agent\AgentPolicyRollbackTool;
+use App\Mcp\Tools\Agent\AgentPolicyUpdateTool;
 use App\Mcp\Tools\Agent\AgentResetSessionTool;
 use App\Mcp\Tools\Agent\AgentResponseAuditListTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
@@ -87,6 +92,7 @@ use App\Mcp\Tools\AgentSession\AgentSessionReplayTool;
 use App\Mcp\Tools\AgentSession\AgentSessionSleepTool;
 use App\Mcp\Tools\AgentSession\AgentSessionWakeTool;
 use App\Mcp\Tools\Approval\ActionProposalApproveTool;
+use App\Mcp\Tools\Approval\ActionProposalExplainTool;
 use App\Mcp\Tools\Approval\ActionProposalGetTool;
 use App\Mcp\Tools\Approval\ActionProposalListTool;
 use App\Mcp\Tools\Approval\ActionProposalRejectTool;
@@ -769,6 +775,11 @@ class AgentFleetServer extends Server
 
         // Agent (23)
         AgentListTool::class,
+        AgentPolicyListTool::class,
+        AgentPolicyGetTool::class,
+        AgentPolicyCreateTool::class,
+        AgentPolicyUpdateTool::class,
+        AgentPolicyRollbackTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
@@ -1035,6 +1046,7 @@ class AgentFleetServer extends Server
         ActionProposalGetTool::class,
         ActionProposalApproveTool::class,
         ActionProposalRejectTool::class,
+        ActionProposalExplainTool::class,
         ApprovalCompleteHumanTaskTool::class,
         ApprovalWebhookTool::class,
         ListSecurityReviewsTool::class,

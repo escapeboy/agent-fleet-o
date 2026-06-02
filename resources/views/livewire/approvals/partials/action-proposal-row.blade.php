@@ -91,6 +91,26 @@
                 </div>
             @endif
 
+            {{-- Policy decision (idea C: reproducible why, pinned to a policy version) --}}
+            @php $policyDecision = $p->rubric_breakdown['policy_decision'] ?? null; @endphp
+            @if($policyDecision)
+                <div class="rounded-md border border-indigo-100 bg-indigo-50/60 p-3 text-xs">
+                    <p class="mb-1 font-semibold text-indigo-900">
+                        <i class="fa-solid fa-shield-halved mr-1 text-indigo-500"></i>
+                        Policy decision: <span class="uppercase">{{ str_replace('_', ' ', $policyDecision['decision'] ?? '—') }}</span>
+                        <span class="ml-1 font-normal text-indigo-700">(effective risk: {{ $policyDecision['effective_risk'] ?? $p->risk_level }})</span>
+                    </p>
+                    <p class="text-indigo-700">{{ $policyDecision['reason'] ?? '' }}</p>
+                    @if($p->agent_policy_version_id && $p->agentPolicyVersion)
+                        <p class="mt-1 text-[11px] text-indigo-500">
+                            Pinned to
+                            <a href="{{ route('policies.show', $p->agentPolicyVersion->agent_policy_id) }}" class="underline hover:text-indigo-700">policy v{{ $p->agentPolicyVersion->version }}</a>
+                            — reproducible after the policy changes.
+                        </p>
+                    @endif
+                </div>
+            @endif
+
             {{-- Execution result / error --}}
             @if($p->executed_at)
                 <div>

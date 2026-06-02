@@ -693,7 +693,13 @@ class CrewOrchestrator
     public function synthesizeAndComplete(CrewExecution $execution): void
     {
         try {
-            $result = $this->synthesizeResult->execute($execution);
+            // Competitive arbitration (idea D): opt-in reduction that picks the
+            // single best candidate deterministically instead of LLM-merging
+            // all outputs. Off by default → unchanged synthesis behavior.
+            $arbitrate = (bool) ($execution->config_snapshot['settings']['arbitration_enabled'] ?? false);
+            $result = $arbitrate
+                ? app(CompetitiveArbiter::class)->arbitrate($execution)
+                : $this->synthesizeResult->execute($execution);
 
             // Final QA validation on the synthesized result
             $execution->update([

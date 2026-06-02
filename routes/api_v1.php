@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AgentChatController;
 use App\Http\Controllers\Api\V1\AgentChatSessionController;
 use App\Http\Controllers\Api\V1\AgentController;
 use App\Http\Controllers\Api\V1\AgentManifestController;
+use App\Http\Controllers\Api\V1\AgentPolicyController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\ArtifactController;
 use App\Http\Controllers\Api\V1\AssistantController;
@@ -142,6 +143,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/agents/{agent}/feedback', [AgentController::class, 'submitFeedback']);
     Route::get('/agents/{agent}/feedback', [AgentController::class, 'listFeedback']);
     Route::get('/agents/{agent}/feedback/stats', [AgentController::class, 'feedbackStats']);
+
+    // Agent Policies (policy-governed autonomy) — versioned CRUD + rollback
+    Route::apiResource('agent-policies', AgentPolicyController::class)
+        ->parameters(['agent-policies' => 'agentPolicy'])
+        ->except('destroy');
+    Route::post('/agent-policies/{agentPolicy}/rollback', [AgentPolicyController::class, 'rollback']);
 
     // External Agents CRUD + dispatch (Sanctum-authenticated)
     Route::apiResource('external-agents', ExternalAgentController::class)->parameters(['external-agents' => 'externalAgent']);
