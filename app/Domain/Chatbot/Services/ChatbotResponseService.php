@@ -94,6 +94,7 @@ class ChatbotResponseService
 
         $latencyMs = (int) ((microtime(true) - $startedAt) * 1000);
         $rawReply = $result['output']['content'] ?? $result['output']['result'] ?? $result['output']['text'] ?? '';
+        $rawReply = $this->stripToolCallNarration($rawReply);
 
         // Composite confidence: LLM execution success + RAG best similarity score
         $confidence = $this->estimateConfidence($result, $bestRagScore);
@@ -231,7 +232,7 @@ class ChatbotResponseService
 
         $response = $gateway->stream($request, $onChunk);
 
-        $rawReply = $response->content ?? '';
+        $rawReply = $this->stripToolCallNarration($response->content ?? '');
         $latencyMs = (int) ((microtime(true) - $startedAt) * 1000);
         $confidence = $bestRagScore > 0.0
             ? round((0.85 * 0.6) + ($bestRagScore * 0.4), 4)
@@ -289,6 +290,12 @@ class ChatbotResponseService
         if ($agent->backstory) {
             $parts[] = $agent->backstory;
         }
+
+        // §1 (root fix): keep agent reasoning / tool-call narration out of replies.
+        $parts[] = 'Respond ONLY with the final answer for the user. Never narrate your tool calls, plans, or internal reasoning, and never ask the user for permission to use your tools.';
+
+        // §2: answer in the user's language.
+        $parts[] = 'Always respond in the same language the user wrote in. If the user writes in Bulgarian, respond in Bulgarian.';
 
         return implode("\n\n", $parts);
     }
@@ -429,24 +436,54 @@ class ChatbotResponseService
             return null;
         }
 
-        if ($chatbot->type === ChatbotType::SupportAssistant) {
-            $sourceIds = array_unique(array_column($ragChunks, 'source_id'));
-            $sources = ChatbotKnowledgeSource::whereIn('id', $sourceIds)
-                ->get(['id', 'name', 'source_url'])
-                ->keyBy('id');
-
-            return array_map(fn ($c) => [
-                'chunk_id' => $c['id'],
-                'similarity' => $c['similarity'],
-                'source_name' => $sources[$c['source_id']]->name ?? null,
-                'source_url' => $sources[$c['source_id']]->source_url ?? null,
-            ], $ragChunks);
-        }
+        // §3: enrich citations (name + URL) for EVERY chatbot type, not just
+        // support_assistant. The join is keyed by source_id and is type-independent;
+        // help_bot / developer_assistant previously got bare chunk_id + similarity,
+        // which the widget rendered as "Неизвестен източник" / "#".
+        $sourceIds = array_unique(array_column($ragChunks, 'source_id'));
+        $sources = ChatbotKnowledgeSource::whereIn('id', $sourceIds)
+            ->get(['id', 'name', 'source_url'])
+            ->keyBy('id');
 
         return array_map(fn ($c) => [
             'chunk_id' => $c['id'],
             'similarity' => $c['similarity'],
+            'source_name' => $sources[$c['source_id']]->name ?? null,
+            'source_url' => $sources[$c['source_id']]->source_url ?? null,
         ], $ragChunks);
+    }
+
+    /**
+     * Strip leading tool-call narration that some bridge / local agents emit
+     * before the final answer (e.g. "... — calling barsy_knowledge_search because ...").
+     *
+     * Deliberately narrow: only removes leading lines that *explicitly name a
+     * tool call* (calling/invoking <tool>, or an internal `barsy_*` tool), so a
+     * legitimate answer is never truncated. General reasoning/permission-asking
+     * is handled by the system-prompt instruction in buildChatbotSystemPrompt();
+     * this regex is a defense-in-depth safety net for the specific leak class.
+     */
+    private function stripToolCallNarration(string $reply): string
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $reply) ?: [];
+
+        while ($lines !== []) {
+            $first = trim($lines[0]);
+            if ($first === '') {
+                array_shift($lines);
+
+                continue;
+            }
+            if (preg_match('/\b(?:calling|invoking)\s+[a-z][a-z0-9_]+\b/i', $first)
+                || preg_match('/\bbarsy_[a-z_]+\b/i', $first)) {
+                array_shift($lines);
+
+                continue;
+            }
+            break;
+        }
+
+        return trim(implode("\n", $lines));
     }
 
     /**
