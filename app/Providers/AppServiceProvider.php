@@ -125,6 +125,8 @@ use App\Domain\Workflow\Events\WorkflowSaved;
 use App\Domain\Workflow\Listeners\QueueWorkflowYamlPush;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
+use App\Infrastructure\AI\Exceptions\LocalEmbeddingNotConfiguredException;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -132,6 +134,7 @@ use App\Infrastructure\AI\Middleware\SafetyClassifier;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
+use App\Infrastructure\AI\Services\EmbeddingService;
 use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Bridge\HandleBridgeRelayResponse;
@@ -198,6 +201,24 @@ class AppServiceProvider extends ServiceProvider
         // also doesn't help. The only correct shape is "bound iff middleware ran".
 
         $this->app->singleton(DeploymentMode::class, fn () => new DeploymentMode);
+
+        // Embedding seam: a single sanctioned backend for vector generation,
+        // selected by config('memory.embedding_driver'). 'cloud' (default) is
+        // the Prism/OpenAI EmbeddingService. 'local' is the documented bind
+        // point for a future FFI/local provider (e.g. NeuraPHP over
+        // embedding.cpp) — it fails fast until such a provider ships.
+        $this->app->bind(EmbeddingProviderInterface::class, function ($app) {
+            $driver = config('memory.embedding_driver', 'cloud');
+
+            return match ($driver) {
+                'cloud' => new EmbeddingService(
+                    provider: config('memory.embedding_provider', 'openai'),
+                    model: config('memory.embedding_model', 'text-embedding-3-small'),
+                ),
+                'local' => throw new LocalEmbeddingNotConfiguredException,
+                default => throw new \InvalidArgumentException("Unknown embedding driver [{$driver}]. Use 'cloud' or 'local'."),
+            };
+        });
 
         // Lazy MCP stdio handle registry — one instance per request/job lifecycle
         $this->app->singleton(McpHandleRegistry::class);
