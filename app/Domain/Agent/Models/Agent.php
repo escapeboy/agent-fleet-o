@@ -45,6 +45,7 @@ use Illuminate\Support\Carbon;
  * @property array|null $config
  * @property array|null $capabilities
  * @property array|null $constraints
+ * @property array|null $charter
  * @property int|null $budget_cap_credits
  * @property int $budget_spent_credits
  * @property int|null $max_credits_per_call
