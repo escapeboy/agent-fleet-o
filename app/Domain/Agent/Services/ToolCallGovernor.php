@@ -27,7 +27,7 @@ class ToolCallGovernor
 
     /**
      * @param  array<string, mixed>  $args  The named tool-call arguments.
-     * @return string|null  Deny reason when blocked, or null to allow.
+     * @return string|null Deny reason when blocked, or null to allow.
      */
     public function assert(Agent $agent, string $toolName, array $args): ?string
     {

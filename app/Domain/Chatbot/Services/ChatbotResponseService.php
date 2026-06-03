@@ -494,7 +494,10 @@ class ChatbotResponseService
         return match ($chatbot->type) {
             ChatbotType::HelpBot => ['public', 'key'],
             ChatbotType::DeveloperAssistant => ['internal', 'code'],
-            default => ['public', 'key', 'representative', 'internal', 'code'],
+            ChatbotType::SupportAssistant => ['public', 'key', 'representative', 'internal'],
+            // Least-privilege default: Custom (and any future type) gets only public/key — never 'code' or 'internal'.
+            // No default arm: an unmapped enum case throws UnhandledMatchError (fail-closed) instead of leaking access.
+            ChatbotType::Custom => ['public', 'key'],
         };
     }
 
