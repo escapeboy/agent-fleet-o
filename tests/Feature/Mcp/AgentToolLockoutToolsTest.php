@@ -6,6 +6,7 @@ namespace Tests\Feature\Mcp;
 
 use App\Domain\Agent\Actions\LockToolResourceAction;
 use App\Domain\Agent\Actions\ReleaseToolLockoutAction;
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentToolLockout;
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Tools\Agent\AgentToolLockoutListTool;
@@ -104,7 +105,7 @@ class AgentToolLockoutToolsTest extends TestCase
     public function test_set_rejects_agent_from_another_team(): void
     {
         $otherTeam = Team::factory()->create();
-        $foreignAgent = \App\Domain\Agent\Models\Agent::factory()->create(['team_id' => $otherTeam->id]);
+        $foreignAgent = Agent::factory()->create(['team_id' => $otherTeam->id]);
 
         $response = (new AgentToolLockoutSetTool)->handle(
             new Request(['resource' => 'x.php', 'agent_id' => $foreignAgent->id]),
