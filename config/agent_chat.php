@@ -31,6 +31,13 @@ return [
         'cache_seconds' => 300,
     ],
 
+    'a2a' => [
+        // Consumer-side A2A discovery (fetching an external agent's AgentCard).
+        // Off by default — flip via env to enable.
+        'discovery_enabled' => env('A2A_DISCOVERY_ENABLED', false),
+        'well_known_path' => '/.well-known/agent-card.json',
+    ],
+
     'session' => [
         'idle_ttl_seconds' => 86_400,
     ],
