@@ -74,6 +74,8 @@ class AgentUpdateTool extends Tool
                 ->description('Fraction of requests to include in evaluation (0.0 to 1.0)'),
             'heartbeat_definition' => $schema->object()
                 ->description('Agent health check config: {enabled: bool, cron: string, prompt: string}. Pass null to clear.'),
+            'charter' => $schema->object()
+                ->description('Charter-as-contract — the agent authority boundary: {owns: string[], refuses: string[], escalate_to: string, escalate_when: string[]}. Rendered into the system prompt when agent.charter.enabled is on. Pass null to clear.'),
         ];
     }
 
@@ -102,6 +104,7 @@ class AgentUpdateTool extends Tool
             'evaluation_enabled' => 'nullable|boolean',
             'evaluation_sample_rate' => 'nullable|numeric|min:0|max:1',
             'heartbeat_definition' => 'nullable|array',
+            'charter' => 'nullable|array',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -224,6 +227,11 @@ class AgentUpdateTool extends Tool
         // heartbeat_definition
         if (array_key_exists('heartbeat_definition', $validated)) {
             $data['heartbeat_definition'] = $validated['heartbeat_definition'];
+        }
+
+        // charter-as-contract: null clears it
+        if (array_key_exists('charter', $validated)) {
+            $data['charter'] = $validated['charter'];
         }
 
         if (empty($data)) {

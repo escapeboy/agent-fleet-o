@@ -2,8 +2,10 @@
 
 namespace App\Domain\Tool\Services;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Services\DockerSandboxExecutor;
 use App\Domain\Agent\Services\SandboxedWorkspace;
+use App\Domain\Agent\Services\ToolCallGovernor;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Credential\Models\Credential;
@@ -33,10 +35,10 @@ class ToolTranslator
      *
      * @return array<PrismToolObject>
      */
-    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
+    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
     {
         if ($tool->isBuiltIn()) {
-            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy, $workspace);
+            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy, $workspace, $agent);
         }
 
         if ($tool->isMcp()) {
@@ -175,15 +177,15 @@ class ToolTranslator
     /**
      * Build PrismPHP Tools for built-in host capabilities.
      */
-    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
+    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
     {
         $kind = BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash');
 
         return match ($kind) {
-            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy, $workspace),
-            BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace),
+            BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy, $workspace, $agent),
+            BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace, $agent),
             BuiltInToolKind::Browser => $this->buildBrowserTools($tool),
-            BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides),
+            BuiltInToolKind::Ssh => $this->buildSshTools($tool, $overrides, $agent),
             BuiltInToolKind::BrowserRelay => $this->buildBrowserRelayTools($tool),
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
@@ -192,7 +194,7 @@ class ToolTranslator
         };
     }
 
-    private function buildBashTools(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null): array
+    private function buildBashTools(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
     {
         $config = $tool->transport_config;
         $allowedCommands = $config['allowed_commands'] ?? [
@@ -213,7 +215,12 @@ class ToolTranslator
                 ->for("Execute a shell command. Allowed commands: {$commandDescription}. Working directory restricted to: {$pathDescription}")
                 ->withStringParameter('command', 'The shell command to execute')
                 ->withStringParameter('working_directory', 'Working directory relative to sandbox root (sandbox mode) or absolute path', required: false)
-                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool, $credentialEnv): string {
+                ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool, $credentialEnv, $agent): string {
+                    // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
+                    if (($denied = $this->governanceDenial($agent, 'bash_execute', ['command' => $command, 'working_directory' => $working_directory])) !== null) {
+                        return $denied;
+                    }
+
                     // just-bash sidecar mode: route through the Node.js bash-sidecar container
                     if ($workspace && config('agent.bash_sandbox_mode') === 'just_bash') {
                         // Execution-time plan check: allows cloud to block on plan downgrade.
@@ -368,7 +375,7 @@ class ToolTranslator
         return "Command failed (exit {$result->exitCode()}): {$errorOutput}";
     }
 
-    private function buildFilesystemTools(Tool $tool, array $overrides, ?SandboxedWorkspace $workspace = null): array
+    private function buildFilesystemTools(Tool $tool, array $overrides, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
     {
         $config = $tool->transport_config;
         $allowedPaths = $config['allowed_paths'] ?? ['/tmp/agent-workspace'];
@@ -433,7 +440,12 @@ class ToolTranslator
                 ->for("Write content to a file. Paths restricted to: {$pathDescription}")
                 ->withStringParameter('path', 'Path to the file (relative to sandbox root in sandbox mode, absolute otherwise)')
                 ->withStringParameter('content', 'The content to write')
-                ->using(function (string $path, string $content) use ($allowedPaths, $workspace): string {
+                ->using(function (string $path, string $content) use ($allowedPaths, $workspace, $agent): string {
+                    // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
+                    if (($denied = $this->governanceDenial($agent, 'file_write', ['path' => $path, 'content' => $content])) !== null) {
+                        return $denied;
+                    }
+
                     try {
                         $absolute = $workspace ? $workspace->resolve($path) : $path;
                     } catch (\OutOfBoundsException $e) {
@@ -890,7 +902,7 @@ class ToolTranslator
         ];
     }
 
-    private function buildSshTools(Tool $tool, array $overrides): array
+    private function buildSshTools(Tool $tool, array $overrides, ?Agent $agent = null): array
     {
         $config = $tool->transport_config;
         $host = $config['host'] ?? null;
@@ -915,7 +927,12 @@ class ToolTranslator
             PrismTool::as('ssh_execute')
                 ->for("Execute a command on {$username}@{$host}:{$port} via SSH. {$allowedDesc}")
                 ->withStringParameter('command', 'The command to execute on the remote server')
-                ->using(function (string $command) use ($teamId, $host, $port, $username, $credentialId, $allowedCommands, $timeout, $sshExecutor): string {
+                ->using(function (string $command) use ($teamId, $host, $port, $username, $credentialId, $allowedCommands, $timeout, $sshExecutor, $agent): string {
+                    // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
+                    if (($denied = $this->governanceDenial($agent, 'ssh_execute', ['command' => $command])) !== null) {
+                        return $denied;
+                    }
+
                     // Enforce allowed-commands whitelist at tool level
                     if (! empty($allowedCommands)) {
                         $binary = basename(explode(' ', trim($command))[0]);
@@ -958,6 +975,25 @@ class ToolTranslator
                     }
                 }),
         ];
+    }
+
+    /**
+     * Run the per-tool-call governor for a mutating built-in tool. Returns a
+     * ready-to-return Error string when the call is blocked, or null to proceed.
+     * A no-op when no agent context is available or governance is disabled — so
+     * the legacy tool path is byte-for-byte unchanged.
+     *
+     * @param  array<string, mixed>  $args
+     */
+    private function governanceDenial(?Agent $agent, string $toolName, array $args): ?string
+    {
+        if ($agent === null) {
+            return null;
+        }
+
+        $reason = app(ToolCallGovernor::class)->assert($agent, $toolName, $args);
+
+        return $reason === null ? null : "Error: blocked by governance — {$reason}";
     }
 
     private function isPathAllowed(string $path, array $allowedPaths): bool

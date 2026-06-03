@@ -252,7 +252,7 @@ class ResolveAgentToolsAction
                 continue; // platform tool deactivated for this team
             }
 
-            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace));
+            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace, $agent));
         }
 
         return $prismTools;

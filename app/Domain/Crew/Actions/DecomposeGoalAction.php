@@ -8,6 +8,7 @@ use App\Domain\Crew\Exceptions\MaxDelegationDepthExceededException;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Services\CrewDecisionContext;
 use App\Domain\Experiment\Actions\PlanWithKnowledgeAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -44,6 +45,16 @@ class DecomposeGoalAction
             $knowledgeContext = '';
         }
 
+        // Decision log (Squad borrow): inject the crew's inherited decisions as
+        // constraints. Flag-gated; off → prompt is byte-for-byte legacy.
+        $decisionContext = '';
+        if (config('crew.decision_log.enabled')) {
+            $block = app(CrewDecisionContext::class)->build($execution->team_id, $execution->crew_id);
+            if ($block !== null) {
+                $decisionContext = "\n\n{$block}";
+            }
+        }
+
         $config = $execution->config_snapshot;
         $coordinator = Agent::withoutGlobalScopes()->find($config['coordinator']['id']);
 
@@ -74,7 +85,7 @@ class DecomposeGoalAction
                 ."Each task should define ONE hypothesis to investigate. No dependencies — all tasks run in parallel in Round 1.\n"
                 ."Prefix each title with 'Round 1: Hypothesis — '.";
 
-            $userPrompt = "Goal: {$execution->goal}\n\nCreate one hypothesis per team member as the starting positions for a structured debate.{$knowledgeContext}";
+            $userPrompt = "Goal: {$execution->goal}\n\nCreate one hypothesis per team member as the starting positions for a structured debate.{$knowledgeContext}{$decisionContext}";
         } else {
             $systemPrompt = "You are {$coordinator->role}. {$coordinator->goal}\n\n"
                 .($isCoordinatorOnly
@@ -83,7 +94,7 @@ class DecomposeGoalAction
                 ."\nOutput valid JSON: an array of task objects with keys: title, description, assigned_to, dependencies (array of 0-based indices), expected_output."
                 ."\nOptionally include skip_condition to conditionally skip a task based on dependency outputs. Format: {\"field\": \"output.key\", \"operator\": \"==\", \"value\": \"...\"} or compound: {\"all\": [...]} / {\"any\": [...]}. Operators: ==, !=, >, <, >=, <=, contains, in, is_null, is_not_null.";
 
-            $userPrompt = "Goal: {$execution->goal}\n\nProduce a task plan as a JSON array.{$knowledgeContext}";
+            $userPrompt = "Goal: {$execution->goal}\n\nProduce a task plan as a JSON array.{$knowledgeContext}{$decisionContext}";
         }
 
         $request = new AiRequestDTO(

@@ -195,4 +195,30 @@ return [
     'output_schema' => [
         'max_retries_default' => (int) env('AGENT_OUTPUT_SCHEMA_MAX_RETRIES', 2),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Charter-as-contract (Squad borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, an agent's structured `charter` (owns / refuses /
+    | escalate-to / escalate-when) is rendered into the system prompt as an
+    | explicit boundary + escalation contract. Off by default — a null charter
+    | is byte-for-byte legacy regardless of this flag.
+    */
+    'charter' => [
+        'enabled' => (bool) env('AGENT_CHARTER_ENABLED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Per-tool-call governance (Squad borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, mutating built-in tool calls (bash_execute, file_write,
+    | ssh_execute) pass through ToolCallGovernor before running: active
+    | reviewer-lockouts and OnToolCall guardrail hooks can block the call.
+    | Off by default — the governor is a hard no-op when disabled.
+    */
+    'tool_governance' => [
+        'enabled' => (bool) env('AGENT_TOOL_GOVERNANCE_ENABLED', false),
+    ],
 ];

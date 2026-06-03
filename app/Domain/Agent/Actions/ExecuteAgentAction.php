@@ -859,6 +859,49 @@ class ExecuteAgentAction
      * @param  array<string>  $extraParts  Additional sections injected by the pipeline middleware
      */
     /**
+     * Render the agent's charter (Squad borrow) into a system-prompt block:
+     * what it owns, what it refuses, and who/when to escalate. Returns null when
+     * the charter is absent or has no usable sections.
+     */
+    private function buildCharterBlock(Agent $agent): ?string
+    {
+        /** @var array<string, mixed>|null $charter */
+        $charter = $agent->charter;
+        if (! is_array($charter) || $charter === []) {
+            return null;
+        }
+
+        $sections = [];
+
+        $owns = array_values(array_filter((array) ($charter['owns'] ?? []), 'is_string'));
+        if ($owns !== []) {
+            $sections[] = "**I own:**\n".collect($owns)->map(fn ($x) => "- {$x}")->implode("\n");
+        }
+
+        $refuses = array_values(array_filter((array) ($charter['refuses'] ?? []), 'is_string'));
+        if ($refuses !== []) {
+            $sections[] = "**I do NOT handle** (defer these to others):\n".collect($refuses)->map(fn ($x) => "- {$x}")->implode("\n");
+        }
+
+        $escalateWhen = array_values(array_filter((array) ($charter['escalate_when'] ?? []), 'is_string'));
+        $escalateTo = is_string($charter['escalate_to'] ?? null) && $charter['escalate_to'] !== '' ? $charter['escalate_to'] : null;
+        if ($escalateWhen !== [] || $escalateTo !== null) {
+            $target = $escalateTo !== null ? " to {$escalateTo}" : '';
+            $line = "**When I'm unsure, I escalate{$target}** instead of guessing.";
+            if ($escalateWhen !== []) {
+                $line .= "\nEscalate when:\n".collect($escalateWhen)->map(fn ($x) => "- {$x}")->implode("\n");
+            }
+            $sections[] = $line;
+        }
+
+        if ($sections === []) {
+            return null;
+        }
+
+        return "## Charter (your authority boundary — honour it)\n".implode("\n\n", $sections);
+    }
+
+    /**
      * @param  array<string, mixed>  $tierConfig  Resolved execution tier config (max_steps, etc.)
      */
     private function buildAgentSystemPrompt(Agent $agent, ?Project $project = null, array $input = [], array $extraParts = [], array $tierConfig = []): string
@@ -923,6 +966,12 @@ class ExecuteAgentAction
         if (! empty($agent->constraints)) {
             $constraintList = collect($agent->constraints)->map(fn ($c) => "- {$c}")->implode("\n");
             $parts[] = "Constraints:\n{$constraintList}";
+        }
+
+        // Charter-as-contract (Squad borrow): explicit ownership / refusal /
+        // escalation boundary. Flag-gated; a null/empty charter is a no-op.
+        if (config('agent.charter.enabled') && ($charterBlock = $this->buildCharterBlock($agent)) !== null) {
+            $parts[] = $charterBlock;
         }
 
         // Opt-in per-team guardrail: enforce comment discipline on code the agent writes.

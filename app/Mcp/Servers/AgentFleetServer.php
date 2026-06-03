@@ -61,6 +61,9 @@ use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolDenySetTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutListTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutReleaseTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutSetTool;
 use App\Mcp\Tools\Agent\AgentToolPermissionSetTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
@@ -191,6 +194,8 @@ use App\Mcp\Tools\Crew\CrewBeliefTrajectoryTool;
 use App\Mcp\Tools\Crew\CrewBlackboardPostTool;
 use App\Mcp\Tools\Crew\CrewBlackboardReadTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
+use App\Mcp\Tools\Crew\CrewDecisionListTool;
+use App\Mcp\Tools\Crew\CrewDecisionRecordTool;
 use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
@@ -780,6 +785,9 @@ class AgentFleetServer extends Server
         AgentPolicyCreateTool::class,
         AgentPolicyUpdateTool::class,
         AgentPolicyRollbackTool::class,
+        AgentToolLockoutSetTool::class,
+        AgentToolLockoutListTool::class,
+        AgentToolLockoutReleaseTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
@@ -836,6 +844,8 @@ class AgentFleetServer extends Server
         // Crew (16)
         CrewListTool::class,
         CrewGetTool::class,
+        CrewDecisionRecordTool::class,
+        CrewDecisionListTool::class,
         CrewCreateTool::class,
         CrewUpdateTool::class,
         CrewExecuteTool::class,

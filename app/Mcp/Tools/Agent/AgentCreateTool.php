@@ -70,6 +70,8 @@ class AgentCreateTool extends Tool
                 ->description('Fraction of requests to include in evaluation (0.0 to 1.0). Only used when evaluation_enabled is true.'),
             'heartbeat_definition' => $schema->object()
                 ->description('Agent health check config: {enabled: bool, cron: string, prompt: string}'),
+            'charter' => $schema->object()
+                ->description('Charter-as-contract — the agent authority boundary: {owns: string[], refuses: string[], escalate_to: string, escalate_when: string[]}. Rendered into the system prompt when agent.charter.enabled is on.'),
         ];
     }
 
@@ -95,6 +97,7 @@ class AgentCreateTool extends Tool
             'evaluation_enabled' => 'nullable|boolean',
             'evaluation_sample_rate' => 'nullable|numeric|min:0|max:1',
             'heartbeat_definition' => 'nullable|array',
+            'charter' => 'nullable|array',
         ]);
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
         if (! $teamId) {
@@ -144,6 +147,10 @@ class AgentCreateTool extends Tool
 
             if (! empty($validated['environment'])) {
                 $agent->update(['environment' => $validated['environment']]);
+            }
+
+            if (! empty($validated['charter'])) {
+                $agent->update(['charter' => $validated['charter']]);
             }
 
             if (! empty($validated['reasoning_effort']) && $validated['reasoning_effort'] !== 'none') {
