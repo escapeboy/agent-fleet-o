@@ -494,7 +494,10 @@ class ChatbotResponseService
         return match ($chatbot->type) {
             ChatbotType::HelpBot => ['public', 'key'],
             ChatbotType::DeveloperAssistant => ['internal', 'code'],
-            default => ['public', 'key', 'representative', 'internal', 'code'],
+            ChatbotType::SupportAssistant => ['public', 'key', 'representative', 'internal'],
+            ChatbotType::Custom => ['public', 'key'],
+            // Least-privilege fallback for any unmapped chatbot type; never grant 'code' or 'internal' by default.
+            default => ['public', 'key'],
         };
     }
 
