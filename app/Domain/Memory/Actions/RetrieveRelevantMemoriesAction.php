@@ -44,7 +44,12 @@ class RetrieveRelevantMemoriesAction
         $threshold = $threshold ?? config('memory.similarity_threshold', 0.7);
 
         try {
-            $queryEmbedding = $this->generateEmbedding($query);
+            // Skip the embedding call (and the semantic clauses that depend on it)
+            // when the query text is blank. OpenAI's embeddings endpoint rejects an
+            // empty input with a 400 "Invalid 'input[0]'"; without a query we simply
+            // score by recency + importance instead of semantic similarity.
+            $hasQuery = trim($query) !== '';
+            $queryEmbedding = $hasQuery ? $this->generateEmbedding($query) : null;
 
             $semanticWeight = config('memory.scoring.semantic_weight', 0.5);
             $recencyWeight = config('memory.scoring.recency_weight', 0.3);
@@ -55,8 +60,10 @@ class RetrieveRelevantMemoriesAction
             // Curated tiers (canonical, facts, decisions, failures, successes) receive a +0.10 boost
             // so human-approved knowledge surfaces preferentially over agent-proposed memories.
             // User feedback boost: COALESCE(boost, 0) * 0.05 — max +0.5 for boost=10.
-            $compositeScoreSql = <<<'SQL'
-                (? * (1 - (embedding <=> ?))) +
+            // The semantic term is only included when a query embedding exists.
+            $semanticTerm = $hasQuery ? '(? * (1 - (embedding <=> ?))) +' : '';
+            $compositeScoreSql = <<<SQL
+                {$semanticTerm}
                 (? * POWER(0.5, EXTRACT(EPOCH FROM (NOW() - COALESCE(last_accessed_at, created_at))) / 86400.0 / ?)) +
                 (? * LEAST(COALESCE(importance, 0.5) + LN(1 + COALESCE(retrieval_count, 0)) * 0.15, 1.0)) +
                 CASE WHEN COALESCE(tier, 'working') IN ('canonical','facts','decisions','failures','successes') THEN 0.10 ELSE 0.0 END +
@@ -64,14 +71,14 @@ class RetrieveRelevantMemoriesAction
                 AS composite_score
             SQL;
 
+            $compositeBindings = $hasQuery
+                ? [$semanticWeight, $queryEmbedding, $recencyWeight, $halfLifeDays, $importanceWeight]
+                : [$recencyWeight, $halfLifeDays, $importanceWeight];
+
             $builder = Memory::withoutGlobalScopes()
                 ->select('memories.*')
-                ->selectRaw($compositeScoreSql, [
-                    $semanticWeight, $queryEmbedding,
-                    $recencyWeight, $halfLifeDays,
-                    $importanceWeight,
-                ])
-                ->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold])
+                ->selectRaw($compositeScoreSql, $compositeBindings)
+                ->when($hasQuery, fn ($q) => $q->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold]))
                 ->where('confidence', '>=', $minConfidence)
                 // Exclude rejected proposals — keep NULL (legacy) and approved.
                 ->where(fn ($q) => $q->whereNull('proposal_status')->orWhere('proposal_status', '!=', 'rejected'))
@@ -215,8 +222,12 @@ class RetrieveRelevantMemoriesAction
     private function applyTagFilter(Builder $builder, array $tags): void
     {
         if (config('database.default') === 'pgsql') {
-            // ?| checks if the JSONB array contains ANY of the given text values
-            $builder->whereRaw('tags ?| ?', ['{'.implode(',', $tags).'}']);
+            // jsonb_exists_any() is the function form of the JSONB ?| operator. The
+            // operator form collides with PDO's ? placeholders ("syntax error at or
+            // near ... tags $11| $12" → SQLSTATE[42601]); the function form takes a
+            // bound text[] and is placeholder-safe.
+            $placeholders = implode(',', array_fill(0, count($tags), '?'));
+            $builder->whereRaw("jsonb_exists_any(tags, ARRAY[{$placeholders}]::text[])", array_values($tags));
         } else {
             // SQLite fallback: unnest the JSON array and check membership
             $placeholders = implode(',', array_fill(0, count($tags), '?'));

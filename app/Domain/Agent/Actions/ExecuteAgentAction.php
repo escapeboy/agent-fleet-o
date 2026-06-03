@@ -381,6 +381,13 @@ class ExecuteAgentAction
                         $workspace->teardown();
                     }
                 }
+            } elseif (! empty($input['task'])) {
+                // Tools resolved to empty (unreachable/misconfigured mcp_http, empty
+                // tool_definitions). For a tool-only agent (0 skills) the skill chain
+                // would fail hard with "Agent has no skills or tools assigned",
+                // bricking every reply. Degrade gracefully to a plain LLM completion
+                // using the provided context instead.
+                $result = $this->executeDirectPrompt($agent, $input, $teamId, $userId, $experimentId, $stepId, $ctx->systemPromptParts);
             } else {
                 // Fallback: existing skill-chain execution
                 $result = $this->executeSkillChain($agent, $input, $teamId, $userId, $experimentId);
