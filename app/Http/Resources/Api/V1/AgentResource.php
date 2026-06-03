@@ -22,6 +22,7 @@ class AgentResource extends FleetQResource
             'config' => $this->config,
             'capabilities' => $this->capabilities,
             'constraints' => $this->constraints,
+            'charter' => $this->charter,
             'tool_profile' => $this->tool_profile,
             'environment' => $this->environment?->value,
             'budget_cap_credits' => $this->budget_cap_credits,

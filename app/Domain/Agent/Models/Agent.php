@@ -115,6 +115,7 @@ class Agent extends Model
         'default_workflow_id',
         'strict_mode',
         'tool_permission_default',
+        'charter',
     ];
 
     protected function casts(): array
@@ -155,6 +156,7 @@ class Agent extends Model
             'tool_deny_list' => 'array',
             'strict_mode' => 'boolean',
             'tool_permission_default' => ToolPermissionLevel::class,
+            'charter' => 'array',
         ];
     }
 
