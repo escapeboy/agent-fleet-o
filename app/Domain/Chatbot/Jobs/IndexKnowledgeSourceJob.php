@@ -7,6 +7,7 @@ use App\Domain\Chatbot\Enums\KnowledgeSourceType;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Integration\Services\WebclawResolver;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\Storage\TenantStorageManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -15,7 +16,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Prism\Prism\Facades\Prism;
 
 class IndexKnowledgeSourceJob implements ShouldQueue
 {
@@ -216,16 +216,12 @@ class IndexKnowledgeSourceJob implements ShouldQueue
 
     private function embedAndStore(ChatbotKnowledgeSource $source, array $chunks, int $startIndex): void
     {
+        $embeddingProvider = app(EmbeddingProviderInterface::class);
+
         foreach ($chunks as $idx => $chunk) {
             $text = $chunk['content'];
 
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
-                ->fromInput($text)
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
-            $embeddingStr = '['.implode(',', $vector).']';
+            $embeddingStr = $embeddingProvider->formatForPgvector($embeddingProvider->embed($text));
 
             DB::table('chatbot_kb_chunks')->insert([
                 'id' => Str::orderedUuid(),

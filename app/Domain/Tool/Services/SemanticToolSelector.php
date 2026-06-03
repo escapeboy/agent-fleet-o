@@ -3,10 +3,10 @@
 namespace App\Domain\Tool\Services;
 
 use App\Domain\Tool\Models\ToolEmbedding;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class SemanticToolSelector
 {
@@ -114,16 +114,11 @@ class SemanticToolSelector
 
     private function generateEmbedding(string $text): string
     {
-        $model = config('tools.embedding_model', 'text-embedding-3-small');
-        $provider = config('tools.embedding_provider', 'openai');
+        // Routed through the unified embedding seam (memory.embedding_driver).
+        // Tool embeddings share the same 1536-dim space as memory/KB embeddings,
+        // so they use the same backend rather than the legacy tools.embedding_* keys.
+        $provider = app(EmbeddingProviderInterface::class);
 
-        $response = Prism::embeddings()
-            ->using($provider, $model)
-            ->fromInput($text)
-            ->asEmbeddings();
-
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $provider->formatForPgvector($provider->embed($text));
     }
 }

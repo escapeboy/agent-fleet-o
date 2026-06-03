@@ -12,15 +12,15 @@ use App\Domain\Skill\Enums\SkillStatus;
 use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AutoSkillCreationService
 {
     public function __construct(
-        private readonly EmbeddingService $embedder,
+        private readonly EmbeddingProviderInterface $embedder,
         private readonly AiGatewayInterface $gateway,
         private readonly NotificationService $notificationService,
     ) {}

@@ -5,8 +5,8 @@ namespace App\Domain\Memory\Actions;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Facades\Log;
 
 class ContextualChunkEnricherAction
@@ -70,10 +70,7 @@ PROMPT;
             // Re-embed with context prepended so retrieval benefits from the enriched text.
             $enrichedContent = $context."\n\n".$memory->content;
 
-            $embeddingService = new EmbeddingService(
-                provider: config('memory.embedding_provider', 'openai'),
-                model: config('memory.embedding_model', 'text-embedding-3-small'),
-            );
+            $embeddingService = app(EmbeddingProviderInterface::class);
 
             $vector = $embeddingService->embedForTeam($enrichedContent, $memory->team_id);
 

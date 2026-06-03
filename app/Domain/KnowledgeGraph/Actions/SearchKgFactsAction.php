@@ -3,9 +3,9 @@
 namespace App\Domain\KnowledgeGraph\Actions;
 
 use App\Domain\KnowledgeGraph\Models\KgEdge;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class SearchKgFactsAction
 {
@@ -61,15 +61,8 @@ class SearchKgFactsAction
 
     private function generateEmbedding(string $text): string
     {
-        $model = config('memory.embedding_model', 'text-embedding-3-small');
+        $provider = app(EmbeddingProviderInterface::class);
 
-        $response = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), $model)
-            ->fromInput($text)
-            ->asEmbeddings();
-
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $provider->formatForPgvector($provider->embed($text));
     }
 }

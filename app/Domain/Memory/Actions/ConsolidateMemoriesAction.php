@@ -5,11 +5,11 @@ namespace App\Domain\Memory\Actions;
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Consolidates similar memories for a single agent using greedy centroid clustering.
@@ -171,12 +171,8 @@ PROMPT;
         }
 
         // Generate embedding for consolidated content
-        $embeddingResponse = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
-            ->fromInput($consolidatedContent)
-            ->asEmbeddings();
-
-        $embedding = '['.implode(',', $embeddingResponse->embeddings[0]->embedding).']';
+        $embeddingProvider = app(EmbeddingProviderInterface::class);
+        $embedding = $embeddingProvider->formatForPgvector($embeddingProvider->embed($consolidatedContent));
 
         // Compute aggregate scores
         $maxImportance = $cluster->max('importance') ?? 0.5;

@@ -5,11 +5,11 @@ namespace App\Domain\KnowledgeGraph\Actions;
 use App\Domain\KnowledgeGraph\Enums\EntityType;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Prism\Prism\Facades\Prism;
 
 class AddKnowledgeFactAction
 {
@@ -145,16 +145,9 @@ class AddKnowledgeFactAction
     private function generateEmbedding(string $text): ?string
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
+            $provider = app(EmbeddingProviderInterface::class);
 
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput($text)
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
-
-            return '['.implode(',', $vector).']';
+            return $provider->formatForPgvector($provider->embed($text));
         } catch (\Throwable $e) {
             Log::warning('AddKnowledgeFactAction: Embedding generation failed', ['error' => $e->getMessage()]);
 

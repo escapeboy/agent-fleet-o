@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools\Signal;
 
 use App\Domain\KnowledgeGraph\Models\KgCommunity;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Mcp\Attributes\AssistantTool;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,6 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use Prism\Prism\Facades\Prism;
 
 #[IsReadOnly]
 #[AssistantTool('read')]
@@ -107,14 +107,7 @@ class KgCommunitySearchTool extends Tool
     private function generateEmbedding(string $text): ?array
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
-
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput($text)
-                ->asEmbeddings();
-
-            return $response->embeddings[0]->embedding;
+            return app(EmbeddingProviderInterface::class)->embed($text);
         } catch (\Throwable) {
             return null;
         }

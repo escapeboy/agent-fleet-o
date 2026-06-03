@@ -6,9 +6,9 @@ use App\Domain\Agent\Pipeline\AgentExecutionContext;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Knowledge\Services\KnowledgeBaseRAGFactory;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Closure;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Injects relevant context into the agent's system prompt from two sources:
@@ -101,16 +101,9 @@ class InjectKnowledgeGraphContext
     private function generateEmbedding(string $text): ?string
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
+            $provider = app(EmbeddingProviderInterface::class);
 
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput(mb_substr($text, 0, 1000))
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
-
-            return '['.implode(',', $vector).']';
+            return $provider->formatForPgvector($provider->embed(mb_substr($text, 0, 1000)));
         } catch (\Throwable) {
             return null;
         }

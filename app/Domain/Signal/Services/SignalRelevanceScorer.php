@@ -4,7 +4,7 @@ namespace App\Domain\Signal\Services;
 
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\Signal;
-use App\Infrastructure\AI\Services\EmbeddingService;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,7 +33,7 @@ class SignalRelevanceScorer
     private const W_LLM = 0.15;
 
     public function __construct(
-        private readonly EmbeddingService $embeddingService,
+        private readonly EmbeddingProviderInterface $embeddingService,
     ) {}
 
     /**

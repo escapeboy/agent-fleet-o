@@ -7,12 +7,12 @@ use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Signal\Models\Entity;
 use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Support\LlmDefaults;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Prism\Prism\Facades\Prism;
 
 class ExtractKnowledgeEdgesAction
 {
@@ -277,16 +277,9 @@ class ExtractKnowledgeEdgesAction
     private function generateEmbedding(string $text): ?string
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
+            $provider = app(EmbeddingProviderInterface::class);
 
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput($text)
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
-
-            return '['.implode(',', $vector).']';
+            return $provider->formatForPgvector($provider->embed($text));
         } catch (\Throwable $e) {
             Log::warning('ExtractKnowledgeEdgesAction: Embedding generation failed', [
                 'error' => $e->getMessage(),

@@ -10,13 +10,13 @@ use App\Domain\Chatbot\Jobs\IndexKnowledgeSourceJob;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKbChunk;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\Storage\TenantStorageManager;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Prism\Prism\Facades\Prism;
 
 class ChatbotKnowledgeBasePage extends Component
 {
@@ -196,14 +196,9 @@ class ChatbotKnowledgeBasePage extends Component
 
     private function generateTestEmbedding(string $text): string
     {
-        $response = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
-            ->fromInput($text)
-            ->asEmbeddings();
+        $provider = app(EmbeddingProviderInterface::class);
 
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $provider->formatForPgvector($provider->embed($text));
     }
 
     public function render()

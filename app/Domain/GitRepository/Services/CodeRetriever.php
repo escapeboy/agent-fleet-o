@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\GitRepository\Services;
 
 use App\Domain\GitRepository\Models\CodeElement;
-use App\Infrastructure\AI\Services\EmbeddingService;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 class CodeRetriever
 {
     public function __construct(
-        private readonly EmbeddingService $embeddings,
+        private readonly EmbeddingProviderInterface $embeddings,
     ) {}
 
     /**

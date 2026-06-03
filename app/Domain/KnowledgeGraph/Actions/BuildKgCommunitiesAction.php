@@ -8,12 +8,12 @@ use App\Domain\KnowledgeGraph\Models\KgCommunity;
 use App\Domain\KnowledgeGraph\Services\LouvainCommunityDetector;
 use App\Domain\Signal\Models\Entity;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Prism\Prism\Facades\Prism;
 
 class BuildKgCommunitiesAction
 {
@@ -167,14 +167,7 @@ class BuildKgCommunitiesAction
     private function generateEmbedding(string $text): ?array
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
-
-            $response = Prism::embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput($text)
-                ->asEmbeddings();
-
-            return $response->embeddings[0]->embedding;
+            return app(EmbeddingProviderInterface::class)->embed($text);
         } catch (\Throwable $e) {
             Log::warning('BuildKgCommunitiesAction: embedding generation failed', ['error' => $e->getMessage()]);
 

@@ -5,8 +5,8 @@ namespace App\Domain\Chatbot\Services;
 use App\Domain\Chatbot\Contracts\KnowledgeGraphContextProviderInterface;
 use App\Domain\KnowledgeGraph\Models\KgEdge;
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Prism;
 
 class ChatbotKnowledgeGraphContextProvider implements KnowledgeGraphContextProviderInterface
 {
@@ -65,16 +65,9 @@ class ChatbotKnowledgeGraphContextProvider implements KnowledgeGraphContextProvi
     private function generateEmbedding(string $text): ?string
     {
         try {
-            $model = config('memory.embedding_model', 'text-embedding-3-small');
+            $provider = app(EmbeddingProviderInterface::class);
 
-            $response = app(Prism::class)->embeddings()
-                ->using(config('memory.embedding_provider', 'openai'), $model)
-                ->fromInput(mb_substr($text, 0, 1000))
-                ->asEmbeddings();
-
-            $vector = $response->embeddings[0]->embedding;
-
-            return '['.implode(',', $vector).']';
+            return $provider->formatForPgvector($provider->embed(mb_substr($text, 0, 1000)));
         } catch (\Throwable) {
             return null;
         }

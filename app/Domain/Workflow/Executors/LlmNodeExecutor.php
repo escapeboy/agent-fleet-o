@@ -8,6 +8,7 @@ use App\Domain\Memory\Actions\UnifiedMemorySearchAction;
 use App\Domain\Workflow\Contracts\NodeExecutorInterface;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Schema\ArraySchema;
@@ -150,12 +151,18 @@ class LlmNodeExecutor implements NodeExecutorInterface
         $provider = $config['embed_provider'] ?? config('memory.embedding_provider', 'openai');
         $model = $config['embed_model'] ?? config('memory.embedding_model', 'text-embedding-3-small');
 
-        $response = Prism::embeddings()
-            ->using($provider, $model)
-            ->fromInput($text)
-            ->generate();
-
-        $vector = $response->embeddings[0]->embedding;
+        // An explicit per-node provider/model is an advanced cloud override and
+        // stays on a direct Prism call. The default path goes through the unified
+        // embedding seam so a future local driver applies here too.
+        if (isset($config['embed_provider']) || isset($config['embed_model'])) {
+            $vector = Prism::embeddings()
+                ->using($provider, $model)
+                ->fromInput($text)
+                ->generate()
+                ->embeddings[0]->embedding;
+        } else {
+            $vector = app(EmbeddingProviderInterface::class)->embed($text);
+        }
 
         return [
             'vector' => $vector,

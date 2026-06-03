@@ -11,7 +11,7 @@ use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\PhpCodeParser;
 use App\Domain\GitRepository\Services\PolyglotCodeExtractor;
-use App\Infrastructure\AI\Services\EmbeddingService;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -29,7 +29,7 @@ class IndexRepositoryAction
     public function __construct(
         private readonly PhpCodeParser $phpParser,
         private readonly GitOperationRouter $router,
-        private readonly EmbeddingService $embeddings,
+        private readonly EmbeddingProviderInterface $embeddings,
         private readonly PolyglotCodeExtractor $polyglot,
     ) {}
 

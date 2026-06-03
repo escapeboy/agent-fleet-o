@@ -6,8 +6,8 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ReasoningBankEntry;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +15,7 @@ class ReasoningBankService
 {
     public function __construct(
         private readonly AiGatewayInterface $gateway,
-        private readonly EmbeddingService $embedder,
+        private readonly EmbeddingProviderInterface $embedder,
     ) {}
 
     /**

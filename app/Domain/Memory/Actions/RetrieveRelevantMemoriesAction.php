@@ -4,11 +4,11 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Memory\Enums\MemoryVisibility;
 use App\Domain\Memory\Models\Memory;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\Services\TokenEstimator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class RetrieveRelevantMemoriesAction
 {
@@ -234,16 +234,11 @@ class RetrieveRelevantMemoriesAction
      */
     private function generateEmbedding(string $text): string
     {
-        $model = config('memory.embedding_model', 'text-embedding-3-small');
+        $provider = app(EmbeddingProviderInterface::class);
 
-        $response = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), $model)
-            ->fromInput($this->truncateToEmbeddingLimit($text))
-            ->asEmbeddings();
-
-        $vector = $response->embeddings[0]->embedding;
-
-        return '['.implode(',', $vector).']';
+        return $provider->formatForPgvector(
+            $provider->embed($this->truncateToEmbeddingLimit($text)),
+        );
     }
 
     /**

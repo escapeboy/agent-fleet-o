@@ -3775,12 +3775,6 @@ parameters:
 			path: app/Domain/KnowledgeGraph/Actions/UpdateKnowledgeFactAction.php
 
 		-
-			message: '#^Static call to instance method Prism\\Prism\\Prism\:\:embeddings\(\)\.$#'
-			identifier: method.staticCall
-			count: 1
-			path: app/Domain/KnowledgeGraph/Actions/UpdateKnowledgeFactAction.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between int\<1, max\> and 0 will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1

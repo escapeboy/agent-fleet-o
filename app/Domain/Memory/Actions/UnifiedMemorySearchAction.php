@@ -4,9 +4,9 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Memory\Models\Memory;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Unified search across vector memory, knowledge graph, and keyword search
@@ -393,11 +393,8 @@ class UnifiedMemorySearchAction
 
     private function generateEmbedding(string $text): string
     {
-        $response = Prism::embeddings()
-            ->using(config('memory.embedding_provider', 'openai'), config('memory.embedding_model', 'text-embedding-3-small'))
-            ->fromInput($text)
-            ->asEmbeddings();
+        $provider = app(EmbeddingProviderInterface::class);
 
-        return '['.implode(',', $response->embeddings[0]->embedding).']';
+        return $provider->formatForPgvector($provider->embed($text));
     }
 }
