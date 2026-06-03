@@ -10638,11 +10638,6 @@ parameters:
 			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
-		-
-			message: '#^Method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:isLocalProvider\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
 		-
 			message: '#^Method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:planEnforcerHasFeature\(\) is unused\.$#'
