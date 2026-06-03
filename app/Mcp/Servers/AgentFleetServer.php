@@ -68,6 +68,7 @@ use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceContractGetTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
+use App\Mcp\Tools\AgentChatProtocol\A2aDiscoverTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool;
@@ -756,13 +757,14 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent Chat Protocol (13) — peer-to-peer agent interop (ASI1-compatible)
+        // Agent Chat Protocol (14) — peer-to-peer agent interop (ASI1 + A2A)
         ExternalAgentListTool::class,
         ExternalAgentGetTool::class,
         ExternalAgentCreateTool::class,
         ExternalAgentUpdateTool::class,
         ExternalAgentDeleteTool::class,
         ExternalAgentRefreshManifestTool::class,
+        A2aDiscoverTool::class,
         ExternalAgentPingTool::class,
         AgentChatSendTool::class,
         AgentChatStructuredTool::class,

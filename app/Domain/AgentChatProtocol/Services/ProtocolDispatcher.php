@@ -8,6 +8,7 @@ use App\Domain\AgentChatProtocol\DTOs\ChatMessageDTO;
 use App\Domain\AgentChatProtocol\DTOs\StructuredRequestDTO;
 use App\Domain\AgentChatProtocol\Enums\AdapterKind;
 use App\Domain\AgentChatProtocol\Enums\ExternalAgentStatus;
+use App\Domain\AgentChatProtocol\Exceptions\A2aDispatchNotSupportedException;
 use App\Domain\AgentChatProtocol\Exceptions\RemoteAgentTimeoutException;
 use App\Domain\AgentChatProtocol\Models\ExternalAgent;
 use App\Domain\Shared\Services\SsrfGuard;
@@ -27,6 +28,8 @@ class ProtocolDispatcher
 
     public function sendChat(ExternalAgent $externalAgent, ChatMessageDTO $message): array
     {
+        $this->assertDispatchable($externalAgent);
+
         if ($this->adapterKind($externalAgent)->isAgentverse()) {
             return $this->dispatchAgentverse($externalAgent, $message);
         }
@@ -36,11 +39,27 @@ class ProtocolDispatcher
 
     public function sendStructuredRequest(ExternalAgent $externalAgent, StructuredRequestDTO $request): array
     {
+        $this->assertDispatchable($externalAgent);
+
         if ($this->adapterKind($externalAgent)->isAgentverse()) {
             return $this->dispatchAgentverse($externalAgent, $request);
         }
 
         return $this->dispatch($externalAgent, 'structured', $request->toArray());
+    }
+
+    /**
+     * A2A agents are discoverable but not yet callable — dispatch is a deferred
+     * slice. Fail loudly here so an A2A agent never falls through to the generic
+     * HTTP POST path, which is not the A2A (JSON-RPC) wire protocol.
+     */
+    private function assertDispatchable(ExternalAgent $externalAgent): void
+    {
+        if ($this->adapterKind($externalAgent)->isA2a()) {
+            throw new A2aDispatchNotSupportedException(
+                "External agent {$externalAgent->id} uses the A2A adapter; A2A message dispatch is not yet implemented (discovery only).",
+            );
+        }
     }
 
     private function adapterKind(ExternalAgent $externalAgent): AdapterKind
