@@ -38,6 +38,13 @@ class GracefulToolDegradationTest extends TestCase
     {
         parent::setUp();
 
+        // Pin the bash sandbox mode to the default 'php' so this test never
+        // attempts a real just-bash sidecar session (the CI runner may export
+        // AGENT_BASH_SANDBOX_MODE=just_bash, which would otherwise reach the
+        // unreachable bash_sidecar host). This test exercises graceful tool
+        // degradation, not the sandbox path — pinning keeps it hermetic.
+        config(['agent.bash_sandbox_mode' => 'php']);
+
         $this->user = User::factory()->create();
         $this->team = Team::create([
             'name' => 'Test Team',
