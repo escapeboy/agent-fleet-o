@@ -61,6 +61,9 @@ use App\Mcp\Tools\Agent\AgentTemplatesListTool;
 use App\Mcp\Tools\Agent\AgentToggleStatusTool;
 use App\Mcp\Tools\Agent\AgentToolApprovalConfigureTool;
 use App\Mcp\Tools\Agent\AgentToolDenySetTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutListTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutReleaseTool;
+use App\Mcp\Tools\Agent\AgentToolLockoutSetTool;
 use App\Mcp\Tools\Agent\AgentToolPermissionSetTool;
 use App\Mcp\Tools\Agent\AgentToolSyncTool;
 use App\Mcp\Tools\Agent\AgentUpdateIdentityTool;
@@ -68,6 +71,7 @@ use App\Mcp\Tools\Agent\AgentUpdateTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceContractGetTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
+use App\Mcp\Tools\AgentChatProtocol\A2aDiscoverTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool;
@@ -191,6 +195,8 @@ use App\Mcp\Tools\Crew\CrewBeliefTrajectoryTool;
 use App\Mcp\Tools\Crew\CrewBlackboardPostTool;
 use App\Mcp\Tools\Crew\CrewBlackboardReadTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
+use App\Mcp\Tools\Crew\CrewDecisionListTool;
+use App\Mcp\Tools\Crew\CrewDecisionRecordTool;
 use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
@@ -756,13 +762,14 @@ class AgentFleetServer extends Server
     }
 
     protected array $tools = [
-        // Agent Chat Protocol (13) — peer-to-peer agent interop (ASI1-compatible)
+        // Agent Chat Protocol (14) — peer-to-peer agent interop (ASI1 + A2A)
         ExternalAgentListTool::class,
         ExternalAgentGetTool::class,
         ExternalAgentCreateTool::class,
         ExternalAgentUpdateTool::class,
         ExternalAgentDeleteTool::class,
         ExternalAgentRefreshManifestTool::class,
+        A2aDiscoverTool::class,
         ExternalAgentPingTool::class,
         AgentChatSendTool::class,
         AgentChatStructuredTool::class,
@@ -780,6 +787,9 @@ class AgentFleetServer extends Server
         AgentPolicyCreateTool::class,
         AgentPolicyUpdateTool::class,
         AgentPolicyRollbackTool::class,
+        AgentToolLockoutSetTool::class,
+        AgentToolLockoutListTool::class,
+        AgentToolLockoutReleaseTool::class,
         AgentGetTool::class,
         AgentCreateTool::class,
         AgentUpdateTool::class,
@@ -836,6 +846,8 @@ class AgentFleetServer extends Server
         // Crew (16)
         CrewListTool::class,
         CrewGetTool::class,
+        CrewDecisionRecordTool::class,
+        CrewDecisionListTool::class,
         CrewCreateTool::class,
         CrewUpdateTool::class,
         CrewExecuteTool::class,

@@ -175,7 +175,7 @@ class MemoryContextInjector
 
         $lines = $results->map(fn ($item, $i) => $this->formatResultWithAttribution($item, $i + 1))->implode("\n\n");
 
-        return "## Relevant Context\nEach item includes its source and reliability indicators.\n\n{$lines}";
+        return $this->contextHeader()."\n\n{$lines}";
     }
 
     /**
@@ -216,7 +216,9 @@ class MemoryContextInjector
 
         $attribution = implode(' | ', $parts);
 
-        $line = "{$rank}. [{$attribution}]\n   {$item['content']}";
+        $cite = $this->citationToken($item['id'] ?? ($meta['id'] ?? null));
+        $passage = $this->passageText((string) ($item['content'] ?? ''), $item['chunk_context'] ?? ($meta['chunk_context'] ?? null));
+        $line = "{$rank}. {$cite}[{$attribution}]\n   {$passage}";
 
         $vetoes = $this->formatRejectedAlternatives($meta['rejected_alternatives'] ?? []);
         if ($vetoes !== null) {
@@ -301,7 +303,9 @@ class MemoryContextInjector
             $attribution = implode(' | ', $parts);
             $rank = $i + 1;
 
-            $line = "{$rank}. [{$attribution}]\n   {$m->content}";
+            $cite = $this->citationToken($m->id ?? null);
+            $passage = $this->passageText((string) $m->content, $m->chunk_context ?? null);
+            $line = "{$rank}. {$cite}[{$attribution}]\n   {$passage}";
 
             $vetoes = $this->formatRejectedAlternatives($m->rejected_alternatives ?? []);
             if ($vetoes !== null) {
@@ -311,7 +315,59 @@ class MemoryContextInjector
             return $line;
         })->implode("\n\n");
 
-        return "## Relevant Context\nEach item includes its source and reliability indicators.\n\n{$lines}";
+        return $this->contextHeader()."\n\n{$lines}";
+    }
+
+    /**
+     * Evidence objects (Web IQ borrow): when enabled, injected context items
+     * carry a stable citation token and prefer passage-level chunk_context over
+     * the full content — optimising information density per token while keeping
+     * outputs attributable. Off by default → byte-for-byte legacy formatting.
+     */
+    private function evidenceCitationsEnabled(): bool
+    {
+        return (bool) config('memory.evidence_citations.enabled', false);
+    }
+
+    /**
+     * The context block header. Adds a citation instruction when evidence
+     * citations are enabled.
+     */
+    private function contextHeader(): string
+    {
+        $header = "## Relevant Context\nEach item includes its source and reliability indicators.";
+
+        if ($this->evidenceCitationsEnabled()) {
+            $header .= "\nCite any fact you use with the [[mem:id]] token shown before each item.";
+        }
+
+        return $header;
+    }
+
+    /**
+     * A stable per-item citation token (e.g. "[[mem:019e8cb3]] ") when evidence
+     * citations are enabled and an id is available; otherwise an empty string.
+     */
+    private function citationToken(?string $id): string
+    {
+        if (! $this->evidenceCitationsEnabled() || $id === null || $id === '') {
+            return '';
+        }
+
+        return '[[mem:'.substr($id, 0, 8).']] ';
+    }
+
+    /**
+     * Prefer the passage-level chunk_context (an evidence object) over the full
+     * content when citations are enabled and a chunk_context is present.
+     */
+    private function passageText(string $content, ?string $chunkContext): string
+    {
+        if ($this->evidenceCitationsEnabled() && is_string($chunkContext) && trim($chunkContext) !== '') {
+            return $chunkContext;
+        }
+
+        return $content;
     }
 
     /**

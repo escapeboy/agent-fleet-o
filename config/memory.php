@@ -314,4 +314,17 @@ return [
         'max_pairs' => (int) env('MEMORY_CONTRADICTION_MAX_PAIRS', 25),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Evidence citations (Web IQ borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, injected memory context items carry a stable [[mem:id]]
+    | citation token and prefer the passage-level chunk_context over full
+    | content — optimising information density per token while keeping outputs
+    | attributable. Off by default → injected context is byte-for-byte legacy.
+    */
+    'evidence_citations' => [
+        'enabled' => (bool) env('MEMORY_EVIDENCE_CITATIONS_ENABLED', false),
+    ],
+
 ];
