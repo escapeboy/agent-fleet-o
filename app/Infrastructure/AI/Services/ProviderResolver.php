@@ -625,7 +625,7 @@ class ProviderResolver
      * @param  array<string, array{label: string, input_cost: float|int, output_cost: float|int}>  $staticModels
      * @return array<string, array{label: string, input_cost: float|int, output_cost: float|int}>
      */
-    private function dynamicCatalogModels(string $provider, ?Team $team, array $staticModels): array
+    protected function dynamicCatalogModels(string $provider, ?Team $team, array $staticModels): array
     {
         if (! config('model_catalog.enabled')) {
             return $staticModels;
@@ -653,7 +653,7 @@ class ProviderResolver
      * public endpoints (auth = 'none', e.g. OpenRouter). For bearer endpoints,
      * prefers the team BYOK key, then the platform key.
      */
-    private function resolveCatalogApiKey(string $provider, ?Team $team): ?string
+    protected function resolveCatalogApiKey(string $provider, ?Team $team): ?string
     {
         if (config("llm_providers.{$provider}.models_endpoint_auth") !== 'bearer') {
             return null;
