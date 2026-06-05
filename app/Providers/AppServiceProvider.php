@@ -23,6 +23,7 @@ use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
 use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
 use App\Domain\Credential\Observers\SecretScanObserver;
+use App\Domain\Evaluation\Listeners\AppendRegressionCaseOnFailureListener;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Listeners\CheckParentExperimentCompletion;
@@ -603,6 +604,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Memory: extract failure lesson when experiment enters a failed state
         Event::listen(ExperimentTransitioned::class, ExtractFailureLessonListener::class);
+
+        // Evaluation: append a deferred regression case at triage time (Agentic AI Flywheel #1)
+        Event::listen(ExperimentTransitioned::class, AppendRegressionCaseOnFailureListener::class);
 
         // Memory: extract success pattern when experiment reaches Completed
         Event::listen(ExperimentTransitioned::class, ExtractSuccessPatternListener::class);

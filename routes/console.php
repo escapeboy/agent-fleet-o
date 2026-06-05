@@ -93,6 +93,12 @@ Schedule::command('skills:evolve')->weeklyOn(0, '03:00')->withoutOverlapping(120
 // Skill degradation monitor — hourly scan creates EvolutionProposals for underperforming skills
 Schedule::command('skills:monitor-degradation')->hourly();
 
+// Agentic AI Flywheel #5 — continuous production eval monitor (no-op unless EVAL_PRODUCTION_MONITOR=true)
+Schedule::command('evaluation:monitor-production')->dailyAt('03:30')->withoutOverlapping(90)->onOneServer();
+
+// Agentic AI Flywheel #4 — drift signals (no-op unless EVAL_DRIFT_MONITOR=true)
+Schedule::command('evaluation:check-drift')->hourly()->withoutOverlapping(30)->onOneServer();
+
 // Marketplace quality aggregation — roll up installed skill metrics into listing quality scores
 Schedule::command('marketplace:aggregate-quality')->everySixHours();
 
