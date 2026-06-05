@@ -665,9 +665,15 @@ class ProviderResolver
                 ->where('is_active', true)
                 ->first();
 
-            $key = $credential?->credentials['api_key'] ?? null;
-            if (is_string($key) && $key !== '') {
-                return $key;
+            if ($credential !== null) {
+                // `credentials` is a TeamEncryptedArray cast; larastan mis-types it
+                // as string, so annotate the local to keep offset access type-safe.
+                /** @var array<string, mixed> $creds */
+                $creds = $credential->credentials;
+                $key = $creds['api_key'] ?? null;
+                if (is_string($key) && $key !== '') {
+                    return $key;
+                }
             }
         }
 
