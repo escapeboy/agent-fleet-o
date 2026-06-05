@@ -64,4 +64,45 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Agentic AI Flywheel (all default-OFF — see docs/architecture/architecture-agentic-flywheel.md)
+    |--------------------------------------------------------------------------
+    */
+
+    /** Aggregate scores below this are treated as a failing eval case. */
+    'regression_threshold' => (float) env('EVALUATION_REGRESSION_THRESHOLD', 7.0),
+
+    // #1 Auto-eval at triage: append a deferred regression case when a failure mode is named.
+    'auto_eval' => [
+        'enabled' => (bool) env('EVAL_AUTO_EVAL_AT_TRIAGE', false),
+        'dataset_name' => env('EVAL_AUTO_EVAL_DATASET_NAME', 'Production Regressions'),
+    ],
+
+    // #3 Error-mode catalog: cluster named failures into a per-team taxonomy with lever assignment.
+    'error_mode_catalog' => [
+        'enabled' => (bool) env('EVAL_ERROR_MODE_CATALOG', false),
+    ],
+
+    // #5 Production eval monitor: run the eval set on sampled production traffic as a continuous monitor.
+    'production_monitor' => [
+        'enabled' => (bool) env('EVAL_PRODUCTION_MONITOR', false),
+        'sample_size' => (int) env('EVAL_MONITOR_SAMPLE_SIZE', 20),
+    ],
+
+    // #4 Drift monitor: four signals (input shift, eval decay, thumbs-down, latency/cost).
+    'drift_monitor' => [
+        'enabled' => (bool) env('EVAL_DRIFT_MONITOR', false),
+        'window_hours' => (int) env('EVAL_DRIFT_WINDOW_HOURS', 24),
+        'baseline_hours' => (int) env('EVAL_DRIFT_BASELINE_HOURS', 168),
+        'notify_on_breach' => (bool) env('EVAL_DRIFT_NOTIFY', false),
+        'thresholds' => [
+            'eval_score_decay' => (float) env('EVAL_DRIFT_SCORE_DECAY', 1.0),
+            'thumbs_down_rate' => (float) env('EVAL_DRIFT_THUMBS_DOWN_RATE', 0.15),
+            'latency_p95_mult' => (float) env('EVAL_DRIFT_LATENCY_MULT', 1.5),
+            'cost_avg_mult' => (float) env('EVAL_DRIFT_COST_MULT', 1.5),
+            'input_novelty_rate' => (float) env('EVAL_DRIFT_INPUT_NOVELTY', 0.4),
+        ],
+    ],
+
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Evaluation\Actions;
 
+use App\Domain\Evaluation\Enums\EvaluationCaseStatus;
 use App\Domain\Evaluation\Enums\EvaluationStatus;
 use App\Domain\Evaluation\Models\EvaluationCase;
 use App\Domain\Evaluation\Models\EvaluationDataset;
@@ -75,11 +76,16 @@ final class ReplayEvaluationDatasetAction
         $passedCases = 0;
         $failedCases = 0;
         $erroredCases = 0;
+        $deferredCount = 0;
+        $deferredPassed = 0;
+        /** @var list<array{case_id: string, score: float}> $silentWins */
+        $silentWins = [];
         $criterionSums = array_fill_keys($criteria, 0.0);
         $criterionCounts = array_fill_keys($criteria, 0);
         $totalCostCredits = 0;
 
         foreach ($cases as $case) {
+            /** @var EvaluationCase $case */
             $totalCases++;
             $caseOutcome = $this->runSingleCase(
                 run: $run,
@@ -99,7 +105,17 @@ final class ReplayEvaluationDatasetAction
             }
 
             $score = $caseOutcome['avg_score'];
-            if ($score >= self::REGRESSION_THRESHOLD) {
+
+            // Deferred cases are scored but do NOT gate the run. A deferred case
+            // scoring at/above threshold is a "silent win" — an unrelated change
+            // accidentally fixed the failure mode (the deferred-eval pattern).
+            if ($case->status === EvaluationCaseStatus::Deferred) {
+                $deferredCount++;
+                if ($score >= self::REGRESSION_THRESHOLD) {
+                    $deferredPassed++;
+                    $silentWins[] = ['case_id' => (string) $case->id, 'score' => $score];
+                }
+            } elseif ($score >= self::REGRESSION_THRESHOLD) {
                 $passedCases++;
             } else {
                 $failedCases++;
@@ -120,7 +136,10 @@ final class ReplayEvaluationDatasetAction
                 : null;
         }
 
-        $passRate = $totalCases > 0 ? round(($passedCases / $totalCases) * 100, 1) : 0.0;
+        // Pass rate is computed over gating (active, non-errored) cases only;
+        // deferred cases are tracked separately and do not dilute the gate.
+        $gatingCases = $passedCases + $failedCases;
+        $passRate = $gatingCases > 0 ? round(($passedCases / $gatingCases) * 100, 1) : 0.0;
         $overallAvg = array_sum($aggregate) / max(1, count(array_filter($aggregate, fn ($v) => $v !== null)));
 
         $run->update([
@@ -133,6 +152,9 @@ final class ReplayEvaluationDatasetAction
                 'passed' => $passedCases,
                 'failed' => $failedCases,
                 'errored' => $erroredCases,
+                'deferred_count' => $deferredCount,
+                'deferred_passed' => $deferredPassed,
+                'silent_wins' => $silentWins,
                 'pass_rate_pct' => $passRate,
                 'overall_avg_score' => round($overallAvg, 2),
                 'regression_threshold' => self::REGRESSION_THRESHOLD,
