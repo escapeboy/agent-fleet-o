@@ -10,6 +10,7 @@ use App\Domain\Shared\Services\SsrfGuard;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Infrastructure\AI\Services\ManagedModelDiscovery;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
@@ -287,6 +288,26 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Default LLM provider saved.');
+    }
+
+    /**
+     * Re-fetch the live model catalog for a managed multi-model provider
+     * (OpenRouter, …) by busting its discovery cache. The dropdown repopulates
+     * on the next render via ProviderResolver::availableProviders().
+     */
+    public function refreshManagedModels(string $provider): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        if (! config('model_catalog.enabled') || empty(config("llm_providers.{$provider}.dynamic_catalog"))) {
+            session()->flash('message', "Catalog refresh is not available for {$provider}.");
+
+            return;
+        }
+
+        app(ManagedModelDiscovery::class)->bustCache($provider);
+
+        session()->flash('message', "Refreshed model catalog for {$provider}.");
     }
 
     public function saveObservability(): void
