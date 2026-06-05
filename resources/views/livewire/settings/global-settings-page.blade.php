@@ -63,6 +63,22 @@
                         </x-form-select>
                     @endif
 
+                    @if(!empty($providers[$defaultLlmProvider]['dynamic_catalog']) && config('model_catalog.enabled'))
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{{ count($defaultLlmModels) }} models · live catalog</span>
+                            <button type="button"
+                                    wire:click="refreshManagedModels('{{ $defaultLlmProvider }}')"
+                                    wire:loading.attr="disabled"
+                                    wire:target="refreshManagedModels"
+                                    class="rounded border border-gray-300 px-2 py-1 font-medium text-gray-700 hover:bg-gray-50">
+                                <span wire:loading.remove wire:target="refreshManagedModels">↻ Refresh models</span>
+                                <span wire:loading wire:target="refreshManagedModels">Refreshing…</span>
+                            </button>
+                        </div>
+                    @elseif(!empty($providers[$defaultLlmProvider]['dynamic_catalog']))
+                        <p class="text-xs text-gray-400">Static catalog. Enable MANAGED_MODEL_CATALOG_SYNC for the live provider catalog.</p>
+                    @endif
+
                     <button type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         Save Default LLM
                     </button>

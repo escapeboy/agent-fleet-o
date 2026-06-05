@@ -409,6 +409,7 @@ use App\Mcp\Tools\Shared\ContactHealthScoreTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
 use App\Mcp\Tools\Shared\LocalAgentCustomManageTool;
 use App\Mcp\Tools\Shared\LocalLlmTool;
+use App\Mcp\Tools\Shared\ModelCatalogTool;
 use App\Mcp\Tools\Shared\NotificationTool;
 use App\Mcp\Tools\Shared\PluginManageTool;
 use App\Mcp\Tools\Shared\PortkeyGatewayTool;
@@ -1267,6 +1268,7 @@ class AgentFleetServer extends Server
         TeamObservabilityUpdateTool::class,
         TeamObservabilityTestTool::class,
         LocalLlmTool::class,
+        ModelCatalogTool::class,
         LocalAgentCustomManageTool::class,
         TeamByokCredentialManageTool::class,
         TeamClaudeCodeVpsAccessTool::class,
