@@ -583,6 +583,13 @@ class ProviderResolver
             if (! $platformKey && ! $subProgramKey && ! isset($teamByokProviders[$key])) {
                 unset($providers[$key]);
             }
+
+            // Managed multi-model providers (OpenRouter, …): replace the static
+            // config catalog with the live provider catalog when dynamic sync is
+            // enabled and the provider survived the key check above.
+            if (isset($providers[$key]) && ! empty($provider['dynamic_catalog'])) {
+                $providers[$key]['models'] = $this->dynamicCatalogModels($key, $team, $providers[$key]['models'] ?? []);
+            }
         }
 
         return $providers;
@@ -598,11 +605,75 @@ class ProviderResolver
      */
     public function modelsForProvider(string $provider, ?Team $team = null): array
     {
-        if (! config("llm_providers.{$provider}.http_local")) {
-            return config("llm_providers.{$provider}.models", []);
+        if (config("llm_providers.{$provider}.http_local")) {
+            return $this->fetchHttpLocalModels($provider, $team);
         }
 
-        return $this->fetchHttpLocalModels($provider, $team);
+        $static = config("llm_providers.{$provider}.models", []);
+
+        if (! empty(config("llm_providers.{$provider}.dynamic_catalog"))) {
+            return $this->dynamicCatalogModels($provider, $team, $static);
+        }
+
+        return $static;
+    }
+
+    /**
+     * Live model catalog for a managed multi-model provider, falling back to the
+     * static config catalog when the feature is off or the endpoint is unreachable.
+     *
+     * @param  array<string, array{label: string, input_cost: float|int, output_cost: float|int}>  $staticModels
+     * @return array<string, array{label: string, input_cost: float|int, output_cost: float|int}>
+     */
+    private function dynamicCatalogModels(string $provider, ?Team $team, array $staticModels): array
+    {
+        if (! config('model_catalog.enabled')) {
+            return $staticModels;
+        }
+
+        $entries = app(ManagedModelDiscovery::class)->discover(
+            $provider,
+            $this->resolveCatalogApiKey($provider, $team),
+        );
+
+        if ($entries === []) {
+            return $staticModels;
+        }
+
+        $models = [];
+        foreach ($entries as $entry) {
+            $models[$entry->id] = $entry->toProviderModel();
+        }
+
+        return $models;
+    }
+
+    /**
+     * Resolve the API key for a provider's /models endpoint. Returns null for
+     * public endpoints (auth = 'none', e.g. OpenRouter). For bearer endpoints,
+     * prefers the team BYOK key, then the platform key.
+     */
+    private function resolveCatalogApiKey(string $provider, ?Team $team): ?string
+    {
+        if (config("llm_providers.{$provider}.models_endpoint_auth") !== 'bearer') {
+            return null;
+        }
+
+        if ($team) {
+            $credential = TeamProviderCredential::where('team_id', $team->id)
+                ->where('provider', $provider)
+                ->where('is_active', true)
+                ->first();
+
+            $key = $credential?->credentials['api_key'] ?? null;
+            if (is_string($key) && $key !== '') {
+                return $key;
+            }
+        }
+
+        $platform = config("services.platform_api_keys.{$provider}");
+
+        return is_string($platform) && $platform !== '' ? $platform : null;
     }
 
     /**

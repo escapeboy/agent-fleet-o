@@ -36,6 +36,13 @@ return [
     ],
     'openrouter' => [
         'name' => 'OpenRouter',
+        // Dynamic catalog: when model_catalog.enabled, the static list below is
+        // replaced by the live catalog fetched from models_endpoint (300+ models).
+        // The static list remains the fallback when the endpoint is unreachable.
+        'dynamic_catalog' => true,
+        'models_endpoint' => env('OPENROUTER_MODELS_ENDPOINT', 'https://openrouter.ai/api/v1/models'),
+        'models_endpoint_auth' => 'none', // OpenRouter /models is public (no key required)
+        'catalog_adapter' => 'openrouter',
         'models' => [
             'meta-llama/llama-3.3-70b-instruct:free' => ['label' => 'Llama 3.3 70B (free)', 'input_cost' => 0, 'output_cost' => 0],
             'qwen/qwen3-coder-480b-a35b:free' => ['label' => 'Qwen3 Coder 480B (free)', 'input_cost' => 0, 'output_cost' => 0],

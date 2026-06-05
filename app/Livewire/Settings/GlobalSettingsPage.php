@@ -12,6 +12,7 @@ use App\Domain\System\Services\VersionCheckService;
 use App\Domain\Tool\Actions\ImportMcpServersAction;
 use App\Domain\Tool\Services\McpConfigDiscovery;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
+use App\Infrastructure\AI\Services\ManagedModelDiscovery;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\Blacklist;
 use App\Models\GlobalSetting;
@@ -200,6 +201,32 @@ class GlobalSettingsPage extends Component
     {
         $providers = app(ProviderResolver::class)->availableProviders(auth()->user()?->currentTeam);
         $this->assistantModel = array_key_first($providers[$this->assistantProvider]['models'] ?? []) ?? '';
+    }
+
+    /**
+     * Re-fetch the live model catalog for a managed multi-model provider
+     * (OpenRouter, …) by busting its discovery cache. The dropdown repopulates
+     * on the next render via ProviderResolver::availableProviders().
+     */
+    public function refreshManagedModels(string $provider): void
+    {
+        Gate::authorize('access-admin');
+
+        if (! config('model_catalog.enabled')) {
+            session()->flash('mcp-error', 'Dynamic model catalog sync is disabled (MANAGED_MODEL_CATALOG_SYNC=false).');
+
+            return;
+        }
+
+        if (empty(config("llm_providers.{$provider}.dynamic_catalog"))) {
+            session()->flash('mcp-error', "Provider '{$provider}' does not support catalog refresh.");
+
+            return;
+        }
+
+        app(ManagedModelDiscovery::class)->bustCache($provider);
+
+        session()->flash('message', "Refreshed model catalog for {$provider}.");
     }
 
     public function saveBudgetSettings(): void

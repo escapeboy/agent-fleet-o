@@ -28,6 +28,8 @@ use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmDiscovery;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
+use App\Infrastructure\AI\Services\ManagedModelDiscovery;
+use App\Infrastructure\AI\Services\ManagedPricingStore;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
@@ -46,6 +48,8 @@ class AiServiceProvider extends ServiceProvider
         $this->app->singleton(LocalAgentDiscovery::class);
         $this->app->singleton(LocalLlmDiscovery::class);
         $this->app->singleton(LocalLlmUrlValidator::class);
+        $this->app->singleton(ManagedModelDiscovery::class);
+        $this->app->singleton(ManagedPricingStore::class);
         // Request/worker-scoped — holds the active root-span stack so nested
         // LLM calls land under the right parent. Resets between requests in
         // HTTP context; persists across jobs in a queue worker (the stack
@@ -160,6 +164,17 @@ class AiServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $appName = config('app.name', 'FleetQ');
+
+        // Merge synced managed-provider pricing into the live billing config so
+        // CostCalculator::getPricing() resolves a real rate for dynamically
+        // discovered models. Cheap DB-backed read, no HTTP. No-op when the
+        // dynamic catalog feature is off or nothing has been synced yet.
+        if (config('model_catalog.enabled')) {
+            foreach (app(ManagedPricingStore::class)->all() as $provider => $models) {
+                $existing = config("llm_pricing.providers.{$provider}", []);
+                config(["llm_pricing.providers.{$provider}" => array_merge($existing, $models)]);
+            }
+        }
 
         // Custom AI endpoints — always available (not gated by local_llm.enabled).
         // Backed by the OpenRouter driver which uses POST /v1/chat/completions.
