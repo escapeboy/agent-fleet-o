@@ -138,6 +138,16 @@
                                 <span class="text-gray-600">{{ $task->qa_feedback['feedback'] ?? 'No feedback' }}</span>
                             </div>
                         @endif
+                        @if(!empty($task->qa_feedback['unverified']))
+                            <div class="mb-2">
+                                <span class="font-medium text-amber-700">Could not verify:</span>
+                                <ul class="mt-1 list-disc pl-5 text-amber-700">
+                                    @foreach($task->qa_feedback['unverified'] as $unverified)
+                                        <li>{{ $unverified }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         @if($task->error_message)
                             <p class="text-red-600">Error: {{ $task->error_message }}</p>
                         @endif

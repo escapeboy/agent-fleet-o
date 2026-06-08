@@ -21,7 +21,7 @@ class ValidateTaskOutputAction
     /**
      * Have the QA agent validate a task's output.
      *
-     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores?: array<string, float>}
+     * @return array{passed: bool, score: float, feedback: string, issues: array, unverified: array, criterion_scores?: array<string, float>}
      */
     public function execute(CrewTaskExecution $taskExecution, CrewExecution $execution): array
     {
@@ -44,7 +44,8 @@ class ValidateTaskOutputAction
             ."Evaluate the output of a completed task.\n"
             .$this->buildRubricSection($rubric)
             ."The quality threshold is {$qualityThreshold} (0.0-1.0).\n\n"
-            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "criterion_scores": {"criterion_name": float} }';
+            ."In \"unverified\", honestly list any checks you could NOT perform — data you could not access, behavior you could not execute, or claims you could not confirm. Use an empty array if nothing was left unverified.\n\n"
+            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "unverified": [string], "criterion_scores": {"criterion_name": float} }';
 
         $expectedOutput = $taskExecution->input_context['expected_output'] ?? 'No specific format expected';
 
@@ -105,7 +106,7 @@ class ValidateTaskOutputAction
      * Each pass is isolated — the agent cannot see prior assessments (commit phase).
      * Results are aggregated by majority vote on pass/fail and mean score (reveal phase).
      *
-     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores?: array<string, float>, parallel_rounds?: int, agreement_ratio?: float}
+     * @return array{passed: bool, score: float, feedback: string, issues: array, unverified: array, criterion_scores?: array<string, float>, parallel_rounds?: int, agreement_ratio?: float}
      */
     public function executeParallel(CrewTaskExecution $taskExecution, CrewExecution $execution, int $rounds = 3): array
     {
@@ -128,7 +129,8 @@ class ValidateTaskOutputAction
             ."Evaluate the output of a completed task independently.\n"
             .$this->buildRubricSection($rubric)
             ."The quality threshold is {$qualityThreshold} (0.0-1.0).\n\n"
-            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "criterion_scores": {"criterion_name": float} }';
+            ."In \"unverified\", honestly list any checks you could NOT perform — data you could not access, behavior you could not execute, or claims you could not confirm. Use an empty array if nothing was left unverified.\n\n"
+            .'Respond with valid JSON: { "passed": bool, "score": float (0.0-1.0), "feedback": string, "issues": [string], "unverified": [string], "criterion_scores": {"criterion_name": float} }';
 
         $expectedOutput = $taskExecution->input_context['expected_output'] ?? 'No specific format expected';
         $userPrompt = "Task: {$taskExecution->title}\n"
@@ -179,6 +181,7 @@ class ValidateTaskOutputAction
             'score' => round($meanScore, 4),
             'feedback' => $assessments[0]['feedback'],
             'issues' => array_values(array_unique(array_merge(...array_column($assessments, 'issues')))),
+            'unverified' => array_values(array_unique(array_merge(...array_column($assessments, 'unverified')))),
             'criterion_scores' => $assessments[0]['criterion_scores'] ?? [],
             'parallel_rounds' => count($assessments),
             'agreement_ratio' => round($agreementRatio, 4),
@@ -264,7 +267,7 @@ class ValidateTaskOutputAction
     }
 
     /**
-     * @return array{passed: bool, score: float, feedback: string, issues: array, criterion_scores: array<string, float>}
+     * @return array{passed: bool, score: float, feedback: string, issues: array, unverified: array, criterion_scores: array<string, float>}
      */
     private function parseValidation(string $content): array
     {
@@ -283,6 +286,7 @@ class ValidateTaskOutputAction
                 'score' => 0.0,
                 'feedback' => 'QA agent did not produce a valid validation response.',
                 'issues' => ['Invalid QA response format'],
+                'unverified' => [],
                 'criterion_scores' => [],
             ];
         }
@@ -292,6 +296,7 @@ class ValidateTaskOutputAction
             'score' => (float) min(1.0, max(0.0, $parsed['score'])),
             'feedback' => (string) $parsed['feedback'],
             'issues' => $parsed['issues'] ?? [],
+            'unverified' => is_array($parsed['unverified'] ?? null) ? array_values($parsed['unverified']) : [],
             'criterion_scores' => is_array($parsed['criterion_scores'] ?? null) ? $parsed['criterion_scores'] : [],
         ];
     }
