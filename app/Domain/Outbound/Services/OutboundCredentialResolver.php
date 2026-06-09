@@ -22,6 +22,18 @@ class OutboundCredentialResolver
         'discord' => ['webhook_url' => null], // Discord has no global config fallback
         'teams' => ['webhook_url' => 'services.teams.webhook_url'],
         'google_chat' => ['webhook_url' => 'services.google_chat.webhook_url'],
+        'matrix' => [
+            'homeserver_url' => 'services.matrix.homeserver_url',
+            'access_token' => 'services.matrix.access_token',
+        ],
+        'signal_protocol' => [
+            'api_url' => 'services.signal.api_url',
+            'phone_number' => 'services.signal.phone_number',
+        ],
+        'supabase_realtime' => [
+            'ref' => 'services.supabase.ref',
+            'key' => 'services.supabase.key',
+        ],
         'whatsapp' => [
             'phone_number_id' => 'services.whatsapp.phone_number_id',
             'access_token' => 'services.whatsapp.access_token',
@@ -139,6 +151,9 @@ class OutboundCredentialResolver
             'discord' => ['webhook_url'],
             'teams' => ['webhook_url'],
             'google_chat' => ['webhook_url'],
+            'matrix' => ['homeserver_url', 'access_token', 'room_id'],
+            'signal_protocol' => ['api_url', 'phone_number', 'recipient', 'phone'],
+            'supabase_realtime' => ['ref', 'key', 'channel', 'event'],
             'whatsapp' => ['phone', 'to'],
             'email' => ['email'],
             'webhook' => ['url', 'headers', 'secret'],

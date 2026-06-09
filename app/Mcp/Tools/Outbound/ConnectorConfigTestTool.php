@@ -63,6 +63,9 @@ class ConnectorConfigTestTool extends Tool
                 'whatsapp' => $this->testWhatsApp($creds),
                 'email' => $this->testSmtp($creds),
                 'webhook' => $this->testWebhook($creds),
+                'matrix' => $this->testMatrix($creds),
+                'signal_protocol' => $this->testSignal($creds),
+                'supabase_realtime' => $this->testSupabaseRealtime($creds),
                 default => throw new \RuntimeException('Unknown channel'),
             };
 
@@ -237,6 +240,70 @@ class ConnectorConfigTestTool extends Tool
         }
 
         throw new \RuntimeException("Unexpected SMTP response: {$banner}");
+    }
+
+    private function testMatrix(array $creds): string
+    {
+        $homeserverUrl = rtrim($creds['homeserver_url'] ?? '', '/');
+        $accessToken = $creds['access_token'] ?? '';
+
+        if (! $homeserverUrl || ! $accessToken) {
+            throw new \RuntimeException('Homeserver URL and access token are required');
+        }
+
+        $response = Http::timeout(10)
+            ->withToken($accessToken)
+            ->get("{$homeserverUrl}/_matrix/client/v3/account/whoami");
+
+        if ($response->successful()) {
+            return 'Connected as '.($response->json('user_id') ?? 'verified');
+        }
+
+        throw new \RuntimeException($response->json('error', 'Invalid homeserver URL or access token'));
+    }
+
+    private function testSignal(array $creds): string
+    {
+        $apiUrl = rtrim($creds['api_url'] ?? 'http://signal-sidecar:8080', '/');
+
+        $response = Http::timeout(10)->get("{$apiUrl}/v1/about");
+
+        if ($response->successful()) {
+            return 'signal-cli-rest-api reachable at '.$apiUrl;
+        }
+
+        throw new \RuntimeException('signal-cli-rest-api returned '.$response->status());
+    }
+
+    private function testSupabaseRealtime(array $creds): string
+    {
+        $ref = $creds['ref'] ?? '';
+        $apiKey = $creds['key'] ?? '';
+
+        if (! $ref || ! $apiKey) {
+            throw new \RuntimeException('Project ref and key are required');
+        }
+
+        $channel = $creds['channel'] ?? 'agent:results';
+        $event = $creds['event'] ?? 'message';
+
+        $response = Http::withHeaders([
+            'apikey' => $apiKey,
+            'Authorization' => "Bearer {$apiKey}",
+            'Content-Type' => 'application/json',
+        ])->timeout(10)->post("https://{$ref}.supabase.co/realtime/v1/api/broadcast", [
+            'messages' => [[
+                'topic' => $channel,
+                'event' => $event,
+                'payload' => ['test' => true, 'source' => 'fleetq'],
+            ]],
+        ]);
+
+        if ($response->successful()) {
+            return 'Broadcast sent successfully';
+        }
+
+        throw new \RuntimeException('Supabase returned '.$response->status());
     }
 
     private function testWebhook(array $creds): string

@@ -498,6 +498,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/discord', \App\Livewire\OutboundConnectors\DiscordOutboundPage::class)->name('outbound.discord');
     Route::get('/outbound/teams', \App\Livewire\OutboundConnectors\TeamsOutboundPage::class)->name('outbound.teams');
     Route::get('/outbound/google-chat', \App\Livewire\OutboundConnectors\GoogleChatOutboundPage::class)->name('outbound.google_chat');
+    Route::get('/outbound/matrix', \App\Livewire\OutboundConnectors\MatrixOutboundPage::class)->name('outbound.matrix');
+    Route::get('/outbound/signal', \App\Livewire\OutboundConnectors\SignalProtocolOutboundPage::class)->name('outbound.signal_protocol');
+    Route::get('/outbound/supabase-realtime', \App\Livewire\OutboundConnectors\SupabaseRealtimeOutboundPage::class)->name('outbound.supabase_realtime');
     Route::get('/outbound/blacklist', \App\Livewire\Outbound\BlacklistPage::class)->name('outbound.blacklist');
     Route::get('/outbound/proposals', \App\Livewire\Outbound\OutboundProposalsPage::class)->name('outbound.proposals');
 
