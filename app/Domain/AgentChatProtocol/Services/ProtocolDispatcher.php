@@ -24,11 +24,16 @@ class ProtocolDispatcher
     public function __construct(
         private readonly SsrfGuard $ssrfGuard,
         private readonly AgentverseEnvelopeMapper $envelopeMapper,
+        private readonly A2aClient $a2aClient,
     ) {}
 
     public function sendChat(ExternalAgent $externalAgent, ChatMessageDTO $message): array
     {
         $this->assertDispatchable($externalAgent);
+
+        if ($this->adapterKind($externalAgent)->isA2a()) {
+            return $this->dispatchA2a($externalAgent, $message->content, $message->msgId);
+        }
 
         if ($this->adapterKind($externalAgent)->isAgentverse()) {
             return $this->dispatchAgentverse($externalAgent, $message);
@@ -41,6 +46,13 @@ class ProtocolDispatcher
     {
         $this->assertDispatchable($externalAgent);
 
+        if ($this->adapterKind($externalAgent)->isA2a()) {
+            // A2A has no native structured/schema channel — send the prompt as a
+            // text turn; the schema travels for the peer's benefit but parsing is
+            // best-effort on our side.
+            return $this->dispatchA2a($externalAgent, $request->prompt, $request->msgId);
+        }
+
         if ($this->adapterKind($externalAgent)->isAgentverse()) {
             return $this->dispatchAgentverse($externalAgent, $request);
         }
@@ -49,16 +61,46 @@ class ProtocolDispatcher
     }
 
     /**
-     * A2A agents are discoverable but not yet callable — dispatch is a deferred
-     * slice. Fail loudly here so an A2A agent never falls through to the generic
-     * HTTP POST path, which is not the A2A (JSON-RPC) wire protocol.
+     * A2A agents are discoverable always; they are callable only once A2A
+     * dispatch is explicitly enabled. With the flag off, fail loudly here so an
+     * A2A agent never falls through to the generic HTTP POST path (which is not
+     * the A2A JSON-RPC wire protocol).
      */
     private function assertDispatchable(ExternalAgent $externalAgent): void
     {
-        if ($this->adapterKind($externalAgent)->isA2a()) {
+        if ($this->adapterKind($externalAgent)->isA2a() && ! config('agent_chat.a2a.dispatch_enabled', false)) {
             throw new A2aDispatchNotSupportedException(
-                "External agent {$externalAgent->id} uses the A2A adapter; A2A message dispatch is not yet implemented (discovery only).",
+                "External agent {$externalAgent->id} uses the A2A adapter; A2A message dispatch is disabled (set A2A_DISPATCH_ENABLED=true to enable).",
             );
+        }
+    }
+
+    /**
+     * Dispatch to an A2A agent over JSON-RPC (message/send), wrapped in the same
+     * callable/circuit-breaker guards as the other adapters.
+     *
+     * @return array<string, mixed>
+     */
+    private function dispatchA2a(ExternalAgent $externalAgent, string $text, string $messageId): array
+    {
+        if (! $externalAgent->status->isCallable()) {
+            throw new \RuntimeException("External agent {$externalAgent->id} is not callable (status: {$externalAgent->status->value})");
+        }
+
+        if ($this->isCircuitOpen($externalAgent)) {
+            $this->recordFailure($externalAgent, 'circuit breaker open');
+            throw new \RuntimeException("Circuit breaker open for external agent {$externalAgent->id}");
+        }
+
+        $start = microtime(true);
+        try {
+            $result = $this->a2aClient->sendMessage($externalAgent, $text, $messageId);
+            $this->recordSuccess($externalAgent, (int) ((microtime(true) - $start) * 1000));
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->recordFailure($externalAgent, $e->getMessage());
+            throw $e;
         }
     }
 

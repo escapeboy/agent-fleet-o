@@ -189,13 +189,13 @@ parameters:
 		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
-			count: 2
+			count: 3
 			path: app/Domain/AgentChatProtocol/Services/ProtocolDispatcher.php
 
 		-
 			message: '#^Cannot call method isCallable\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 2
+			count: 3
 			path: app/Domain/AgentChatProtocol/Services/ProtocolDispatcher.php
 
 		-

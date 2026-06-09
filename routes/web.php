@@ -185,9 +185,15 @@ use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
-// A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required)
+// A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required).
+// Served at both the legacy `agent.json` and the current spec `agent-card.json`
+// path (what consumer-side discovery defaults to) so peers find us either way.
 Route::get('/.well-known/agent.json', AgentCardController::class)
     ->name('a2a.agent-card')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+Route::get('/.well-known/agent-card.json', AgentCardController::class)
+    ->name('a2a.agent-card.spec')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 
