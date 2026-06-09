@@ -44,7 +44,12 @@ use App\Livewire\AuditConsole\AuditConsoleDetailPage;
 use App\Livewire\AuditConsole\AuditConsoleListPage;
 use App\Livewire\AuditConsole\AuditConsoleSettingsPage;
 use App\Livewire\Auth\AcceptTermsPage;
+use App\Livewire\AgentSessions\AgentSessionDetailPage;
+use App\Livewire\AgentSessions\AgentSessionListPage;
 use App\Livewire\Broadcast\BroadcastDetailPage;
+use App\Livewire\Broadcast\BroadcastListPage;
+use App\Livewire\Broadcast\CreateBroadcastForm;
+use App\Livewire\Migration\ImportWizardPage;
 use App\Livewire\Changelog\ChangelogPage;
 use App\Livewire\Chatbots\ChatbotAnalyticsPage;
 use App\Livewire\Chatbots\ChatbotConversationListPage;
@@ -65,6 +70,8 @@ use App\Livewire\Email\EmailTemplateListPage;
 use App\Livewire\Email\EmailThemeDetailPage;
 use App\Livewire\Email\EmailThemeListPage;
 use App\Livewire\Evaluation\EvaluationCompareRunsPage;
+use App\Livewire\Evaluation\DriftSignalsPage;
+use App\Livewire\Evaluation\EvalMonitorPage;
 use App\Livewire\Evaluation\EvaluationPage;
 use App\Livewire\Evolution\EvolutionListPage;
 use App\Livewire\Experiments\ExperimentDetailPage;
@@ -105,6 +112,7 @@ use App\Livewire\Projects\ProjectListPage;
 use App\Livewire\Releases\ReleaseDetailPage;
 use App\Livewire\Releases\ReleaseDiffPage;
 use App\Livewire\Releases\ReleaseListPage;
+use App\Livewire\Releases\SigningKeysPage;
 use App\Livewire\Settings\GitSyncPage;
 use App\Livewire\Settings\GlobalSettingsPage;
 use App\Livewire\Settings\PluginsPage;
@@ -393,8 +401,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
 
     Route::get('/releases', ReleaseListPage::class)->name('releases.index');
+    Route::get('/releases/signing-keys', SigningKeysPage::class)->name('releases.signing-keys');
     Route::get('/releases/{release}/diff', ReleaseDiffPage::class)->name('releases.diff');
     Route::get('/releases/{release}', ReleaseDetailPage::class)->name('releases.show');
+
+    Route::get('/agent-sessions', AgentSessionListPage::class)->name('agent-sessions.index');
+    Route::get('/agent-sessions/{agentSession}', AgentSessionDetailPage::class)->name('agent-sessions.show');
 
     Route::get('/inbox', InboxPage::class)->name('inbox.index');
 
@@ -430,6 +442,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/contacts', ContactsPage::class)->name('contacts.index');
     Route::get('/contacts/{contact}', ContactDetailPage::class)->name('contacts.show');
 
+    Route::get('/imports/create', ImportWizardPage::class)->name('imports.create');
+
     Route::get('/metrics/models', ModelComparisonPage::class)->name('metrics.models');
     Route::get('/metrics/rocs', RocsPage::class)->name('metrics.rocs');
     Route::get('/metrics/ai-routing', AiRoutingPage::class)->name('metrics.ai-routing');
@@ -438,6 +452,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
     Route::get('/evaluation/compare', EvaluationCompareRunsPage::class)->name('evaluation.compare');
+    Route::get('/evaluation/drift', DriftSignalsPage::class)->name('evaluation.drift');
+    Route::get('/evaluation/monitor', EvalMonitorPage::class)->name('evaluation.monitor');
     Route::get('/evaluations', WorkflowEvaluationListPage::class)->name('evaluations.index');
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
@@ -469,6 +485,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Audiences & broadcasts
     Route::get('/audiences', AudienceListPage::class)->name('audiences.index');
     Route::get('/audiences/{audience}', AudienceDetailPage::class)->name('audiences.show');
+    Route::get('/broadcasts', BroadcastListPage::class)->name('broadcasts.index');
+    Route::get('/broadcasts/create', CreateBroadcastForm::class)->name('broadcasts.create');
     Route::get('/broadcasts/{broadcast}', BroadcastDetailPage::class)->name('broadcasts.show');
 
     // Email themes
