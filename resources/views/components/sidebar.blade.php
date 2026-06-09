@@ -1,7 +1,7 @@
 @php
     $activeRailGroup = match(true) {
         request()->routeIs('dashboard', 'projects.*', 'experiments.*', 'agents.*', 'agent-sessions.*', 'crews.*', 'approvals.*', 'chatbots.*') => 'fleet',
-        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*') => 'build',
+        request()->routeIs('workflows.*', 'skills.*', 'memory.*', 'knowledge.*', 'knowledge-graph.*', 'evaluation.*', 'evaluations.*', 'triggers.*', 'evolution.*', 'websites.*', 'reasoning-bank.*', 'error-modes.*', 'testing.*') => 'build',
         request()->routeIs('signals.*', 'bug-reports.*', 'contacts.*', 'imports.*', 'email.*', 'outbound.*', 'audiences.*', 'broadcasts.*', 'health', 'audit', 'audit-console.*', 'metrics.*') => 'monitor',
         request()->routeIs('app.marketplace.*', 'marketplace.*', 'plugins', 'telegram.*') => 'marketplace',
         request()->routeIs('tools.*', 'credentials.*', 'releases.*', 'integrations.*', 'git-repositories.*', 'team.*', 'settings', 'settings.git-sync', 'profile', 'notifications.*') => 'settings',
@@ -145,12 +145,16 @@
                 <x-sidebar-link href="{{ route('memory.proposals') }}" :active="request()->routeIs('memory.proposals')" icon="check-circle">Memory Proposals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('world-model.index') }}" :active="request()->routeIs('world-model.*')" icon="globe-alt">World Model</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge.index') }}" :active="request()->routeIs('knowledge.*') && !request()->routeIs('knowledge-graph.*')" icon="book-open">Knowledge</x-sidebar-link>
-                <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">Knowledge Graph</x-sidebar-link>
+                <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.index')" icon="share">Knowledge Graph</x-sidebar-link>
+                <x-sidebar-link href="{{ route('knowledge-graph.communities') }}" :active="request()->routeIs('knowledge-graph.communities')" icon="share">KG Communities</x-sidebar-link>
                 <x-sidebar-link href="{{ route('evaluation.index') }}" :active="request()->routeIs('evaluation.index')" icon="scale">Evaluation</x-sidebar-link>
                 <x-sidebar-link href="{{ route('evaluation.drift') }}" :active="request()->routeIs('evaluation.drift')" icon="scale">Drift Signals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('evaluation.monitor') }}" :active="request()->routeIs('evaluation.monitor')" icon="chart-bar">Eval Monitor</x-sidebar-link>
                 <x-sidebar-link href="{{ route('evaluations.index') }}" :active="request()->routeIs('evaluations.*')" icon="beaker">Flow Evals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('triggers.index') }}" :active="request()->routeIs('triggers.*')" icon="bolt">Triggers</x-sidebar-link>
+                <x-sidebar-link href="{{ route('reasoning-bank.index') }}" :active="request()->routeIs('reasoning-bank.*')" icon="light-bulb">Reasoning Bank</x-sidebar-link>
+                <x-sidebar-link href="{{ route('error-modes.index') }}" :active="request()->routeIs('error-modes.*')" icon="bug-ant">Error Modes</x-sidebar-link>
+                <x-sidebar-link href="{{ route('testing.index') }}" :active="request()->routeIs('testing.*')" icon="beaker">Test Suites</x-sidebar-link>
                 @if(Route::has('evolution.index'))
                     <x-sidebar-link href="{{ route('evolution.index') }}" :active="request()->routeIs('evolution.*')" icon="sparkles">
                         Evolution

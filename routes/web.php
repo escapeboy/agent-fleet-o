@@ -336,6 +336,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/experiments', ExperimentListPage::class)->name('experiments.index');
+    Route::get('/experiments/reasoning-bank', \App\Livewire\Experiments\ReasoningBankPage::class)->name('reasoning-bank.index');
     Route::get('/experiments/{experiment}', ExperimentDetailPage::class)->name('experiments.show');
     Route::get('/experiments/{experiment}/checkpoints', \App\Livewire\Experiments\ExperimentCheckpointsPage::class)->name('experiments.checkpoints');
 
@@ -402,6 +403,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/crews/create', CreateCrewForm::class)->name('crews.create');
     Route::get('/crews/{crew}/execute', CrewExecutionPage::class)->name('crews.execute');
     Route::get('/crews/{crew}', CrewDetailPage::class)->name('crews.show');
+    Route::get('/crew-executions/{execution}/chat', \App\Livewire\Crews\CrewChatRoomPage::class)->name('crews.chat');
 
     Route::get('/releases', ReleaseListPage::class)->name('releases.index');
     Route::get('/releases/signing-keys', SigningKeysPage::class)->name('releases.signing-keys');
@@ -434,6 +436,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/world-model', WorldModelPage::class)->name('world-model.index');
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
+    Route::get('/knowledge-graph/communities', \App\Livewire\KnowledgeGraph\KgCommunitiesPage::class)->name('knowledge-graph.communities');
 
     Route::get('/signals', SignalBrowserPage::class)->name('signals.index');
     Route::get('/signals/new', ManualSignalForm::class)->name('signals.create');
@@ -477,6 +480,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notifications', NotificationInboxPage::class)->name('notifications.index');
     Route::get('/notifications/preferences', NotificationPreferencesPage::class)->name('notifications.preferences');
 
+    Route::get('/error-modes', \App\Livewire\ErrorModes\ErrorModeCatalogPage::class)->name('error-modes.index');
+    Route::get('/test-suites', \App\Livewire\Testing\TestSuitesPage::class)->name('testing.index');
+    Route::get('/test-suites/{suite}', \App\Livewire\Testing\TestSuiteDetailPage::class)->name('testing.show');
     Route::get('/triggers', TriggerRulesPage::class)->name('triggers.index');
     Route::get('/triggers/create', CreateTriggerRuleForm::class)->name('triggers.create');
 
