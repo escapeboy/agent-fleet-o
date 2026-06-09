@@ -337,10 +337,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/experiments', ExperimentListPage::class)->name('experiments.index');
     Route::get('/experiments/{experiment}', ExperimentDetailPage::class)->name('experiments.show');
+    Route::get('/experiments/{experiment}/checkpoints', \App\Livewire\Experiments\ExperimentCheckpointsPage::class)->name('experiments.checkpoints');
 
     Route::get('/skills', SkillListPage::class)->name('skills.index');
     Route::get('/skills/create', CreateSkillForm::class)->name('skills.create');
     Route::get('/skills/import', ImportSkillForm::class)->name('skills.import');
+    Route::get('/skills/ops', \App\Livewire\Skills\SkillOpsPage::class)->name('skills.ops');
     Route::get('/skills/{skill}', SkillDetailPage::class)->name('skills.show');
     Route::get('/skills/{skill}/export', SkillExportController::class)->name('skills.export');
 
@@ -387,6 +389,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/credentials', CredentialListPage::class)->name('credentials.index');
     Route::get('/credentials/create', CreateCredentialForm::class)->name('credentials.create');
+    Route::get('/credentials/scan', \App\Livewire\Credentials\CredentialScanPage::class)->name('credentials.scan');
     Route::get('/credentials/{credential}', CredentialDetailPage::class)->name('credentials.show');
 
     Route::get('/integrations', IntegrationListPage::class)->name('integrations.index');
@@ -420,11 +423,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/workflows/create', WorkflowBuilderPage::class)->name('workflows.create');
     Route::get('/workflows/{workflow}/schedule', ScheduleWorkflowForm::class)->name('workflows.schedule');
     Route::get('/workflows/{workflow}/edit', WorkflowBuilderPage::class)->name('workflows.edit');
+    Route::get('/workflows/ops', \App\Livewire\Workflows\WorkflowOpsPage::class)->name('workflows.ops');
+    Route::get('/workflows/{workflow}/simulate', \App\Livewire\Workflows\WorkflowSimulationPanel::class)->name('workflows.simulate');
     Route::get('/workflows/{workflow}', WorkflowDetailPage::class)->name('workflows.show');
 
     Route::get('/artifacts/{artifact}/render/{version?}', [ArtifactPreviewController::class, 'render'])->name('artifacts.render');
 
     Route::get('/memory', MemoryBrowserPage::class)->name('memory.index');
+    Route::get('/memory/proposals', \App\Livewire\Memory\MemoryProposalsPage::class)->name('memory.proposals');
     Route::get('/world-model', WorldModelPage::class)->name('world-model.index');
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
@@ -486,6 +492,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/discord', \App\Livewire\OutboundConnectors\DiscordOutboundPage::class)->name('outbound.discord');
     Route::get('/outbound/teams', \App\Livewire\OutboundConnectors\TeamsOutboundPage::class)->name('outbound.teams');
     Route::get('/outbound/google-chat', \App\Livewire\OutboundConnectors\GoogleChatOutboundPage::class)->name('outbound.google_chat');
+    Route::get('/outbound/blacklist', \App\Livewire\Outbound\BlacklistPage::class)->name('outbound.blacklist');
+    Route::get('/outbound/proposals', \App\Livewire\Outbound\OutboundProposalsPage::class)->name('outbound.proposals');
 
     // Audiences & broadcasts
     Route::get('/audiences', AudienceListPage::class)->name('audiences.index');

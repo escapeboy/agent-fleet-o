@@ -512,6 +512,7 @@ use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditLogTool;
+use App\Mcp\Tools\System\SecretScanFindingsTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
@@ -1341,6 +1342,7 @@ class AgentFleetServer extends Server
         SystemVersionCheckTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,
+        SecretScanFindingsTool::class,
         GlobalSettingsUpdateTool::class,
         BlacklistManageTool::class,
         SecurityPolicyManageTool::class,

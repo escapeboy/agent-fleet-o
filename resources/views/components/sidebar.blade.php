@@ -135,11 +135,14 @@
         <div x-show="nav === 'build'" class="flex h-full flex-col py-3" style="display: none;">
             <p class="mb-1 px-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Build</p>
             <nav class="flex-1 overflow-y-auto px-2">
-                <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*')" icon="arrow-path">Workflows</x-sidebar-link>
+                <x-sidebar-link href="{{ route('workflows.index') }}" :active="request()->routeIs('workflows.*') && !request()->routeIs('workflows.ops')" icon="arrow-path">Workflows</x-sidebar-link>
+                <x-sidebar-link href="{{ route('workflows.ops') }}" :active="request()->routeIs('workflows.ops')" icon="arrow-path">Compensation</x-sidebar-link>
                 <x-sidebar-link href="{{ route('websites.index') }}" :active="request()->routeIs('websites.*')" icon="globe-alt">Websites</x-sidebar-link>
-                <x-sidebar-link href="{{ route('skills.index') }}" :active="request()->routeIs('skills.*')" icon="puzzle-piece">Skills</x-sidebar-link>
+                <x-sidebar-link href="{{ route('skills.index') }}" :active="request()->routeIs('skills.*') && !request()->routeIs('skills.ops')" icon="puzzle-piece">Skills</x-sidebar-link>
+                <x-sidebar-link href="{{ route('skills.ops') }}" :active="request()->routeIs('skills.ops')" icon="wrench-screwdriver">Skill Ops</x-sidebar-link>
                 <x-sidebar-link href="{{ route('frameworks.index') }}" :active="request()->routeIs('frameworks.*')" icon="academic-cap">Frameworks</x-sidebar-link>
-                <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*') && !request()->routeIs('knowledge.*')" icon="circle-stack">Memory</x-sidebar-link>
+                <x-sidebar-link href="{{ route('memory.index') }}" :active="request()->routeIs('memory.*') && !request()->routeIs('knowledge.*') && !request()->routeIs('memory.proposals')" icon="circle-stack">Memory</x-sidebar-link>
+                <x-sidebar-link href="{{ route('memory.proposals') }}" :active="request()->routeIs('memory.proposals')" icon="check-circle">Memory Proposals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('world-model.index') }}" :active="request()->routeIs('world-model.*')" icon="globe-alt">World Model</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge.index') }}" :active="request()->routeIs('knowledge.*') && !request()->routeIs('knowledge-graph.*')" icon="book-open">Knowledge</x-sidebar-link>
                 <x-sidebar-link href="{{ route('knowledge-graph.index') }}" :active="request()->routeIs('knowledge-graph.*')" icon="share">Knowledge Graph</x-sidebar-link>
@@ -182,6 +185,8 @@
                 <x-sidebar-link href="{{ route('outbound.discord') }}" :active="request()->routeIs('outbound.discord')" icon="chat-bubble-left-right">Discord</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.teams') }}" :active="request()->routeIs('outbound.teams')" icon="chat-bubble-left-right">Teams</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.google_chat') }}" :active="request()->routeIs('outbound.google_chat')" icon="chat-bubble-left-right">Google Chat</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.proposals') }}" :active="request()->routeIs('outbound.proposals')" icon="paper-airplane">Outbound Proposals</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.blacklist') }}" :active="request()->routeIs('outbound.blacklist')" icon="shield-check">Blacklist</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audiences.index') }}" :active="request()->routeIs('audiences.*', 'broadcasts.*')" icon="identification">Audiences</x-sidebar-link>
                 <x-sidebar-link href="{{ route('health') }}" :active="request()->routeIs('health')" icon="heart">Health</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audit') }}" :active="request()->routeIs('audit')" icon="document-text">Audit Log</x-sidebar-link>
@@ -220,6 +225,7 @@
                 <x-sidebar-link href="{{ route('tools.index') }}" :active="request()->routeIs('tools.*')" icon="wrench-screwdriver">Tools</x-sidebar-link>
                 <x-sidebar-link href="{{ route('credentials.index') }}" :active="request()->routeIs('credentials.*')" icon="key">Credentials</x-sidebar-link>
                 <x-sidebar-link href="{{ route('releases.signing-keys') }}" :active="request()->routeIs('releases.signing-keys')" icon="key">Signing Keys</x-sidebar-link>
+                <x-sidebar-link href="{{ route('credentials.scan') }}" :active="request()->routeIs('credentials.scan')" icon="shield-check">Secret Scan</x-sidebar-link>
                 <x-sidebar-link href="{{ route('integrations.index') }}" :active="request()->routeIs('integrations.*')" icon="link">Integrations</x-sidebar-link>
                 <x-sidebar-link href="{{ route('git-repositories.index') }}" :active="request()->routeIs('git-repositories.*')" icon="code-branch">Git Repos</x-sidebar-link>
                 <x-sidebar-link href="{{ route('settings.git-sync') }}" :active="request()->routeIs('settings.git-sync')" icon="arrow-path">Git Sync</x-sidebar-link>
