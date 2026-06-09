@@ -516,10 +516,12 @@ class FallbackAiGateway implements AiGatewayInterface
         // this, a BYOK-only provider (e.g. openrouter) that the platform has no key
         // for is skipped here, and the chain exhausts to "No available providers"
         // even though the team can reach the provider.
-        if ($teamId !== null && TeamProviderCredential::where('team_id', $teamId)
+        // rescue(): a DB hiccup (or schema-less test context) must degrade to the
+        // config-key gate below, not fail the whole provider chain.
+        if ($teamId !== null && rescue(fn (): bool => TeamProviderCredential::where('team_id', $teamId)
             ->where('provider', $providerName)
             ->where('is_active', true)
-            ->exists()) {
+            ->exists(), false, false)) {
             return true;
         }
 
