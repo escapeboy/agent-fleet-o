@@ -44,8 +44,10 @@ class ExperimentCheckpointsPage extends Component
     {
         $teamId = auth()->user()?->current_team_id;
 
+        abort_if($teamId === null, 403);
+
         $experiment = Experiment::query()
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->find($this->experimentId);
 
         abort_if($experiment === null, 404);

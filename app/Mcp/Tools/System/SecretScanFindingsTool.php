@@ -38,9 +38,13 @@ class SecretScanFindingsTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::text(json_encode(['count' => 0, 'findings' => []]));
+        }
+
         $query = AuditEntry::withoutGlobalScopes()
             ->where('event', 'secret_detected')
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->orderByDesc('created_at');
 
         if ($subjectType = $request->get('subject_type')) {
