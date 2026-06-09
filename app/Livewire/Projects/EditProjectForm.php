@@ -283,7 +283,7 @@ class EditProjectForm extends Component
         // Auto-generate alias from project title when selecting a project
         if (str_ends_with($key, '.depends_on_id') && $value) {
             $index = (int) explode('.', $key)[0];
-            $project = Project::find($value);
+            $project = Project::where('team_id', auth()->user()->current_team_id)->find($value);
             if ($project && empty($this->dependencies[$index]['alias'])) {
                 $this->dependencies[$index]['alias'] = str($project->title)->slug('_')->limit(50)->toString();
             }
@@ -338,7 +338,8 @@ class EditProjectForm extends Component
         $tools = Tool::where('status', 'active')->orderBy('name')->get(['id', 'name', 'type']);
         $credentials = Credential::where('status', 'active')->orderBy('name')->get(['id', 'name', 'credential_type']);
         $emailTemplates = EmailTemplate::where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject']);
-        $availableProjects = Project::where('id', '!=', $this->project->id)
+        $availableProjects = Project::where('team_id', auth()->user()->current_team_id)
+            ->where('id', '!=', $this->project->id)
             ->orderBy('title')
             ->get(['id', 'title', 'type', 'status']);
 
