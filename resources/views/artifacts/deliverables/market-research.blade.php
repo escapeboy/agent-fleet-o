@@ -31,7 +31,7 @@
 @if ($summary)
     <div style="background: #f9fafb; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;">
         <div style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 0.5rem;">Summary</div>
-        <div>{!! Str::markdown($summary) !!}</div>
+        <div>{!! Str::markdown($summary, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
     </div>
 @endif
 
@@ -60,5 +60,5 @@
 @endif
 
 @if (!$tam && !$sam && !$som && empty($competitors) && !$summary)
-    <div>{!! Str::markdown($content) !!}</div>
+    <div>{!! Str::markdown($content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
 @endif

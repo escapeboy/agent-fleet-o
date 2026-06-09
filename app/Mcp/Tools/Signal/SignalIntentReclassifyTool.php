@@ -35,8 +35,12 @@ class SignalIntentReclassifyTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $signal = Signal::withoutGlobalScopes()
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->find($signalId);
         if ($signal === null) {
             return Response::error("Signal {$signalId} not found");

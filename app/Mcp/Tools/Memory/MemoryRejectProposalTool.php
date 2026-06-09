@@ -44,13 +44,17 @@ class MemoryRejectProposalTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $validated = $request->validate([
             'memory_id' => 'required|uuid|exists:memories,id',
             'reason' => 'required|string|max:1000',
         ]);
 
         $memory = Memory::withoutGlobalScopes()
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->findOrFail($validated['memory_id']);
 
         $result = $this->reject->execute(

@@ -130,6 +130,32 @@ return [
         'api_key' => env('WEBCLAW_API_KEY'),
     ],
 
+    'signal_webhook' => [
+        'secret' => env('SIGNAL_WEBHOOK_SECRET'),
+    ],
+
+    'jira' => [
+        'webhook_secret' => env('JIRA_WEBHOOK_SECRET'),
+    ],
+
+    'linear' => [
+        'webhook_secret' => env('LINEAR_WEBHOOK_SECRET'),
+    ],
+
+    'datadog' => [
+        'webhook_secret' => env('DATADOG_WEBHOOK_SECRET'),
+    ],
+
+    'pagerduty' => [
+        'webhook_secret' => env('PAGERDUTY_WEBHOOK_SECRET'),
+        'auth_token' => env('PAGERDUTY_AUTH_TOKEN'),
+    ],
+
+    'tracking' => [
+        'base_url' => env('TRACKING_BASE_URL'),
+        'require_sig' => env('TRACKING_REQUIRE_SIG', false),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Social Login (OAuth) Providers

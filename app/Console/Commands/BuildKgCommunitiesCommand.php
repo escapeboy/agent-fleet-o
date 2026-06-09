@@ -23,7 +23,7 @@ class BuildKgCommunitiesCommand extends Command
 
         $teams = $teamId
             ? Team::where('id', $teamId)->get()
-            : Team::all();
+            : Team::cursor();
 
         foreach ($teams as $team) {
             $this->line("Processing team {$team->id}...");

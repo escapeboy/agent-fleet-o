@@ -242,7 +242,7 @@
                                                     ? ($stepOutput['result'] ?? json_encode($stepOutput, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
                                                     : $stepOutput;
                                             @endphp
-                                            {!! \Illuminate\Support\Str::markdown($outputText) !!}
+                                            {!! \Illuminate\Support\Str::markdown($outputText, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                             @if($a2uiComponents)
                                                 <x-a2ui.surface :components="$a2uiComponents" :data-model="$a2uiDataModel" class="mt-3" />
                                             @endif
@@ -258,7 +258,7 @@
                                         <p class="text-xs font-medium text-blue-600">Live Output</p>
                                         @if($node['step_stream_output'])
                                             <div class="prose prose-sm mt-1 max-h-64 overflow-auto text-xs">
-                                                {!! \Illuminate\Support\Str::markdown($node['step_stream_output']) !!}
+                                                {!! \Illuminate\Support\Str::markdown($node['step_stream_output'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                             </div>
                                         @else
                                             <p class="mt-1 text-xs text-blue-400">Waiting for output...</p>

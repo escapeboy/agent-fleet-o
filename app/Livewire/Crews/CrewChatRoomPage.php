@@ -62,6 +62,7 @@ class CrewChatRoomPage extends Component
             ->with(['sender', 'recipient'])
             ->orderBy('round')
             ->orderBy('created_at')
+            ->limit(500)
             ->get();
     }
 
@@ -80,7 +81,7 @@ class CrewChatRoomPage extends Component
             return collect();
         }
 
-        return $execution->chatMessages()->with('agent')->get();
+        return $execution->chatMessages()->with('agent')->limit(500)->get();
     }
 
     /**

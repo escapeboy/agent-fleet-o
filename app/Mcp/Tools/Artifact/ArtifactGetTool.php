@@ -47,9 +47,13 @@ class ArtifactGetTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return $this->permissionDeniedError('Team context is required.');
+        }
+
         $artifact = Artifact::withoutGlobalScopes()
             ->withCount('versions')
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->find($validated['artifact_id']);
 
         if (! $artifact) {

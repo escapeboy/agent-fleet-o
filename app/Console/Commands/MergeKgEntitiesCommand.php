@@ -26,7 +26,7 @@ class MergeKgEntitiesCommand extends Command
 
         $teams = $teamId
             ? Team::where('id', $teamId)->get()
-            : Team::all();
+            : Team::cursor();
 
         $totalMerged = 0;
 

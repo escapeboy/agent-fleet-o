@@ -17,7 +17,7 @@
 </div>
 
 @if (empty($objectives))
-    <div>{!! Str::markdown($content) !!}</div>
+    <div>{!! Str::markdown($content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
 @else
     @foreach ($objectives as $objIndex => $obj)
         <section style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; background: #fff;">

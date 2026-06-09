@@ -53,7 +53,7 @@
             <div class="px-6 py-5">
                 @if(! empty($model->digest))
                     <div class="prose prose-sm max-w-none text-gray-800">
-                        {!! \Illuminate\Support\Str::markdown($model->digest) !!}
+                        {!! \Illuminate\Support\Str::markdown($model->digest, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                     </div>
                 @else
                     <p class="text-sm italic text-gray-500">

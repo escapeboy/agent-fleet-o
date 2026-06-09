@@ -32,7 +32,6 @@ class User extends Authenticatable implements OAuthenticatable
         'email',
         'email_verified_at',
         'password',
-        'is_super_admin',
         'current_team_id',
         'theme',
         'notification_preferences',

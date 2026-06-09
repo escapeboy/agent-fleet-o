@@ -1,6 +1,6 @@
 <?php
 
-use Propaganistas\LaravelDisposableEmail\Fetcher\DefaultFetcher;
+use App\Domain\Signal\Services\HttpDisposableDomainsFetcher;
 
 return [
 
@@ -36,7 +36,9 @@ return [
     |
     */
 
-    'fetcher' => DefaultFetcher::class,
+    // Http-client based: prod FPM has allow_url_fopen=0, which breaks the
+    // package's file_get_contents DefaultFetcher (Sentry issue 825).
+    'fetcher' => HttpDisposableDomainsFetcher::class,
 
     /*
     |--------------------------------------------------------------------------

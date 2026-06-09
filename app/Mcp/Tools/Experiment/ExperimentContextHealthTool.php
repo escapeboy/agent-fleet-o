@@ -13,7 +13,6 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
 #[IsIdempotent]
-// @mcp-cross-tenant transitive-via-experiment
 class ExperimentContextHealthTool extends Tool
 {
     protected string $name = 'experiment_context_health';
@@ -31,7 +30,14 @@ class ExperimentContextHealthTool extends Tool
 
     public function handle(Request $request): Response
     {
+        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $experiment = Experiment::withoutGlobalScopes()
+            ->where('team_id', $teamId)
             ->findOrFail($request->get('experiment_id'));
 
         $health = app(ContextHealthService::class)->getExperimentContextHealth($experiment);

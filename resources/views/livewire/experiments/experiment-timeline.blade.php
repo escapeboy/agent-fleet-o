@@ -103,7 +103,7 @@
                                 ? ($stage->output_snapshot['plan_summary'] ?? $stage->output_snapshot['result'] ?? json_encode($stage->output_snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
                                 : (string) $stage->output_snapshot;
                         @endphp
-                        {!! \Illuminate\Support\Str::markdown($stageText) !!}
+                        {!! \Illuminate\Support\Str::markdown($stageText, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                     </div>
 
                     {{-- Raw JSON view --}}

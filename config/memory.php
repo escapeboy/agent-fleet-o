@@ -327,4 +327,12 @@ return [
         'enabled' => (bool) env('MEMORY_EVIDENCE_CITATIONS_ENABLED', false),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Execution memory auto-capture + drift monitoring
+    |--------------------------------------------------------------------------
+    */
+    'auto_capture' => (bool) env('MEMORY_AUTO_CAPTURE', true),
+    'drift_threshold' => (float) env('MEMORY_DRIFT_THRESHOLD', 0.30),
+
 ];

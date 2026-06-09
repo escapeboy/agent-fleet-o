@@ -178,6 +178,9 @@ use App\Mcp\Tools\Chatbot\ChatbotUpdateTool;
 use App\Mcp\Tools\Codemode\CodemodeExecuteTool;
 use App\Mcp\Tools\Codemode\CodemodeSearchTool;
 use App\Mcp\Tools\Compute\ComputeManageTool;
+use App\Mcp\Tools\ContextGitSync\ContextGitExportNowTool;
+use App\Mcp\Tools\ContextGitSync\ContextGitSyncConfigureTool;
+use App\Mcp\Tools\ContextGitSync\ContextGitSyncStatusTool;
 use App\Mcp\Tools\Credential\CredentialAccessLogTool;
 use App\Mcp\Tools\Credential\CredentialCreateTool;
 use App\Mcp\Tools\Credential\CredentialDeleteTool;
@@ -229,13 +232,16 @@ use App\Mcp\Tools\Email\EmailThemeUpdateTool;
 use App\Mcp\Tools\ErrorMode\ErrorModeAssignLeverTool;
 use App\Mcp\Tools\ErrorMode\ErrorModeGetTool;
 use App\Mcp\Tools\ErrorMode\ErrorModeListTool;
+use App\Mcp\Tools\Evaluation\DriftSignalListTool;
 use App\Mcp\Tools\Evaluation\EvaluationCurateFromAnnotationsTool;
 use App\Mcp\Tools\Evaluation\EvaluationDatasetManageTool;
+use App\Mcp\Tools\Evaluation\EvaluationMonitorSnapshotListTool;
 use App\Mcp\Tools\Evaluation\EvaluationReplayDatasetTool;
 use App\Mcp\Tools\Evaluation\EvaluationRunTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationDatasetCreateTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationResultsTool;
 use App\Mcp\Tools\Evaluation\FlowEvaluationRunStartTool;
+use App\Mcp\Tools\Evaluation\RegressionCaseAppendTool;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
@@ -585,10 +591,12 @@ use App\Mcp\Tools\Webhook\WebhookDeleteTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Website\WebsiteAnalyticsTool;
+use App\Mcp\Tools\Website\WebsiteAssignCrewTool;
 use App\Mcp\Tools\Website\WebsiteCreateTool;
 use App\Mcp\Tools\Website\WebsiteDeleteTool;
 use App\Mcp\Tools\Website\WebsiteDeploymentListTool;
 use App\Mcp\Tools\Website\WebsiteDeployTool;
+use App\Mcp\Tools\Website\WebsiteExecuteCommandTool;
 use App\Mcp\Tools\Website\WebsiteExportTool;
 use App\Mcp\Tools\Website\WebsiteGenerateTool;
 use App\Mcp\Tools\Website\WebsiteGetTool;
@@ -1145,7 +1153,7 @@ class AgentFleetServer extends Server
         BudgetTransferTool::class,
         BudgetCostBreakdownTool::class,
 
-        // Evaluation (5)
+        // Evaluation (10)
         EvaluationDatasetManageTool::class,
         EvaluationRunTool::class,
         EvaluationCurateFromAnnotationsTool::class,
@@ -1153,6 +1161,9 @@ class AgentFleetServer extends Server
         FlowEvaluationDatasetCreateTool::class,
         FlowEvaluationRunStartTool::class,
         FlowEvaluationResultsTool::class,
+        DriftSignalListTool::class,
+        EvaluationMonitorSnapshotListTool::class,
+        RegressionCaseAppendTool::class,
 
         // Cache (2)
         SemanticCacheStatsTool::class,
@@ -1493,7 +1504,7 @@ class AgentFleetServer extends Server
         A2uiRenderSurfaceTool::class,
         A2uiValidateSurfaceTool::class,
 
-        // Website (15)
+        // Website (19)
         WebsiteListTool::class,
         WebsiteGetTool::class,
         WebsiteCreateTool::class,
@@ -1511,6 +1522,13 @@ class AgentFleetServer extends Server
         WebsiteAnalyticsTool::class,
         WebsiteDeployTool::class,
         WebsiteDeploymentListTool::class,
+        WebsiteAssignCrewTool::class,
+        WebsiteExecuteCommandTool::class,
+
+        // Context Git Sync (3) — git-backed team context export (kanwas sprint)
+        ContextGitSyncStatusTool::class,
+        ContextGitSyncConfigureTool::class,
+        ContextGitExportNowTool::class,
 
         // Code Mode (2) — lazy tool discovery + dispatch for agents that want to
         // avoid loading every tool schema upfront. Pair search + execute.

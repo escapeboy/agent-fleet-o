@@ -37,8 +37,12 @@ class AuditLogTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $query = AuditEntry::withoutGlobalScopes()
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->orderByDesc('created_at');
 
         if ($subjectType = $request->get('subject_type')) {

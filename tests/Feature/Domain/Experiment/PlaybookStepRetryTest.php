@@ -16,6 +16,7 @@ use App\Domain\Experiment\Services\StepOutputBroadcaster;
 use App\Domain\Experiment\Services\WorkflowSnapshotRecorder;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Actions\ExecuteSkillAction;
+use App\Domain\Skill\Models\Skill;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,6 +69,19 @@ class PlaybookStepRetryTest extends TestCase
             'provider' => 'openai',
             'model' => 'gpt-4o-mini',
         ]);
+
+        // Without a skill the failure becomes "Agent has no skills or tools
+        // assigned" — a permanent config error that skips retries, which is
+        // not what these transient-error tests exercise.
+        $skill = Skill::create([
+            'team_id' => $this->team->id,
+            'name' => 'Test Skill',
+            'slug' => 'test-skill-'.uniqid(),
+            'type' => 'llm',
+            'status' => 'active',
+            'configuration' => [],
+        ]);
+        $agent->skills()->attach($skill->id, ['priority' => 1]);
 
         $this->experiment = Experiment::withoutGlobalScopes()->create([
             'team_id' => $this->team->id,

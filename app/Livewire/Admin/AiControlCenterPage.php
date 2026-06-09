@@ -19,22 +19,22 @@ class AiControlCenterPage extends Component
 
         $stats = Cache::remember('admin.ai_control_center', 30, function () use ($since24h) {
             // LLM request stats
-            $totalRequests = LlmRequestLog::where('created_at', '>=', $since24h)->count();
-            $successRequests = LlmRequestLog::where('created_at', '>=', $since24h)
+            $totalRequests = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)->count();
+            $successRequests = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->where('status', 'success')->count();
-            $totalCostCredits = LlmRequestLog::where('created_at', '>=', $since24h)->sum('cost_credits');
-            $avgLatencyMs = LlmRequestLog::where('created_at', '>=', $since24h)
+            $totalCostCredits = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)->sum('cost_credits');
+            $avgLatencyMs = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->where('status', 'success')->avg('latency_ms');
 
             // Cost by provider
-            $costByProvider = LlmRequestLog::where('created_at', '>=', $since24h)
+            $costByProvider = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->selectRaw('provider, SUM(cost_credits) as total_cost, COUNT(*) as request_count')
                 ->groupBy('provider')
                 ->orderByDesc('total_cost')
                 ->get();
 
             // Usage by model
-            $usageByModel = LlmRequestLog::where('created_at', '>=', $since24h)
+            $usageByModel = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->selectRaw('model, COUNT(*) as request_count, SUM(cost_credits) as total_cost, AVG(latency_ms) as avg_latency')
                 ->groupBy('model')
                 ->orderByDesc('request_count')
@@ -42,7 +42,7 @@ class AiControlCenterPage extends Component
                 ->get();
 
             // Top teams by spend (last 24h)
-            $topTeamsBySpend = LlmRequestLog::where('created_at', '>=', $since24h)
+            $topTeamsBySpend = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->whereNotNull('team_id')
                 ->selectRaw('team_id, SUM(cost_credits) as total_cost, COUNT(*) as request_count')
                 ->groupBy('team_id')
@@ -64,12 +64,12 @@ class AiControlCenterPage extends Component
                 ->keyBy(fn ($cb) => $cb->agent->name ?? substr($cb->agent_id ?? '', 0, 8) ?: 'Unknown');
 
             // Semantic cache stats
-            $cacheTotal = SemanticCacheEntry::count();
-            $cacheUsed = SemanticCacheEntry::where('hit_count', '>', 0)->count();
-            $totalHits = SemanticCacheEntry::sum('hit_count');
+            $cacheTotal = SemanticCacheEntry::withoutGlobalScopes()->count();
+            $cacheUsed = SemanticCacheEntry::withoutGlobalScopes()->where('hit_count', '>', 0)->count();
+            $totalHits = SemanticCacheEntry::withoutGlobalScopes()->sum('hit_count');
 
             // Error breakdown
-            $errorsByType = LlmRequestLog::where('created_at', '>=', $since24h)
+            $errorsByType = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->where('status', 'error')
                 ->selectRaw('error, COUNT(*) as count')
                 ->groupBy('error')
@@ -78,7 +78,7 @@ class AiControlCenterPage extends Component
                 ->get();
 
             // Tokens by provider
-            $tokensByProvider = LlmRequestLog::where('created_at', '>=', $since24h)
+            $tokensByProvider = LlmRequestLog::withoutGlobalScopes()->where('created_at', '>=', $since24h)
                 ->selectRaw('provider, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens')
                 ->groupBy('provider')
                 ->get();

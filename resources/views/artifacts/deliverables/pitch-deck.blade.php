@@ -36,6 +36,6 @@
             Slide {{ $index + 1 }}
         </div>
         <h2 style="margin: 0 0 1rem; font-size: 1.5em; color: #111827;">{{ $title }}</h2>
-        <div style="color: #374151; line-height: 1.7;">{!! Str::markdown(is_string($body) ? $body : json_encode($body, JSON_PRETTY_PRINT)) !!}</div>
+        <div style="color: #374151; line-height: 1.7;">{!! Str::markdown(is_string($body) ? $body : json_encode($body, JSON_PRETTY_PRINT), ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
     </section>
 @endforeach

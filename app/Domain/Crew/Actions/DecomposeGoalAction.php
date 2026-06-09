@@ -26,7 +26,7 @@ class DecomposeGoalAction
      *
      * @return array<CrewTaskExecution>
      */
-    public function execute(CrewExecution $execution): array
+    public function execute(CrewExecution $execution, bool $skipUnion = false): array
     {
         $maxDepth = config('app.max_delegation_depth', 5);
         if ($execution->delegation_depth >= $maxDepth) {
@@ -34,7 +34,7 @@ class DecomposeGoalAction
         }
 
         $crew = $execution->crew;
-        if ($crew && (bool) ($crew->settings['union_contributions'] ?? false)) {
+        if (! $skipUnion && $crew && (bool) ($crew->settings['union_contributions'] ?? false)) {
             return $this->executeUnion($execution);
         }
 
@@ -202,7 +202,9 @@ class DecomposeGoalAction
         $workers = $config['workers'] ?? [];
 
         if (empty($workers)) {
-            return $this->execute($execution);
+            // skipUnion guards against infinite recursion: execute() would
+            // re-check the still-true union_contributions flag and re-enter here.
+            return $this->execute($execution, skipUnion: true);
         }
 
         $workerPrompt = "You are %s. %s\n\nIndependently propose tasks to accomplish this goal.\n"
@@ -252,7 +254,7 @@ class DecomposeGoalAction
         }
 
         if (empty($allProposals)) {
-            return $this->execute($execution);
+            return $this->execute($execution, skipUnion: true);
         }
 
         // Deduplicate proposals by title similarity (case-insensitive normalized compare)
