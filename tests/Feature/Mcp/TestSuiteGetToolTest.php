@@ -3,6 +3,7 @@
 namespace Tests\Feature\Mcp;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Testing\Enums\TestStatus;
 use App\Domain\Testing\Enums\TestStrategy;
@@ -39,7 +40,7 @@ class TestSuiteGetToolTest extends TestCase
     {
         $suite = TestSuite::withoutGlobalScopes()->create([
             'team_id' => $this->team->id,
-            'project_id' => \App\Domain\Project\Models\Project::factory()->create(['team_id' => $this->team->id])->id,
+            'project_id' => Project::factory()->create(['team_id' => $this->team->id])->id,
             'name' => 'Owned',
             'test_strategy' => TestStrategy::Regression,
         ]);
@@ -69,7 +70,7 @@ class TestSuiteGetToolTest extends TestCase
         $otherTeam = Team::factory()->create();
         $foreign = TestSuite::withoutGlobalScopes()->create([
             'team_id' => $otherTeam->id,
-            'project_id' => \App\Domain\Project\Models\Project::factory()->create(['team_id' => $otherTeam->id])->id,
+            'project_id' => Project::factory()->create(['team_id' => $otherTeam->id])->id,
             'name' => 'Foreign',
             'test_strategy' => TestStrategy::Full,
         ]);

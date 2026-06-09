@@ -835,6 +835,18 @@ parameters:
 			path: app/Domain/Approval/Services/ApprovalSummarizer.php
 
 		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Domain/Approval/Services/ProposalExplainResolver.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Domain/Approval/Services/ProposalExplainResolver.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$team_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2257,7 +2269,7 @@ parameters:
 			path: app/Domain/Crew/Actions/UpdateCrewAction.php
 
 		-
-			message: '#^Offset ''criterion_scores'' on array\{passed\: bool, score\: float, feedback\: string, issues\: array, criterion_scores\: array\<string, float\>\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''criterion_scores'' on array\{passed\: bool, score\: float, feedback\: string, issues\: array, unverified\: array, criterion_scores\: array\<string, float\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
@@ -2873,12 +2885,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Domain/Evaluation/Actions/CurateAssistantEvalsAction.php
-
-		-
-			message: '#^Parameter \$case of method App\\Domain\\Evaluation\\Actions\\ReplayEvaluationDatasetAction\:\:runSingleCase\(\) expects App\\Domain\\Evaluation\\Models\\EvaluationCase, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Domain/Evaluation/Actions/ReplayEvaluationDatasetAction.php
 
 		-
 			message: '#^Property App\\Infrastructure\\AI\\DTOs\\AiUsageDTO\:\:\$costCredits \(int\) on left side of \?\? is not nullable\.$#'
@@ -4075,6 +4081,12 @@ parameters:
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
 
 		-
+			message: '#^Offset ''taste'' on string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
+
+		-
 			message: '#^Offset ''text_color'' on string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -4089,12 +4101,6 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$value of function collect contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 1
-			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
-
-		-
-			message: '#^Offset ''taste'' on string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Marketplace/Actions/InstallFromMarketplaceAction.php
 
@@ -8053,13 +8059,13 @@ parameters:
 			path: app/Http/Resources/Api/V1/AgentResource.php
 
 		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$tool_profile\.$#'
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$taste\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/AgentResource.php
 
 		-
-			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$taste\.$#'
+			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\V1\\AgentResource\:\:\$tool_profile\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Resources/Api/V1/AgentResource.php
@@ -10638,7 +10644,6 @@ parameters:
 			count: 2
 			path: app/Infrastructure/AI/Services/ProviderResolver.php
 
-
 		-
 			message: '#^Method App\\Infrastructure\\AI\\Services\\ProviderResolver\:\:planEnforcerHasFeature\(\) is unused\.$#'
 			identifier: method.unused
@@ -11012,6 +11017,12 @@ parameters:
 			path: app/Livewire/Admin/AiControlCenterPage.php
 
 		-
+			message: '#^Access to an undefined property App\\Livewire\\AgentSessions\\AgentSessionDetailPage\:\:\$session\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Livewire/AgentSessions/AgentSessionDetailPage.php
+
+		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -11042,9 +11053,15 @@ parameters:
 			path: app/Livewire/Agents/AgentDetailPage.php
 
 		-
-			message: '#^Offset ''enabled'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''cron'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
+			path: app/Livewire/Agents/AgentDetailPage.php
+
+		-
+			message: '#^Offset ''enabled'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
 			path: app/Livewire/Agents/AgentDetailPage.php
 
 		-
@@ -11078,6 +11095,12 @@ parameters:
 			path: app/Livewire/Agents/AgentDetailPage.php
 
 		-
+			message: '#^Offset ''prompt'' on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Agents/AgentDetailPage.php
+
+		-
 			message: '#^Offset ''rules'' on non\-falsy\-string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -11106,6 +11129,24 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Livewire/Agents/CreateAgentForm.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\Approvals\\HumanTaskForm\:\:\$teamMembers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:users\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Cannot unset offset ''sla_hours'' on array\{\}\|string\.$#'
+			identifier: unset.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
 
 		-
 			message: '#^Empty array passed to foreach\.$#'
@@ -11162,9 +11203,21 @@ parameters:
 			path: app/Livewire/Approvals/HumanTaskForm.php
 
 		-
+			message: '#^Offset ''sla_hours'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
 			message: '#^Offset ''type'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 2
+			path: app/Livewire/Approvals/HumanTaskForm.php
+
+		-
+			message: '#^Parameter \#1 \$array \(array\{\}\|array\{0\?\: non\-falsy\-string\}\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
 			path: app/Livewire/Approvals/HumanTaskForm.php
 
 		-
@@ -11336,6 +11389,18 @@ parameters:
 			path: app/Livewire/Credentials/CredentialListPage.php
 
 		-
+			message: '#^Access to an undefined property App\\Domain\\Audit\\Models\\AuditEntry\:\:\$team_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Credentials/CredentialScanPage.php
+
+		-
+			message: '#^Property App\\Domain\\Audit\\Models\\AuditEntry\:\:\$properties \(string\|null\) does not accept array\<string, int\|string\|null\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Livewire/Credentials/CredentialScanPage.php
+
+		-
 			message: '#^Offset ''crew_name'' on array\{crew_name\: string, description\: string, process_type\: string, coordinator\: array, qa_agent\: array, workers\: array, suggested_quality_threshold\: float, reasoning\: string\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -11364,6 +11429,12 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Livewire/Crews/CreateCrewForm.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\Crews\\CrewChatRoomPage\:\:\$execution\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Livewire/Crews/CrewChatRoomPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$agent_id\.$#'
@@ -11858,6 +11929,12 @@ parameters:
 			path: app/Livewire/Memory/MemoryBrowserPage.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Livewire/Memory/MemoryProposalsPage.php
+
+		-
 			message: '#^Access to an undefined property App\\Livewire\\Profile\\TwoFactorAuthenticationForm\:\:\$qrCodeSvg\.$#'
 			identifier: property.notFound
 			count: 1
@@ -11901,6 +11978,12 @@ parameters:
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:getNextRunTimes\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Livewire/Projects/EditProjectForm.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:ordered\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Livewire/Projects/EditProjectForm.php
@@ -12006,6 +12089,12 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Livewire/Releases/ReleaseDiffPage.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Release\\Crypto\\Enums\\SigningKeyStatus\:\:Active will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Livewire/Releases/SigningKeysPage.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
@@ -12396,6 +12485,48 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: app/Livewire/Workflows/WorkflowDetailPage.php
+
+		-
+			message: '#^Method App\\Livewire\\Workflows\\WorkflowOpsPage\:\:compensationRuns\(\) should return Illuminate\\Support\\Collection\<int, array\{experiment\: App\\Domain\\Experiment\\Models\\Experiment, compensated_count\: int\}\> but returns Illuminate\\Support\\Collection\<int, array\{experiment\: App\\Domain\\Experiment\\Models\\Experiment, compensated_count\: int\<1, max\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Livewire/Workflows/WorkflowOpsPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,string\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
+
+		-
+			message: '#^Parameter \#2 \$nodes of method App\\Livewire\\Workflows\\WorkflowSimulationPanel\:\:renderResult\(\) expects Illuminate\\Support\\Collection\<string, App\\Domain\\Workflow\\Models\\WorkflowNode\>, Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>label" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/Workflows/WorkflowSimulationPanel.php
 
 		-
 			message: '#^Unsafe call to private method App\\Mcp\\ErrorClassifier\:\:classNameHint\(\) through static\:\:\.$#'
@@ -13220,6 +13351,12 @@ parameters:
 			path: app/Mcp/Tools/Crew/CrewBeliefTrajectoryTool.php
 
 		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{agent_name\: string\|null, role\: string, content\: string, round\: int, created_at\: string\|null\}, Closure\(App\\Domain\\Crew\\Models\\CrewChatMessage\)\: array\{agent_name\: string\|null, role\: string, content\: string, round\: int, created_at\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Mcp/Tools/Crew/CrewBlackboardGetTool.php
+
+		-
 			message: '#^Invalid array key type float\.$#'
 			identifier: array.invalidKey
 			count: 1
@@ -13568,6 +13705,18 @@ parameters:
 			path: app/Mcp/Tools/Evolution/EvolutionGetTool.php
 
 		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentCheckpointsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Experiment/ExperimentCheckpointsTool.php
+
+		-
 			message: '#^Call to an undefined method App\\Mcp\\Tools\\Experiment\\ExperimentCompleteBuildingTool\:\:validationError\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -13638,6 +13787,18 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Experiment/ExperimentStepsTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Experiment/ReasoningBankListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Experiment\\Models\\ReasoningBankEntry\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Experiment/ReasoningBankListTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -15236,6 +15397,48 @@ parameters:
 			path: app/Mcp/Tools/System/MetricsModelComparisonTool.php
 
 		-
+			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Offset ''acknowledged_at'' on string\|null in empty\(\) does not exist\.$#'
+			identifier: empty.offset
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Offset ''field'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Offset ''pattern_id'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Offset ''pattern_name'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Audit\\Models\\AuditEntry\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/System/SecretScanFindingsTool.php
+
+		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 3
@@ -15252,6 +15455,54 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Mcp/Tools/Telegram/TelegramBotTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Mcp/Tools/Testing/TestSuiteGetTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Mcp/Tools/Testing/TestSuiteGetTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Testing\\Models\\TestRun\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Testing/TestSuiteGetTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Mcp/Tools/Testing/TestSuiteGetTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/Testing/TestSuiteListTool.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Mcp/Tools/Testing/TestSuiteListTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Testing\\Models\\TestSuite\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Testing/TestSuiteListTool.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Testing/TestSuiteListTool.php
 
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
@@ -15468,6 +15719,18 @@ parameters:
 			identifier: property.nonObject
 			count: 1
 			path: app/Mcp/Tools/Workflow/WorkflowActivateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowCompensationRunsTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, App\\Domain\\Experiment\\Models\\Experiment\|int\<1, max\>\>\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowCompensationRunsTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -15716,6 +15979,36 @@ parameters:
 			path: app/Mcp/Tools/Workflow/WorkflowSaveGraphTool.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowSimulateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowSimulateTool.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Mcp/Tools/Workflow/WorkflowSimulateTool.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,string\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowSimulateTool.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>label" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Mcp/Tools/Workflow/WorkflowSimulateTool.php
+
+		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 2
@@ -15756,15 +16049,3 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Providers/FleetPluginServiceProvider.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Domain/Approval/Services/ProposalExplainResolver.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Approval/Services/ProposalExplainResolver.php

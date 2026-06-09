@@ -21,6 +21,12 @@
 
     {{-- Channels --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Supported channels</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Every channel below is a <strong>first-class core driver</strong> registered on the
+        <code class="rounded bg-gray-100 px-1">OutboundConnectorManager</code> — no plugin required. Eight chat
+        channels join Email, Webhook, and ntfy, and each has its own per-channel configuration page under
+        <strong>Settings → Outbound</strong>.
+    </p>
     <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
         <table class="w-full text-sm">
             <thead>
@@ -33,7 +39,7 @@
                 <tr>
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Email</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
-                        Send via the platform's shared SMTP relay or your own SMTP connector.
+                        Send via the platform's shared SMTP relay or your own SMTP/Resend connector.
                         Supports HTML and plain-text bodies, attachments, reply-to headers, and
                         open/click tracking.
                     </td>
@@ -54,12 +60,55 @@
                     </td>
                 </tr>
                 <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Discord</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Post to a Discord channel via a channel webhook URL.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Microsoft Teams</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Post to a Teams channel via an incoming webhook (connector) URL.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Google Chat</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Post to a Google Chat space via a space webhook URL.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Matrix</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Send to a Matrix room via a homeserver URL, access token, and room ID.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Signal</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Send via a self-hosted signal-cli REST gateway (the
+                        <code class="rounded bg-gray-100 px-1">signal_protocol</code> channel).
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Supabase Realtime</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Broadcast the proposal payload to a Supabase Realtime channel for in-app delivery.
+                    </td>
+                </tr>
+                <tr>
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">WhatsApp</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
                         Send messages via the WhatsApp Business API. Supports plain text and
                         WhatsApp message templates. Requires a
                         <code class="rounded bg-gray-100 px-1">phone_number_id</code> and a
                         bearer <code class="rounded bg-gray-100 px-1">token</code> from the Meta Developer Portal.
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">ntfy</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">
+                        Push to an ntfy topic for lightweight mobile/desktop notifications.
                     </td>
                 </tr>
                 <tr>
@@ -73,13 +122,27 @@
                     <td class="py-2.5 pl-4 pr-6 font-medium text-gray-900">Custom</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
                         Implement the <code class="rounded bg-gray-100 px-1">OutboundConnectorInterface</code>
-                        to add any delivery channel. Register the connector in a service provider and it
-                        becomes available for selection in the UI.
+                        and register it as a driver — <code class="rounded bg-gray-100 px-1">$manager-&gt;extend('custom', …)</code> —
+                        to add any delivery channel.
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
+
+    <x-docs.callout type="info">
+        Each chat channel has a dedicated configuration page under <strong>Settings → Outbound</strong> —
+        <a href="{{ route('outbound.telegram') }}" class="text-primary-600 hover:underline">Telegram</a>,
+        <a href="{{ route('outbound.slack') }}" class="text-primary-600 hover:underline">Slack</a>,
+        <a href="{{ route('outbound.discord') }}" class="text-primary-600 hover:underline">Discord</a>,
+        <a href="{{ route('outbound.teams') }}" class="text-primary-600 hover:underline">Microsoft Teams</a>,
+        <a href="{{ route('outbound.google_chat') }}" class="text-primary-600 hover:underline">Google Chat</a>,
+        <a href="{{ route('outbound.matrix') }}" class="text-primary-600 hover:underline">Matrix</a>,
+        <a href="{{ route('outbound.signal_protocol') }}" class="text-primary-600 hover:underline">Signal</a>, and
+        <a href="{{ route('outbound.supabase_realtime') }}" class="text-primary-600 hover:underline">Supabase Realtime</a> —
+        alongside <a href="{{ route('outbound.email') }}" class="text-primary-600 hover:underline">Email</a> and
+        <a href="{{ route('outbound.webhooks') }}" class="text-primary-600 hover:underline">Webhook</a>.
+    </x-docs.callout>
 
     {{-- Outbound Flow --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Delivery flow</h2>

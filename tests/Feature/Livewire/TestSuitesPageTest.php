@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
@@ -78,7 +79,7 @@ class TestSuitesPageTest extends TestCase
     {
         $suite = $this->makeSuite($this->team, 'Owned '.Str::random(8));
 
-        $experiment = \App\Domain\Experiment\Models\Experiment::factory()->create(['team_id' => $this->team->id]);
+        $experiment = Experiment::factory()->create(['team_id' => $this->team->id]);
 
         $run = TestRun::create([
             'test_suite_id' => $suite->id,

@@ -22,7 +22,7 @@ class ManagedPricingStore
     private const KEY = 'managed_model_pricing';
 
     /**
-     * @return PricingMap  provider => model => pricing entry
+     * @return PricingMap provider => model => pricing entry
      */
     public function all(): array
     {

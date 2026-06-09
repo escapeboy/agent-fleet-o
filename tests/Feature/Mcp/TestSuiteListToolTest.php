@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Testing\Enums\TestStrategy;
 use App\Domain\Testing\Models\TestSuite;
@@ -36,7 +37,7 @@ class TestSuiteListToolTest extends TestCase
     {
         TestSuite::withoutGlobalScopes()->create([
             'team_id' => $this->team->id,
-            'project_id' => \App\Domain\Project\Models\Project::factory()->create(['team_id' => $this->team->id])->id,
+            'project_id' => Project::factory()->create(['team_id' => $this->team->id])->id,
             'name' => 'Mine',
             'test_strategy' => TestStrategy::Regression,
         ]);
@@ -44,7 +45,7 @@ class TestSuiteListToolTest extends TestCase
         $otherTeam = Team::factory()->create();
         TestSuite::withoutGlobalScopes()->create([
             'team_id' => $otherTeam->id,
-            'project_id' => \App\Domain\Project\Models\Project::factory()->create(['team_id' => $otherTeam->id])->id,
+            'project_id' => Project::factory()->create(['team_id' => $otherTeam->id])->id,
             'name' => 'Theirs',
             'test_strategy' => TestStrategy::Full,
         ]);
