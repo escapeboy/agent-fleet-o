@@ -2,6 +2,26 @@
 
 **Read this before implementing anything.** Many capabilities already exist — check here first to avoid duplicating features.
 
+## Platform at a glance (2026-06-09)
+
+- **45 bounded domains** under `app/Domain/`
+- **675+ MCP tool files across 62 tool groups** (`app/Mcp/Tools/`) — every feature is MCP-addressable
+- **~175 REST endpoints across 61 API v1 controllers** (`app/Http/Controllers/Api/V1/`), OpenAPI 3.1 at `/docs/api`
+- **173 Livewire components** (`app/Livewire/`) · **424 migrations** · **88 config files**
+
+## New in 1.27.0
+
+UIs landed for capabilities that were previously MCP/API-only — check these before assuming a feature is headless:
+
+- **AgentSession viewer** (`app/Livewire/AgentSessions/`) — session list + timeline/replay
+- **Release signing-key management** (`app/Livewire/Releases/`) — generate/rotate/revoke
+- **Evaluation: Agentic AI Flywheel** — self-growing eval set, error-mode catalog, drift monitor (`DriftSignal`), production-eval monitor (`EvaluationMonitorSnapshot`), auto-eval at triage (deferred/non-gating)
+- **Policy-Governed Autonomy** — versioned per-agent `AgentPolicy` + precedence-based resolution + replay (`app/Domain/Approval/`); crew proposals gained competitive arbitration (`app/Domain/Crew/`)
+- **Outbound: 8 chat channels as core drivers** — Telegram, Slack, Discord, Teams, Google Chat, Matrix, Signal, Supabase Realtime (`OutboundChannel` / `OutboundConnectorManager`), each with a config page
+- **Broadcast** list/create with batched recipient chunking · **Testing** (`TestSuite`/`TestRun`) UI · **CSV import wizard** (Migration) · **ReasoningBank**, **ErrorMode catalog**, **KG Louvain communities**, **crew chat-room/blackboard**, **experiment checkpoints**, **memory-proposal queue**, **credential secret-scan findings**
+- **Cost-aware orchestration** (fan-out cost gate + tier selector) and **Return on Cognitive Spend (ROCS)** metrics
+- **Pluggable embedding seam** (`MEMORY_EMBEDDING_DRIVER`), **dynamic model-catalog sync** (OpenRouter), **S3 tenant storage** (`TenantStorageManager`), **Phoenix per-team routing**, **A2A agent-card discovery** (flag-gated)
+
 ---
 
 ## Web Search — SearXNG

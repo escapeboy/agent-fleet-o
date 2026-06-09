@@ -8,7 +8,8 @@ $sections = [
     ],
     'Core Concepts' => [
         ['slug' => 'experiments',  'label' => 'Experiments'],
-        ['slug' => 'agents',       'label' => 'Agents'],
+        ['slug' => 'agents',         'label' => 'Agents'],
+        ['slug' => 'agent-sessions', 'label' => 'Agent Sessions'],
         ['slug' => 'skills',       'label' => 'Skills'],
         ['slug' => 'tools',        'label' => 'Tools'],
         ['slug' => 'toolsets',     'label' => 'Toolsets'],
@@ -17,12 +18,15 @@ $sections = [
         ['slug' => 'workflows',    'label' => 'Workflows'],
         ['slug' => 'projects',     'label' => 'Projects'],
         ['slug' => 'approvals',    'label' => 'Approvals & Human Tasks'],
+        ['slug' => 'agent-policy', 'label' => 'Agent Policies'],
         ['slug' => 'evaluation',   'label' => 'Evaluation'],
+        ['slug' => 'test-suites',  'label' => 'Test Suites'],
     ],
     'Signals & Automation' => [
         ['slug' => 'signals',       'label' => 'Signals'],
         ['slug' => 'triggers',      'label' => 'Triggers'],
         ['slug' => 'outbound',      'label' => 'Outbound Delivery'],
+        ['slug' => 'broadcasts',    'label' => 'Broadcasts'],
         ['slug' => 'notifications', 'label' => 'Notifications'],
     ],
     'Platform' => [
@@ -57,9 +61,15 @@ $sections = [
 // Cloud-only pages (appended if routes exist)
 if (Route::has('docs.billing')) {
     $sections['Cloud Edition'] = [
-        ['slug' => 'billing', 'label' => 'Billing & Plans'],
-        ['slug' => 'teams',   'label' => 'Teams & Roles'],
-        ['slug' => 'bridge',  'label' => 'FleetQ Bridge'],
+        ['slug' => 'cloud',         'label' => 'Cloud Guides'],
+        ['slug' => 'onboarding',    'label' => 'Getting Started'],
+        ['slug' => 'teams',         'label' => 'Teams & Roles'],
+        ['slug' => 'billing',       'label' => 'Billing & Plans'],
+        ['slug' => 'credits',       'label' => 'Platform Credits & Cost'],
+        ['slug' => 'data-export',   'label' => 'Team Data Export'],
+        ['slug' => 'partner-api',   'label' => 'Partner Program API'],
+        ['slug' => 'bridge',        'label' => 'FleetQ Bridge'],
+        ['slug' => 'browser-relay', 'label' => 'Browser Relay'],
     ];
 }
 @endphp

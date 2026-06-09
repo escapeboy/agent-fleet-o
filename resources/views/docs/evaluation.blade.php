@@ -37,7 +37,7 @@
         <div class="rounded-xl border border-gray-200 p-4">
             <p class="font-semibold text-gray-900">LLM judge</p>
             <p class="mt-1 text-sm text-gray-600">
-                Any configured LLM (default <code class="font-mono text-xs">claude-haiku-4-5</code>) can be used
+                Any configured LLM (default <code class="font-mono text-xs">claude-haiku-4-5-20251001</code>) can be used
                 as a judge. Pass a custom scoring prompt with <code class="font-mono text-xs">&#123;expected&#125;</code>
                 and <code class="font-mono text-xs">&#123;actual&#125;</code> placeholders, or use the built-in
                 similarity rubric.
@@ -48,6 +48,61 @@
             <p class="mt-1 text-sm text-gray-600">
                 A dataset can carry a target score. Runs that fall below the target fail loudly — wire them into
                 your CI pipeline or a pre-deploy approval to block quality drops from shipping.
+            </p>
+        </div>
+    </div>
+
+    {{-- Agentic AI Flywheel --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">The Agentic AI Flywheel</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Beyond on-demand scoring, the Evaluation domain runs a self-improving loop: failures continuously feed
+        the eval set, are catalogued by failure mode, and are watched for drift in production. These pieces are
+        opt-in via <code class="rounded bg-gray-100 px-1">config/evaluation.php</code>.
+    </p>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl border border-gray-200 p-4">
+            <p class="font-semibold text-gray-900">Self-growing eval set</p>
+            <p class="mt-1 text-sm text-gray-600">
+                Every <code class="font-mono text-xs">EvaluationCase</code> carries a provenance
+                (<code class="font-mono text-xs">manual</code>, <code class="font-mono text-xs">failure_lesson</code>,
+                <code class="font-mono text-xs">task_validation</code>, <code class="font-mono text-xs">thumbs_down</code>,
+                or <code class="font-mono text-xs">drift</code>). Real failures and negative feedback are curated
+                into the dataset automatically, so the eval set grows from production rather than by hand.
+            </p>
+        </div>
+        <div class="rounded-xl border border-gray-200 p-4">
+            <p class="font-semibold text-gray-900">Auto-eval at triage</p>
+            <p class="mt-1 text-sm text-gray-600">
+                When an experiment transitions to a failed state,
+                <code class="font-mono text-xs">AppendRegressionCaseOnFailureListener</code> appends a
+                <strong>deferred</strong>, non-gating regression case capturing the seed input and the named
+                failure state — deterministic, no extra LLM call. Deferred cases are tracked but don't fail a
+                run until promoted to <code class="font-mono text-xs">active</code>.
+            </p>
+        </div>
+        <div class="rounded-xl border border-gray-200 p-4">
+            <p class="font-semibold text-gray-900">Error-mode catalog</p>
+            <p class="mt-1 text-sm text-gray-600">
+                The <code class="font-mono text-xs">ErrorMode</code> domain names and counts recurring failure
+                modes and lets you assign a remediation <em>lever</em> to each, turning one-off failures into a
+                tracked, prioritisable backlog.
+            </p>
+        </div>
+        <div class="rounded-xl border border-gray-200 p-4">
+            <p class="font-semibold text-gray-900">Drift monitor</p>
+            <p class="mt-1 text-sm text-gray-600">
+                <code class="font-mono text-xs">DriftSignal</code> records computed observations —
+                input-distribution shift, eval-score decay, thumbs-down rate, and latency/cost spikes — against
+                a rolling baseline, flagging <code class="font-mono text-xs">breached</code> thresholds for review.
+            </p>
+        </div>
+        <div class="rounded-xl border border-gray-200 p-4 sm:col-span-2">
+            <p class="font-semibold text-gray-900">Production-eval monitor</p>
+            <p class="mt-1 text-sm text-gray-600">
+                <code class="font-mono text-xs">RunProductionEvalMonitorAction</code> samples live traffic and
+                writes an <code class="font-mono text-xs">EvaluationMonitorSnapshot</code> — average score, pass
+                rate, active/deferred counts, and sampled count — giving you a point-in-time read of quality in
+                production over time.
             </p>
         </div>
     </div>
@@ -97,6 +152,18 @@
                     <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">flow_evaluation_results</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">Retrieve per-row actual output + judge score + aggregate metrics for a run.</td>
                 </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">drift_signal_list</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">List recorded drift signals (score decay, thumbs-down rate, input shift, cost spikes).</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">evaluation_monitor_snapshots</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">List production-eval monitor snapshots for quality-over-time tracking.</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">regression_case_append</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">Append a regression case (e.g. a captured failure) to the eval set.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -134,5 +201,6 @@ flow_evaluation_run_start({
         <li><a href="{{ route('docs.show', 'workflows') }}" class="text-primary-600 hover:underline">Workflows</a> — the object under test for flow evaluations.</li>
         <li><a href="{{ route('docs.show', 'skills') }}" class="text-primary-600 hover:underline">Skills</a> — carry their own built-in guardrail evaluators for per-output quality checks.</li>
         <li><a href="{{ route('docs.show', 'metrics') }}" class="text-primary-600 hover:underline">Metrics &amp; Comparison</a> — aggregate evaluation results across runs and models.</li>
+        <li><a href="{{ route('docs.show', 'test-suites') }}" class="text-primary-600 hover:underline">Test Suites</a> — project-level regression test suites for agent outputs.</li>
     </ul>
 </x-layouts.docs>

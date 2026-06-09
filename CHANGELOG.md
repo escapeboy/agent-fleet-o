@@ -2,6 +2,103 @@
 
 All notable changes to Agent Fleet Community Edition are documented here.
 
+## [1.27.0] - 2026-06-09
+
+Three weeks of work (268 commits) that closed the long-standing UI-gap backlog —
+giving web UIs to capabilities that had only existed over MCP/API — and landed a
+run of autonomy, evaluation, cost-governance, and storage upgrades.
+
+### Added — Web UIs for previously headless capabilities (UI-gap backlog)
+
+A sweep across three waves that surfaced features which until now were reachable
+only through MCP tools or the REST API:
+
+- **AgentSession viewer** — list plus a per-session timeline/replay view.
+- **Release signing-key management** — generate, rotate and revoke release
+  signing keys from the UI.
+- **Drift-detection and production-eval monitor dashboards** — browse
+  `DriftSignal` and `EvaluationMonitorSnapshot` records.
+- **Broadcast list/create** — the Broadcast domain previously had only a detail
+  page; recipient sends are now chunked through batched jobs.
+- **CSV import wizard** — multi-step upload → schema detection → mapping → run
+  for the Migration domain.
+- **Wave 2 surfaces** — blacklist management, outbound-proposal review,
+  skill operations dashboards (improvement-loop / benchmark / annotation),
+  workflow compensation and simulation views, experiment checkpoint
+  browse/restore, the memory-proposal approve/reject queue, and the credential
+  secret-scan findings panel.
+- **Wave 3 surfaces** — ReasoningBank browse, ErrorMode catalog, TestSuite /
+  TestRun views, Knowledge-Graph Louvain community visualisation, the crew
+  chat-room / blackboard view, and an agent dry-run button.
+- **Partials** — an editable agent heartbeat schedule, a dependency repeater on
+  the project edit form, and human-task SLA escalation-chain configuration.
+- **13 new MCP tools** backing the surfaces above, all with team-scoped,
+  null-team-safe resolution.
+
+### Added — Outbound: eight channels as first-class drivers
+
+Telegram, Slack, Discord, Microsoft Teams, Google Chat, Matrix, Signal and
+Supabase Realtime are now registered as core outbound drivers, each with a
+per-channel configuration page. Broadcast sends are chunked via batched jobs.
+
+### Added — Agentic AI Flywheel (evaluation)
+
+A self-growing evaluation set with auto-eval at triage (deferred, non-gating
+status), an error-mode catalog, a drift monitor and a production-eval monitor.
+
+### Added — Policy-Governed Autonomy
+
+Versioned, per-agent `AgentPolicy` with precedence-based resolution
+(agent-specific → team default) and replay, an AgentPolicy management UI, and a
+proposal-explain panel. Crew proposals additionally gained competitive arbitration.
+
+### Added — Agent governance (Squad + Web IQ borrows)
+
+`OnToolCall` governance with reviewer lockout, a crew decision log, evidence
+citations on outputs, and an agent charter.
+
+### Added — Cost and value
+
+- **Cost-aware orchestration** — a fan-out cost gate plus a model-tier selector.
+- **Return on Cognitive Spend (ROCS)** — cost↔value ROI metrics.
+
+### Added — Observability
+
+Phoenix per-team project routing and auto-ingest of local-agent transcripts.
+
+### Added — Other
+
+- A2A consumer-side agent-card discovery (flag-gated, discovery only).
+- A pluggable embedding seam (`MEMORY_EMBEDDING_DRIVER`) with SemanticCache
+  model namespacing.
+- Dynamic model-catalog sync for managed providers (OpenRouter) plus a
+  searchable model picker in settings.
+- Thumbs up/down feedback on assistant messages.
+- A public streaming media route for bug-report attachments.
+- Borrowed-ideas sprint: auto-concise context, a taste signal carried through
+  publish/install, and deeper memory judgment.
+
+### Changed
+
+- **Chatbot answer quality** — tool-call narration is stripped, replies follow
+  the user's language, and citations are enriched for every source type.
+- **BYOK-aware provider resolution** for internal pipeline LLM calls.
+
+### Security
+
+- Closed cross-tenant gaps in the secret-scan MCP tool and the experiment
+  checkpoints page (unconditional `team_id` scoping + null-team guard).
+- Explicit team-scoping on the project dependency dropdown and lookup.
+- Tenant-scoped AgentPolicy MCP and Livewire queries.
+- Least-privilege access levels for SupportAssistant / Custom chatbots.
+
+### Infrastructure
+
+- S3 tenant storage via a `TenantStorageManager` gateway with per-tenant disks;
+  upload call sites migrated.
+- Sentry noise reduction (pt3): pattern filters moved to a static `before_send`
+  hook class.
+
 ## [1.26.0] - 2026-05-18
 
 A large feature release spanning eleven days of work: a Kanwas-inspired context
