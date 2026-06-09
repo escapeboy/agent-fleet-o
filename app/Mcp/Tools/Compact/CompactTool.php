@@ -175,7 +175,9 @@ abstract class CompactTool extends Tool
         $scope = $span->activate();
 
         try {
-            $response = app($map[$action])->handle($request);
+            // Container call: delegated tools may declare extra DI params on handle()
+            // (e.g. KnowledgeBaseCreateTool::handle(Request, CreateKnowledgeBaseAction)).
+            $response = app()->call([app($map[$action]), 'handle'], ['request' => $request]);
             $span->setStatus(StatusCode::STATUS_OK);
 
             return $response;

@@ -120,7 +120,7 @@ class ArtifactContentResolver
         $text = Str::limit($text, $limit);
         $text = self::normalizeMarkdownTables($text);
 
-        return Str::markdown($text);
+        return Str::markdown($text, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
     }
 
     /**

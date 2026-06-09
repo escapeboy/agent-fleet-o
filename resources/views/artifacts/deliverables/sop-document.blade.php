@@ -27,7 +27,7 @@
 @endif
 
 @if (empty($steps))
-    <div>{!! Str::markdown($content) !!}</div>
+    <div>{!! Str::markdown($content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
 @else
     <ol style="padding-left: 0; list-style: none;">
         @foreach ($steps as $index => $step)

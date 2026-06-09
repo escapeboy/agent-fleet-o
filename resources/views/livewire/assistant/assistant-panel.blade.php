@@ -450,7 +450,7 @@
                             @endif
                             @if(!empty($msg['content']) && ($msg['streaming'] ?? false))
                                 <div class="assistant-response prose prose-sm max-w-none">
-                                    {!! \Illuminate\Support\Str::markdown($msg['content']) !!}
+                                    {!! \Illuminate\Support\Str::markdown($msg['content'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                 </div>
                                 <div class="mt-1 flex items-center gap-1">
                                     <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400"></span>
@@ -478,7 +478,7 @@
                                     @if(($msg['content'] ?? '') === '')
                                         <span class="text-gray-400 text-xs italic">No response from agent. Check agent authentication and configuration.</span>
                                     @else
-                                        {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '') !!}
+                                        {!! \Illuminate\Support\Str::markdown($msg['content'] ?? '', ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                     @endif
                                 </div>
                                 @if(!empty($msg['a2ui_surfaces']))

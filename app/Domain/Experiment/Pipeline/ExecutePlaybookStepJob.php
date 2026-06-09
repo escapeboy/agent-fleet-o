@@ -462,7 +462,9 @@ class ExecutePlaybookStepJob implements HasSentryContext, ShouldQueue
             // If retries remain, reset step to pending and let the framework retry.
             // Without this, the step would be marked 'failed' and the early guard
             // at the top of handle() would skip all subsequent retry attempts.
-            $hasRetriesLeft = $this->attempts() < $this->tries;
+            // Permanent config errors are exempt: no retry can fix them and each
+            // attempt re-fires the same Sentry event (observed 20x for one run).
+            $hasRetriesLeft = $this->attempts() < $this->tries && ! $this->isPermanentConfigError($e);
 
             if ($hasRetriesLeft) {
                 // Reset step to pending so the retry attempt can re-execute it
@@ -493,6 +495,15 @@ class ExecutePlaybookStepJob implements HasSentryContext, ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Config errors that no retry can fix — retrying only re-fires the same
+     * Sentry event with progressive backoff while the run stays stuck.
+     */
+    private function isPermanentConfigError(\Throwable $e): bool
+    {
+        return str_contains($e->getMessage(), 'Agent has no skills or tools assigned');
     }
 
     /**

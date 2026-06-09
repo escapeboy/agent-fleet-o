@@ -38,9 +38,13 @@ class SignalGetTool extends Tool
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return $this->permissionDeniedError('Team context is required.');
+        }
+
         $signal = Signal::withoutGlobalScopes()
             ->with('contactIdentity')
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->find($validated['signal_id']);
 
         if (! $signal) {

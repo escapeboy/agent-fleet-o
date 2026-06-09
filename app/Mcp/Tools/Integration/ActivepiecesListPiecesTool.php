@@ -48,12 +48,16 @@ class ActivepiecesListPiecesTool extends Tool
         $integrationId = $request->get('integration_id');
         $includeDisabled = (bool) $request->get('include_disabled', false);
 
+        if (! $teamId) {
+            return $this->permissionDeniedError('Team context is required.');
+        }
+
         if ($integrationId) {
             // Verify the integration belongs to this team.
             $integration = Integration::withoutGlobalScopes()
                 ->where('id', $integrationId)
                 ->where('driver', 'activepieces')
-                ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+                ->where('team_id', $teamId)
                 ->first();
 
             if (! $integration) {
@@ -63,11 +67,8 @@ class ActivepiecesListPiecesTool extends Tool
 
         $query = ToolModel::withoutGlobalScopes()
             ->whereNotNull('settings')
-            ->whereRaw("settings ? 'activepieces_piece_name'");
-
-        if ($teamId) {
-            $query->where('team_id', $teamId);
-        }
+            ->whereRaw("settings ? 'activepieces_piece_name'")
+            ->where('team_id', $teamId);
 
         if ($integrationId) {
             $query->whereRaw("settings->>'activepieces_integration_id' = ?", [$integrationId]);

@@ -40,9 +40,13 @@ class MemoryListRecentTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $query = Memory::withoutGlobalScopes()
             ->with(['agent:id,name', 'project:id,title'])
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->orderByDesc('created_at');
 
         if ($agentId = $request->get('agent_id')) {

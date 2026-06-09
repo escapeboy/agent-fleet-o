@@ -827,6 +827,8 @@ class AgentDetailPage extends Component
 
     public function updateToolApproval(string $toolId, string $mode, int $timeout = 30, string $timeoutAction = 'deny'): void
     {
+        $this->authorize('edit-content');
+
         if (! $this->agent->tools()->where('tools.id', $toolId)->exists()) {
             return;
         }

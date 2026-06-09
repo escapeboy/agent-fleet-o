@@ -36,8 +36,12 @@ class KnowledgeBaseListTool extends Tool
     {
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
 
+        if (! $teamId) {
+            return Response::error('Team context could not be resolved.');
+        }
+
         $query = KnowledgeBase::withoutGlobalScopes()
-            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
+            ->where('team_id', $teamId)
             ->when($request->get('agent_id'), fn ($q, $v) => $q->where('agent_id', $v))
             ->when($request->get('status'), fn ($q, $v) => $q->where('status', $v))
             ->orderByDesc('created_at')

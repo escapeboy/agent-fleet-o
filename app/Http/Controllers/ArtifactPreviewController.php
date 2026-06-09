@@ -77,7 +77,7 @@ class ArtifactPreviewController extends Controller
 
     private function renderMarkdown(string $content, string $title): Response
     {
-        $html = Str::markdown($content);
+        $html = Str::markdown($content, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
         $wrapped = $this->wrapInShell($html, $title);
 
         return response($wrapped, 200)

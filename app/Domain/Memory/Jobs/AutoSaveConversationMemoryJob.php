@@ -44,7 +44,8 @@ PROMPT;
         private readonly string $teamId,
         private readonly string $userId,
     ) {
-        $this->onQueue('default');
+        // Makes a synchronous LLM call — belongs on ai-calls, not the 30s default supervisor.
+        $this->onQueue('ai-calls');
     }
 
     public function handle(AiGatewayInterface $gateway, StoreMemoryAction $store): void

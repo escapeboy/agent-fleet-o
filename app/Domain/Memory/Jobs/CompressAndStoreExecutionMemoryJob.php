@@ -27,7 +27,8 @@ class CompressAndStoreExecutionMemoryJob implements ShouldQueue
     public function __construct(
         public readonly string $executionId,
     ) {
-        $this->onQueue('memory');
+        // No Horizon supervisor consumes a 'memory' queue — route to ai-calls (job makes LLM calls).
+        $this->onQueue('ai-calls');
     }
 
     public function handle(

@@ -15,7 +15,7 @@
 </div>
 
 @if (empty($touches))
-    <div>{!! Str::markdown($content) !!}</div>
+    <div>{!! Str::markdown($content, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}</div>
 @else
     @foreach ($touches as $index => $touch)
         <article style="border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 1rem; background: #fff; overflow: hidden;">

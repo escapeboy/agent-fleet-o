@@ -62,7 +62,7 @@ class PruneMemoriesByCapacityCommand extends Command
                     ->where('team_id', $teamId)
                     ->selectRaw("id, ({$effectiveImportanceSql}) AS eff_importance")
                     ->orderByRaw("({$effectiveImportanceSql}) ASC")
-                    ->orderBy('created_at', 'ASC')
+                    ->orderBy('created_at', 'asc')
                     ->limit($limit)
                     ->pluck('id');
 
