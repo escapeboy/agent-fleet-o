@@ -481,6 +481,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/outbound/webhooks', WebhookOutboundPage::class)->name('outbound.webhooks');
     Route::get('/outbound/notifications', NotificationOutboundPage::class)->name('outbound.notifications');
     Route::get('/outbound/whatsapp', WhatsAppOutboundPage::class)->name('outbound.whatsapp');
+    Route::get('/outbound/telegram', \App\Livewire\OutboundConnectors\TelegramOutboundPage::class)->name('outbound.telegram');
+    Route::get('/outbound/slack', \App\Livewire\OutboundConnectors\SlackOutboundPage::class)->name('outbound.slack');
+    Route::get('/outbound/discord', \App\Livewire\OutboundConnectors\DiscordOutboundPage::class)->name('outbound.discord');
+    Route::get('/outbound/teams', \App\Livewire\OutboundConnectors\TeamsOutboundPage::class)->name('outbound.teams');
+    Route::get('/outbound/google-chat', \App\Livewire\OutboundConnectors\GoogleChatOutboundPage::class)->name('outbound.google_chat');
 
     // Audiences & broadcasts
     Route::get('/audiences', AudienceListPage::class)->name('audiences.index');

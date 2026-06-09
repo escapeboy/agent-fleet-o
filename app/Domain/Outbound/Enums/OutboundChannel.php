@@ -4,15 +4,11 @@ namespace App\Domain\Outbound\Enums;
 
 enum OutboundChannel: string
 {
-    // Core channels — always available, managed by OutboundConnectorManager
+    // Core channels — always available, each backed by a built-in connector
+    // registered as a driver on OutboundConnectorManager.
     case Email = 'email';
     case Webhook = 'webhook';
     case Notification = 'notification';
-
-    // Legacy channels — kept for backward compatibility with existing data.
-    // These are no longer registered as core connectors but can be added
-    // by plugins via OutboundConnectorManager::extend() or handled by
-    // agents via MCP tools (browser automation, API calls).
     case Telegram = 'telegram';
     case Slack = 'slack';
     case WhatsApp = 'whatsapp';
@@ -29,6 +25,9 @@ enum OutboundChannel: string
      */
     public function isCore(): bool
     {
-        return in_array($this, [self::Email, self::Webhook, self::Notification]);
+        // signal_protocol, matrix, supabase_realtime have connectors that do not yet
+        // read resolved config credentials — deferred from core until wired to
+        // OutboundCredentialResolver.
+        return ! in_array($this, [self::SignalProtocol, self::Matrix, self::SupabaseRealtime], true);
     }
 }

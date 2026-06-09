@@ -2,10 +2,15 @@
 
 namespace App\Domain\Outbound\Managers;
 
+use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\EmailConnectorDispatcher;
+use App\Domain\Outbound\Connectors\GoogleChatConnector;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\NtfyConnector;
+use App\Domain\Outbound\Connectors\SlackConnector;
+use App\Domain\Outbound\Connectors\TeamsConnector;
+use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
 use App\Domain\Outbound\Connectors\WhatsAppConnector;
 use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
@@ -14,8 +19,11 @@ use Illuminate\Support\Manager;
 /**
  * Laravel Manager for outbound connector resolution.
  *
- * Core drivers: email, webhook, notification, dummy.
- * Plugins extend via: $manager->extend('telegram', fn ($app) => new TelegramConnector);
+ * Core drivers: email, webhook, notification, whatsapp, ntfy, telegram, slack,
+ * discord, teams, google_chat, dummy.
+ * Deferred (connector ignores resolved config — needs OutboundCredentialResolver
+ * wiring before going core): signal_protocol, matrix, supabase_realtime.
+ * Plugins extend via: $manager->extend('custom', fn ($app) => new CustomConnector);
  *
  * Usage:
  *   $connector = app(OutboundConnectorManager::class)->connectorFor('email');
@@ -52,6 +60,31 @@ class OutboundConnectorManager extends Manager
     protected function createNtfyDriver(): OutboundConnectorInterface
     {
         return $this->container->make(NtfyConnector::class);
+    }
+
+    protected function createTelegramDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(TelegramConnector::class);
+    }
+
+    protected function createSlackDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(SlackConnector::class);
+    }
+
+    protected function createDiscordDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(DiscordConnector::class);
+    }
+
+    protected function createTeamsDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(TeamsConnector::class);
+    }
+
+    protected function createGoogleChatDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(GoogleChatConnector::class);
     }
 
     protected function createDummyDriver(): OutboundConnectorInterface
