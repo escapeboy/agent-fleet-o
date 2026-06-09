@@ -190,6 +190,75 @@
             </div>
         </form>
 
+        {{-- Escalation Configuration --}}
+        @can('edit-content')
+            <div class="mt-4 border-t border-gray-100 pt-4">
+                <button type="button" wire:click="$toggle('showEscalationConfig')"
+                    class="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
+                    <span>{{ $showEscalationConfig ? '▾' : '▸' }}</span>
+                    Escalation settings
+                </button>
+
+                @if($showEscalationConfig)
+                    <div class="mt-3 space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <x-form-input
+                            wire:model="slaHours"
+                            type="number"
+                            min="1"
+                            max="8760"
+                            label="SLA hours"
+                            hint="Hours before the task is overdue and escalates to the next assignee."
+                        />
+                        @error('slaHours')
+                            <p class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
+                        @enderror
+
+                        <div>
+                            <span class="mb-1 block text-sm font-medium text-gray-700">Escalation chain</span>
+                            <p class="mb-2 text-xs text-gray-500">Ordered list of team members the task escalates to.</p>
+
+                            @forelse($escalationChain as $index => $assigneeId)
+                                <div class="mb-2 flex items-center gap-2">
+                                    <span class="w-6 text-xs text-gray-400">{{ $index + 1 }}.</span>
+                                    <x-form-select
+                                        wire:model="escalationChain.{{ $index }}"
+                                        compact
+                                        class="flex-1"
+                                    >
+                                        <option value="">-- Select team member --</option>
+                                        @foreach($this->teamMembers as $member)
+                                            <option value="{{ $member['id'] }}">{{ $member['name'] }}</option>
+                                        @endforeach
+                                    </x-form-select>
+                                    <button type="button" wire:click="removeEscalationLevel({{ $index }})"
+                                        class="rounded-lg border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
+                                        Remove
+                                    </button>
+                                </div>
+                                @error("escalationChain.{$index}")
+                                    <p class="mb-2 ml-8 text-xs text-red-600" role="alert">{{ $message }}</p>
+                                @enderror
+                            @empty
+                                <p class="mb-2 text-xs text-gray-400">No escalation levels configured.</p>
+                            @endforelse
+
+                            <button type="button" wire:click="addEscalationLevel"
+                                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">
+                                + Add level
+                            </button>
+                        </div>
+
+                        <div class="border-t border-gray-200 pt-3">
+                            <button type="button" wire:click="saveEscalationConfig"
+                                class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                                Save escalation settings
+                            </button>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endcan
+
         {{-- Reject Modal --}}
         @if($showRejectModal)
             <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">

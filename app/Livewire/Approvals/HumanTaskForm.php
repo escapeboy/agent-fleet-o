@@ -20,10 +20,79 @@ class HumanTaskForm extends Component
 
     public string $rejectionReason = '';
 
+    public bool $showEscalationConfig = false;
+
+    public ?int $slaHours = null;
+
+    /** @var array<int, string> Ordered list of assignee user IDs. */
+    public array $escalationChain = [];
+
     public function mount(ApprovalRequest $task): void
     {
         $this->task = $task;
         $this->initFormData();
+        $this->slaHours = $task->context['sla_hours'] ?? null;
+        $this->escalationChain = array_values(array_filter((array) $task->escalation_chain));
+    }
+
+    /**
+     * Team members eligible as escalation assignees, scoped to the task's team.
+     *
+     * @return array<int, array{id: string, name: string}>
+     */
+    public function getTeamMembersProperty(): array
+    {
+        return $this->task->team
+            ->users()
+            ->get(['users.id', 'users.name'])
+            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+            ->all();
+    }
+
+    public function addEscalationLevel(): void
+    {
+        Gate::authorize('edit-content');
+
+        $this->escalationChain[] = '';
+    }
+
+    public function removeEscalationLevel(int $index): void
+    {
+        Gate::authorize('edit-content');
+
+        unset($this->escalationChain[$index]);
+        $this->escalationChain = array_values($this->escalationChain);
+    }
+
+    public function saveEscalationConfig(): void
+    {
+        Gate::authorize('edit-content');
+
+        $memberIds = array_column($this->teamMembers, 'id');
+
+        $this->validate([
+            'slaHours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+            'escalationChain' => ['array'],
+            'escalationChain.*' => ['required', 'string', 'in:'.implode(',', $memberIds)],
+        ]);
+
+        $chain = array_values(array_filter($this->escalationChain));
+
+        $context = $this->task->context ?? [];
+        if ($this->slaHours !== null) {
+            $context['sla_hours'] = $this->slaHours;
+        } else {
+            unset($context['sla_hours']);
+        }
+
+        $this->task->update([
+            'context' => $context,
+            'escalation_chain' => $chain ?: null,
+        ]);
+
+        $this->escalationChain = $chain;
+        $this->showEscalationConfig = false;
+        session()->flash('message', 'Escalation configuration saved.');
     }
 
     public function submit(): void

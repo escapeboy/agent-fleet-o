@@ -3,8 +3,10 @@
 namespace App\Livewire\Agents;
 
 use App\Domain\Agent\Actions\CreateAgentFeedbackAction;
+use App\Domain\Agent\Actions\DryRunAgentAction;
 use App\Domain\Agent\Actions\ExportAgentWorkspaceAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
+use App\Domain\Agent\DTOs\AgentHeartbeatTask;
 use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
@@ -29,6 +31,7 @@ use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -149,6 +152,23 @@ class AgentDetailPage extends Component
     public string $exportFormat = 'zip';
 
     public bool $exportIncludeMemories = true;
+
+    // Heartbeat schedule editor
+    public bool $editingHeartbeat = false;
+
+    public string $heartbeatCron = '0 * * * *';
+
+    public string $heartbeatPrompt = '';
+
+    public bool $heartbeatEnabled = true;
+
+    // Agent dry-run
+    public string $dryRunInput = '';
+
+    /** @var array<string, mixed>|null */
+    public ?array $dryRunResult = null;
+
+    public ?string $dryRunError = null;
 
     public function mount(Agent $agent): void
     {
@@ -585,6 +605,100 @@ class AgentDetailPage extends Component
         );
 
         session()->flash('message', 'Heartbeat dispatched.');
+    }
+
+    /**
+     * Open the heartbeat schedule editor, prefilling from the current definition.
+     */
+    public function startEditHeartbeat(): void
+    {
+        $this->authorize('edit-content');
+
+        $definition = $this->agent->heartbeat_definition ?? [];
+        $this->heartbeatCron = $definition['cron'] ?? '0 * * * *';
+        $this->heartbeatPrompt = $definition['prompt'] ?? '';
+        $this->heartbeatEnabled = (bool) ($definition['enabled'] ?? false);
+        $this->editingHeartbeat = true;
+        $this->resetValidation();
+    }
+
+    public function cancelEditHeartbeat(): void
+    {
+        $this->editingHeartbeat = false;
+        $this->resetValidation();
+    }
+
+    /**
+     * Persist the agent's heartbeat schedule via the same path the
+     * agent_heartbeat_update MCP tool uses: validate the cron expression,
+     * enforce the 5-minute minimum interval, and store the AgentHeartbeatTask.
+     */
+    public function saveHeartbeat(): void
+    {
+        $this->authorize('edit-content');
+
+        $this->validate([
+            'heartbeatCron' => 'required|string|max:100',
+            'heartbeatPrompt' => 'required|string|max:2000',
+            'heartbeatEnabled' => 'boolean',
+        ]);
+
+        try {
+            $expr = new CronExpression($this->heartbeatCron);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('heartbeatCron', 'Invalid cron expression: '.$e->getMessage());
+
+            return;
+        }
+
+        // Mirror the MCP tool: refuse schedules firing more often than every 5 minutes.
+        $now = new \DateTimeImmutable;
+        $next = $expr->getNextRunDate($now);
+        $afterNext = $expr->getNextRunDate($next);
+        if ($afterNext->getTimestamp() - $next->getTimestamp() < 300) {
+            $this->addError('heartbeatCron', 'Heartbeat schedule must fire no more than once every 5 minutes.');
+
+            return;
+        }
+
+        $task = new AgentHeartbeatTask(
+            enabled: $this->heartbeatEnabled,
+            cron: $this->heartbeatCron,
+            prompt: $this->heartbeatPrompt,
+            nextRunAt: null, // reset so it fires on the next evaluation cycle
+        );
+
+        $this->agent->update(['heartbeat_definition' => $task->toArray()]);
+        $this->agent->refresh();
+        $this->editingHeartbeat = false;
+
+        session()->flash('message', 'Heartbeat schedule saved.');
+    }
+
+    /**
+     * Run the agent through a single LLM completion without persisting any
+     * execution record, artifact, or AiRun row (DryRunAgentAction).
+     */
+    public function dryRun(): void
+    {
+        $this->authorize('edit-content');
+
+        $this->validate([
+            'dryRunInput' => 'required|string|min:1|max:10000',
+        ]);
+
+        $this->dryRunResult = null;
+        $this->dryRunError = null;
+
+        try {
+            $this->dryRunResult = app(DryRunAgentAction::class)->execute(
+                agent: $this->agent,
+                userMessage: $this->dryRunInput,
+                userId: (string) auth()->id(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->dryRunError = $e->getMessage();
+        }
     }
 
     public function saveHook(): void
