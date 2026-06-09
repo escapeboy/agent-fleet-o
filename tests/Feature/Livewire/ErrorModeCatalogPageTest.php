@@ -9,6 +9,7 @@ use App\Domain\Shared\Models\Team;
 use App\Livewire\ErrorModes\ErrorModeCatalogPage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -92,7 +93,7 @@ class ErrorModeCatalogPageTest extends TestCase
     {
         // base 'edit-content' gate is permissive; deny it to prove assignLever
         // authorizes on the action (cloud gates it by role).
-        \Illuminate\Support\Facades\Gate::define('edit-content', fn () => false);
+        Gate::define('edit-content', fn () => false);
 
         $mode = $this->makeMode($this->team->id, 'Protected mode');
 
