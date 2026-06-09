@@ -36,6 +36,17 @@ return [
         // Off by default — flip via env to enable.
         'discovery_enabled' => env('A2A_DISCOVERY_ENABLED', false),
         'well_known_path' => '/.well-known/agent-card.json',
+
+        // Consumer-side A2A dispatch (calling a discovered A2A agent over
+        // JSON-RPC message/send). Independent of discovery: with this off, A2A
+        // agents stay discoverable but not callable (ProtocolDispatcher throws).
+        'dispatch_enabled' => env('A2A_DISPATCH_ENABLED', false),
+
+        // Max times to poll tasks/get for a long-running A2A Task before giving
+        // up, and the delay between polls (ms). Bounds total wait alongside the
+        // outbound timeout.
+        'task_poll_attempts' => (int) env('A2A_TASK_POLL_ATTEMPTS', 5),
+        'task_poll_delay_ms' => (int) env('A2A_TASK_POLL_DELAY_MS', 1000),
     ],
 
     'session' => [
