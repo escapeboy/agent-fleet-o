@@ -2,14 +2,19 @@
 
 namespace Tests\Unit\Infrastructure\AI;
 
+use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Gateways\FallbackAiGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Services\CircuitBreaker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use ReflectionClass;
 use Tests\TestCase;
 
 class ProviderHasApiKeyTest extends TestCase
 {
+    use RefreshDatabase;
+
     private FallbackAiGateway $gateway;
 
     protected function setUp(): void
@@ -42,13 +47,13 @@ class ProviderHasApiKeyTest extends TestCase
         ]);
     }
 
-    private function invoke(string $provider): bool
+    private function invoke(string $provider, ?string $teamId = null): bool
     {
         $reflection = new ReflectionClass($this->gateway);
         $method = $reflection->getMethod('providerHasApiKey');
         $method->setAccessible(true);
 
-        return (bool) $method->invoke($this->gateway, $provider);
+        return (bool) $method->invoke($this->gateway, $provider, $teamId);
     }
 
     public function test_returns_true_when_provider_has_key_in_ai_providers_config(): void
@@ -111,6 +116,36 @@ class ProviderHasApiKeyTest extends TestCase
         // Local agents (claude-code, codex) and bridge providers don't need API keys.
         $this->assertTrue($this->invoke('claude-code'));
         $this->assertTrue($this->invoke('codex'));
+    }
+
+    public function test_returns_true_when_team_has_active_byok_credential_without_platform_key(): void
+    {
+        // Regression: a BYOK-only provider (openrouter) the platform has no key
+        // for must still pass the gate when the team has an active credential —
+        // otherwise the fallback chain exhausts to "No available providers".
+        $team = Team::factory()->create();
+        TeamProviderCredential::create([
+            'team_id' => $team->id,
+            'provider' => 'openrouter',
+            'credentials' => ['api_key' => 'sk-or-team-key'],
+            'is_active' => true,
+        ]);
+
+        $this->assertFalse($this->invoke('openrouter'), 'team-blind check must still fail without a team id');
+        $this->assertTrue($this->invoke('openrouter', $team->id));
+    }
+
+    public function test_returns_false_when_team_credential_is_inactive(): void
+    {
+        $team = Team::factory()->create();
+        TeamProviderCredential::create([
+            'team_id' => $team->id,
+            'provider' => 'openrouter',
+            'credentials' => ['api_key' => 'sk-or-team-key'],
+            'is_active' => false,
+        ]);
+
+        $this->assertFalse($this->invoke('openrouter', $team->id));
     }
 
     /**
