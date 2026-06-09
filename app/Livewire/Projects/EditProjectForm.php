@@ -10,6 +10,7 @@ use App\Domain\Project\Enums\OverlapPolicy;
 use App\Domain\Project\Enums\ProjectExecutionMode;
 use App\Domain\Project\Enums\ScheduleFrequency;
 use App\Domain\Project\Models\Project;
+use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
@@ -82,6 +83,9 @@ class EditProjectForm extends Component
 
     public array $selectedCredentialIds = [];
 
+    // Dependencies (predecessor projects)
+    public array $dependencies = [];
+
     // Quality Gates (live in project.settings JSONB)
     public bool $doneGateEnabled = false;
 
@@ -136,6 +140,16 @@ class EditProjectForm extends Component
         $this->selectedToolIds = $project->allowed_tool_ids ?? [];
         $this->selectedCredentialIds = $project->allowed_credential_ids ?? [];
 
+        // Dependencies (predecessor projects)
+        $this->dependencies = $project->dependencies()->ordered()->get()
+            ->map(fn (ProjectDependency $dep) => [
+                'depends_on_id' => $dep->depends_on_id,
+                'alias' => $dep->alias,
+                'reference_type' => $dep->reference_type,
+                'is_required' => $dep->is_required,
+            ])
+            ->all();
+
         // Quality Gates
         $settings = $project->settings ?? [];
         $this->doneGateEnabled = (bool) ($settings['done_gate_enabled'] ?? false);
@@ -176,6 +190,11 @@ class EditProjectForm extends Component
 
         $rules['doneGateEnabled'] = 'boolean';
         $rules['doneGateKillSwitch'] = 'boolean';
+
+        $rules['dependencies'] = 'array';
+        $rules['dependencies.*.depends_on_id'] = "required|exists:projects,id,team_id,{$teamId}";
+        $rules['dependencies.*.alias'] = 'nullable|string|max:50';
+        $rules['dependencies.*.reference_type'] = 'required|in:latest_run,specific_run';
 
         return $rules;
     }
@@ -237,8 +256,68 @@ class EditProjectForm extends Component
 
         app(UpdateProjectAction::class)->execute($this->project, $data);
 
+        $this->syncDependencies();
+
         session()->flash('message', 'Project updated successfully!');
         $this->redirect(route('projects.show', $this->project));
+    }
+
+    public function addDependency(): void
+    {
+        $this->dependencies[] = [
+            'depends_on_id' => '',
+            'alias' => '',
+            'reference_type' => 'latest_run',
+            'is_required' => true,
+        ];
+    }
+
+    public function removeDependency(int $index): void
+    {
+        unset($this->dependencies[$index]);
+        $this->dependencies = array_values($this->dependencies);
+    }
+
+    public function updatedDependencies($value, $key): void
+    {
+        // Auto-generate alias from project title when selecting a project
+        if (str_ends_with($key, '.depends_on_id') && $value) {
+            $index = (int) explode('.', $key)[0];
+            $project = Project::where('team_id', auth()->user()->current_team_id)->find($value);
+            if ($project && empty($this->dependencies[$index]['alias'])) {
+                $this->dependencies[$index]['alias'] = str($project->title)->slug('_')->limit(50)->toString();
+            }
+        }
+    }
+
+    private function syncDependencies(): void
+    {
+        $teamId = auth()->user()->current_team_id;
+
+        $rows = array_values(array_filter(
+            $this->dependencies,
+            fn ($d) => ! empty($d['depends_on_id']),
+        ));
+
+        $keptIds = [];
+        foreach ($rows as $index => $dep) {
+            $record = ProjectDependency::updateOrCreate(
+                [
+                    'project_id' => $this->project->id,
+                    'depends_on_id' => $dep['depends_on_id'],
+                ],
+                [
+                    'team_id' => $teamId,
+                    'alias' => $dep['alias'] ?: 'dependency_'.$index,
+                    'reference_type' => $dep['reference_type'] ?? 'latest_run',
+                    'is_required' => $dep['is_required'] ?? true,
+                    'sort_order' => $index,
+                ],
+            );
+            $keptIds[] = $record->id;
+        }
+
+        $this->project->dependencies()->whereNotIn('id', $keptIds)->delete();
     }
 
     public function getSchedulePreviewProperty(): array
@@ -259,6 +338,10 @@ class EditProjectForm extends Component
         $tools = Tool::where('status', 'active')->orderBy('name')->get(['id', 'name', 'type']);
         $credentials = Credential::where('status', 'active')->orderBy('name')->get(['id', 'name', 'credential_type']);
         $emailTemplates = EmailTemplate::where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject']);
+        $availableProjects = Project::where('team_id', auth()->user()->current_team_id)
+            ->where('id', '!=', $this->project->id)
+            ->orderBy('title')
+            ->get(['id', 'title', 'type', 'status']);
 
         return view('livewire.projects.edit-project-form', [
             'agents' => $agents,
@@ -268,6 +351,7 @@ class EditProjectForm extends Component
             'tools' => $tools,
             'credentials' => $credentials,
             'emailTemplates' => $emailTemplates,
+            'availableProjects' => $availableProjects,
             'executionModes' => ProjectExecutionMode::cases(),
             'schedulePreview' => $this->schedulePreview,
         ])->layout('layouts.app', ['header' => 'Edit: '.$this->project->title]);

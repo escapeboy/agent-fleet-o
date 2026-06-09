@@ -6,29 +6,32 @@ use App\Domain\Broadcast\Enums\BroadcastRecipientStatus;
 use App\Domain\Broadcast\Enums\BroadcastStatus;
 use App\Domain\Broadcast\Models\Broadcast;
 use App\Domain\Broadcast\Models\BroadcastRecipient;
-use App\Domain\Broadcast\Services\BroadcastMailer;
+use App\Domain\Broadcast\Services\BroadcastBudgetGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Bus;
 
 /**
- * Delivers an approved broadcast to every pending recipient, then rolls the
- * broadcast up to a terminal status.
+ * Orchestrates delivery of an approved broadcast: gates on budget, fans the
+ * pending recipients out across batched SendBroadcastChunkJob jobs, and rolls
+ * the broadcast to a terminal status only once the whole batch settles.
  *
- * For very large audiences this should be chunked into per-recipient jobs;
- * the single-job approach is sufficient at current scale (see sprint plan).
+ * The per-recipient send loop lives in SendBroadcastChunkJob so large audiences
+ * never run in a single 600s synchronous loop.
  */
 class SendBroadcastJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600;
+    /** Recipients per chunk job. */
+    private const CHUNK_SIZE = 100;
 
     public function __construct(public string $broadcastId) {}
 
-    public function handle(BroadcastMailer $mailer): void
+    public function handle(BroadcastBudgetGuard $budgetGuard): void
     {
         $broadcast = Broadcast::withoutGlobalScopes()->find($this->broadcastId);
 
@@ -36,35 +39,53 @@ class SendBroadcastJob implements ShouldQueue
             return;
         }
 
-        $recipients = BroadcastRecipient::withoutGlobalScopes()
+        $pendingQuery = BroadcastRecipient::withoutGlobalScopes()
+            ->where('team_id', $broadcast->team_id)
             ->where('broadcast_id', $broadcast->id)
-            ->where('status', BroadcastRecipientStatus::Pending->value)
-            ->get();
+            ->where('status', BroadcastRecipientStatus::Pending->value);
 
-        foreach ($recipients as $recipient) {
-            try {
-                $result = $mailer->send(
-                    teamId: $broadcast->team_id,
-                    toEmail: $recipient->email,
-                    subject: $broadcast->subject,
-                    html: $broadcast->body,
-                    idempotencyKey: hash('xxh128', "broadcast|{$recipient->id}"),
-                );
+        $pendingCount = (clone $pendingQuery)->count();
 
-                $recipient->update([
-                    'status' => BroadcastRecipientStatus::Sent,
-                    'message_id' => $result['message_id'],
-                    'sent_at' => now(),
-                ]);
-            } catch (\Throwable $e) {
-                $recipient->update([
-                    'status' => BroadcastRecipientStatus::Failed,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        if ($pendingCount === 0) {
+            self::finalize($broadcast->id);
+
+            return;
+        }
+
+        $budgetGuard->assertCanSend($broadcast->team_id, $pendingCount);
+
+        $jobs = [];
+        $pendingQuery->select('id')->chunkById(self::CHUNK_SIZE, function ($recipients) use ($broadcast, &$jobs) {
+            $jobs[] = new SendBroadcastChunkJob(
+                broadcastId: $broadcast->id,
+                recipientIds: $recipients->pluck('id')->all(),
+            );
+        });
+
+        $broadcastId = $broadcast->id;
+
+        Bus::batch($jobs)
+            ->name("broadcast:{$broadcastId}")
+            ->onQueue('outbound')
+            ->finally(function () use ($broadcastId) {
+                self::finalize($broadcastId);
+            })
+            ->dispatch();
+    }
+
+    /**
+     * Roll the broadcast to a terminal status once every chunk has settled.
+     */
+    private static function finalize(string $broadcastId): void
+    {
+        $broadcast = Broadcast::withoutGlobalScopes()->find($broadcastId);
+
+        if (! $broadcast || $broadcast->status !== BroadcastStatus::Sending) {
+            return;
         }
 
         $sentCount = BroadcastRecipient::withoutGlobalScopes()
+            ->where('team_id', $broadcast->team_id)
             ->where('broadcast_id', $broadcast->id)
             ->where('status', BroadcastRecipientStatus::Sent->value)
             ->count();

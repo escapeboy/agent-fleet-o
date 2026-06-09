@@ -6,9 +6,12 @@ use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\EmailConnectorDispatcher;
 use App\Domain\Outbound\Connectors\GoogleChatConnector;
+use App\Domain\Outbound\Connectors\MatrixConnector;
 use App\Domain\Outbound\Connectors\NotificationConnector;
 use App\Domain\Outbound\Connectors\NtfyConnector;
+use App\Domain\Outbound\Connectors\SignalProtocolConnector;
 use App\Domain\Outbound\Connectors\SlackConnector;
+use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
 use App\Domain\Outbound\Connectors\TeamsConnector;
 use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Connectors\WebhookOutboundConnector;
@@ -20,9 +23,7 @@ use Illuminate\Support\Manager;
  * Laravel Manager for outbound connector resolution.
  *
  * Core drivers: email, webhook, notification, whatsapp, ntfy, telegram, slack,
- * discord, teams, google_chat, dummy.
- * Deferred (connector ignores resolved config — needs OutboundCredentialResolver
- * wiring before going core): signal_protocol, matrix, supabase_realtime.
+ * discord, teams, google_chat, matrix, signal_protocol, supabase_realtime, dummy.
  * Plugins extend via: $manager->extend('custom', fn ($app) => new CustomConnector);
  *
  * Usage:
@@ -85,6 +86,21 @@ class OutboundConnectorManager extends Manager
     protected function createGoogleChatDriver(): OutboundConnectorInterface
     {
         return $this->container->make(GoogleChatConnector::class);
+    }
+
+    protected function createMatrixDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(MatrixConnector::class);
+    }
+
+    protected function createSignalProtocolDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(SignalProtocolConnector::class);
+    }
+
+    protected function createSupabaseRealtimeDriver(): OutboundConnectorInterface
+    {
+        return $this->container->make(SupabaseRealtimeConnector::class);
     }
 
     protected function createDummyDriver(): OutboundConnectorInterface

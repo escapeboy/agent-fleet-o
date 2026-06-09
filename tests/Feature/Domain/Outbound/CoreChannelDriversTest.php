@@ -5,7 +5,10 @@ namespace Tests\Feature\Domain\Outbound;
 use App\Domain\Outbound\Connectors\DiscordConnector;
 use App\Domain\Outbound\Connectors\DummyConnector;
 use App\Domain\Outbound\Connectors\GoogleChatConnector;
+use App\Domain\Outbound\Connectors\MatrixConnector;
+use App\Domain\Outbound\Connectors\SignalProtocolConnector;
 use App\Domain\Outbound\Connectors\SlackConnector;
+use App\Domain\Outbound\Connectors\SupabaseRealtimeConnector;
 use App\Domain\Outbound\Connectors\TeamsConnector;
 use App\Domain\Outbound\Connectors\TelegramConnector;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
@@ -47,6 +50,9 @@ class CoreChannelDriversTest extends TestCase
             'discord' => ['discord', DiscordConnector::class],
             'teams' => ['teams', TeamsConnector::class],
             'google_chat' => ['google_chat', GoogleChatConnector::class],
+            'matrix' => ['matrix', MatrixConnector::class],
+            'signal_protocol' => ['signal_protocol', SignalProtocolConnector::class],
+            'supabase_realtime' => ['supabase_realtime', SupabaseRealtimeConnector::class],
         ];
     }
 
@@ -117,4 +123,69 @@ class CoreChannelDriversTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), 'hooks.slack.com/services/T/B/X'));
     }
 
+    public function test_matrix_send_uses_resolved_config_and_fakes_http(): void
+    {
+        Http::fake(['matrix.example.org/*' => Http::response(['event_id' => '$evt:matrix.example.org'], 200)]);
+        $this->configFor('matrix', [
+            'homeserver_url' => 'https://matrix.example.org',
+            'access_token' => 'cfg-token',
+            'room_id' => '!cfgroom:matrix.example.org',
+        ]);
+
+        // Empty target — connector must fall back to resolved config creds.
+        $proposal = $this->proposal(OutboundChannel::Matrix, []);
+        $action = app(MatrixConnector::class)->send($proposal);
+
+        $this->assertSame(OutboundActionStatus::Sent, $action->status);
+        $this->assertSame('$evt:matrix.example.org', $action->external_id);
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'matrix.example.org/_matrix/client/v3/rooms/')
+                && str_contains($request->url(), urlencode('!cfgroom:matrix.example.org'))
+                && $request->hasHeader('Authorization', 'Bearer cfg-token');
+        });
+    }
+
+    public function test_signal_send_uses_resolved_config_and_fakes_http(): void
+    {
+        Http::fake(['signal.example.org:8080/*' => Http::response(['timestamp' => 1700000000], 201)]);
+        $this->configFor('signal_protocol', [
+            'api_url' => 'http://signal.example.org:8080',
+            'phone_number' => '+15551112222',
+            'recipient' => '+15553334444',
+        ]);
+
+        // Empty target — connector must fall back to resolved config creds.
+        $proposal = $this->proposal(OutboundChannel::SignalProtocol, []);
+        $action = app(SignalProtocolConnector::class)->send($proposal);
+
+        $this->assertSame(OutboundActionStatus::Sent, $action->status);
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'signal.example.org:8080/v2/send')
+                && $request['number'] === '+15551112222'
+                && $request['recipients'] === ['+15553334444'];
+        });
+    }
+
+    public function test_supabase_realtime_send_uses_resolved_config_and_fakes_http(): void
+    {
+        Http::fake(['cfgref.supabase.co/*' => Http::response('', 202)]);
+        $this->configFor('supabase_realtime', [
+            'ref' => 'cfgref',
+            'key' => 'cfg-key',
+            'channel' => 'cfg:channel',
+            'event' => 'cfg_event',
+        ]);
+
+        // Empty target — connector must fall back to resolved config creds.
+        $proposal = $this->proposal(OutboundChannel::SupabaseRealtime, []);
+        $action = app(SupabaseRealtimeConnector::class)->send($proposal);
+
+        $this->assertSame(OutboundActionStatus::Sent, $action->status);
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'cfgref.supabase.co/realtime/v1/api/broadcast')
+                && $request->hasHeader('apikey', 'cfg-key')
+                && $request['messages'][0]['topic'] === 'cfg:channel'
+                && $request['messages'][0]['event'] === 'cfg_event';
+        });
+    }
 }

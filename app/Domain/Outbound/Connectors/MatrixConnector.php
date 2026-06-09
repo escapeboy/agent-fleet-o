@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -13,7 +14,8 @@ use Illuminate\Support\Str;
  * Matrix Protocol outbound connector via Matrix Client-Server API.
  *
  * Sends messages to a Matrix room using the PUT /_matrix/client/v3/rooms/{roomId}/send endpoint.
- * Credentials expected in proposal target:
+ * Credentials are resolved via OutboundCredentialResolver (saved config + .env),
+ * with the proposal target overriding per-send:
  *   homeserver_url — Matrix homeserver (e.g. https://matrix.org)
  *   access_token   — Bot access token
  *   room_id        — Target Matrix room ID (e.g. !abc123:matrix.org)
@@ -38,12 +40,14 @@ class MatrixConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $target = $proposal->target;
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('matrix', $proposal->target, $proposal->team_id);
+
             $content = $proposal->content;
 
-            $homeserverUrl = rtrim($target['homeserver_url'] ?? config('services.matrix.homeserver_url', ''), '/');
-            $accessToken = $target['access_token'] ?? config('services.matrix.access_token');
-            $roomId = $target['room_id'] ?? null;
+            $homeserverUrl = rtrim($creds['homeserver_url'] ?? '', '/');
+            $accessToken = $creds['access_token'] ?? null;
+            $roomId = $creds['room_id'] ?? null;
 
             if (! $homeserverUrl || ! $accessToken || ! $roomId) {
                 throw new \InvalidArgumentException('matrix connector requires homeserver_url, access_token, and room_id');

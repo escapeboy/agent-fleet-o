@@ -25,9 +25,6 @@ enum OutboundChannel: string
      */
     public function isCore(): bool
     {
-        // signal_protocol, matrix, supabase_realtime have connectors that do not yet
-        // read resolved config credentials — deferred from core until wired to
-        // OutboundCredentialResolver.
-        return ! in_array($this, [self::SignalProtocol, self::Matrix, self::SupabaseRealtime], true);
+        return true;
     }
 }

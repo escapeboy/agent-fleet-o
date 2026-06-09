@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -37,12 +38,14 @@ class SignalProtocolConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $target = $proposal->target;
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('signal_protocol', $proposal->target, $proposal->team_id);
+
             $content = $proposal->content;
 
-            $apiUrl = rtrim($target['api_url'] ?? config('services.signal.api_url', 'http://signal-sidecar:8080'), '/');
-            $phoneNumber = $target['phone_number'] ?? config('services.signal.phone_number');
-            $recipient = $target['recipient'] ?? $target['phone'] ?? null;
+            $apiUrl = rtrim($creds['api_url'] ?? 'http://signal-sidecar:8080', '/');
+            $phoneNumber = $creds['phone_number'] ?? null;
+            $recipient = $creds['recipient'] ?? $creds['phone'] ?? null;
 
             if (! $phoneNumber || ! $recipient) {
                 throw new \InvalidArgumentException('signal_protocol connector requires phone_number and recipient');

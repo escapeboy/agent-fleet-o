@@ -189,6 +189,9 @@
                 <x-sidebar-link href="{{ route('outbound.discord') }}" :active="request()->routeIs('outbound.discord')" icon="chat-bubble-left-right">Discord</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.teams') }}" :active="request()->routeIs('outbound.teams')" icon="chat-bubble-left-right">Teams</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.google_chat') }}" :active="request()->routeIs('outbound.google_chat')" icon="chat-bubble-left-right">Google Chat</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.matrix') }}" :active="request()->routeIs('outbound.matrix')" icon="chat-bubble-left-right">Matrix</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.signal_protocol') }}" :active="request()->routeIs('outbound.signal_protocol')" icon="chat-bubble-left-right">Signal</x-sidebar-link>
+                <x-sidebar-link href="{{ route('outbound.supabase_realtime') }}" :active="request()->routeIs('outbound.supabase_realtime')" icon="chat-bubble-left-right">Supabase Realtime</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.proposals') }}" :active="request()->routeIs('outbound.proposals')" icon="paper-airplane">Outbound Proposals</x-sidebar-link>
                 <x-sidebar-link href="{{ route('outbound.blacklist') }}" :active="request()->routeIs('outbound.blacklist')" icon="shield-check">Blacklist</x-sidebar-link>
                 <x-sidebar-link href="{{ route('audiences.index') }}" :active="request()->routeIs('audiences.*', 'broadcasts.*')" icon="identification">Audiences</x-sidebar-link>

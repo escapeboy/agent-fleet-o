@@ -513,6 +513,19 @@ use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\SecretScanFindingsTool;
+use App\Mcp\Tools\Crew\CrewBlackboardGetTool;
+use App\Mcp\Tools\Experiment\ExperimentCheckpointsTool;
+use App\Mcp\Tools\Experiment\ReasoningBankListTool;
+use App\Mcp\Tools\Outbound\OutboundProposalListTool;
+use App\Mcp\Tools\Workflow\WorkflowCompensationRunsTool;
+use App\Mcp\Tools\Workflow\WorkflowSimulateTool;
+use App\Mcp\Tools\Testing\TestSuiteListTool;
+use App\Mcp\Tools\Testing\TestSuiteGetTool;
+use App\Mcp\Tools\ErrorMode\ErrorModeListTool;
+use App\Mcp\Tools\ErrorMode\ErrorModeGetTool;
+use App\Mcp\Tools\ErrorMode\ErrorModeAssignLeverTool;
+use App\Mcp\Tools\Signal\KgCommunityListTool;
+use App\Mcp\Tools\Signal\KgCommunityRebuildTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
@@ -1343,6 +1356,19 @@ class AgentFleetServer extends Server
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,
         SecretScanFindingsTool::class,
+        CrewBlackboardGetTool::class,
+        ExperimentCheckpointsTool::class,
+        ReasoningBankListTool::class,
+        OutboundProposalListTool::class,
+        WorkflowCompensationRunsTool::class,
+        WorkflowSimulateTool::class,
+        TestSuiteListTool::class,
+        TestSuiteGetTool::class,
+        ErrorModeListTool::class,
+        ErrorModeGetTool::class,
+        ErrorModeAssignLeverTool::class,
+        KgCommunityListTool::class,
+        KgCommunityRebuildTool::class,
         GlobalSettingsUpdateTool::class,
         BlacklistManageTool::class,
         SecurityPolicyManageTool::class,

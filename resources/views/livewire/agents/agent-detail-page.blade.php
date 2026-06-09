@@ -1394,8 +1394,8 @@
                             <h3 class="text-sm font-semibold text-gray-900">Heartbeat Schedule</h3>
                             <p class="mt-0.5 text-xs text-gray-500">A recurring task the agent runs automatically on a cron schedule. Evaluated every minute by the scheduler.</p>
                         </div>
-                        @if(!empty($agent->heartbeat_definition))
-                            <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2">
+                            @if(!empty($agent->heartbeat_definition))
                                 <span class="text-xs {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'text-green-700 bg-green-100' : 'text-gray-600 bg-gray-100' }} rounded-full px-2.5 py-1 font-medium">
                                     {{ ($agent->heartbeat_definition['enabled'] ?? false) ? 'Enabled' : 'Disabled' }}
                                 </span>
@@ -1408,11 +1408,48 @@
                                     class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700">
                                     Run Now
                                 </button>
-                            </div>
-                        @endif
+                            @endif
+                            @unless($editingHeartbeat)
+                                <button wire:click="startEditHeartbeat"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                                    {{ !empty($agent->heartbeat_definition) ? 'Edit schedule' : 'Configure' }}
+                                </button>
+                            @endunless
+                        </div>
                     </div>
 
-                    @if(!empty($agent->heartbeat_definition))
+                    @if($editingHeartbeat)
+                        <div class="space-y-4">
+                            <x-form-input
+                                wire:model="heartbeatCron"
+                                name="heartbeatCron"
+                                label="Cron Expression"
+                                hint='e.g. "0 * * * *" hourly, "*/15 * * * *" every 15 min. Must fire no more than once every 5 minutes.'
+                                mono
+                                :error="$errors->first('heartbeatCron')" />
+                            <x-form-textarea
+                                wire:model="heartbeatPrompt"
+                                name="heartbeatPrompt"
+                                label="Prompt"
+                                hint="The task sent to the agent on each heartbeat execution."
+                                rows="4"
+                                :error="$errors->first('heartbeatPrompt')" />
+                            <x-form-checkbox
+                                wire:model="heartbeatEnabled"
+                                name="heartbeatEnabled"
+                                label="Schedule enabled" />
+                            <div class="flex items-center gap-2">
+                                <button wire:click="saveHeartbeat"
+                                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                                    Save schedule
+                                </button>
+                                <button wire:click="cancelEditHeartbeat"
+                                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    @elseif(!empty($agent->heartbeat_definition))
                         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
                                 <dt class="mb-1 text-xs font-medium text-gray-500">Cron Expression</dt>
@@ -1434,11 +1471,64 @@
                                 <dd class="whitespace-pre-wrap text-sm text-gray-900">{{ $agent->heartbeat_definition['prompt'] ?? '—' }}</dd>
                             </div>
                         </dl>
-                        <p class="mt-4 text-xs text-gray-400">To change the schedule, use the MCP tool <code class="font-mono">agent_heartbeat_update</code> or update the agent's <code class="font-mono">heartbeat_definition</code> JSONB field directly.</p>
                     @else
                         <div class="rounded-lg border border-dashed border-gray-300 p-8 text-center">
                             <p class="text-sm text-gray-500">No heartbeat configured for this agent.</p>
-                            <p class="mt-1 text-xs text-gray-400">Use the MCP tool <code class="font-mono">agent_heartbeat_update</code> to set a schedule.</p>
+                            <p class="mt-1 text-xs text-gray-400">Click <span class="font-medium">Configure</span> to set a schedule.</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Agent dry-run — one LLM call, no execution/artifact/AiRun persisted --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="mb-4">
+                        <h3 class="text-sm font-semibold text-gray-900">Dry Run</h3>
+                        <p class="mt-0.5 text-xs text-gray-500">Send a sample message through the agent's system prompt as a single LLM call. No execution record, artifact, or AiRun is saved. Costs credits.</p>
+                    </div>
+
+                    @if($dryRunError)
+                        <div class="mb-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">{{ $dryRunError }}</div>
+                    @endif
+
+                    <div class="space-y-3">
+                        <x-form-textarea
+                            wire:model="dryRunInput"
+                            name="dryRunInput"
+                            label="Sample input message"
+                            rows="3"
+                            :error="$errors->first('dryRunInput')" />
+                        <button wire:click="dryRun"
+                            wire:loading.attr="disabled"
+                            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="dryRun">Run dry run</span>
+                            <span wire:loading wire:target="dryRun">Running…</span>
+                        </button>
+                    </div>
+
+                    @if($dryRunResult)
+                        <div class="mt-4 space-y-3">
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <dt class="mb-1 text-xs font-medium text-gray-500">Output</dt>
+                                <dd class="whitespace-pre-wrap text-sm text-gray-900">{{ $dryRunResult['output'] }}</dd>
+                            </div>
+                            <dl class="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <dt class="text-gray-500">Provider / Model</dt>
+                                    <dd class="mt-0.5 font-mono text-gray-900">{{ $dryRunResult['provider'] }} · {{ $dryRunResult['model'] }}</dd>
+                                </div>
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <dt class="text-gray-500">Latency</dt>
+                                    <dd class="mt-0.5 font-mono text-gray-900">{{ number_format($dryRunResult['latency_ms']) }} ms</dd>
+                                </div>
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <dt class="text-gray-500">Cost</dt>
+                                    <dd class="mt-0.5 font-mono text-gray-900">{{ number_format($dryRunResult['cost_credits']) }} credits</dd>
+                                </div>
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <dt class="text-gray-500">Tokens (in / out)</dt>
+                                    <dd class="mt-0.5 font-mono text-gray-900">{{ number_format($dryRunResult['tokens_input']) }} / {{ number_format($dryRunResult['tokens_output']) }}</dd>
+                                </div>
+                            </dl>
                         </div>
                     @endif
                 </div>

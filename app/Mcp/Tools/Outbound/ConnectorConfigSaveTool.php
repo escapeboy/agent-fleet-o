@@ -40,7 +40,7 @@ class ConnectorConfigSaveTool extends Tool
     public function handle(Request $request): Response
     {
         $channel = $request->get('channel');
-        $validChannels = ['email', 'webhook', 'notification', 'telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp', 'ntfy'];
+        $validChannels = ['email', 'webhook', 'notification', 'telegram', 'slack', 'discord', 'teams', 'google_chat', 'whatsapp', 'ntfy', 'matrix', 'signal_protocol', 'supabase_realtime'];
 
         if (! in_array($channel, $validChannels)) {
             return $this->invalidArgumentError('Invalid channel. Must be one of: '.implode(', ', $validChannels));

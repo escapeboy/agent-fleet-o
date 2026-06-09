@@ -6,6 +6,7 @@ use App\Domain\Outbound\Contracts\OutboundConnectorInterface;
 use App\Domain\Outbound\Enums\OutboundActionStatus;
 use App\Domain\Outbound\Models\OutboundAction;
 use App\Domain\Outbound\Models\OutboundProposal;
+use App\Domain\Outbound\Services\OutboundCredentialResolver;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -49,11 +50,13 @@ class SupabaseRealtimeConnector implements OutboundConnectorInterface
         ]);
 
         try {
-            $target = $proposal->target;
-            $ref = $target['ref'] ?? null;
-            $channel = $target['channel'] ?? 'agent:results';
-            $event = $target['event'] ?? 'message';
-            $apiKey = $target['key'] ?? null;
+            $resolver = app(OutboundCredentialResolver::class);
+            $creds = $resolver->resolve('supabase_realtime', $proposal->target, $proposal->team_id);
+
+            $ref = $creds['ref'] ?? null;
+            $channel = $creds['channel'] ?? 'agent:results';
+            $event = $creds['event'] ?? 'message';
+            $apiKey = $creds['key'] ?? null;
 
             if (! $ref || ! $apiKey) {
                 Log::warning('SupabaseRealtimeConnector: missing ref or key in target', [
