@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Gateways;
 
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -141,7 +142,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 }
             }
 
-            if (! $this->providerHasApiKey($providerName)) {
+            if (! $this->providerHasApiKey($providerName, $request->teamId)) {
                 Log::debug("AI Gateway: skipping {$providerName} (no API key configured)");
 
                 continue;
@@ -346,7 +347,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 }
             }
 
-            if (! $this->providerHasApiKey($providerName)) {
+            if (! $this->providerHasApiKey($providerName, $request->teamId)) {
                 continue;
             }
 
@@ -504,9 +505,21 @@ class FallbackAiGateway implements AiGatewayInterface
      * provider-specific config (config/ai.php) and the generic services config —
      * either is enough to satisfy Prism. An empty string is treated as missing.
      */
-    private function providerHasApiKey(string $providerName): bool
+    private function providerHasApiKey(string $providerName, ?string $teamId = null): bool
     {
         if ($this->isBridgeProvider($providerName) || $this->isLocalProvider($providerName)) {
+            return true;
+        }
+
+        // A team's active BYOK credential satisfies the gate: applyTeamCredentials()
+        // injects it into the prism config before the actual provider call. Without
+        // this, a BYOK-only provider (e.g. openrouter) that the platform has no key
+        // for is skipped here, and the chain exhausts to "No available providers"
+        // even though the team can reach the provider.
+        if ($teamId !== null && TeamProviderCredential::where('team_id', $teamId)
+            ->where('provider', $providerName)
+            ->where('is_active', true)
+            ->exists()) {
             return true;
         }
 
