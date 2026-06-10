@@ -132,6 +132,27 @@ return [
         'openrouter' => [
             'driver' => 'openrouter',
             'key' => env('OPENROUTER_API_KEY'),
+
+            /*
+             * OpenRouter requires vendor-prefixed model IDs (anthropic/claude-sonnet-4.5).
+             * Agents are often configured with FleetQ's canonical IDs (claude-sonnet-4-5),
+             * which OpenRouter rejects with "not a valid model ID" — tripping the per-agent
+             * circuit breaker. The gateway auto-translates a canonical ID to its OpenRouter
+             * equivalent via this map before the call. IDs already containing "/" pass through
+             * untouched, so users can still set a raw OpenRouter ID directly.
+             */
+            'model_aliases' => [
+                'claude-sonnet-4-5' => 'anthropic/claude-sonnet-4.5',
+                'claude-sonnet-4-6' => 'anthropic/claude-sonnet-4.6',
+                'claude-haiku-4-5' => 'anthropic/claude-haiku-4.5',
+                'claude-opus-4-6' => 'anthropic/claude-opus-4.6',
+                'claude-opus-4-7' => 'anthropic/claude-opus-4.7',
+                'claude-opus-4-8' => 'anthropic/claude-opus-4.8',
+                'gpt-4o' => 'openai/gpt-4o',
+                'gpt-4o-mini' => 'openai/gpt-4o-mini',
+                'gemini-2.5-flash' => 'google/gemini-2.5-flash',
+                'gemini-2.5-pro' => 'google/gemini-2.5-pro',
+            ],
         ],
 
         'voyageai' => [
