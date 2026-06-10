@@ -15,6 +15,7 @@ use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Closure;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use Prism\Prism\Enums\Provider;
@@ -49,6 +50,7 @@ class PrismAiGateway implements AiGatewayInterface
     public function complete(AiRequestDTO $request): AiResponseDTO
     {
         $request = $this->normalizeCustomEndpoint($request);
+        $request = $this->normalizeOpenRouterModel($request);
 
         if ($request->teamId) {
             app()->instance('ai.current_team_id', $request->teamId);
@@ -103,6 +105,7 @@ class PrismAiGateway implements AiGatewayInterface
     public function stream(AiRequestDTO $request, ?callable $onChunk = null): AiResponseDTO
     {
         $request = $this->normalizeCustomEndpoint($request);
+        $request = $this->normalizeOpenRouterModel($request);
 
         // Structured output doesn't support streaming — fall back
         if ($request->isStructured()) {
@@ -819,6 +822,36 @@ class PrismAiGateway implements AiGatewayInterface
      * split it into provider='custom_endpoint' and providerName='my-proxy'.
      * This allows agents/skills to store a single provider string.
      */
+    /**
+     * Translate a canonical model id (claude-sonnet-4-5) to its OpenRouter
+     * vendor-prefixed id (anthropic/claude-sonnet-4.5). OpenRouter rejects bare
+     * ids with "not a valid model ID", which trips the per-agent circuit breaker.
+     * Ids already containing "/" are left untouched so a raw OpenRouter id still
+     * works; unknown bare ids pass through with a warning rather than guessing.
+     */
+    private function normalizeOpenRouterModel(AiRequestDTO $request): AiRequestDTO
+    {
+        if (! str_starts_with($request->provider, 'openrouter')) {
+            return $request;
+        }
+
+        if (str_contains($request->model, '/')) {
+            return $request;
+        }
+
+        $alias = config("ai.providers.openrouter.model_aliases.{$request->model}");
+
+        if (is_string($alias) && $alias !== '') {
+            return $request->withModel($alias);
+        }
+
+        Log::warning('OpenRouter model has no vendor prefix and no alias — sending as-is; configure ai.providers.openrouter.model_aliases', [
+            'model' => $request->model,
+        ]);
+
+        return $request;
+    }
+
     private function normalizeCustomEndpoint(AiRequestDTO $request): AiRequestDTO
     {
         // Validate early so the middleware pipeline never runs with null teamId

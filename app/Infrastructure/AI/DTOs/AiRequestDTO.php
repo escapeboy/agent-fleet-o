@@ -80,6 +80,51 @@ final readonly class AiRequestDTO
         public ?int $maxCostCredits = null,
     ) {}
 
+    /**
+     * Clone with a different model id, preserving every other field. Used by the
+     * gateway to swap in a provider-specific model id (e.g. OpenRouter aliasing)
+     * without dropping any request state. Covered by AiRequestDtoWithModelTest,
+     * which fails if a newly added constructor field is missed here.
+     */
+    public function withModel(string $model): self
+    {
+        return new self(
+            provider: $this->provider,
+            model: $model,
+            systemPrompt: $this->systemPrompt,
+            userPrompt: $this->userPrompt,
+            maxTokens: $this->maxTokens,
+            outputSchema: $this->outputSchema,
+            userId: $this->userId,
+            teamId: $this->teamId,
+            experimentId: $this->experimentId,
+            experimentStageId: $this->experimentStageId,
+            agentId: $this->agentId,
+            purpose: $this->purpose,
+            idempotencyKey: $this->idempotencyKey,
+            temperature: $this->temperature,
+            fallbackChain: $this->fallbackChain,
+            tools: $this->tools,
+            maxSteps: $this->maxSteps,
+            toolChoice: $this->toolChoice,
+            providerName: $this->providerName,
+            thinkingBudget: $this->thinkingBudget,
+            effort: $this->effort,
+            workingDirectory: $this->workingDirectory,
+            enablePromptCaching: $this->enablePromptCaching,
+            complexity: $this->complexity,
+            classifiedComplexity: $this->classifiedComplexity,
+            budgetPressureLevel: $this->budgetPressureLevel,
+            escalationAttempts: $this->escalationAttempts,
+            fastMode: $this->fastMode,
+            providerCredentialOverride: $this->providerCredentialOverride,
+            gatewaySort: $this->gatewaySort,
+            parentTraceId: $this->parentTraceId,
+            parentSpanId: $this->parentSpanId,
+            maxCostCredits: $this->maxCostCredits,
+        );
+    }
+
     public function isStructured(): bool
     {
         return $this->outputSchema !== null;
