@@ -2,10 +2,10 @@
 
 namespace App\Domain\Chatbot\Jobs;
 
+use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotSession;
-use App\Domain\Chatbot\Services\ChatbotResponseService;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -30,7 +30,7 @@ class ProcessChatbotTicketMessageJob implements ShouldQueue
         $this->onQueue('ai-calls');
     }
 
-    public function handle(ChatbotResponseService $responseService): void
+    public function handle(ChatbotResponderInterface $responseService): void
     {
         $chatbot = Chatbot::find($this->chatbotId);
 
