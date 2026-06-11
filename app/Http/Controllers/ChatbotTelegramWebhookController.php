@@ -9,10 +9,17 @@ use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Domain\Telegram\Actions\SendTelegramReplyAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotTelegramWebhookController extends Controller
 {
+    /** Cache key prefix for the per-chat "awaiting 👎 comment" state. */
+    private const FEEDBACK_COMMENT_PREFIX = 'tg:fbcomment:';
+
+    /** How long we wait for the user to type their optional comment. */
+    private const FEEDBACK_COMMENT_TTL = 600; // 10 minutes
+
     /**
      * Handle an inbound Telegram webhook push for a chatbot channel.
      *
@@ -124,6 +131,23 @@ class ChatbotTelegramWebhookController extends Controller
                 }
             }
 
+            // On a 👎 only: invite an optional free-text reason and remember
+            // that the next plain text message from this chat is that comment.
+            // The stored value is the feedback message id from fb:down:<id>.
+            if ($vote === 'thumbs_down' && $botToken && $voteChatId !== null) {
+                Cache::put(
+                    self::FEEDBACK_COMMENT_PREFIX.$voteChatId,
+                    $messageId,
+                    self::FEEDBACK_COMMENT_TTL,
+                );
+
+                $reply->execute(
+                    $botToken,
+                    (string) $voteChatId,
+                    'Какво не беше наред? Може да опишете с няколко думи (по желание).',
+                );
+            }
+
             if ($botToken && isset($callbackQuery['id'])) {
                 $reply->answerCallbackQuery(
                     $botToken,
@@ -144,6 +168,31 @@ class ChatbotTelegramWebhookController extends Controller
         $chatId = (string) ($message['chat']['id'] ?? '');
         $text = $message['text'] ?? $update['callback_query']['data'] ?? '';
         $username = ($update['callback_query']['from'] ?? $message['from'] ?? [])['username'] ?? null;
+
+        // If we previously prompted this chat for a 👎 comment, treat the next
+        // plain text message as that comment instead of a new question. The TTL
+        // bounds staleness; we can't distinguish a genuine follow-up question,
+        // so the documented behaviour is that the next text becomes the comment.
+        if ($chatId !== '' && $text !== '' && isset($update['message'])) {
+            $commentKey = self::FEEDBACK_COMMENT_PREFIX.$chatId;
+            $pendingMessageId = Cache::get($commentKey);
+
+            if ($pendingMessageId !== null) {
+                Cache::forget($commentKey);
+
+                app(ChatbotFeedbackRecorderInterface::class)->recordComment($pendingMessageId, $text);
+
+                if ($botToken) {
+                    app(SendTelegramReplyAction::class)->execute(
+                        $botToken,
+                        $chatId,
+                        'Благодаря за обратната връзка!',
+                    );
+                }
+
+                return response('', 200);
+            }
+        }
 
         if ($chatId !== '' && $text !== '') {
             ProcessChatbotTelegramMessageJob::dispatch($chatbot->id, $channel->id, $chatId, $text, $username);
