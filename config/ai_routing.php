@@ -109,6 +109,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Shadow Traffic
+    |--------------------------------------------------------------------------
+    |
+    | Sampled, fire-and-forget A/B: after a primary completion the SAME prompt is
+    | mirrored to a candidate model on a background queue and both results
+    | (cost, latency, output hash) are recorded — the shadow output is NEVER
+    | served. The primary request path never awaits the shadow call. The shadow
+    | call IS metered (real provider spend), so keep sample_rate low. Disabled by
+    | default; only mirrors plain text generations (no tools / no structured).
+    |
+    */
+    'shadow_traffic' => [
+        'enabled' => (bool) env('AI_SHADOW_TRAFFIC_ENABLED', false),
+        'sample_rate' => (float) env('AI_SHADOW_TRAFFIC_SAMPLE_RATE', 0.0),
+        'provider' => env('AI_SHADOW_TRAFFIC_PROVIDER'),
+        'model' => env('AI_SHADOW_TRAFFIC_MODEL'),
+        'queue' => env('AI_SHADOW_TRAFFIC_QUEUE', 'metrics'),
+        // Persist truncated output text for manual inspection (off — PII/storage).
+        'store_snippets' => (bool) env('AI_SHADOW_TRAFFIC_STORE_SNIPPETS', false),
+        'snippet_chars' => (int) env('AI_SHADOW_TRAFFIC_SNIPPET_CHARS', 2000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Stuck Detection
     |--------------------------------------------------------------------------
     |
