@@ -121,6 +121,25 @@ class SendTelegramReplyAction
     }
 
     /**
+     * Replace the inline keyboard of an already-sent message. Passing an empty
+     * keyboard ([]) removes the buttons entirely. Used to lock a per-answer vote
+     * after the user has chosen 👍/👎 so it can no longer be re-tapped.
+     *
+     * @param  list<list<array{text: string, callback_data: string}>>  $inlineKeyboard
+     */
+    public function editMessageReplyMarkup(string $botToken, string $chatId, int $messageId, array $inlineKeyboard): void
+    {
+        Http::timeout(10)->post(
+            "https://api.telegram.org/bot{$botToken}/editMessageReplyMarkup",
+            [
+                'chat_id' => $chatId,
+                'message_id' => $messageId,
+                'reply_markup' => json_encode(['inline_keyboard' => $inlineKeyboard]),
+            ],
+        );
+    }
+
+    /**
      * Acknowledge a callback_query (e.g. a vote button press) with an optional
      * toast shown to the user. Telegram requires every callback_query to be
      * answered; failures are non-fatal so they are not surfaced.

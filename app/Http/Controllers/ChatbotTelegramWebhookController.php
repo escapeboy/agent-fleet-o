@@ -9,6 +9,7 @@ use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Domain\Telegram\Actions\SendTelegramReplyAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class ChatbotTelegramWebhookController extends Controller
 {
@@ -57,10 +58,27 @@ class ChatbotTelegramWebhookController extends Controller
 
         $update = $request->json()->all();
 
+        $callbackQuery = $update['callback_query'] ?? null;
+        $callbackData = (string) ($callbackQuery['data'] ?? '');
+        $botToken = $channel->config['bot_token'] ?? null;
+
+        // A locked vote button carries `fb:noop`. The keyboard is already gone
+        // for the user who voted, but a stray/forged tap can still arrive —
+        // just acknowledge it so Telegram stops retrying, and do nothing else.
+        if ($callbackQuery !== null && $callbackData === 'fb:noop') {
+            if ($botToken && isset($callbackQuery['id'])) {
+                app(SendTelegramReplyAction::class)->answerCallbackQuery(
+                    $botToken,
+                    (string) $callbackQuery['id'],
+                );
+            }
+
+            return response('', 200);
+        }
+
         // Per-answer vote callback (👍/👎). Record the vote and acknowledge —
         // do NOT route it through the message job as if it were a new question.
-        $callbackQuery = $update['callback_query'] ?? null;
-        if ($callbackQuery !== null && preg_match('/^fb:(up|down):(.+)$/', (string) ($callbackQuery['data'] ?? ''), $m) === 1) {
+        if ($callbackQuery !== null && preg_match('/^fb:(up|down):(.+)$/', $callbackData, $m) === 1) {
             $vote = $m[1] === 'up' ? 'thumbs_up' : 'thumbs_down';
             $messageId = $m[2];
 
@@ -78,9 +96,36 @@ class ChatbotTelegramWebhookController extends Controller
                 app(ChatbotFeedbackRecorderInterface::class)->record($messageId, $vote);
             }
 
-            $botToken = $channel->config['bot_token'] ?? null;
+            $reply = app(SendTelegramReplyAction::class);
+
+            // Lock the choice: replace the two-button keyboard on the original
+            // bot message with a single, non-actionable confirmation button so
+            // the vote can no longer be changed or re-cast. `fb:noop` callback
+            // data means a stray tap does nothing.
+            $voteMessageId = $callbackQuery['message']['message_id'] ?? null;
+            $voteChatId = $callbackQuery['message']['chat']['id'] ?? null;
+            if ($botToken && $voteMessageId !== null && $voteChatId !== null) {
+                $lockedLabel = $vote === 'thumbs_up' ? '✅ Благодаря!' : '✅ Отбелязано';
+                try {
+                    $reply->editMessageReplyMarkup(
+                        $botToken,
+                        (string) $voteChatId,
+                        (int) $voteMessageId,
+                        [[['text' => $lockedLabel, 'callback_data' => 'fb:noop']]],
+                    );
+                } catch (\Throwable $e) {
+                    // Message may be too old to edit, or already edited — the vote
+                    // is recorded regardless, so never fail the webhook over this.
+                    Log::warning('Failed to lock Telegram vote keyboard', [
+                        'chatbot_id' => $chatbot->id,
+                        'message_id' => $voteMessageId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             if ($botToken && isset($callbackQuery['id'])) {
-                app(SendTelegramReplyAction::class)->answerCallbackQuery(
+                $reply->answerCallbackQuery(
                     $botToken,
                     (string) $callbackQuery['id'],
                     'Благодаря за обратната връзка!',
