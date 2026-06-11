@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Jobs\RunShadowComparisonJob;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\ProviderRanker;
@@ -47,6 +48,8 @@ class FallbackAiGateway implements AiGatewayInterface
         try {
             $result = $this->completeWithFallback($request, $span);
             $span->setStatus(StatusCode::STATUS_OK);
+
+            $this->maybeDispatchShadow($request, $result);
 
             return $result;
         } catch (Throwable $e) {
@@ -685,5 +688,63 @@ class FallbackAiGateway implements AiGatewayInterface
                 : null,
             gatewaySort: $request->gatewaySort,
         );
+    }
+
+    /**
+     * Mirror a completed request to a candidate model on a background queue for
+     * offline A/B. Fully guarded — any failure here must never affect the primary
+     * response that has already been produced. Skips structured/tool requests and
+     * never recurses (the shadow leg's purpose ends in ':shadow').
+     */
+    private function maybeDispatchShadow(AiRequestDTO $request, AiResponseDTO $result): void
+    {
+        try {
+            if (! (bool) config('ai_routing.shadow_traffic.enabled', false)) {
+                return;
+            }
+
+            $shadowProvider = (string) config('ai_routing.shadow_traffic.provider', '');
+            $shadowModel = (string) config('ai_routing.shadow_traffic.model', '');
+            if ($shadowProvider === '' || $shadowModel === '') {
+                return;
+            }
+
+            // Never mirror structured/tool calls; never recurse on the shadow leg.
+            if ($request->isStructured() || $request->hasTools() || str_ends_with((string) $request->purpose, ':shadow')) {
+                return;
+            }
+
+            // Don't shadow the same model against itself.
+            if ($shadowProvider === $result->provider && $shadowModel === $result->model) {
+                return;
+            }
+
+            $rate = (float) config('ai_routing.shadow_traffic.sample_rate', 0.0);
+            if ($rate <= 0.0 || (mt_rand() / mt_getrandmax()) >= $rate) {
+                return;
+            }
+
+            RunShadowComparisonJob::dispatch(
+                $request->systemPrompt,
+                $request->userPrompt,
+                $request->maxTokens,
+                $request->temperature,
+                $request->teamId,
+                $request->purpose,
+                $result->provider,
+                $result->model,
+                $result->latencyMs,
+                $result->usage->costCredits,
+                $result->content,
+                $shadowProvider,
+                $shadowModel,
+                (bool) config('ai_routing.shadow_traffic.store_snippets', false),
+                (int) config('ai_routing.shadow_traffic.snippet_chars', 2000),
+            )->onQueue((string) config('ai_routing.shadow_traffic.queue', 'metrics'));
+        } catch (Throwable $e) {
+            Log::warning('Shadow traffic dispatch failed (primary unaffected)', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
