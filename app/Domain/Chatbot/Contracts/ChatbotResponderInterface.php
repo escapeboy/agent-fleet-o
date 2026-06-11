@@ -18,7 +18,11 @@ interface ChatbotResponderInterface
     /**
      * Process a user message and return the assistant response.
      *
-     * @return array{message: ChatbotMessage, escalated: bool, reply: string|null}
+     * The optional `feedback_message_id` is the id a downstream layer wants
+     * per-answer votes (👍/👎) attached to. Channels that don't surface voting
+     * ignore it; the default service sets it to the assistant ChatbotMessage id.
+     *
+     * @return array{message: ChatbotMessage, escalated: bool, reply: string|null, feedback_message_id?: string|null}
      */
     public function handle(Chatbot $chatbot, ChatbotSession $session, string $userText, string $actorUserId): array;
 }

@@ -36,7 +36,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
     /**
      * Process a user message and return the assistant response.
      *
-     * @return array{message: ChatbotMessage, escalated: bool, reply: string|null}
+     * @return array{message: ChatbotMessage, escalated: bool, reply: string|null, feedback_message_id?: string|null}
      */
     public function handle(
         Chatbot $chatbot,
@@ -179,6 +179,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
             'message' => $assistantMsg,
             'escalated' => false,
             'reply' => $rawReply,
+            'feedback_message_id' => $assistantMsg->id,
         ];
     }
 

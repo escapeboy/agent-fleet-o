@@ -96,11 +96,14 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
         }
 
         $reply = $result['reply'];
+        $feedbackId = $result['feedback_message_id'] ?? null;
 
         if ($result['escalated'] || $reply === null) {
             $reply = $chatbot->fallback_message ?? 'I need a moment to verify this response. Please wait.';
+            // No answer to vote on yet (escalated / pending) — suppress voting buttons.
+            $feedbackId = null;
         }
 
-        $sendReply->execute($botToken, $this->chatId, $reply);
+        $sendReply->execute($botToken, $this->chatId, $reply, feedbackId: $feedbackId);
     }
 }
