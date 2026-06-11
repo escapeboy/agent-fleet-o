@@ -156,6 +156,24 @@ class SendTelegramReplyAction
     }
 
     /**
+     * Fetch the bot's own account info via Telegram getMe. Returns the `result`
+     * payload (containing `id`, `username`, etc.) or null on failure. Callers
+     * should cache this — the bot identity is stable per token.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getMe(string $botToken): ?array
+    {
+        $response = Http::timeout(10)->get("https://api.telegram.org/bot{$botToken}/getMe");
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        return $response->json('result');
+    }
+
+    /**
      * Convert common Markdown to Telegram HTML format.
      */
     private function convertMarkdownToHtml(string $text): string
