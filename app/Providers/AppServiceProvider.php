@@ -18,10 +18,12 @@ use App\Domain\Approval\Listeners\DispatchActionProposalExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Audit\Listeners\LogIntegrationExecution;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
+use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
 use App\Domain\Chatbot\Events\ChatbotResponseApprovedEvent;
 use App\Domain\Chatbot\Listeners\CaptureResponseCorrectionListener;
 use App\Domain\Chatbot\Listeners\DeliverChatbotWorkflowResultListener;
 use App\Domain\Chatbot\Listeners\ExtractChatMemoriesListener;
+use App\Domain\Chatbot\Services\ChatbotResponseService;
 use App\Domain\Credential\Observers\SecretScanObserver;
 use App\Domain\Evaluation\Listeners\AppendRegressionCaseOnFailureListener;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
@@ -345,6 +347,10 @@ class AppServiceProvider extends ServiceProvider
         // Replace the default MailChannel with our team-aware variant that applies
         // the active email theme to all system notification emails.
         $this->app->bind(MailChannel::class, TeamAwareMailChannel::class);
+
+        // Chatbot responder seam — downstream layers (e.g. the Barsy plugin)
+        // may rebind this interface to substitute their own answering pipeline.
+        $this->app->bind(ChatbotResponderInterface::class, ChatbotResponseService::class);
     }
 
     /**

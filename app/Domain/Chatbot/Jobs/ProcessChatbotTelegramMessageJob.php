@@ -2,10 +2,10 @@
 
 namespace App\Domain\Chatbot\Jobs;
 
+use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotSession;
-use App\Domain\Chatbot\Services\ChatbotResponseService;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Telegram\Actions\SendTelegramReplyAction;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +30,7 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
         $this->onQueue('ai-calls');
     }
 
-    public function handle(ChatbotResponseService $responseService, SendTelegramReplyAction $sendReply): void
+    public function handle(ChatbotResponderInterface $responseService, SendTelegramReplyAction $sendReply): void
     {
         $chatbot = Chatbot::find($this->chatbotId);
 

@@ -6,6 +6,7 @@ use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Chatbot\Jobs\ExecuteChatbotWorkflowJob;
 use App\Domain\Chatbot\Models\Chatbot;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class ChatbotResponseService
+class ChatbotResponseService implements ChatbotResponderInterface
 {
     // Redis TTL for context cache: 30 minutes
     private const CONTEXT_TTL = 1800;
