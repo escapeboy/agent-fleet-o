@@ -26,6 +26,7 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
         public readonly string $chatId,
         public readonly string $text,
         public readonly ?string $username = null,
+        public readonly ?string $sessionExternalId = null,
     ) {
         $this->onQueue('ai-calls');
     }
@@ -55,11 +56,16 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
             return;
         }
 
+        // Session identity: in groups this is "<chatId>:<userId>" so each member
+        // gets their own conversation (no context bleed); in private chats it is
+        // just "<chatId>" (back-compat). Replies always go back to $chatId.
+        $externalUserId = $this->sessionExternalId ?? $this->chatId;
+
         // Find or create session — start a new one if the last activity was > 24 hours ago
         $session = ChatbotSession::withoutGlobalScopes()
             ->where('chatbot_id', $chatbot->id)
             ->where('channel', 'telegram')
-            ->where('external_user_id', $this->chatId)
+            ->where('external_user_id', $externalUserId)
             ->latest('last_activity_at')
             ->first();
 
@@ -68,7 +74,7 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
                 'chatbot_id' => $chatbot->id,
                 'team_id' => $chatbot->team_id,
                 'channel' => 'telegram',
-                'external_user_id' => $this->chatId,
+                'external_user_id' => $externalUserId,
                 'metadata' => ['username' => $this->username],
                 'started_at' => now(),
                 'last_activity_at' => now(),

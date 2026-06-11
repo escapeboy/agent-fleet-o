@@ -147,15 +147,15 @@ class ChatbotTelegramFeedbackWebhookTest extends TestCase
             'callback_query' => [
                 'id' => 'cb-1',
                 'data' => 'fb:down:msg-123',
-                'from' => ['username' => 'tester'],
+                'from' => ['id' => 42, 'username' => 'tester'],
                 'message' => ['message_id' => 555, 'chat' => ['id' => 99]],
             ],
         ]);
 
         $response->assertStatus(200);
 
-        // The next text from chat 99 should be treated as the comment for msg-123.
-        $this->assertSame('msg-123', Cache::get('tg:fbcomment:99'));
+        // The next text from user 42 in chat 99 is treated as the comment for msg-123.
+        $this->assertSame('msg-123', Cache::get('tg:fbcomment:99:42'));
 
         // An optional-reason prompt is sent back to the chat.
         Http::assertSent(fn ($request) => str_contains($request->url(), '/sendMessage')
@@ -169,7 +169,7 @@ class ChatbotTelegramFeedbackWebhookTest extends TestCase
         Bus::fake();
         Http::fake();
 
-        Cache::put('tg:fbcomment:99', 'msg-123', 600);
+        Cache::put('tg:fbcomment:99:42', 'msg-123', 600);
 
         $recorder = Mockery::mock(ChatbotFeedbackRecorderInterface::class);
         $recorder->shouldReceive('recordComment')->once()->with('msg-123', 'Отговорът беше грешен');
@@ -180,7 +180,7 @@ class ChatbotTelegramFeedbackWebhookTest extends TestCase
             'message' => [
                 'chat' => ['id' => 99],
                 'text' => 'Отговорът беше грешен',
-                'from' => ['username' => 'tester'],
+                'from' => ['id' => 42, 'username' => 'tester'],
             ],
         ]);
 
@@ -188,7 +188,7 @@ class ChatbotTelegramFeedbackWebhookTest extends TestCase
 
         // Comment consumed: question job not dispatched and cache key cleared.
         Bus::assertNotDispatched(ProcessChatbotTelegramMessageJob::class);
-        $this->assertNull(Cache::get('tg:fbcomment:99'));
+        $this->assertNull(Cache::get('tg:fbcomment:99:42'));
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/sendMessage')
             && (string) $request['chat_id'] === '99'

@@ -14,11 +14,17 @@ use Illuminate\Support\Facades\Log;
 
 class ChatbotTelegramWebhookController extends Controller
 {
-    /** Cache key prefix for the per-chat "awaiting 👎 comment" state. */
+    /** Cache key prefix for the per-(chat, user) "awaiting 👎 comment" state. */
     private const FEEDBACK_COMMENT_PREFIX = 'tg:fbcomment:';
 
     /** How long we wait for the user to type their optional comment. */
     private const FEEDBACK_COMMENT_TTL = 600; // 10 minutes
+
+    /** Cache key prefix for the resolved bot username (per bot token). */
+    private const BOT_USERNAME_PREFIX = 'tg:botusername:';
+
+    /** Bot identity is stable per token — cache it for a day. */
+    private const BOT_USERNAME_TTL = 86400;
 
     /**
      * Handle an inbound Telegram webhook push for a chatbot channel.
@@ -132,11 +138,14 @@ class ChatbotTelegramWebhookController extends Controller
             }
 
             // On a 👎 only: invite an optional free-text reason and remember
-            // that the next plain text message from this chat is that comment.
+            // that this user's next plain text message in this chat is that
+            // comment. Keyed per (chat, user) so that in a group only the SAME
+            // voter's follow-up is captured — not another member's message.
             // The stored value is the feedback message id from fb:down:<id>.
+            $voteUserId = $callbackQuery['from']['id'] ?? null;
             if ($vote === 'thumbs_down' && $botToken && $voteChatId !== null) {
                 Cache::put(
-                    self::FEEDBACK_COMMENT_PREFIX.$voteChatId,
+                    $this->feedbackCommentKey((string) $voteChatId, $voteUserId),
                     $messageId,
                     self::FEEDBACK_COMMENT_TTL,
                 );
@@ -166,15 +175,18 @@ class ChatbotTelegramWebhookController extends Controller
         }
 
         $chatId = (string) ($message['chat']['id'] ?? '');
+        $chatType = (string) ($message['chat']['type'] ?? 'private');
         $text = $message['text'] ?? $update['callback_query']['data'] ?? '';
+        $fromUserId = $message['from']['id'] ?? null;
         $username = ($update['callback_query']['from'] ?? $message['from'] ?? [])['username'] ?? null;
 
-        // If we previously prompted this chat for a 👎 comment, treat the next
-        // plain text message as that comment instead of a new question. The TTL
-        // bounds staleness; we can't distinguish a genuine follow-up question,
-        // so the documented behaviour is that the next text becomes the comment.
+        // If we previously prompted this user for a 👎 comment, treat their next
+        // plain text message as that comment instead of a new question. The key
+        // is per (chat, user) so in a group only the voter's own follow-up is
+        // captured. The TTL bounds staleness; we can't distinguish a genuine
+        // follow-up question, so the next text becomes the comment.
         if ($chatId !== '' && $text !== '' && isset($update['message'])) {
-            $commentKey = self::FEEDBACK_COMMENT_PREFIX.$chatId;
+            $commentKey = $this->feedbackCommentKey($chatId, $fromUserId);
             $pendingMessageId = Cache::get($commentKey);
 
             if ($pendingMessageId !== null) {
@@ -194,10 +206,122 @@ class ChatbotTelegramWebhookController extends Controller
             }
         }
 
-        if ($chatId !== '' && $text !== '') {
-            ProcessChatbotTelegramMessageJob::dispatch($chatbot->id, $channel->id, $chatId, $text, $username);
+        if ($chatId === '' || $text === '') {
+            return response('', 200);
         }
 
+        // Default: private chats answer every message, keyed only by chat id.
+        $sessionExternalId = $chatId;
+
+        // Groups/supergroups: only respond when explicitly addressed (an @mention
+        // of the bot or a reply to one of the bot's own messages). All other
+        // ambient chatter is ignored. Each member gets their own session via a
+        // "<chatId>:<userId>" key so context never bleeds between participants.
+        if ($chatType === 'group' || $chatType === 'supergroup') {
+            $botUserId = ($botToken !== null && $botToken !== '')
+                ? (int) strtok($botToken, ':')
+                : null;
+
+            $directedText = $this->directedText($message, $botToken, $botUserId);
+
+            if ($directedText === null || $directedText === '') {
+                return response('', 200);
+            }
+
+            $text = $directedText;
+            $sessionExternalId = $fromUserId !== null ? $chatId.':'.$fromUserId : $chatId;
+        }
+
+        ProcessChatbotTelegramMessageJob::dispatch(
+            $chatbot->id,
+            $channel->id,
+            $chatId,
+            $text,
+            $username,
+            $sessionExternalId,
+        );
+
         return response('', 200);
+    }
+
+    /**
+     * Build the per-(chat, user) cache key for the pending 👎-comment state.
+     */
+    private function feedbackCommentKey(string $chatId, int|string|null $userId): string
+    {
+        return self::FEEDBACK_COMMENT_PREFIX.$chatId.':'.($userId ?? '');
+    }
+
+    /**
+     * Decide whether a group message is addressed to the bot, and return the
+     * question text to dispatch (with the @mention token stripped). Returns null
+     * when the message is ambient chatter that should be ignored.
+     *
+     * A message is "directed" when it either replies to one of the bot's own
+     * messages (reply_to_message.from.id == bot user id) or @mentions the bot
+     * (a `mention` entity matching '@<bot_username>', or a `text_mention`
+     * entity whose user.id == bot user id).
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function directedText(array $message, ?string $botToken, ?int $botUserId): ?string
+    {
+        $text = (string) ($message['text'] ?? '');
+
+        $isReplyToBot = $botUserId !== null
+            && (int) ($message['reply_to_message']['from']['id'] ?? 0) === $botUserId;
+
+        $hasMentionEntity = false;
+        $isTextMention = false;
+
+        foreach ($message['entities'] ?? [] as $entity) {
+            $type = $entity['type'] ?? null;
+
+            if ($type === 'mention') {
+                $hasMentionEntity = true;
+            }
+
+            if ($type === 'text_mention'
+                && $botUserId !== null
+                && (int) ($entity['user']['id'] ?? 0) === $botUserId) {
+                $isTextMention = true;
+            }
+        }
+
+        $botUsername = ($hasMentionEntity && $botToken !== null && $botToken !== '')
+            ? $this->resolveBotUsername($botToken)
+            : null;
+
+        $isAtMention = $botUsername !== null && stripos($text, '@'.$botUsername) !== false;
+
+        if (! $isReplyToBot && ! $isAtMention && ! $isTextMention) {
+            return null;
+        }
+
+        // Strip the '@<bot_username>' token so the RAG question isn't polluted.
+        if ($isAtMention) {
+            $text = (string) preg_replace('/@'.preg_quote($botUsername, '/').'\b/i', '', $text);
+            $text = trim((string) preg_replace('/\s{2,}/', ' ', $text));
+        }
+
+        return $text;
+    }
+
+    /**
+     * Resolve the bot's @username via getMe, cached per bot token (the identity
+     * is stable). Returns null if Telegram is unreachable — callers treat a null
+     * username as "no @mention match", falling back to reply-detection only.
+     */
+    private function resolveBotUsername(string $botToken): ?string
+    {
+        return Cache::remember(
+            self::BOT_USERNAME_PREFIX.md5($botToken),
+            self::BOT_USERNAME_TTL,
+            function () use ($botToken): ?string {
+                $me = app(SendTelegramReplyAction::class)->getMe($botToken);
+
+                return is_array($me) ? ($me['username'] ?? null) : null;
+            },
+        );
     }
 }
