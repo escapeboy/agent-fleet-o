@@ -180,6 +180,28 @@ class ChatbotTelegramWebhookController extends Controller
         $fromUserId = $message['from']['id'] ?? null;
         $username = ($update['callback_query']['from'] ?? $message['from'] ?? [])['username'] ?? null;
 
+        // Bot slash-commands are not questions and must never reach the RAG
+        // pipeline (it would decline them as out-of-scope). Intercept here —
+        // before the pending-👎-comment capture (so a command isn't recorded as
+        // feedback) and before group-gating (so /start works in groups too,
+        // where Telegram still delivers commands under privacy mode). Only for
+        // real inbound messages; callbacks never carry slash-commands.
+        if (isset($update['message']) && str_starts_with($text, '/')) {
+            $command = strtolower(strtok(ltrim($text, '/'), " @\n\t"));
+
+            if ($command === 'start' && $botToken) {
+                app(SendTelegramReplyAction::class)->execute(
+                    $botToken,
+                    $chatId,
+                    'Здравейте! 👋 Аз съм виртуалният асистент на Barsy. Просто напишете въпроса си тук и ще се опитам да помогна. След всеки отговор може да гласувате 👍/👎, за да го подобрявам.',
+                );
+            }
+
+            // Any other command (incl. unknown ones) is silently ignored — we
+            // expose no command surface yet.
+            return response('', 200);
+        }
+
         // If we previously prompted this user for a 👎 comment, treat their next
         // plain text message as that comment instead of a new question. The key
         // is per (chat, user) so in a group only the voter's own follow-up is
