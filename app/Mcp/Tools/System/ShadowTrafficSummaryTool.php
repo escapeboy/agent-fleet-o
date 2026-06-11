@@ -44,7 +44,7 @@ class ShadowTrafficSummaryTool extends Tool
 
         $limit = $validated['limit'] ?? 50;
 
-        $rows = ShadowComparison::query()
+        $rows = ShadowComparison::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->orderByDesc('created_at')
             ->limit($limit)
