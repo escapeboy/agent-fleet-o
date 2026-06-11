@@ -57,8 +57,12 @@ class SendTelegramReplyAction
 
     /**
      * Send a text reply to a Telegram chat. Long messages are split at MAX_MESSAGE_LENGTH.
+     *
+     * When $feedbackId is non-null, a 👍/👎 inline keyboard is attached to the
+     * final chunk with callback data `fb:up:<id>` / `fb:down:<id>` so the channel
+     * can collect a per-answer vote. When null, behaves exactly as before.
      */
-    public function execute(string $botToken, string $chatId, string $text, string $parseMode = 'HTML'): bool
+    public function execute(string $botToken, string $chatId, string $text, string $parseMode = 'HTML', ?string $feedbackId = null): bool
     {
         // Sanitize text for Telegram HTML mode
         if ($parseMode === 'HTML') {
@@ -67,15 +71,28 @@ class SendTelegramReplyAction
 
         // Split long messages
         $chunks = $this->splitMessage($text);
+        $lastIndex = count($chunks) - 1;
 
-        foreach ($chunks as $chunk) {
+        foreach ($chunks as $index => $chunk) {
+            $payload = [
+                'chat_id' => $chatId,
+                'text' => $chunk,
+                'parse_mode' => $parseMode,
+            ];
+
+            // Attach voting buttons only to the final chunk.
+            if ($feedbackId !== null && $index === $lastIndex) {
+                $payload['reply_markup'] = json_encode([
+                    'inline_keyboard' => [[
+                        ['text' => '👍', 'callback_data' => "fb:up:{$feedbackId}"],
+                        ['text' => '👎', 'callback_data' => "fb:down:{$feedbackId}"],
+                    ]],
+                ]);
+            }
+
             $response = Http::timeout(15)->post(
                 "https://api.telegram.org/bot{$botToken}/sendMessage",
-                [
-                    'chat_id' => $chatId,
-                    'text' => $chunk,
-                    'parse_mode' => $parseMode,
-                ],
+                $payload,
             );
 
             if (! $response->successful()) {
@@ -101,6 +118,22 @@ class SendTelegramReplyAction
         }
 
         return true;
+    }
+
+    /**
+     * Acknowledge a callback_query (e.g. a vote button press) with an optional
+     * toast shown to the user. Telegram requires every callback_query to be
+     * answered; failures are non-fatal so they are not surfaced.
+     */
+    public function answerCallbackQuery(string $botToken, string $callbackQueryId, string $text = ''): void
+    {
+        Http::timeout(10)->post(
+            "https://api.telegram.org/bot{$botToken}/answerCallbackQuery",
+            [
+                'callback_query_id' => $callbackQueryId,
+                'text' => $text,
+            ],
+        );
     }
 
     /**
