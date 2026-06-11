@@ -125,6 +125,51 @@ final readonly class AiRequestDTO
         );
     }
 
+    /**
+     * Clone with a different user prompt, preserving every other field. Used by
+     * SchemaValidation to issue a self-correcting retry (re-prompt for valid JSON)
+     * without dropping any request state. Covered by AiRequestDtoWithUserPromptTest,
+     * which fails if a newly added constructor field is missed here.
+     */
+    public function withUserPrompt(string $userPrompt): self
+    {
+        return new self(
+            provider: $this->provider,
+            model: $this->model,
+            systemPrompt: $this->systemPrompt,
+            userPrompt: $userPrompt,
+            maxTokens: $this->maxTokens,
+            outputSchema: $this->outputSchema,
+            userId: $this->userId,
+            teamId: $this->teamId,
+            experimentId: $this->experimentId,
+            experimentStageId: $this->experimentStageId,
+            agentId: $this->agentId,
+            purpose: $this->purpose,
+            idempotencyKey: $this->idempotencyKey,
+            temperature: $this->temperature,
+            fallbackChain: $this->fallbackChain,
+            tools: $this->tools,
+            maxSteps: $this->maxSteps,
+            toolChoice: $this->toolChoice,
+            providerName: $this->providerName,
+            thinkingBudget: $this->thinkingBudget,
+            effort: $this->effort,
+            workingDirectory: $this->workingDirectory,
+            enablePromptCaching: $this->enablePromptCaching,
+            complexity: $this->complexity,
+            classifiedComplexity: $this->classifiedComplexity,
+            budgetPressureLevel: $this->budgetPressureLevel,
+            escalationAttempts: $this->escalationAttempts,
+            fastMode: $this->fastMode,
+            providerCredentialOverride: $this->providerCredentialOverride,
+            gatewaySort: $this->gatewaySort,
+            parentTraceId: $this->parentTraceId,
+            parentSpanId: $this->parentSpanId,
+            maxCostCredits: $this->maxCostCredits,
+        );
+    }
+
     public function isStructured(): bool
     {
         return $this->outputSchema !== null;

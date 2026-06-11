@@ -87,6 +87,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Structured Output Self-Correction
+    |--------------------------------------------------------------------------
+    |
+    | Prism validates structured (schema) output natively, so first-class
+    | providers rarely return an unparseable result. The exception is
+    | custom_endpoint / self-hosted models (Ollama-style) that ignore native
+    | JSON-schema and emit prose or fenced JSON, leaving parsedOutput null.
+    |
+    | When enabled, SchemaValidation re-prompts up to `max_attempts` times for a
+    | single valid JSON object before giving up. Each retry is a fresh, metered
+    | provider call (downstream of this middleware — not budget/idempotency
+    | re-checked), so keep max_attempts small. Disabled by default; activate via
+    | env flag.
+    |
+    */
+    'structured_self_correction' => [
+        'enabled' => (bool) env('AI_STRUCTURED_SELF_CORRECTION_ENABLED', false),
+        'max_attempts' => (int) env('AI_STRUCTURED_SELF_CORRECTION_MAX_ATTEMPTS', 1),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Stuck Detection
     |--------------------------------------------------------------------------
     |
