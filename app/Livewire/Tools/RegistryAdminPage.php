@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tools;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Tool\Actions\CreateMcpRegistryEntryAction;
 use App\Domain\Tool\Actions\InstallFromRegistryAction;
 use App\Domain\Tool\Enums\RegistryTrustLevel;
@@ -29,6 +30,11 @@ class RegistryAdminPage extends Component
 
     public string $trustLevel = 'community';
 
+    public function mount(): void
+    {
+        $this->authorizeRegistryCuration();
+    }
+
     public function rules(): array
     {
         return [
@@ -52,6 +58,7 @@ class RegistryAdminPage extends Component
     public function save(CreateMcpRegistryEntryAction $action): void
     {
         Gate::authorize('edit-content');
+        $this->authorizeRegistryCuration();
 
         $this->validate();
 
@@ -74,6 +81,7 @@ class RegistryAdminPage extends Component
     public function toggleActive(string $id): void
     {
         Gate::authorize('edit-content');
+        $this->authorizeRegistryCuration();
 
         $entry = McpServerRegistry::query()->findOrFail($id);
         $entry->update(['is_active' => ! $entry->is_active]);
@@ -93,6 +101,18 @@ class RegistryAdminPage extends Component
         $tool = $action->execute($entry, $teamId);
 
         session()->flash('success', 'Installed as Tool: '.$tool->slug);
+    }
+
+    /**
+     * In cloud mode only super-admins may curate the platform registry (entries become
+     * installable for every team). In self-hosted mode any authenticated user may do so
+     * (single-team, owner controls the install). Mirrors McpRegistryCreateTool.
+     */
+    private function authorizeRegistryCuration(): void
+    {
+        if (app(DeploymentMode::class)->isCloud()) {
+            abort_unless(auth()->user()?->is_super_admin, 403);
+        }
     }
 
     public function render()
