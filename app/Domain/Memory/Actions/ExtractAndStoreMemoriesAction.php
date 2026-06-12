@@ -17,15 +17,14 @@ use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Extracts durable facts from a completed AgentExecution using claude-haiku-4-5.
+ * Extracts durable facts from a completed AgentExecution using the configured
+ * memory-extraction model (config('memory.extraction.model')).
  *
  * Facts are filtered by confidence >= 0.5 and stored as individual Memory records
  * via StoreMemoryAction, enriched with confidence scores and semantic tags.
  */
 class ExtractAndStoreMemoriesAction
 {
-    private const EXTRACT_MODEL = 'claude-haiku-4-5';
-
     private const MIN_CONFIDENCE = 0.5;
 
     private const SYSTEM_PROMPT = <<<'PROMPT'
@@ -126,11 +125,20 @@ PROMPT;
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);
 
+            // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+            // so the model name is never paired with a foreign resolved provider
+            // (which 400s on gateways that don't expose Anthropic models). An
+            // un-prefixed override falls back to the team-resolved provider.
+            $configured = (string) config('memory.extraction.model', 'anthropic/claude-haiku-4-5');
+            [$extractProvider, $extractModel] = str_contains($configured, '/')
+                ? explode('/', $configured, 2)
+                : [$resolved['provider'], $configured];
+
             $prompt = $this->buildExtractionPrompt($execution);
 
             $response = $this->gateway->complete(new AiRequestDTO(
-                provider: $resolved['provider'],
-                model: self::EXTRACT_MODEL,
+                provider: $extractProvider,
+                model: $extractModel,
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $prompt,
                 maxTokens: 512,

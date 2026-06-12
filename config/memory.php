@@ -58,6 +58,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Memory Extraction Model
+    |--------------------------------------------------------------------------
+    |
+    | The cheap/fast model used by the extraction family — ExtractAndStore,
+    | ExtractFailureLesson, ExtractSuccessPattern — to distil durable facts,
+    | lessons, and patterns from completed runs.
+    |
+    | Format: "provider/model" (e.g. "anthropic/claude-haiku-4-5"). The provider
+    | prefix binds the model to the provider that actually serves it, so the
+    | model name is never POSTed to a foreign provider (the cause of the 400
+    | "model 'claude-haiku-4-5' does not exist" on gateways that don't expose
+    | Anthropic models). Deployments routed through an OpenAI-compatible bridge
+    | should override this with a model their gateway exposes, e.g.
+    | MEMORY_EXTRACTION_MODEL=openai/gpt-4o-mini.
+    |
+    */
+    'extraction' => [
+        'model' => env('MEMORY_EXTRACTION_MODEL', 'anthropic/claude-haiku-4-5'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Memory TTL (Days)
     |--------------------------------------------------------------------------
     |
@@ -159,7 +181,7 @@ return [
         'min_cluster_size' => 3,
         'similarity_threshold' => 0.85,
         'exclude_newer_than_days' => 7,
-        'model' => 'claude-haiku-4-5',
+        'model' => env('MEMORY_CONSOLIDATION_MODEL', 'anthropic/claude-haiku-4-5'),
     ],
 
     /*
@@ -179,7 +201,7 @@ return [
         'window_hours' => 24,
         'max_events' => 200,
         'provider' => 'anthropic',
-        'model' => 'claude-haiku-4-5',
+        'model' => env('MEMORY_DISTILLATION_MODEL', 'anthropic/claude-haiku-4-5'),
     ],
 
     /*
@@ -231,7 +253,7 @@ return [
     */
     'deep_judgment' => [
         'enabled' => (bool) env('MEMORY_DEEP_JUDGMENT_ENABLED', false),
-        'model' => env('MEMORY_DEEP_JUDGMENT_MODEL', 'claude-haiku-4-5'),
+        'model' => env('MEMORY_DEEP_JUDGMENT_MODEL', 'anthropic/claude-haiku-4-5'),
         'threshold' => (float) env('MEMORY_DEEP_JUDGMENT_THRESHOLD', 0.5),
         'min_candidates' => (int) env('MEMORY_DEEP_JUDGMENT_MIN_CANDIDATES', 4),
     ],
@@ -249,7 +271,7 @@ return [
     */
     'contextual_rag' => [
         'enabled' => (bool) env('MEMORY_CONTEXTUAL_RAG_ENABLED', false),
-        'model' => env('MEMORY_CONTEXTUAL_RAG_MODEL', 'claude-haiku-4-5'),
+        'model' => env('MEMORY_CONTEXTUAL_RAG_MODEL', 'anthropic/claude-haiku-4-5'),
     ],
 
     /*
@@ -307,7 +329,7 @@ return [
     */
     'contradiction_scan' => [
         'enabled' => (bool) env('MEMORY_CONTRADICTION_SCAN', false),
-        'model' => env('MEMORY_CONTRADICTION_MODEL', 'claude-haiku-4-5'),
+        'model' => env('MEMORY_CONTRADICTION_MODEL', 'anthropic/claude-haiku-4-5'),
         'min_similarity' => (float) env('MEMORY_CONTRADICTION_MIN_SIMILARITY', 0.55),
         'max_similarity' => (float) env('MEMORY_CONTRADICTION_MAX_SIMILARITY', 0.92),
         'candidate_limit' => (int) env('MEMORY_CONTRADICTION_CANDIDATE_LIMIT', 60),
