@@ -138,11 +138,17 @@ class RetrievalBenchmarkRunner
 
             if ($vectorLane) {
                 try {
-                    $embedding = $provider->formatForPgvector($provider->embed($doc['content']));
+                    // Team-aware: BYOK installs have no platform embedding key.
+                    $vector = $provider->embedForTeam($doc['content'], $teamId);
+                    $embedding = $vector === null ? null : $provider->formatForPgvector($vector);
                 } catch (\Throwable $e) {
+                    $embedding = null;
+                    Log::warning('RetrievalBenchmark: embedding failed', ['error' => $e->getMessage()]);
+                }
+
+                if ($embedding === null) {
                     // Degrade exactly like the search path: keyword lane still works.
                     $vectorLane = false;
-                    Log::warning('RetrievalBenchmark: embedding unavailable, vector lane disabled', ['error' => $e->getMessage()]);
                 }
             }
 

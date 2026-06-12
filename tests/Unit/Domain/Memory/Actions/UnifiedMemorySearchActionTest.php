@@ -5,6 +5,7 @@ namespace Tests\Unit\Domain\Memory\Actions;
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Memory\Actions\UnifiedMemorySearchAction;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
 use Mockery;
 use Prism\Prism\Embeddings\Response as EmbeddingResponse;
@@ -27,6 +28,39 @@ class UnifiedMemorySearchActionTest extends TestCase
                 meta: new Meta(id: 'test', model: 'text-embedding-3-small'),
             ),
         ]);
+
+        // The action's KG-lane embedding is team-aware (embedForTeam) and the
+        // real EmbeddingService would hit team_provider_credentials — bind a
+        // direct fake so no DB is needed in this unit test.
+        $this->app->instance(EmbeddingProviderInterface::class, new class($vector) implements EmbeddingProviderInterface
+        {
+            public function __construct(private array $vector) {}
+
+            public function embed(string $text): array
+            {
+                return $this->vector;
+            }
+
+            public function embedForTeam(string $text, ?string $teamId): ?array
+            {
+                return $this->vector;
+            }
+
+            public function formatForPgvector(array $embedding): string
+            {
+                return '['.implode(',', $embedding).']';
+            }
+
+            public function dimensions(): int
+            {
+                return 1536;
+            }
+
+            public function identifier(): string
+            {
+                return 'unit-fake';
+            }
+        });
     }
 
     public function test_falls_back_to_vector_only_when_unified_disabled(): void

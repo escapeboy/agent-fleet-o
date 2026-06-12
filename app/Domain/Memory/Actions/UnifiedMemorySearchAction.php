@@ -46,14 +46,18 @@ class UnifiedMemorySearchAction
         $keywordWeight = config('memory.unified_search.keyword_weight', 0.5);
         $rrfK = config('memory.unified_search.rrf_k', 60);
 
-        $queryEmbedding = $this->generateEmbedding($query);
+        $queryEmbedding = $this->generateEmbedding($query, $teamId);
 
         // System 1: Vector search — run original + keyword-expanded query variants in parallel,
         // then merge with weighted RRF (Onyx-inspired multi-query wRRF).
         $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $rrfK);
 
-        // System 2: Knowledge Graph search
-        $kgResults = $this->getKgResults($teamId, $queryEmbedding);
+        // System 2: Knowledge Graph search — skipped when no embedding is
+        // available (BYOK installs with no platform key); other lanes degrade
+        // the same way instead of failing the whole search.
+        $kgResults = $queryEmbedding !== null
+            ? $this->getKgResults($teamId, $queryEmbedding)
+            : collect();
 
         // System 3: Keyword search
         $keywordResults = $this->getKeywordResults($teamId, $agentId, $query);
@@ -391,10 +395,23 @@ class UnifiedMemorySearchAction
         ]);
     }
 
-    private function generateEmbedding(string $text): string
+    /**
+     * Team-aware query embedding for the KG lane. Uses the team's BYOK
+     * credential (platform key may be absent on BYOK installs) and degrades
+     * to null instead of throwing — this was the only un-guarded call in the
+     * action and killed the entire unified search when no key was available.
+     */
+    private function generateEmbedding(string $text, ?string $teamId): ?string
     {
-        $provider = app(EmbeddingProviderInterface::class);
+        try {
+            $provider = app(EmbeddingProviderInterface::class);
+            $vector = $provider->embedForTeam($text, $teamId);
 
-        return $provider->formatForPgvector($provider->embed($text));
+            return $vector === null ? null : $provider->formatForPgvector($vector);
+        } catch (\Throwable $e) {
+            Log::debug('UnifiedSearch: query embedding failed', ['error' => $e->getMessage()]);
+
+            return null;
+        }
     }
 }
