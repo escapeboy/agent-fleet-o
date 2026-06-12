@@ -14,6 +14,7 @@ class BenchmarkRetrieval extends Command
         {--team= : Team UUID (defaults to the first team)}
         {--agent= : Agent UUID (defaults to the first agent of the team)}
         {--k=10 : Cutoff for Recall@k / NDCG@k}
+        {--threshold= : Override memory.similarity_threshold for this run (e.g. 0.45) — for calibrating the vector lane}
         {--keep : Keep the ingested benchmark memories after the run}
         {--json : Output the full report as JSON}';
 
@@ -53,6 +54,12 @@ class BenchmarkRetrieval extends Command
             return self::FAILURE;
         }
 
+        if ($this->option('threshold') !== null) {
+            config(['memory.similarity_threshold' => (float) $this->option('threshold')]);
+        }
+
+        $activeThreshold = (float) config('memory.similarity_threshold', 0.7);
+
         try {
             $report = $runner->run($dataset, $teamId, $agentId, (int) $this->option('k'), (bool) $this->option('keep'));
         } catch (\InvalidArgumentException $e) {
@@ -60,6 +67,8 @@ class BenchmarkRetrieval extends Command
 
             return self::FAILURE;
         }
+
+        $report['similarity_threshold'] = $activeThreshold;
 
         if ($this->option('json')) {
             $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -82,8 +91,9 @@ class BenchmarkRetrieval extends Command
         );
 
         $this->info(sprintf(
-            'Means over %d case(s): Recall@%d %s · MRR %s · NDCG@%d %s',
+            'Means over %d case(s) @ threshold %.2f: Recall@%d %s · MRR %s · NDCG@%d %s',
             count($report['cases']),
+            $activeThreshold,
             $report['k'],
             $this->fmt($report['means']['recall']),
             $this->fmt($report['means']['mrr']),

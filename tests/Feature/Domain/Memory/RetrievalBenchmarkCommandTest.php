@@ -102,6 +102,21 @@ class RetrievalBenchmarkCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_threshold_option_is_reflected_in_output(): void
+    {
+        config(['memory.similarity_threshold' => 0.7]);
+        $path = $this->writeDataset($this->validDataset());
+
+        $this->artisan('memory:benchmark-retrieval', [
+            'dataset' => $path,
+            '--team' => $this->team->id,
+            '--agent' => $this->agent->id,
+            '--threshold' => 0.42,
+        ])
+            ->expectsOutputToContain('@ threshold 0.42')
+            ->assertSuccessful();
+    }
+
     public function test_fixture_memories_are_cleaned_up_unless_kept(): void
     {
         $path = $this->writeDataset($this->validDataset());
