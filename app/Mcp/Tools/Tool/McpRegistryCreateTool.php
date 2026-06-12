@@ -2,8 +2,10 @@
 
 namespace App\Mcp\Tools\Tool;
 
+use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Tool\Actions\CreateMcpRegistryEntryAction;
 use App\Mcp\Attributes\AssistantTool;
+use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -14,6 +16,8 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class McpRegistryCreateTool extends Tool
 {
+    use HasStructuredErrors;
+
     protected string $name = 'mcp_registry_create';
 
     protected string $description = 'Add an MCP server to the platform-curated registry. Platform admin operation: the entry becomes installable for every team. For stdio transport, connection must include command and args. For http, connection must include url. Optional bearer_token in connection is stored as-is — never paste raw production secrets through MCP.';
@@ -45,6 +49,13 @@ class McpRegistryCreateTool extends Tool
 
     public function handle(Request $request, CreateMcpRegistryEntryAction $action): Response
     {
+        // In cloud mode only super-admins may curate the platform registry (entries become
+        // installable for every team). In self-hosted mode any authenticated user may do so
+        // (single-team, owner controls the install).
+        if (app(DeploymentMode::class)->isCloud() && ! auth()->user()?->is_super_admin) {
+            return $this->permissionDeniedError('Access denied: super admin privileges required.');
+        }
+
         $entry = $action->execute([
             'name' => (string) $request->get('name'),
             'description' => $request->get('description'),
