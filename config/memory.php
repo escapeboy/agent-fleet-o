@@ -106,8 +106,15 @@ return [
     | Minimum cosine similarity score (0-1) for memories to be included.
     | Higher values mean stricter matching.
     |
+    | Calibrated against text-embedding-3-small via memory:benchmark-retrieval
+    | (2026-06-12): relevant query/passage pairs score cosine ~0.45-0.62 with
+    | this model, so the old 0.7 default excluded essentially all real matches
+    | (Recall@10 0.10). The sweep plateaus around 0.35-0.45; 0.4 captures the
+    | relevant band while leaving precision headroom. Re-run the benchmark and
+    | retune this if the embedding model changes.
+    |
     */
-    'similarity_threshold' => (float) env('MEMORY_SIMILARITY_THRESHOLD', 0.7),
+    'similarity_threshold' => (float) env('MEMORY_SIMILARITY_THRESHOLD', 0.4),
 
     /*
     |--------------------------------------------------------------------------
