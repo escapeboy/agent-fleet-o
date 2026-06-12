@@ -148,13 +148,19 @@ PROMPT;
      */
     private function consolidateCluster(Collection $cluster, string $agentId, string $teamId): void
     {
-        $model = config('memory.consolidation.model', 'claude-haiku-4-5');
+        // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+        // so the model name is never paired with a foreign provider (which 400s on
+        // gateways that don't expose Anthropic models). Un-prefixed → anthropic.
+        $configured = (string) config('memory.consolidation.model', 'anthropic/claude-haiku-4-5');
+        [$provider, $model] = str_contains($configured, '/')
+            ? explode('/', $configured, 2)
+            : ['anthropic', $configured];
 
         // Build the facts list for the LLM
         $factsList = $cluster->map(fn ($m, $i) => ($i + 1).'. '.$m->content)->implode("\n");
 
         $response = $this->gateway->complete(new AiRequestDTO(
-            provider: 'anthropic',
+            provider: $provider,
             model: $model,
             systemPrompt: 'You are a memory consolidator. Output only the merged fact.',
             userPrompt: sprintf(self::CONSOLIDATE_PROMPT, $factsList),

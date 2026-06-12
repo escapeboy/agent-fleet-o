@@ -106,7 +106,7 @@ class MemoryLifecycleTest extends TestCase
         $this->assertEquals(50, config('memory.consolidation.min_memories_per_agent'));
         $this->assertEquals(3, config('memory.consolidation.min_cluster_size'));
         $this->assertEqualsWithDelta(0.85, config('memory.consolidation.similarity_threshold'), 0.001);
-        $this->assertEquals('claude-haiku-4-5', config('memory.consolidation.model'));
+        $this->assertEquals('anthropic/claude-haiku-4-5', config('memory.consolidation.model'));
     }
 
     public function test_pruning_config_defaults(): void

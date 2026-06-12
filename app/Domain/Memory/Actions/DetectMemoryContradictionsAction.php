@@ -198,9 +198,18 @@ PROMPT;
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(team: $team);
 
+            // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+            // so the model name is never paired with a foreign resolved provider
+            // (which 400s on gateways that don't expose Anthropic models). An
+            // un-prefixed override falls back to the team-resolved provider.
+            $configured = (string) config('memory.contradiction_scan.model', 'anthropic/claude-haiku-4-5');
+            [$provider, $model] = str_contains($configured, '/')
+                ? explode('/', $configured, 2)
+                : [$resolved['provider'], $configured];
+
             $response = $this->gateway->complete(new AiRequestDTO(
-                provider: $resolved['provider'],
-                model: (string) config('memory.contradiction_scan.model', 'claude-haiku-4-5'),
+                provider: $provider,
+                model: $model,
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $userPrompt,
                 maxTokens: 256,
