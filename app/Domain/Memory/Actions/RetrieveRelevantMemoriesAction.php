@@ -49,7 +49,11 @@ class RetrieveRelevantMemoriesAction
             // empty input with a 400 "Invalid 'input[0]'"; without a query we simply
             // score by recency + importance instead of semantic similarity.
             $hasQuery = trim($query) !== '';
-            $queryEmbedding = $hasQuery ? $this->generateEmbedding($query) : null;
+            $queryEmbedding = $hasQuery ? $this->generateEmbedding($query, $teamId) : null;
+            // When no embedding is available (e.g. a BYOK team whose provider
+            // key isn't set yet), fall back to recency + importance scoring
+            // instead of returning nothing — the semantic clauses are skipped.
+            $hasQuery = $hasQuery && $queryEmbedding !== null;
 
             $semanticWeight = config('memory.scoring.semantic_weight', 0.5);
             $recencyWeight = config('memory.scoring.recency_weight', 0.3);
@@ -239,17 +243,21 @@ class RetrieveRelevantMemoriesAction
     }
 
     /**
-     * Generate embedding vector for the query string.
+     * Generate a pgvector embedding string for the query, using the team's
+     * BYOK credential. Returns null when no embedding is available (no key /
+     * provider error) so the caller can fall back to non-semantic scoring
+     * rather than failing the whole retrieval — the platform key is empty on
+     * BYOK installs, so embed() would 401 here.
      *
-     * @return string Vector string for pgvector
+     * @return string|null Vector string for pgvector, or null when unavailable
      */
-    private function generateEmbedding(string $text): string
+    private function generateEmbedding(string $text, ?string $teamId): ?string
     {
         $provider = app(EmbeddingProviderInterface::class);
 
-        return $provider->formatForPgvector(
-            $provider->embed($this->truncateToEmbeddingLimit($text)),
-        );
+        $vector = $provider->embedForTeam($this->truncateToEmbeddingLimit($text), $teamId);
+
+        return $vector === null ? null : $provider->formatForPgvector($vector);
     }
 
     /**

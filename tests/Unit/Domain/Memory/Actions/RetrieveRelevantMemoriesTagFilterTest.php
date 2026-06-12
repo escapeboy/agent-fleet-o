@@ -27,6 +27,11 @@ class RetrieveRelevantMemoriesTagFilterTest extends TestCase
     {
         $vector = array_fill(0, 1536, 0.1);
 
+        // Query embeddings now route through EmbeddingService::embedForTeam,
+        // which skips the call when no provider key is configured. Set one so
+        // the faked Prism request is actually issued.
+        config(['prism.providers.openai.api_key' => 'test-key']);
+
         return Prism::fake([
             new EmbeddingResponse(
                 embeddings: [new Embedding($vector)],

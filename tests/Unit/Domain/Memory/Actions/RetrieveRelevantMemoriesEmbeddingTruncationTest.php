@@ -29,6 +29,11 @@ class RetrieveRelevantMemoriesEmbeddingTruncationTest extends TestCase
     {
         $vector = array_fill(0, 1536, 0.1);
 
+        // Query embeddings route through EmbeddingService::embedForTeam, which
+        // skips the call when no provider key is configured. Set one so the
+        // faked Prism request is actually issued.
+        config(['prism.providers.openai.api_key' => 'test-key']);
+
         return Prism::fake([
             new EmbeddingResponse(
                 embeddings: [new Embedding($vector)],
@@ -51,7 +56,9 @@ class RetrieveRelevantMemoriesEmbeddingTruncationTest extends TestCase
         $action = new RetrieveRelevantMemoriesAction;
         $method = new ReflectionMethod($action, 'generateEmbedding');
         $method->setAccessible(true);
-        $method->invoke($action, $text);
+        // generateEmbedding is now team-aware; null teamId falls back to the
+        // platform/configured key, which is what these truncation cases assert.
+        $method->invoke($action, $text, null);
     }
 
     public function test_embedding_service_truncates_long_input(): void
