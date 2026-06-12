@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Log;
 
 class ContextualChunkEnricherAction
 {
-    private const CONTEXT_MODEL = 'claude-haiku-4-5';
-
     private const CONTEXT_PROMPT = <<<'PROMPT'
 <document>
 %s
@@ -49,9 +47,17 @@ PROMPT;
         try {
             $truncatedDoc = mb_substr($documentContext, 0, 8000);
 
+            // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+            // so the model name is never paired with a foreign provider (which 400s on
+            // gateways that don't expose Anthropic models). Un-prefixed → anthropic.
+            $configured = (string) config('memory.contextual_rag.model', 'anthropic/claude-haiku-4-5');
+            [$provider, $model] = str_contains($configured, '/')
+                ? explode('/', $configured, 2)
+                : ['anthropic', $configured];
+
             $response = $this->gateway->complete(new AiRequestDTO(
-                provider: 'anthropic',
-                model: self::CONTEXT_MODEL,
+                provider: $provider,
+                model: $model,
                 systemPrompt: 'You are a document analyst. Generate precise, informative chunk context.',
                 userPrompt: sprintf(self::CONTEXT_PROMPT, $truncatedDoc, $memory->content),
                 maxTokens: 128,

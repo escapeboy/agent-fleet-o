@@ -10,7 +10,8 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Extracts a reusable success pattern from a completed Experiment using claude-haiku-4-5.
+ * Extracts a reusable success pattern from a completed Experiment using the
+ * configured memory-extraction model (config('memory.extraction.model')).
  *
  * Stores the pattern as a Memory record with tier = MemoryTier::Successes so it
  * receives the curated retrieval boost and surfaces prominently in future executions
@@ -20,8 +21,6 @@ use Illuminate\Support\Facades\Log;
  */
 class ExtractSuccessPatternAction
 {
-    private const EXTRACT_MODEL = 'claude-haiku-4-5';
-
     private const SYSTEM_PROMPT = <<<'PROMPT'
 You are a success analyst. Analyze this completed experiment and extract a reusable success pattern.
 
@@ -68,11 +67,18 @@ PROMPT;
         }
 
         try {
-            $provider = config('llm_pricing.default_provider', 'anthropic');
+            // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+            // so the model name is never paired with a foreign default provider
+            // (which 400s on gateways that don't expose Anthropic models). An
+            // un-prefixed override falls back to the platform default provider.
+            $configured = (string) config('memory.extraction.model', 'anthropic/claude-haiku-4-5');
+            [$provider, $model] = str_contains($configured, '/')
+                ? explode('/', $configured, 2)
+                : [config('llm_pricing.default_provider', 'anthropic'), $configured];
 
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $provider,
-                model: self::EXTRACT_MODEL,
+                model: $model,
                 systemPrompt: self::SYSTEM_PROMPT,
                 userPrompt: $this->buildPrompt($experiment),
                 maxTokens: 256,

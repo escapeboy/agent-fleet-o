@@ -138,9 +138,18 @@ PROMPT;
             ))
             ->implode("\n");
 
+        // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
+        // so the model name is never paired with a foreign provider (which 400s on
+        // gateways that don't expose Anthropic models). An un-prefixed override
+        // falls back to the separate distillation.provider config key.
+        $configured = (string) config('memory.distillation.model', 'anthropic/claude-haiku-4-5');
+        [$provider, $model] = str_contains($configured, '/')
+            ? explode('/', $configured, 2)
+            : [(string) config('memory.distillation.provider', 'anthropic'), $configured];
+
         $response = $this->gateway->complete(new AiRequestDTO(
-            provider: (string) config('memory.distillation.provider', 'anthropic'),
-            model: (string) config('memory.distillation.model', 'claude-haiku-4-5'),
+            provider: $provider,
+            model: $model,
             systemPrompt: self::SYSTEM_PROMPT,
             userPrompt: "Recent activity log:\n\n".$log,
             maxTokens: 512,
