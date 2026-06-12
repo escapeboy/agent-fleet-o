@@ -39,7 +39,11 @@ class RegistryAdminPageTest extends TestCase
     {
         // Mount in self-hosted mode, then flip to cloud before the action call —
         // proves save() carries its own guard and a direct Livewire method call
-        // can't bypass a mount-only check.
+        // can't bypass a mount-only check. The cloud edition defaults to
+        // cloud.mode=true, which would abort the mount itself — force a
+        // self-hosted start explicitly so this test means the same thing in
+        // both editions.
+        config(['app.deployment_mode' => 'self-hosted', 'cloud.mode' => false]);
         $this->actingAsTeamUser(superAdmin: false);
         $component = Livewire::test(RegistryAdminPage::class);
 
@@ -87,6 +91,9 @@ class RegistryAdminPageTest extends TestCase
 
     public function test_non_super_admin_cannot_toggle_active_in_cloud_mode(): void
     {
+        // Self-hosted start so the mount survives in the cloud edition (see
+        // test_save_is_denied_in_cloud_mode_even_bypassing_mount).
+        config(['app.deployment_mode' => 'self-hosted', 'cloud.mode' => false]);
         $user = $this->actingAsTeamUser(superAdmin: false);
 
         $entry = McpServerRegistry::create([
