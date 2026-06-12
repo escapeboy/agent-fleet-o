@@ -351,6 +351,7 @@ use App\Mcp\Tools\Memory\MemoryListRecentTool;
 use App\Mcp\Tools\Memory\MemoryPromoteTool;
 use App\Mcp\Tools\Memory\MemoryProposeTool;
 use App\Mcp\Tools\Memory\MemoryRejectProposalTool;
+use App\Mcp\Tools\Memory\MemoryRetrievalBenchmarkTool;
 use App\Mcp\Tools\Memory\MemorySearchTool;
 use App\Mcp\Tools\Memory\MemoryStatsTool;
 use App\Mcp\Tools\Memory\MemoryUnifiedSearchTool;
@@ -526,6 +527,7 @@ use App\Mcp\Tools\Skill\SkillTrajectoryExtractTool;
 use App\Mcp\Tools\Skill\SkillUpdateTool;
 use App\Mcp\Tools\Skill\SkillVersionsTool;
 use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
+use App\Mcp\Tools\System\AuditChainVerifyTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
@@ -1215,6 +1217,7 @@ class AgentFleetServer extends Server
         MemoryListProposalsTool::class,
         MemoryRejectProposalTool::class,
         MemoryAuditProposalsTool::class,
+        MemoryRetrievalBenchmarkTool::class,
         PhoenixProjectListTool::class,
         PhoenixTraceListTool::class,
         PhoenixTraceGetTool::class,
@@ -1366,6 +1369,7 @@ class AgentFleetServer extends Server
         SystemVersionCheckTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,
+        AuditChainVerifyTool::class,
         SecretScanFindingsTool::class,
         CrewBlackboardGetTool::class,
         ExperimentCheckpointsTool::class,

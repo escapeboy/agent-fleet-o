@@ -45,6 +45,11 @@ Schedule::command('error-translator:harvest --format=json')
     ->appendOutputTo(storage_path('logs/error-translator-harvest.log'));
 
 Schedule::command('audit:cleanup')->dailyAt('02:00');
+// Tamper-evident audit hash chain — async notary linking of audit_entries (flag-off by default).
+if (config('audit.hash_chain.enabled', false)) {
+    Schedule::command('audit:chain')->everyFiveMinutes()->withoutOverlapping(10)->onOneServer();
+    Schedule::command('audit:verify-chain')->dailyAt('05:15')->withoutOverlapping(60)->onOneServer();
+}
 Schedule::command('agent-session-events:cleanup')->dailyAt('03:45')->withoutOverlapping(60)->onOneServer();
 Schedule::command('memory:check-drift --notify')->dailyAt('04:15')->withoutOverlapping(60)->onOneServer();
 // Cross-corpus contradiction scan — self-gates on memory.contradiction_scan.enabled (off by default).

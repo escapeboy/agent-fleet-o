@@ -1,0 +1,29 @@
+{
+    "name": "retrieval-smoke-v1",
+    "documents": [
+        { "key": "deploy-runbook", "content": "Production deploys run through deploy.sh which merges origin/develop, reloads PHP-FPM with SIGUSR2 and clears OPcache. Never restart the app container directly because Horizon needs a 300 second drain window.", "importance": 0.9 },
+        { "key": "deploy-rollback", "content": "To roll back a failed production deploy, check out the previous release tag and re-run the deploy script. Database migrations are not rolled back automatically; use the down methods manually after verifying the schema state.", "importance": 0.8 },
+        { "key": "budget-credits", "content": "One platform credit equals 0.001 USD. Budget reservations apply a 1.5x multiplier on the estimated cost and are settled after the LLM call completes with actual token usage.", "importance": 0.7 },
+        { "key": "budget-pause", "content": "When a team exceeds its credit budget, the PauseOnBudgetExceeded listener automatically pauses running experiments. Resuming requires topping up credits or raising the budget cap on the project.", "importance": 0.7 },
+        { "key": "queue-layout", "content": "The platform uses six Redis queues: critical, ai-calls, experiments, outbound, metrics and default. Horizon supervisors auto-scale ai-calls between two and fifteen workers with a 120 second timeout.", "importance": 0.6 },
+        { "key": "queue-redis-dbs", "content": "Redis database 0 stores queues, database 1 stores the cache and database 2 stores locks. The predis client is required; phpredis is not supported in this deployment.", "importance": 0.5 },
+        { "key": "experiment-states", "content": "Experiments move through twenty states including Draft, Scoring, Planning, Building, AwaitingApproval, Executing, CollectingMetrics, Evaluating and Completed. Any active state can be Paused or Killed.", "importance": 0.8 },
+        { "key": "experiment-retry", "content": "A failed experiment stage can be retried from a specific step. RetryFromStep performs a graph-aware breadth-first reset that clears only the target step and its downstream dependents.", "importance": 0.6 },
+        { "key": "tenancy-scope", "content": "All domain models use the BelongsToTeam trait with the TeamScope global scope for tenant isolation. PostgreSQL row-level security adds a second enforcement layer below Eloquent.", "importance": 0.8 },
+        { "key": "tenancy-tokens", "content": "Sanctum API tokens are scoped to a single team by the ScopeTokenToTeam middleware. Switching teams invalidates previously issued tokens for the old team context.", "importance": 0.6 },
+        { "key": "semantic-cache", "content": "The semantic cache stores LLM responses with pgvector embeddings and serves a cached answer when cosine similarity to a previous prompt exceeds 0.92. The cache is shared across teams by design.", "importance": 0.5 },
+        { "key": "circuit-breaker", "content": "Each LLM provider has a circuit breaker that opens after five consecutive failures and attempts recovery after sixty seconds in half-open state before fully closing again.", "importance": 0.5 }
+    ],
+    "cases": [
+        { "query": "how do I deploy to production safely", "relevant": ["deploy-runbook"] },
+        { "query": "rolling back a bad release", "relevant": ["deploy-rollback", "deploy-runbook"] },
+        { "query": "what happens when a team runs out of credits", "relevant": ["budget-pause", "budget-credits"] },
+        { "query": "how much does one credit cost in dollars", "relevant": ["budget-credits"] },
+        { "query": "which Redis database holds the cache", "relevant": ["queue-redis-dbs"] },
+        { "query": "Horizon worker scaling for AI calls", "relevant": ["queue-layout"] },
+        { "query": "retry a failed pipeline step without rerunning everything", "relevant": ["experiment-retry"] },
+        { "query": "how is tenant data isolated between teams", "relevant": ["tenancy-scope", "tenancy-tokens"] },
+        { "query": "when does the provider stop receiving requests after errors", "relevant": ["circuit-breaker"] },
+        { "query": "cached LLM answers similarity threshold", "relevant": ["semantic-cache"] }
+    ]
+}
