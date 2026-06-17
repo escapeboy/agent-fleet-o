@@ -20,6 +20,7 @@ class ProviderRankerTest extends TestCase
         $redis->del($keys['latency']);
         $redis->del($keys['cost']);
         $redis->del($keys['samples']);
+        $redis->del($keys['success']);
     }
 
     public function test_null_sort_returns_input_unchanged(): void
@@ -129,8 +130,50 @@ class ProviderRankerTest extends TestCase
         $this->assertSame('google', $ranked[2]['provider']);
     }
 
+    public function test_rank_by_health_orders_by_success_desc_then_latency(): void
+    {
+        $this->seedMetrics([
+            // Fastest but least reliable — should sink despite low latency.
+            'openai:gpt-4o' => ['latency' => 100, 'cost' => 7.0, 'samples' => 50, 'success' => 0.80],
+            'anthropic:claude-sonnet-4-5' => ['latency' => 800, 'cost' => 5.0, 'samples' => 50, 'success' => 0.99],
+            'google:gemini-2.5-pro' => ['latency' => 500, 'cost' => 4.0, 'samples' => 50, 'success' => 0.99],
+        ]);
+
+        $chain = [
+            ['provider' => 'openai', 'model' => 'gpt-4o'],
+            ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+            ['provider' => 'google', 'model' => 'gemini-2.5-pro'],
+        ];
+
+        $ranked = $this->ranker->rank($chain, 'health');
+
+        // 0.99 success beats 0.80; tie broken by lower latency (google 500 < anthropic 800).
+        $this->assertSame('google', $ranked[0]['provider']);
+        $this->assertSame('anthropic', $ranked[1]['provider']);
+        $this->assertSame('openai', $ranked[2]['provider']);
+    }
+
+    public function test_health_missing_success_falls_to_end_in_original_order(): void
+    {
+        $this->seedMetrics([
+            'anthropic:claude-sonnet-4-5' => ['latency' => 800, 'cost' => 5.0, 'samples' => 50, 'success' => 0.97],
+        ]);
+
+        $chain = [
+            ['provider' => 'openai', 'model' => 'gpt-4o'],            // no success metric
+            ['provider' => 'google', 'model' => 'gemini-2.5-pro'],    // no success metric
+            ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+        ];
+
+        $ranked = $this->ranker->rank($chain, 'health');
+
+        $this->assertSame('anthropic', $ranked[0]['provider']);
+        $this->assertSame('openai', $ranked[1]['provider']); // first missing in input order
+        $this->assertSame('google', $ranked[2]['provider']);
+    }
+
     /**
-     * @param  array<string, array{latency: int, cost: float, samples: int}>  $metrics
+     * @param  array<string, array{latency: int, cost: float, samples: int, success?: float}>  $metrics
      */
     private function seedMetrics(array $metrics): void
     {
@@ -141,6 +184,9 @@ class ProviderRankerTest extends TestCase
             $redis->hset($keys['latency'], $field, (string) $values['latency']);
             $redis->hset($keys['cost'], $field, (string) $values['cost']);
             $redis->hset($keys['samples'], $field, (string) $values['samples']);
+            if (isset($values['success'])) {
+                $redis->hset($keys['success'], $field, (string) $values['success']);
+            }
         }
     }
 }

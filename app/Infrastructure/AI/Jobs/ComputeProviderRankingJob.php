@@ -28,28 +28,33 @@ class ComputeProviderRankingJob implements ShouldQueue
 
     public function handle(): void
     {
+        // Pull both completed and failed rows: latency/cost come from completed
+        // rows only (failed rows carry no timing), but the success rate needs
+        // the full completed+failed denominator per provider/model.
         $rows = LlmRequestLog::withoutGlobalScopes()
             ->where('created_at', '>=', now()->subDay())
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'failed'])
             ->whereNotNull('provider')
             ->whereNotNull('model')
-            ->whereNotNull('latency_ms')
-            ->whereNotNull('input_tokens')
-            ->whereNotNull('output_tokens')
-            ->whereNotNull('cost_credits')
-            ->get(['provider', 'model', 'latency_ms', 'input_tokens', 'output_tokens', 'cost_credits']);
+            ->get(['provider', 'model', 'status', 'latency_ms', 'input_tokens', 'output_tokens', 'cost_credits']);
 
         $byKey = [];
 
         foreach ($rows as $row) {
-            $tokens = (int) $row->input_tokens + (int) $row->output_tokens;
-            if ($tokens <= 0) {
+            $key = $row->provider.':'.$row->model;
+            $byKey[$key]['total'] = ($byKey[$key]['total'] ?? 0) + 1;
+
+            if ($row->status !== 'completed') {
                 continue;
             }
 
-            $key = $row->provider.':'.$row->model;
-            $byKey[$key]['latency'][] = (int) $row->latency_ms;
-            $byKey[$key]['cost_per_1k'][] = (float) $row->cost_credits / $tokens * 1000.0;
+            $byKey[$key]['completed'] = ($byKey[$key]['completed'] ?? 0) + 1;
+
+            $tokens = (int) $row->input_tokens + (int) $row->output_tokens;
+            if ($row->latency_ms !== null && $row->cost_credits !== null && $tokens > 0) {
+                $byKey[$key]['latency'][] = (int) $row->latency_ms;
+                $byKey[$key]['cost_per_1k'][] = (float) $row->cost_credits / $tokens * 1000.0;
+            }
         }
 
         $keys = ProviderRanker::storageKeys();
@@ -59,10 +64,20 @@ class ComputeProviderRankingJob implements ShouldQueue
             $keys['latency'] => [],
             $keys['cost'] => [],
             $keys['samples'] => [],
+            $keys['success'] => [],
         ];
 
         foreach ($byKey as $field => $bucket) {
-            $samples = count($bucket['latency']);
+            // Health: success rate over the full completed+failed denominator,
+            // eligible once total samples clear the threshold.
+            $total = (int) ($bucket['total'] ?? 0);
+            if ($total >= ProviderRanker::MIN_SAMPLES) {
+                $completed = (int) ($bucket['completed'] ?? 0);
+                $writeBatch[$keys['success']][$field] = round($completed / $total, 4);
+            }
+
+            // Latency/cost: gated on the count of completed rows that carried timing.
+            $samples = count($bucket['latency'] ?? []);
             if ($samples < ProviderRanker::MIN_SAMPLES) {
                 continue;
             }

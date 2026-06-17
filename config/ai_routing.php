@@ -174,4 +174,23 @@ return [
         'auto_enable_purpose_prefixes' => ['signal.', 'digest.'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Provider Ranking (health/latency-weighted routing)
+    |--------------------------------------------------------------------------
+    |
+    | ProviderRanker reorders the cloud fallback chain by 24h-rolling metrics
+    | (computed every 5 min by ComputeProviderRankingJob). A per-request
+    | AiRequestDTO::$gatewaySort always wins; this is the platform DEFAULT applied
+    | when a request doesn't specify one.
+    |
+    | Values: null (off — per-request only), 'cost', 'latency', or 'health'
+    | ('health' = route to the fastest provider with the best recent success
+    | rate). Activate fleet-wide by setting AI_PROVIDER_RANKING_SORT=health.
+    |
+    */
+    'provider_ranking' => [
+        'default_sort' => env('AI_PROVIDER_RANKING_SORT'),
+    ],
+
 ];
