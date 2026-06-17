@@ -3,8 +3,11 @@
 namespace App\Domain\Agent\Services;
 
 use App\Domain\Agent\Enums\AgentHookPosition;
+use App\Domain\Agent\Enums\AgentHookType;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentToolLockout;
+use App\Domain\Approval\Actions\CreateActionProposalAction;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -15,6 +18,11 @@ use Illuminate\Support\Facades\Log;
  *   2. OnToolCall guardrail hooks — user-configured, deterministic boundaries
  *      ("blocked commands", PII, etc.) enforced at the tool boundary instead of
  *      being whispered into the prompt.
+ *   3. Argument predicates (eve borrow) — input-conditioned rules that gate a
+ *      call by the value of a specific argument (e.g. a query that would scan
+ *      more than N GB). A match either blocks the call or raises an
+ *      ActionProposal for human approval. Gated behind the
+ *      tool_governance.argument_predicates sub-flag.
  *
  * A hard no-op when agent.tool_governance.enabled is off, so the legacy tool
  * path is byte-for-byte unchanged. Returns a deny reason, or null to allow.
@@ -23,6 +31,7 @@ class ToolCallGovernor
 {
     public function __construct(
         private readonly AgentHookExecutor $hookExecutor,
+        private readonly ArgumentPredicateEvaluator $predicates,
     ) {}
 
     /**
@@ -47,7 +56,123 @@ class ToolCallGovernor
             return $this->deny($agent, $toolName, 'guardrail', $guardReason);
         }
 
+        $predicateReason = $this->argumentPredicateReason($agent, $toolName, $args);
+        if ($predicateReason !== null) {
+            return $predicateReason;
+        }
+
         return null;
+    }
+
+    /**
+     * Evaluate input-conditioned argument predicates declared on the agent's
+     * OnToolCall guardrail hooks (config.arg_predicates). A `block` match denies
+     * the call; a `require_approval` match denies the autonomous call AND raises
+     * an ActionProposal so a human can approve it from the inbox (FleetQ has no
+     * tool-call-level suspend/resume, so the call cannot be paused mid-flight —
+     * it is held and re-driven after approval).
+     *
+     * @param  array<string, mixed>  $args
+     */
+    private function argumentPredicateReason(Agent $agent, string $toolName, array $args): ?string
+    {
+        if (! config('agent.tool_governance.argument_predicates')) {
+            return null;
+        }
+
+        $predicates = $this->collectPredicates($agent, $toolName);
+        if ($predicates === []) {
+            return null;
+        }
+
+        $match = $this->predicates->evaluate($predicates, $args);
+        if ($match === null) {
+            return null;
+        }
+
+        if ($match['action'] === 'require_approval') {
+            $this->raiseApprovalProposal($agent, $toolName, $args, $match);
+
+            return $this->deny(
+                $agent,
+                $toolName,
+                'arg_predicate_approval',
+                $match['reason'].' — held for human approval.',
+            );
+        }
+
+        return $this->deny($agent, $toolName, 'arg_predicate_block', $match['reason']);
+    }
+
+    /**
+     * Gather predicate definitions from the agent's enabled OnToolCall guardrail
+     * hooks (class-level + instance-level). A predicate may scope itself to a
+     * single tool via a `tool` key; absent that, it applies to every tool.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function collectPredicates(Agent $agent, string $toolName): array
+    {
+        $hooks = AgentHook::where('team_id', $agent->team_id)
+            ->where('position', AgentHookPosition::OnToolCall)
+            ->where('type', AgentHookType::Guardrail)
+            ->where('enabled', true)
+            ->where(function ($q) use ($agent) {
+                $q->whereNull('agent_id')->orWhere('agent_id', $agent->id);
+            })
+            ->get();
+
+        $out = [];
+        foreach ($hooks as $hook) {
+            $defs = $hook->config['arg_predicates'] ?? null;
+            if (! is_array($defs)) {
+                continue;
+            }
+
+            foreach ($defs as $def) {
+                if (! is_array($def)) {
+                    continue;
+                }
+
+                $scopedTool = $def['tool'] ?? null;
+                if (is_string($scopedTool) && $scopedTool !== '' && $scopedTool !== $toolName) {
+                    continue;
+                }
+
+                $out[] = $def;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @param  array{action: string, reason: string, arg: string, op: string}  $match
+     */
+    private function raiseApprovalProposal(Agent $agent, string $toolName, array $args, array $match): void
+    {
+        try {
+            app(CreateActionProposalAction::class)->execute(
+                teamId: (string) $agent->team_id,
+                targetType: 'tool_call',
+                targetId: null,
+                summary: "Tool '{$toolName}' needs approval: {$match['reason']}",
+                payload: [
+                    'tool_name' => $toolName,
+                    'args' => $args,
+                    'predicate' => ['arg' => $match['arg'], 'op' => $match['op']],
+                ],
+                agentId: $agent->id,
+                riskLevel: 'high',
+            );
+        } catch (\Throwable $e) {
+            Log::warning('ToolCallGovernor: failed to raise approval proposal', [
+                'agent_id' => $agent->id,
+                'tool' => $toolName,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -220,5 +220,15 @@ return [
     */
     'tool_governance' => [
         'enabled' => (bool) env('AGENT_TOOL_GOVERNANCE_ENABLED', false),
+
+        /*
+        | Input-conditioned argument predicates (eve borrow). When enabled (and
+        | tool_governance.enabled is on), a tool call's arguments are evaluated
+        | against per-argument predicates declared on OnToolCall guardrail hooks
+        | (config.arg_predicates). A match can `block` the call or
+        | `require_approval` (block + raise an ActionProposal). Off by default;
+        | with no arg_predicates configured the governor path is unchanged.
+        */
+        'argument_predicates' => (bool) env('AGENT_TOOL_ARG_PREDICATES', false),
     ],
 ];

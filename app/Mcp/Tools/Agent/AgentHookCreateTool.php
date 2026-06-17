@@ -37,7 +37,7 @@ class AgentHookCreateTool extends Tool
                 ->enum(array_map(fn ($c) => $c->value, AgentHookType::cases()))
                 ->required(),
             'config' => $schema->object()
-                ->description('Type-specific config. prompt_injection: {text, target}. output_transform: {transform, prefix/suffix/search/replace}. guardrail: {rules: [{field, operator, value, message}]}. notification: {channel, message}. context_enrichment: {source, target, content}.')
+                ->description('Type-specific config. prompt_injection: {text, target}. output_transform: {transform, prefix/suffix/search/replace}. guardrail: {rules: [{field, operator, value, message}]} and, for on_tool_call guardrails, input-conditioned argument predicates {arg_predicates: [{arg, op (gt/gte/lt/lte/eq/neq/contains/matches), value, transform? (length/lower/upper/abs/int/float), action? (block|require_approval), reason?, tool?}]} (requires agent.tool_governance.argument_predicates). notification: {channel, message}. context_enrichment: {source, target, content}.')
                 ->required(),
             'priority' => $schema->number()
                 ->description('Execution priority (lower = runs first, default 100)')
