@@ -50,9 +50,12 @@ class ComputeProviderRankingJob implements ShouldQueue
 
             $byKey[$key]['completed'] = ($byKey[$key]['completed'] ?? 0) + 1;
 
+            // The model casts latency_ms/cost_credits to int, so guard on the
+            // values (a failed/incomplete row carries 0) rather than null.
             $tokens = (int) $row->input_tokens + (int) $row->output_tokens;
-            if ($row->latency_ms !== null && $row->cost_credits !== null && $tokens > 0) {
-                $byKey[$key]['latency'][] = (int) $row->latency_ms;
+            $latency = (int) $row->latency_ms;
+            if ($tokens > 0 && $latency > 0) {
+                $byKey[$key]['latency'][] = $latency;
                 $byKey[$key]['cost_per_1k'][] = (float) $row->cost_credits / $tokens * 1000.0;
             }
         }
@@ -70,7 +73,7 @@ class ComputeProviderRankingJob implements ShouldQueue
         foreach ($byKey as $field => $bucket) {
             // Health: success rate over the full completed+failed denominator,
             // eligible once total samples clear the threshold.
-            $total = (int) ($bucket['total'] ?? 0);
+            $total = (int) $bucket['total'];
             if ($total >= ProviderRanker::MIN_SAMPLES) {
                 $completed = (int) ($bucket['completed'] ?? 0);
                 $writeBatch[$keys['success']][$field] = round($completed / $total, 4);
