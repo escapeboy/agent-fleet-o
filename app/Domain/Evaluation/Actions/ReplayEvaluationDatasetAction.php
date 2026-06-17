@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
  * Used by `evaluation_replay_dataset` MCP tool + `ReplayEvaluationDatasetJob`
  * for async long-running replays.
  */
-final class ReplayEvaluationDatasetAction
+class ReplayEvaluationDatasetAction
 {
     private const DEFAULT_CRITERIA = ['correctness', 'relevance'];
 

@@ -211,6 +211,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Eval gate on config change (eve borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, a config change to an agent that has an eval dataset
+    | configured (config.eval_gate_dataset_id) is first replayed against that
+    | dataset BEFORE being applied. If the candidate config's aggregate score
+    | falls below `threshold`, the change is held (not promoted) and surfaced
+    | to the caller. Off by default; with no dataset configured the path is a
+    | passthrough. Fail-open: an infra error in the gate lets the change
+    | proceed (logged) rather than locking out config edits.
+    */
+    'eval_gate' => [
+        'enabled' => (bool) env('AGENT_EVAL_GATE_ENABLED', false),
+        'threshold' => (float) env('AGENT_EVAL_GATE_THRESHOLD', 7.0),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Per-tool-call governance (Squad borrow)
     |--------------------------------------------------------------------------
     | When enabled, mutating built-in tool calls (bash_execute, file_write,
