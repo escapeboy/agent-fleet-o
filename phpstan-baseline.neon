@@ -12769,12 +12769,6 @@ parameters:
 			path: app/Mcp/Tools/Agent/AgentRuntimeStateTool.php
 
 		-
-			message: '#^Missing parameter \$newData \(array\<string, mixed\>\) in call to method App\\Domain\\Agent\\Actions\\RecordAgentConfigRevisionAction\:\:execute\(\)\.$#'
-			identifier: argument.missing
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentUpdateTool.php
-
-		-
 			message: '#^Offset ''config'' on array\{name\?\: mixed, role\?\: mixed, goal\?\: mixed, backstory\?\: mixed, taste\?\: mixed, personality\?\: mixed, provider\?\: mixed, model\?\: mixed, \.\.\.\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -12783,12 +12777,6 @@ parameters:
 		-
 			message: '#^Strict comparison using \!\=\= between mixed~\(0\|0\.0\|''''\|''0''\|array\{\}\|false\|null\) and '''' will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Mcp/Tools/Agent/AgentUpdateTool.php
-
-		-
-			message: '#^Unknown parameter \$newConfig in call to method App\\Domain\\Agent\\Actions\\RecordAgentConfigRevisionAction\:\:execute\(\)\.$#'
-			identifier: argument.unknown
 			count: 1
 			path: app/Mcp/Tools/Agent/AgentUpdateTool.php
 
