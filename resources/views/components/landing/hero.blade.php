@@ -4,6 +4,11 @@
     'ctaLabel'    => 'Get Started Free',
     'ctaHref'     => null,
     'badge'       => null,
+    // Optional second entry point: any action a human can take, an agent can too.
+    // When agentCtaHref is set, the hero pairs the human CTA with a "For agents"
+    // path (points at the MCP/connect docs). Off by default → unchanged hero.
+    'agentCtaLabel' => 'Connect your agents',
+    'agentCtaHref'  => null,
 ])
 
 <section id="hero" class="relative overflow-hidden bg-gradient-to-br from-white via-primary-50/30 to-white">
@@ -33,21 +38,57 @@
                style="transition-delay: 300ms">
                 {{ $subheadline }}
             </p>
-            <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-                 class="mt-10 flex items-center gap-x-6 transition duration-600 ease-out"
-                 style="transition-delay: 450ms">
-                <a href="{{ $ctaHref ?? route('register') }}"
-                   class="rounded-lg bg-primary-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
-                    {{ $ctaLabel }}
-                </a>
-                <a href="#how-it-works" class="group rounded text-sm font-semibold leading-6 text-gray-700 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
-                    See How It Works <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-1">&rarr;</span>
-                </a>
-                <a href="https://github.com/escapeboy/agent-fleet-o" class="hidden items-center gap-1.5 rounded text-sm font-medium text-gray-500 transition hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:inline-flex" rel="noopener noreferrer" target="_blank">
-                    <i class="fa-brands fa-github text-base"></i>
-                    Star on GitHub
-                </a>
-            </div>
+            @if ($agentCtaHref)
+                {{-- Dual entry point: humans sign up, agents connect. Mirrors the
+                     agent-native parity of the platform (anything a human can do
+                     in the UI, an agent can do over MCP). --}}
+                <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+                     class="mt-10 flex flex-col gap-4 transition duration-600 ease-out sm:flex-row sm:items-stretch"
+                     style="transition-delay: 450ms">
+                    <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">For humans</span>
+                        <a href="{{ $ctaHref ?? route('register') }}"
+                           class="rounded-lg bg-primary-600 px-6 py-3 text-center text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
+                            {{ $ctaLabel }}
+                        </a>
+                    </div>
+                    <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">For agents</span>
+                        <a href="{{ $agentCtaHref }}"
+                           class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-800 shadow-sm transition hover:border-primary-400 hover:text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
+                            <i class="fa-solid fa-terminal text-sm text-primary-600"></i>
+                            {{ $agentCtaLabel }}
+                        </a>
+                    </div>
+                </div>
+                <div :class="shown ? 'opacity-100' : 'opacity-0'"
+                     class="mt-5 flex items-center gap-x-6 transition duration-600 ease-out"
+                     style="transition-delay: 600ms">
+                    <a href="#how-it-works" class="group rounded text-sm font-semibold leading-6 text-gray-700 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
+                        See How It Works <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-1">&rarr;</span>
+                    </a>
+                    <a href="https://github.com/escapeboy/agent-fleet-o" class="hidden items-center gap-1.5 rounded text-sm font-medium text-gray-500 transition hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:inline-flex" rel="noopener noreferrer" target="_blank">
+                        <i class="fa-brands fa-github text-base"></i>
+                        Star on GitHub
+                    </a>
+                </div>
+            @else
+                <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+                     class="mt-10 flex items-center gap-x-6 transition duration-600 ease-out"
+                     style="transition-delay: 450ms">
+                    <a href="{{ $ctaHref ?? route('register') }}"
+                       class="rounded-lg bg-primary-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
+                        {{ $ctaLabel }}
+                    </a>
+                    <a href="#how-it-works" class="group rounded text-sm font-semibold leading-6 text-gray-700 transition hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">
+                        See How It Works <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-1">&rarr;</span>
+                    </a>
+                    <a href="https://github.com/escapeboy/agent-fleet-o" class="hidden items-center gap-1.5 rounded text-sm font-medium text-gray-500 transition hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:inline-flex" rel="noopener noreferrer" target="_blank">
+                        <i class="fa-brands fa-github text-base"></i>
+                        Star on GitHub
+                    </a>
+                </div>
+            @endif
         </div>
 
         {{-- Visual column --}}
