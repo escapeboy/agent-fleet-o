@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentToolLockout;
 use App\Domain\Agent\Services\ToolCallGovernor;
+use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -139,5 +140,77 @@ class ToolCallGovernorTest extends TestCase
 
         // A safe command passes.
         $this->assertNull($this->governor()->assert($this->agent, 'bash_execute', ['command' => 'ls -la']));
+    }
+
+    private function argPredicateHook(array $predicates): AgentHook
+    {
+        return AgentHook::create([
+            'team_id' => $this->team->id,
+            'agent_id' => null,
+            'name' => 'Arg predicates',
+            'position' => 'on_tool_call',
+            'type' => 'guardrail',
+            'config' => ['arg_predicates' => $predicates],
+            'priority' => 0,
+            'enabled' => true,
+        ]);
+    }
+
+    public function test_arg_predicate_blocks_when_threshold_exceeded(): void
+    {
+        config(['agent.tool_governance.argument_predicates' => true]);
+        $this->argPredicateHook([
+            ['arg' => 'scan_gb', 'op' => 'gt', 'value' => 50, 'action' => 'block', 'reason' => 'Scan too large.'],
+        ]);
+
+        $reason = $this->governor()->assert($this->agent, 'run_sql', ['scan_gb' => 80]);
+        $this->assertSame('Scan too large.', $reason);
+
+        // Under threshold passes.
+        $this->assertNull($this->governor()->assert($this->agent, 'run_sql', ['scan_gb' => 10]));
+    }
+
+    public function test_arg_predicate_require_approval_raises_proposal_and_blocks(): void
+    {
+        config([
+            'agent.tool_governance.argument_predicates' => true,
+            'decision_rubric.enabled' => false,
+        ]);
+        $this->argPredicateHook([
+            ['arg' => 'amount', 'op' => 'gte', 'value' => 1000, 'action' => 'require_approval', 'reason' => 'High spend.'],
+        ]);
+
+        $reason = $this->governor()->assert($this->agent, 'charge', ['amount' => 5000]);
+        $this->assertNotNull($reason);
+        $this->assertStringContainsString('held for human approval', $reason);
+
+        $proposal = ActionProposal::where('team_id', $this->team->id)->where('target_type', 'tool_call')->first();
+        $this->assertNotNull($proposal);
+        $this->assertSame($this->agent->id, $proposal->actor_agent_id);
+        $this->assertSame('charge', $proposal->payload['tool_name']);
+    }
+
+    public function test_arg_predicate_is_noop_when_subflag_disabled(): void
+    {
+        config(['agent.tool_governance.argument_predicates' => false]);
+        $this->argPredicateHook([
+            ['arg' => 'scan_gb', 'op' => 'gt', 'value' => 50, 'action' => 'block', 'reason' => 'Scan too large.'],
+        ]);
+
+        $this->assertNull($this->governor()->assert($this->agent, 'run_sql', ['scan_gb' => 80]));
+        $this->assertSame(0, ActionProposal::where('team_id', $this->team->id)->count());
+    }
+
+    public function test_arg_predicate_scoped_to_other_tool_does_not_apply(): void
+    {
+        config(['agent.tool_governance.argument_predicates' => true]);
+        $this->argPredicateHook([
+            ['arg' => 'scan_gb', 'op' => 'gt', 'value' => 50, 'tool' => 'run_sql', 'reason' => 'SQL only.'],
+        ]);
+
+        // Same arg on a different tool is untouched because the predicate is tool-scoped.
+        $this->assertNull($this->governor()->assert($this->agent, 'other_tool', ['scan_gb' => 80]));
+        // The scoped tool is gated.
+        $this->assertSame('SQL only.', $this->governor()->assert($this->agent, 'run_sql', ['scan_gb' => 80]));
     }
 }
