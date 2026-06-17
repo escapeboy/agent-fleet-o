@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\Exceptions\LocalEmbeddingNotConfiguredException;
-use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Models\SemanticCacheEntry;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
