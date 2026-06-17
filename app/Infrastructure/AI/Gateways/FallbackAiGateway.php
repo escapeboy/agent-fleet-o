@@ -463,6 +463,12 @@ class FallbackAiGateway implements AiGatewayInterface
      */
     private function maybeRankChain(array $chain, ?string $sortBy): array
     {
+        // A per-request gatewaySort wins; otherwise fall back to the platform
+        // default (off unless AI_PROVIDER_RANKING_SORT is set). This makes
+        // health/latency routing active fleet-wide rather than only when a
+        // caller remembers to opt in per request.
+        $sortBy ??= config('ai_routing.provider_ranking.default_sort');
+
         if ($sortBy === null || $this->ranker === null || count($chain) <= 1) {
             return $chain;
         }
