@@ -4,6 +4,8 @@ namespace App\Domain\Memory\Services;
 
 use App\Domain\Memory\Actions\RetrieveRelevantMemoriesAction;
 use App\Domain\Memory\Actions\UnifiedMemorySearchAction;
+use App\Domain\Memory\Enums\MemoryCategory;
+use App\Domain\Memory\Enums\MemoryRelevance;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
 use Carbon\Carbon;
@@ -41,12 +43,25 @@ class MemoryContextInjector
 
         $queryText = is_string($input) ? $input : json_encode($input);
 
-        // Try unified search first (RRF fusion across vector + KG + keyword)
+        // Try unified search first (RRF fusion across vector + KG + keyword).
+        // Preferences are excluded from this semantic discovery path (Path B) —
+        // they are enumerated in full below (Path A) so they are never dropped
+        // by the top-k cutoff.
         if ($this->unifiedSearch && config('memory.unified_search.enabled', true) && $teamId) {
             $context = $this->buildUnifiedContext($teamId, $queryText, $agentId, $projectId, $userId);
         } else {
             // Fallback to vector-only search
             $context = $this->buildVectorOnlyContext($agentId, $queryText, $projectId, $teamId, $userId);
+        }
+
+        // Path A (known-scope enumeration): preference-category memories, in full,
+        // every turn. Reserved slot — prepended so a stable preference is never
+        // crowded out by ranked discovery results.
+        $preferences = $this->buildPreferencesContext($teamId, $agentId);
+        if ($preferences !== null) {
+            $context = $context !== null
+                ? $preferences."\n\n".$context
+                : $preferences;
         }
 
         // Append failure lessons for the team so agents avoid known failure patterns.
@@ -58,6 +73,51 @@ class MemoryContextInjector
         }
 
         return $context;
+    }
+
+    /**
+     * Build a "User Preferences" section by enumerating ALL preference-category
+     * memories for the team (and the executing agent) in full — exact match, no
+     * semantic ranking, no top-k cutoff. This is the Oracle "RAG → memory"
+     * known-scope-lookup path: a stable preference ("be terse", "JSON output")
+     * must always apply, so it can never share the discovery path's top-k
+     * boundary with facts. Returns null when disabled, no team, or none found.
+     */
+    private function buildPreferencesContext(?string $teamId, ?string $agentId): ?string
+    {
+        if (! $teamId || ! config('memory.preferences_injection.enabled', true)) {
+            return null;
+        }
+
+        $max = (int) config('memory.preferences_injection.max_items', 25);
+
+        try {
+            $prefs = Memory::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('category', MemoryCategory::Preference)
+                ->when($agentId, fn ($q) => $q->where(fn ($sub) => $sub->where('agent_id', $agentId)->orWhereNull('agent_id')))
+                ->where(fn ($q) => $q->whereNull('proposal_status')->orWhere('proposal_status', '!=', 'rejected'))
+                ->where(fn ($q) => $q->whereNull('belief_status')->orWhere('belief_status', '!=', 'superseded'))
+                ->orderByDesc('importance')
+                ->orderByDesc('created_at')
+                ->limit($max)
+                ->get(['content', 'preference_subtype']);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($prefs->isEmpty()) {
+            return null;
+        }
+
+        $lines = $prefs->map(function (Memory $m): string {
+            $subtype = $m->preference_subtype?->value;
+            $tag = $subtype ? "[{$subtype}] " : '';
+
+            return "- {$tag}{$m->content}";
+        })->implode("\n");
+
+        return "## User Preferences\n{$lines}";
     }
 
     /**
@@ -159,6 +219,7 @@ class MemoryContextInjector
             query: $query,
             agentId: $agentId,
             projectId: $projectId,
+            excludePreferences: true,
         );
 
         if ($results->isEmpty()) {
@@ -204,6 +265,10 @@ class MemoryContextInjector
         $parts = ["source: {$sourceType}"];
         $parts[] = "age: {$age}";
         $parts[] = "importance: {$importance}/10";
+
+        if (config('memory.relevance_tiers.enabled', true) && ! empty($meta['relevance'])) {
+            $parts[] = "relevance: {$meta['relevance']}";
+        }
 
         if ($retrievals > 0) {
             $parts[] = "used: {$retrievals}x";
@@ -275,6 +340,7 @@ class MemoryContextInjector
             projectId: $projectId,
             scope: $scope,
             teamId: $teamId,
+            excludePreferences: true,
         );
 
         if ($memories->isEmpty()) {
@@ -296,6 +362,12 @@ class MemoryContextInjector
             $retrievals = $m->retrieval_count ?? 0;
 
             $parts = ["source: {$sourceType}", "age: {$age}", "importance: {$importance}/10"];
+            if (config('memory.relevance_tiers.enabled', true)) {
+                $relevance = MemoryRelevance::fromCosine($m->similarity ?? null)?->value;
+                if ($relevance !== null) {
+                    $parts[] = "relevance: {$relevance}";
+                }
+            }
             if ($retrievals > 0) {
                 $parts[] = "used: {$retrievals}x";
             }

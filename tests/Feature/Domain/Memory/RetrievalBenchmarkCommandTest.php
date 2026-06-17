@@ -45,6 +45,7 @@ class RetrievalBenchmarkCommandTest extends TestCase
                 int $topK = 10,
                 ?array $tags = null,
                 ?string $topic = null,
+                bool $excludePreferences = false,
             ): Collection {
                 return Memory::withoutGlobalScopes()
                     ->where('team_id', $teamId)

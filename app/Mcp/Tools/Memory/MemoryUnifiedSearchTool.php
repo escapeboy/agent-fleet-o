@@ -70,9 +70,15 @@ class MemoryUnifiedSearchTool extends Tool
 
         return Response::text(json_encode([
             'count' => $results->count(),
+            // Lanes that degraded on this call (e.g. ['kg'], ['embedding_unavailable']).
+            // Empty when every retrieval lane ran cleanly.
+            'degraded_modes' => $action->degradedModes(),
             'results' => $results->map(fn ($item) => [
                 'type' => $item['type'],
                 'content' => $item['content'],
+                // Coarse relevance label (high/standard/low) instead of a bare
+                // score; null for lexical/KG hits with no vector signal.
+                'relevance' => $item['metadata']['relevance'] ?? null,
                 'rrf_score' => round($item['score'], 6),
                 'metadata' => $item['metadata'],
             ])->toArray(),

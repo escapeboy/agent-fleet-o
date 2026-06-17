@@ -297,6 +297,57 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Two-path retrieval (Oracle "RAG → memory" borrow)
+    |--------------------------------------------------------------------------
+    |
+    | Path A — known-scope enumeration: preference-category memories are loaded
+    | in full every turn (exact match, no top-k cutoff, no semantic ranking) so a
+    | stable user/team preference is never silently dropped below the top-k
+    | boundary the way it is when it shares the semantic discovery path with
+    | facts. On by default: this is a correctness fix, not a risky behavior
+    | change — preferences are meant to always apply.
+    |
+    | Path B — semantic discovery (the existing ranked vector/RRF retrieval) then
+    | excludes preference-category rows to avoid double-injection.
+    |
+    */
+    'preferences_injection' => [
+        'enabled' => (bool) env('MEMORY_PREFERENCES_INJECTION', true),
+        'max_items' => (int) env('MEMORY_PREFERENCES_MAX', 25),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Provisional exclusion from semantic discovery
+    |--------------------------------------------------------------------------
+    |
+    | When on, Proposed-tier ("provisional") memories are durable but excluded
+    | from the semantic discovery path until a human/auditor promotes them —
+    | keeping a noisy auto-extraction pipeline out of the recall layer. Off by
+    | default to preserve existing recall (Proposed rows are retrievable today).
+    |
+    */
+    'exclude_provisional_from_discovery' => (bool) env('MEMORY_EXCLUDE_PROVISIONAL', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relevance tiers (coarse labels, not bare scores)
+    |--------------------------------------------------------------------------
+    |
+    | Retrieved items are labelled high/standard/low instead of (or alongside)
+    | a raw cosine number — models calibrate poorly on bare floats but use coarse
+    | labels well. Bands are calibrated to text-embedding-3-small, whose relevant
+    | query/passage pairs score ~0.45-0.62 (see similarity_threshold note).
+    |
+    */
+    'relevance_tiers' => [
+        'enabled' => (bool) env('MEMORY_RELEVANCE_TIERS', true),
+        'high' => (float) env('MEMORY_RELEVANCE_HIGH', 0.55),
+        'standard' => (float) env('MEMORY_RELEVANCE_STANDARD', 0.45),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Proposal Workflow (Knowledge Nominations)
     |--------------------------------------------------------------------------
     |

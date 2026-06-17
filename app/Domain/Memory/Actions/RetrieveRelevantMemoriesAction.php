@@ -35,6 +35,7 @@ class RetrieveRelevantMemoriesAction
         ?array $tags = null,
         ?string $topic = null,
         ?string $domain = null,
+        bool $excludePreferences = false,
     ): Collection {
         if (! config('memory.enabled', true)) {
             return collect();
@@ -82,6 +83,10 @@ class RetrieveRelevantMemoriesAction
             $builder = Memory::withoutGlobalScopes()
                 ->select('memories.*')
                 ->selectRaw($compositeScoreSql, $compositeBindings)
+                // Raw cosine similarity, surfaced so callers can label results
+                // high/standard/low (MemoryRelevance) instead of showing a bare
+                // score. Only available when a query embedding exists.
+                ->when($hasQuery, fn ($q) => $q->selectRaw('1 - (embedding <=> ?) AS similarity', [$queryEmbedding]))
                 ->when($hasQuery, fn ($q) => $q->whereRaw('1 - (embedding <=> ?) >= ?', [$queryEmbedding, $threshold]))
                 ->where('confidence', '>=', $minConfidence)
                 // Exclude rejected proposals — keep NULL (legacy) and approved.
@@ -89,6 +94,20 @@ class RetrieveRelevantMemoriesAction
                 // Superseded beliefs are retained for audit but never injected.
                 ->where(fn ($q) => $q->whereNull('belief_status')->orWhere('belief_status', '!=', 'superseded'))
                 ->orderByDesc('composite_score');
+
+            // Path B (semantic discovery) excludes preference-category memories:
+            // preferences are loaded in full by Path A (known-scope enumeration)
+            // so they are never subject to the top-k cutoff. Excluding them here
+            // avoids double-injection. NULL-category rows are kept.
+            if ($excludePreferences) {
+                $builder->where(fn ($q) => $q->where('category', '!=', 'preference')->orWhereNull('category'));
+            }
+
+            // Provisional (Proposed-tier) memories are durable but kept out of
+            // semantic discovery until audited/promoted, when the flag is on.
+            if (config('memory.exclude_provisional_from_discovery', false)) {
+                $builder->where(fn ($q) => $q->where('tier', '!=', 'proposed')->orWhereNull('tier'));
+            }
 
             // Topic namespace pre-filter: narrows the candidate set before the pgvector scan.
             // Skipped when topic is null to preserve backwards-compatible behaviour.

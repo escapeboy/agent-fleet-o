@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Actions;
 
 use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
+use App\Domain\Memory\Enums\MemoryRelevance;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use Illuminate\Support\Collection;
@@ -16,10 +17,31 @@ use Illuminate\Support\Facades\Log;
  */
 class UnifiedMemorySearchAction
 {
+    /**
+     * Retrieval lanes that degraded (threw, or had no usable embedding) on the
+     * most recent execute() call. Surfaced to callers so a degraded retrieval
+     * shows up as telemetry rather than silent breakage. Cascade order:
+     * hybrid (vector+kg+keyword) → vector → keyword → recency.
+     *
+     * @var array<int, string>
+     */
+    private array $degradedModes = [];
+
     public function __construct(
         private readonly RetrieveRelevantMemoriesAction $vectorSearch,
         private readonly TemporalKnowledgeGraphService $kgService,
     ) {}
+
+    /**
+     * Lanes that degraded on the last execute() call (e.g. 'kg', 'keyword',
+     * 'embedding_unavailable'). Empty when every lane ran cleanly.
+     *
+     * @return array<int, string>
+     */
+    public function degradedModes(): array
+    {
+        return $this->degradedModes;
+    }
 
     /**
      * @return Collection<int, array{type: string, content: string, score: float, metadata: array}>
@@ -35,10 +57,13 @@ class UnifiedMemorySearchAction
         int $topK = 10,
         ?array $tags = null,
         ?string $topic = null,
+        bool $excludePreferences = false,
     ): Collection {
+        $this->degradedModes = [];
+
         if (! config('memory.unified_search.enabled', true)) {
             // Fall back to vector-only search
-            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId, $tags, $topic);
+            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId, $tags, $topic, $excludePreferences);
         }
 
         $vectorWeight = config('memory.unified_search.vector_weight', 1.0);
@@ -48,9 +73,13 @@ class UnifiedMemorySearchAction
 
         $queryEmbedding = $this->generateEmbedding($query, $teamId);
 
+        if ($queryEmbedding === null) {
+            $this->degradedModes[] = 'embedding_unavailable';
+        }
+
         // System 1: Vector search — run original + keyword-expanded query variants in parallel,
         // then merge with weighted RRF (Onyx-inspired multi-query wRRF).
-        $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $rrfK);
+        $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $rrfK, $excludePreferences);
 
         // System 2: Knowledge Graph search — skipped when no embedding is
         // available (BYOK installs with no platform key); other lanes degrade
@@ -60,7 +89,15 @@ class UnifiedMemorySearchAction
             : collect();
 
         // System 3: Keyword search
-        $keywordResults = $this->getKeywordResults($teamId, $agentId, $query);
+        $keywordResults = $this->getKeywordResults($teamId, $agentId, $query, $excludePreferences);
+
+        if ($this->degradedModes !== []) {
+            Log::info('memory.retrieval.degraded', [
+                'team_id' => $teamId,
+                'agent_id' => $agentId,
+                'modes' => $this->degradedModes,
+            ]);
+        }
 
         // RRF fusion
         $fused = collect();
@@ -83,6 +120,7 @@ class UnifiedMemorySearchAction
                     'retrieval_count' => $item->retrieval_count ?? 0,
                     'created_at' => $item->created_at?->toIso8601String(),
                     'confidence' => $item->confidence,
+                    'relevance' => MemoryRelevance::fromCosine($item->similarity ?? null)?->value,
                     'rejected_alternatives' => $item->rejected_alternatives ?? null,
                     'metadata' => $item->metadata,
                 ],
@@ -134,6 +172,8 @@ class UnifiedMemorySearchAction
                         'retrieval_count' => $item->retrieval_count ?? 0,
                         'created_at' => $item->created_at?->toIso8601String(),
                         'confidence' => $item->confidence,
+                        // Keyword-only hits have no vector signal → no relevance label.
+                        'relevance' => MemoryRelevance::fromCosine($item->similarity ?? null)?->value,
                         'rejected_alternatives' => $item->rejected_alternatives ?? null,
                         'metadata' => $item->metadata,
                     ],
@@ -162,6 +202,7 @@ class UnifiedMemorySearchAction
         ?array $tags,
         ?string $topic,
         int $k,
+        bool $excludePreferences = false,
     ): Collection {
         if (! $agentId) {
             return collect();
@@ -177,6 +218,7 @@ class UnifiedMemorySearchAction
                 teamId: $teamId,
                 tags: $tags,
                 topic: $topic,
+                excludePreferences: $excludePreferences,
             );
 
             $expandedQuery = $this->expandKeywords($query);
@@ -190,6 +232,7 @@ class UnifiedMemorySearchAction
                     teamId: $teamId,
                     tags: $tags,
                     topic: $topic,
+                    excludePreferences: $excludePreferences,
                 )
                 : collect();
 
@@ -199,6 +242,7 @@ class UnifiedMemorySearchAction
             ], $k);
         } catch (\Throwable $e) {
             Log::debug('UnifiedSearch: multi-query vector search failed', ['error' => $e->getMessage()]);
+            $this->degradedModes[] = 'vector';
 
             return collect();
         }
@@ -290,29 +334,42 @@ class UnifiedMemorySearchAction
             );
         } catch (\Throwable $e) {
             Log::debug('UnifiedSearch: KG search failed', ['error' => $e->getMessage()]);
+            $this->degradedModes[] = 'kg';
 
             return collect();
         }
     }
 
-    private function getKeywordResults(string $teamId, ?string $agentId, string $query): Collection
+    private function getKeywordResults(string $teamId, ?string $agentId, string $query, bool $excludePreferences = false): Collection
     {
         try {
             // PostgreSQL: use full-text search with BM25 ranking (ts_rank_cd).
             // Falls back to ILIKE for SQLite (tests) or if content_tsv column is absent.
             if (\DB::getDriverName() === 'pgsql') {
-                return $this->getFtsResults($teamId, $agentId, $query);
+                return $this->getFtsResults($teamId, $agentId, $query, $excludePreferences);
             }
 
-            return $this->getIlikeResults($teamId, $agentId, $query);
+            return $this->getIlikeResults($teamId, $agentId, $query, $excludePreferences);
         } catch (\Throwable $e) {
             Log::debug('UnifiedSearch: keyword search failed', ['error' => $e->getMessage()]);
+            $this->degradedModes[] = 'keyword';
 
             return collect();
         }
     }
 
-    private function getFtsResults(string $teamId, ?string $agentId, string $query): Collection
+    /**
+     * Path B excludes preference-category rows (loaded in full by Path A).
+     * NULL-category rows are kept.
+     */
+    private function applyPreferenceExclusion(\Illuminate\Database\Eloquent\Builder $builder, bool $excludePreferences): void
+    {
+        if ($excludePreferences) {
+            $builder->where(fn ($q) => $q->where('category', '!=', 'preference')->orWhereNull('category'));
+        }
+    }
+
+    private function getFtsResults(string $teamId, ?string $agentId, string $query, bool $excludePreferences = false): Collection
     {
         $safeQuery = str_replace(['\'', '\\'], ['\'\'', '\\\\'], $query);
 
@@ -325,6 +382,7 @@ class UnifiedMemorySearchAction
         if ($agentId) {
             $builder->where('agent_id', $agentId);
         }
+        $this->applyPreferenceExclusion($builder, $excludePreferences);
 
         $results = $builder->get();
 
@@ -339,6 +397,7 @@ class UnifiedMemorySearchAction
             if ($agentId) {
                 $trigramBuilder->where('agent_id', $agentId);
             }
+            $this->applyPreferenceExclusion($trigramBuilder, $excludePreferences);
 
             $results = $trigramBuilder->get();
         }
@@ -346,7 +405,7 @@ class UnifiedMemorySearchAction
         return $results;
     }
 
-    private function getIlikeResults(string $teamId, ?string $agentId, string $query): Collection
+    private function getIlikeResults(string $teamId, ?string $agentId, string $query, bool $excludePreferences = false): Collection
     {
         $builder = Memory::withoutGlobalScopes()
             ->where('team_id', $teamId)
@@ -357,11 +416,12 @@ class UnifiedMemorySearchAction
         if ($agentId) {
             $builder->where('agent_id', $agentId);
         }
+        $this->applyPreferenceExclusion($builder, $excludePreferences);
 
         return $builder->get();
     }
 
-    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId, ?array $tags = null, ?string $topic = null): Collection
+    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId, ?array $tags = null, ?string $topic = null, bool $excludePreferences = false): Collection
     {
         if (! $agentId) {
             return collect();
@@ -376,6 +436,7 @@ class UnifiedMemorySearchAction
             teamId: $teamId,
             tags: $tags,
             topic: $topic,
+            excludePreferences: $excludePreferences,
         );
 
         return $memories->map(fn ($m) => [
@@ -390,6 +451,7 @@ class UnifiedMemorySearchAction
                 'retrieval_count' => $m->retrieval_count ?? 0,
                 'created_at' => $m->created_at?->toIso8601String(),
                 'confidence' => $m->confidence,
+                'relevance' => MemoryRelevance::fromCosine($m->similarity ?? null)?->value,
                 'rejected_alternatives' => $m->rejected_alternatives,
             ],
         ]);
