@@ -58,6 +58,8 @@ class MemorySearchTool extends Tool
                 ->enum(['active', 'inferred', 'exploratory', 'superseded']),
             'domain' => $schema->string()
                 ->description('Hard scope filter by domain, e.g. "domain:code". Returns only beliefs in that domain plus universal (no-domain) beliefs.'),
+            'task_type' => $schema->string()
+                ->description('Episodic recall filter by task type, e.g. "debug" or "growth". Returns only memories tagged with the same kind of task.'),
         ];
     }
 
@@ -159,6 +161,10 @@ class MemorySearchTool extends Tool
 
         if ($domain = $request->get('domain')) {
             $query->where(fn ($q) => $q->where('domain', $domain)->orWhereNull('domain'));
+        }
+
+        if ($taskType = $request->get('task_type')) {
+            $query->where('task_type', $taskType);
         }
 
         return $query->limit(100)->get();

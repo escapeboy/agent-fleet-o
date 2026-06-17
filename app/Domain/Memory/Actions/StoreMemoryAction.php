@@ -65,6 +65,7 @@ PROMPT;
         ?string $domain = null,
         array $rejectedAlternatives = [],
         ?string $supersedesId = null,
+        ?string $taskType = null,
     ): array {
         if (! config('memory.enabled', true)) {
             return [];
@@ -89,7 +90,7 @@ PROMPT;
                     $projectId, $sourceId, $metadata, $confidence,
                     $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
                     $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
-                    $rejectedAlternatives, $supersedesId,
+                    $rejectedAlternatives, $supersedesId, $taskType,
                 );
 
                 if ($memory) {
@@ -183,6 +184,7 @@ PROMPT;
         ?string $domain = null,
         array $rejectedAlternatives = [],
         ?string $supersedesId = null,
+        ?string $taskType = null,
     ): ?Memory {
         $contentHash = hash('sha256', mb_strtolower(trim($chunk)));
         $embedding = $this->generateEmbedding($chunk, $teamId);
@@ -213,7 +215,7 @@ PROMPT;
                 $sourceType, $projectId, $sourceId, $metadata,
                 $confidence, $importance, $tags, $visibility, $tier, $proposedBy, $category, $topic,
                 $beliefType, $preferenceSubtype, $whyItMatters, $beliefStatus, $domain,
-                $rejectedAlternatives, $supersedesId,
+                $rejectedAlternatives, $supersedesId, $taskType,
             ),
         };
     }
@@ -368,6 +370,7 @@ PROMPT;
         ?string $domain = null,
         array $rejectedAlternatives = [],
         ?string $supersedesId = null,
+        ?string $taskType = null,
     ): Memory {
         // A preference subtype only applies to Preference beliefs — drop it otherwise.
         if ($beliefType?->acceptsPreferenceSubtype() !== true) {
@@ -397,6 +400,7 @@ PROMPT;
             'why_it_matters' => $whyItMatters,
             'belief_status' => $beliefStatus,
             'domain' => $domain,
+            'task_type' => $taskType,
             'rejected_alternatives' => $rejectedAlternatives,
             'supersedes_id' => $supersedesId,
         ]);

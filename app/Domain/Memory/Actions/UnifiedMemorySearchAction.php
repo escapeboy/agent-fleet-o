@@ -57,13 +57,14 @@ class UnifiedMemorySearchAction
         int $topK = 10,
         ?array $tags = null,
         ?string $topic = null,
+        ?string $taskType = null,
         bool $excludePreferences = false,
     ): Collection {
         $this->degradedModes = [];
 
         if (! config('memory.unified_search.enabled', true)) {
             // Fall back to vector-only search
-            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId, $tags, $topic, $excludePreferences);
+            return $this->vectorOnlyFallback($agentId, $query, $projectId, $topK, $teamId, $tags, $topic, $taskType, $excludePreferences);
         }
 
         $vectorWeight = config('memory.unified_search.vector_weight', 1.0);
@@ -79,7 +80,7 @@ class UnifiedMemorySearchAction
 
         // System 1: Vector search — run original + keyword-expanded query variants in parallel,
         // then merge with weighted RRF (Onyx-inspired multi-query wRRF).
-        $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $rrfK, $excludePreferences);
+        $vectorResults = $this->getVectorResultsMultiQuery($agentId, $query, $projectId, $teamId, $tags, $topic, $taskType, $rrfK, $excludePreferences);
 
         // System 2: Knowledge Graph search — skipped when no embedding is
         // available (BYOK installs with no platform key); other lanes degrade
@@ -201,6 +202,7 @@ class UnifiedMemorySearchAction
         ?string $teamId,
         ?array $tags,
         ?string $topic,
+        ?string $taskType,
         int $k,
         bool $excludePreferences = false,
     ): Collection {
@@ -218,6 +220,7 @@ class UnifiedMemorySearchAction
                 teamId: $teamId,
                 tags: $tags,
                 topic: $topic,
+                taskType: $taskType,
                 excludePreferences: $excludePreferences,
             );
 
@@ -232,6 +235,7 @@ class UnifiedMemorySearchAction
                     teamId: $teamId,
                     tags: $tags,
                     topic: $topic,
+                    taskType: $taskType,
                     excludePreferences: $excludePreferences,
                 )
                 : collect();
@@ -421,7 +425,7 @@ class UnifiedMemorySearchAction
         return $builder->get();
     }
 
-    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId, ?array $tags = null, ?string $topic = null, bool $excludePreferences = false): Collection
+    private function vectorOnlyFallback(?string $agentId, string $query, ?string $projectId, int $topK, ?string $teamId, ?array $tags = null, ?string $topic = null, ?string $taskType = null, bool $excludePreferences = false): Collection
     {
         if (! $agentId) {
             return collect();
@@ -436,6 +440,7 @@ class UnifiedMemorySearchAction
             teamId: $teamId,
             tags: $tags,
             topic: $topic,
+            taskType: $taskType,
             excludePreferences: $excludePreferences,
         );
 

@@ -35,6 +35,7 @@ class RetrieveRelevantMemoriesAction
         ?array $tags = null,
         ?string $topic = null,
         ?string $domain = null,
+        ?string $taskType = null,
         bool $excludePreferences = false,
     ): Collection {
         if (! config('memory.enabled', true)) {
@@ -120,6 +121,14 @@ class RetrieveRelevantMemoriesAction
             // session. NULL-domain beliefs are universal and always eligible.
             if ($domain !== null) {
                 $builder->where(fn ($q) => $q->where('domain', $domain)->orWhereNull('domain'));
+            }
+
+            // Episodic task_type filter: narrows recall to lessons learned on the
+            // same kind of task ("we've done this before"). Exact-match only —
+            // unlike domain, NULL-task_type rows are not surfaced when a specific
+            // task type is requested.
+            if ($taskType !== null) {
+                $builder->where('task_type', $taskType);
             }
 
             // Tag-based filtering (opt-in: only applied when tags are passed)

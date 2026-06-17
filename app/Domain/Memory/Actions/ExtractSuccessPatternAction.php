@@ -109,12 +109,14 @@ PROMPT;
             }
 
             $proposalWorkflow = (bool) config('memory.proposal_workflow.extractors_enabled', false);
+            $taskType = $this->inferTaskType($experiment);
 
             $metadata = [
                 'experiment_id' => $experimentId,
                 'experiment_title' => $experiment->title,
                 'final_status' => $experiment->status?->value,
                 'key_technique' => $keyTechnique,
+                'task_type' => $taskType,
                 'extracted_at' => now()->toIso8601String(),
             ];
 
@@ -135,6 +137,7 @@ PROMPT;
                 tier: $proposalWorkflow ? MemoryTier::Proposed : MemoryTier::Successes,
                 category: MemoryCategory::Behavior,
                 proposedBy: 'system:success_extractor',
+                taskType: $taskType,
             );
 
             Log::info('ExtractSuccessPatternAction: pattern stored', [
@@ -148,6 +151,16 @@ PROMPT;
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Derive a reusable task_type for episodic recall. Prefers the experiment's
+     * track (a stable taxonomy: growth/retention/debug/workflow/…); falls back
+     * to null when the experiment has no track. Deterministic — no LLM call.
+     */
+    private function inferTaskType(Experiment $experiment): ?string
+    {
+        return $experiment->track?->value;
     }
 
     private function buildPrompt(Experiment $experiment): string

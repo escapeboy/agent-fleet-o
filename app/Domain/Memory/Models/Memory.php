@@ -44,6 +44,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $why_it_matters
  * @property MemoryBeliefStatus $belief_status
  * @property string|null $domain
+ * @property string|null $task_type
  * @property array<string, mixed>|null $rejected_alternatives
  * @property string|null $supersedes_id
  * @property bool $conflict_flag
@@ -90,6 +91,7 @@ class Memory extends Model
         'why_it_matters',
         'belief_status',
         'domain',
+        'task_type',
         'rejected_alternatives',
         'supersedes_id',
         'conflict_flag',

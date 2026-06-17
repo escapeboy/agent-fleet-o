@@ -344,6 +344,7 @@ use App\Mcp\Tools\Memory\MemoryDeleteTool;
 use App\Mcp\Tools\Memory\MemoryDriftStatusTool;
 use App\Mcp\Tools\Memory\MemoryExportTool;
 use App\Mcp\Tools\Memory\MemoryFeedbackTool;
+use App\Mcp\Tools\Memory\MemoryForgetTool;
 use App\Mcp\Tools\Memory\MemoryGetTool;
 use App\Mcp\Tools\Memory\MemoryKeywordSearchTool;
 use App\Mcp\Tools\Memory\MemoryListProposalsTool;
@@ -1209,6 +1210,7 @@ class AgentFleetServer extends Server
         MemoryDriftStatusTool::class,
         MemoryContradictionsTool::class,
         MemoryDeleteTool::class,
+        MemoryForgetTool::class,
         MemoryUploadKnowledgeTool::class,
         MemoryAddTool::class,
         SupabaseProvisionMemoryTool::class,
