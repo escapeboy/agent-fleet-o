@@ -2,8 +2,10 @@
 
 namespace App\Mcp\Tools\Agent;
 
+use App\Domain\Agent\Actions\EvaluateAgentConfigGateAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
@@ -76,6 +78,8 @@ class AgentUpdateTool extends Tool
                 ->description('Agent health check config: {enabled: bool, cron: string, prompt: string}. Pass null to clear.'),
             'charter' => $schema->object()
                 ->description('Charter-as-contract — the agent authority boundary: {owns: string[], refuses: string[], escalate_to: string, escalate_when: string[]}. Rendered into the system prompt when agent.charter.enabled is on. Pass null to clear.'),
+            'eval_gate_dataset_id' => $schema->string()
+                ->description('UUID of an EvaluationDataset to gate config changes against (eve eval-gate). When set and agent.eval_gate.enabled is on, a config change is replayed against this dataset and held if it scores below threshold. Pass empty string to clear.'),
         ];
     }
 
@@ -105,6 +109,7 @@ class AgentUpdateTool extends Tool
             'evaluation_sample_rate' => 'nullable|numeric|min:0|max:1',
             'heartbeat_definition' => 'nullable|array',
             'charter' => 'nullable|array',
+            'eval_gate_dataset_id' => 'nullable|string',
         ]);
 
         $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
@@ -234,13 +239,46 @@ class AgentUpdateTool extends Tool
             $data['charter'] = $validated['charter'];
         }
 
+        // eval_gate_dataset_id: stored in agent.config JSONB; empty string clears.
+        if (array_key_exists('eval_gate_dataset_id', $validated) && $validated['eval_gate_dataset_id'] !== null) {
+            $datasetId = $validated['eval_gate_dataset_id'];
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if ($datasetId === '') {
+                unset($currentConfig['eval_gate_dataset_id']);
+            } else {
+                $datasetExists = EvaluationDataset::withoutGlobalScopes()
+                    ->where('id', $datasetId)
+                    ->where('team_id', $teamId)
+                    ->exists();
+                if (! $datasetExists) {
+                    return $this->notFoundError('evaluation dataset');
+                }
+                $currentConfig['eval_gate_dataset_id'] = $datasetId;
+            }
+            $data['config'] = $currentConfig;
+        }
+
         if (empty($data)) {
             return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
+        // Eval-gate (eve borrow): when enabled and an eval dataset is configured,
+        // replay the candidate config against it and hold the change if it
+        // regresses below threshold. No-op passthrough otherwise.
+        $gate = app(EvaluateAgentConfigGateAction::class)->execute($agent, $data);
+        if ($gate['gated'] && ! $gate['passed']) {
+            return Response::text(json_encode([
+                'success' => false,
+                'held' => true,
+                'reason' => $gate['reason'],
+                'eval_gate' => $gate,
+                'agent_id' => $agent->id,
+            ]));
+        }
+
         app(RecordAgentConfigRevisionAction::class)->execute(
             agent: $agent,
-            newConfig: $data,
+            newData: $data,
             source: 'mcp',
         );
 
@@ -250,6 +288,7 @@ class AgentUpdateTool extends Tool
             'success' => true,
             'agent_id' => $agent->id,
             'updated_fields' => array_keys($data),
+            'eval_gate' => $gate,
         ]));
     }
 }
