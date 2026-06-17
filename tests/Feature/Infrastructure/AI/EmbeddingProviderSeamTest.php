@@ -4,6 +4,7 @@ namespace Tests\Feature\Infrastructure\AI;
 
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\Exceptions\LocalEmbeddingNotConfiguredException;
+use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Models\SemanticCacheEntry;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,8 +66,12 @@ class EmbeddingProviderSeamTest extends TestCase
         // Same team/provider/model/prompt — only the embedding_model differs.
         // The namespace filter SemanticCache applies must keep these disjoint so
         // vectors from different embedding backends are never compared.
+        // A real team is required: semantic_cache_entries.team_id now carries a
+        // cascadeOnDelete FK to teams (GDPR erasure cascade), so a synthetic id
+        // would violate it on insert.
+        $team = Team::factory()->create();
         $shared = [
-            'team_id' => 'team-001',
+            'team_id' => $team->id,
             'provider' => 'anthropic',
             'model' => 'claude-sonnet-4-5',
             'prompt_hash' => str_repeat('a', 32),
@@ -79,7 +84,7 @@ class EmbeddingProviderSeamTest extends TestCase
         SemanticCacheEntry::create($shared + ['embedding_model' => 'multilingual-e5-base']);
 
         $openai = SemanticCacheEntry::withoutGlobalScopes()
-            ->where('team_id', 'team-001')
+            ->where('team_id', $team->id)
             ->where('provider', 'anthropic')
             ->where('model', 'claude-sonnet-4-5')
             ->where('embedding_model', 'text-embedding-3-small')
