@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Tools;
 
+use App\Domain\Assistant\Services\RequestRouter;
 use App\Domain\Crew\Actions\GenerateCrewFromPromptAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Models\Project;
@@ -20,7 +21,60 @@ class DelegationTools
             self::delegateAndNotify($conversationId),
             self::getDelegationResults(),
             self::designCrew(),
+            self::routeRequest($conversationId),
         ];
+    }
+
+    private static function routeRequest(string $conversationId): PrismToolObject
+    {
+        return PrismTool::as('route_request')
+            ->for('Front-door router: given a free-text request, rank the team\'s active agents, crews, and projects by fit and return the best handler(s) with match rationale — so you can point one ask at whoever should handle it without knowing the whole fleet. Set dispatch=true to immediately start the top candidate when it is a project.')
+            ->withStringParameter('request', 'The task or question to route, in plain language.', required: true)
+            ->withBooleanParameter('dispatch', 'If true and the top candidate is a project, trigger it immediately (fire-and-forget). Default false = recommend only.')
+            ->using(function (string $request, ?bool $dispatch = false) use ($conversationId) {
+                try {
+                    $teamId = auth()->user()?->current_team_id;
+                    if (! $teamId) {
+                        return json_encode(['error' => 'No current team.']);
+                    }
+
+                    $ranked = app(RequestRouter::class)->route($teamId, $request);
+                    if ($ranked === []) {
+                        return json_encode([
+                            'matches' => [],
+                            'message' => 'No active agent, crew, or project matched this request.',
+                        ]);
+                    }
+
+                    $top = $ranked[0];
+
+                    if ($dispatch && $top['kind'] === 'project') {
+                        $project = Project::where('id', $top['id'])->first();
+                        if ($project) {
+                            $run = app(TriggerProjectRunAction::class)->execute(
+                                project: $project,
+                                trigger: 'assistant',
+                            );
+                            $run->update(['triggered_by_conversation_id' => $conversationId]);
+
+                            return json_encode([
+                                'dispatched' => true,
+                                'run_id' => $run->id,
+                                'routed_to' => $top,
+                                'message' => "Routed to project '{$project->title}' and started it.",
+                            ]);
+                        }
+                    }
+
+                    return json_encode([
+                        'matches' => $ranked,
+                        'recommended' => $top,
+                        'message' => "Best fit: {$top['name']} ({$top['kind']}). Use delegate_and_notify to run a project, or create/execute a crew as appropriate.",
+                    ]);
+                } catch (\Throwable $e) {
+                    return json_encode(['error' => $e->getMessage()]);
+                }
+            });
     }
 
     private static function delegateAndNotify(string $conversationId): PrismToolObject
