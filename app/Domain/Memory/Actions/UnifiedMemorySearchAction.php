@@ -6,6 +6,7 @@ use App\Domain\KnowledgeGraph\Services\TemporalKnowledgeGraphService;
 use App\Domain\Memory\Enums\MemoryRelevance;
 use App\Domain\Memory\Models\Memory;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -366,7 +367,7 @@ class UnifiedMemorySearchAction
      * Path B excludes preference-category rows (loaded in full by Path A).
      * NULL-category rows are kept.
      */
-    private function applyPreferenceExclusion(\Illuminate\Database\Eloquent\Builder $builder, bool $excludePreferences): void
+    private function applyPreferenceExclusion(Builder $builder, bool $excludePreferences): void
     {
         if ($excludePreferences) {
             $builder->where(fn ($q) => $q->where('category', '!=', 'preference')->orWhereNull('category'));
