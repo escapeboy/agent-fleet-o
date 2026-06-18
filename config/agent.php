@@ -228,6 +228,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Agent prompt optimizer (EvoAgentX / GEPA borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, OptimizeAgentPromptAction generates candidate goal/backstory
+    | variants for an agent, scores EACH against the agent's eval dataset
+    | (config.eval_gate_dataset_id) via ReplayEvaluationDatasetAction, and emits
+    | an EvolutionProposal for the best variant ONLY if it beats the current
+    | config's baseline by `min_improvement`. Proposal-only (human applies).
+    | Off by default; requires a configured eval dataset.
+    */
+    'prompt_optimizer' => [
+        'enabled' => (bool) env('AGENT_PROMPT_OPTIMIZER_ENABLED', false),
+        'population_size' => (int) env('AGENT_PROMPT_OPTIMIZER_POPULATION', 3),
+        'min_improvement' => (float) env('AGENT_PROMPT_OPTIMIZER_MIN_IMPROVEMENT', 0.0),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Per-tool-call governance (Squad borrow)
     |--------------------------------------------------------------------------
     | When enabled, mutating built-in tool calls (bash_execute, file_write,
