@@ -44,6 +44,7 @@ use App\Mcp\Tools\Agent\AgentHookDeleteTool;
 use App\Mcp\Tools\Agent\AgentHookListTool;
 use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentListTool;
+use App\Mcp\Tools\Agent\AgentOptimizePromptTool;
 use App\Mcp\Tools\Agent\AgentPolicyCreateTool;
 use App\Mcp\Tools\Agent\AgentPolicyGetTool;
 use App\Mcp\Tools\Agent\AgentPolicyListTool;
@@ -834,6 +835,7 @@ class AgentFleetServer extends Server
         AgentDryRunTool::class,
         AgentConfigHistoryTool::class,
         AgentRollbackConfigTool::class,
+        AgentOptimizePromptTool::class,
         AgentRuntimeStateTool::class,
         AgentWorkspaceContractGetTool::class,
         AgentResetSessionTool::class,
