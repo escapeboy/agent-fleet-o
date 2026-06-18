@@ -10,9 +10,9 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
+use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 
-#[IsIdempotent]
+#[IsDestructive]
 #[AssistantTool('write')]
 // @mcp-cross-tenant transitive-via-agent — agent_id team-verified upstream
 class AgentOptimizePromptTool extends Tool
