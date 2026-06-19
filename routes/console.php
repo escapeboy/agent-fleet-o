@@ -77,6 +77,9 @@ Schedule::command('credentials:refresh-reddit')->hourly()->withoutOverlapping(5)
 // Project scheduling & budget enforcement
 Schedule::command('projects:check-budgets')->hourly();
 
+// Upstream (platform-funded) credit runway alerts — emails the owner when low
+Schedule::command('credits:check-upstream')->dailyAt('08:00')->withoutOverlapping(30);
+
 // Relationship health scoring (daily)
 Schedule::command('contacts:score-health')->dailyAt('03:30')->withoutOverlapping(60);
 

@@ -162,6 +162,7 @@ use App\Mcp\Tools\Budget\BudgetForecastTool;
 use App\Mcp\Tools\Budget\BudgetLedgerTool;
 use App\Mcp\Tools\Budget\BudgetSummaryTool;
 use App\Mcp\Tools\Budget\BudgetTransferTool;
+use App\Mcp\Tools\Budget\UpstreamCreditRunwayTool;
 use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
 use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
 use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
@@ -1149,7 +1150,7 @@ class AgentFleetServer extends Server
         KgSuggestMergesTool::class,
         KgMergeEntitiesTool::class,
 
-        // Budget (7)
+        // Budget (8)
         BudgetSummaryTool::class,
         BudgetCheckTool::class,
         BudgetForecastTool::class,
@@ -1157,6 +1158,7 @@ class AgentFleetServer extends Server
         BudgetAddCreditsTool::class,
         BudgetTransferTool::class,
         BudgetCostBreakdownTool::class,
+        UpstreamCreditRunwayTool::class,
 
         // Evaluation (10)
         EvaluationDatasetManageTool::class,

@@ -130,4 +130,15 @@ return [
         'tail_stages' => 2,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Require team AI access on experiment creation
+    |--------------------------------------------------------------------------
+    | When enabled, CreateExperimentAction rejects teams that have no usable AI
+    | path (no BYOK key, no platform_llm_fallback, no local/bridge agent, and not
+    | an internal sub-program) with an actionable message — instead of letting the
+    | run fail mid-pipeline. Default off so it can be flipped per environment.
+    */
+    'require_team_ai_access' => (bool) env('EXPERIMENTS_REQUIRE_TEAM_AI_ACCESS', false),
+
 ];
