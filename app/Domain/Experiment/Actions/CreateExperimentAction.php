@@ -4,6 +4,8 @@ namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\TeamAiAccessChecker;
 use App\Domain\Workflow\Actions\MaterializeWorkflowAction;
 use App\Domain\Workflow\Models\Workflow;
 
@@ -27,6 +29,13 @@ class CreateExperimentAction
         ?string $workflowId = null,
         ?string $agentId = null,
     ): Experiment {
+        if ($teamId && (bool) config('experiments.require_team_ai_access', false)) {
+            $team = Team::withoutGlobalScopes()->find($teamId);
+            if ($team) {
+                app(TeamAiAccessChecker::class)->assertCanUseAi($team);
+            }
+        }
+
         $experiment = Experiment::create([
             'user_id' => $userId,
             'team_id' => $teamId,
