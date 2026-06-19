@@ -257,11 +257,11 @@ class HealthPage extends Component
 
     private function getSpendStats(): array
     {
-        $today = CreditLedger::where('type', 'spend')
+        $today = CreditLedger::query()->spend()
             ->where('created_at', '>=', now()->startOfDay())
             ->sum('amount');
 
-        $thisHour = CreditLedger::where('type', 'spend')
+        $thisHour = CreditLedger::query()->spend()
             ->where('created_at', '>=', now()->startOfHour())
             ->sum('amount');
 

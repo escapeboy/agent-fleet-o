@@ -23,14 +23,14 @@ class SpendForecaster
     public function forecast(): array
     {
         $budgetCap = (int) GlobalSetting::get('global_budget_cap', 0);
-        $totalSpent = abs((int) CreditLedger::withoutGlobalScopes()->where('type', 'spend')->sum('amount'));
+        $totalSpent = abs((int) CreditLedger::withoutGlobalScopes()->spend()->sum('amount'));
 
         // Get daily spend for the past 30 days
         $since30 = now()->subDays(30)->startOfDay();
         $since7 = now()->subDays(7)->startOfDay();
 
         $dailySeries = CreditLedger::withoutGlobalScopes()
-            ->where('type', 'spend')
+            ->spend()
             ->where('created_at', '>=', $since30)
             ->selectRaw('DATE(created_at) as day, ABS(SUM(amount)) as spend')
             ->groupByRaw('DATE(created_at)')

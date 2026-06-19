@@ -123,7 +123,7 @@ class DashboardPage extends Component
                     ->count(),
                 'pendingApprovals' => ApprovalRequest::where('status', 'pending')->count(),
                 'successRate' => $total > 0 ? round(($completed / $total) * 100, 1) : 0,
-                'totalSpend' => abs((float) CreditLedger::where('type', 'spend')->sum('amount')),
+                'totalSpend' => abs((float) CreditLedger::query()->spend()->sum('amount')),
                 'activeSkills' => Skill::where('status', 'active')->count(),
                 'activeAgents' => Agent::where('status', 'active')->count(),
                 'skillExecutions24h' => SkillExecution::where('created_at', '>=', now()->subDay())->count(),

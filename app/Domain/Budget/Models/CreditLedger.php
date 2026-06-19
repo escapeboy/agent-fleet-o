@@ -8,6 +8,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Models\User;
 use Database\Factories\Domain\Budget\CreditLedgerFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -73,5 +74,21 @@ class CreditLedger extends Model
             ->where('team_id', $teamId)
             ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
             ->exists();
+    }
+
+    /**
+     * Credit-consumption entries: the reservation hold plus its settlement
+     * (release of the unused part / deduction of any over-run). The signed
+     * amounts net to the actual credits consumed, so callers take
+     * abs(sum(amount)) for the spend in a period. (There is no 'spend'
+     * LedgerType — that was a long-standing bug that matched zero rows.)
+     */
+    public function scopeSpend(Builder $query): Builder
+    {
+        return $query->whereIn('type', [
+            LedgerType::Reservation->value,
+            LedgerType::Release->value,
+            LedgerType::Deduction->value,
+        ]);
     }
 }
