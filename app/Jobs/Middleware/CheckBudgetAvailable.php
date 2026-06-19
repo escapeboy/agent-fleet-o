@@ -2,7 +2,6 @@
 
 namespace App\Jobs\Middleware;
 
-use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Models\Experiment;
 use Closure;
@@ -42,13 +41,9 @@ class CheckBudgetAvailable
         // Check global team balance — only enforce if credits have been explicitly purchased.
         // Community/self-hosted installs never have purchase entries, so we skip this check
         // to avoid blocking jobs on deployments where no billing is configured.
-        // withoutGlobalScopes() ensures this works in queue workers (console context) and tests.
-        $hasPurchasedCredits = CreditLedger::withoutGlobalScopes()
-            ->where('team_id', $experiment->team_id)
-            ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
-            ->exists();
-
-        if (! $hasPurchasedCredits) {
+        // teamHasPurchasedCredits() uses withoutGlobalScopes() so this works in queue
+        // workers (console context) and tests.
+        if (! CreditLedger::teamHasPurchasedCredits($experiment->team_id)) {
             $next($job);
 
             return;

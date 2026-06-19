@@ -48,6 +48,24 @@ class ReserveBudgetTest extends TestCase
         ]);
     }
 
+    /**
+     * Seed a billing-enabled team (has a purchase entry) whose balance has been
+     * fully spent down to zero — the only state in which a reservation should throw.
+     */
+    private function seedDepletedBalance(): void
+    {
+        $this->seedBalance(100);
+
+        CreditLedger::withoutGlobalScopes()->create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'type' => LedgerType::Deduction,
+            'amount' => -100,
+            'balance_after' => 0,
+            'description' => 'Spent',
+        ]);
+    }
+
     public function test_reserves_budget_successfully(): void
     {
         $this->seedBalance(1000);
@@ -79,8 +97,9 @@ class ReserveBudgetTest extends TestCase
         );
     }
 
-    public function test_throws_on_zero_balance(): void
+    public function test_throws_on_zero_balance_for_billing_enabled_team(): void
     {
+        $this->seedDepletedBalance();
         $action = new ReserveBudgetAction;
 
         $this->expectException(InsufficientBudgetException::class);
@@ -90,6 +109,23 @@ class ReserveBudgetTest extends TestCase
             teamId: $this->team->id,
             amount: 10,
         );
+    }
+
+    public function test_skips_reservation_when_team_has_no_purchased_credits(): void
+    {
+        // Team without any purchase/refund entry (no billing configured): a zero
+        // balance must NOT block — the reservation is skipped and returns null,
+        // and no ledger entry is written.
+        $action = new ReserveBudgetAction;
+
+        $entry = $action->execute(
+            userId: $this->user->id,
+            teamId: $this->team->id,
+            amount: 49,
+        );
+
+        $this->assertNull($entry);
+        $this->assertDatabaseCount('credit_ledgers', 0);
     }
 
     public function test_reserves_with_experiment_budget_cap(): void

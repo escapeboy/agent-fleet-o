@@ -58,4 +58,20 @@ class CreditLedger extends Model
     {
         return $this->belongsTo(AiRun::class);
     }
+
+    /**
+     * Whether the team has billing configured, i.e. any purchased or refunded
+     * credits. Budget gates skip credit enforcement when this is false:
+     * community/self-hosted installs and not-yet-billed teams never have
+     * purchase entries, so enforcing a zero balance would block BYOK and
+     * platform-funded calls. Single source of truth for ReserveBudgetAction,
+     * CheckBudgetAction and the CheckBudgetAvailable job middleware.
+     */
+    public static function teamHasPurchasedCredits(string $teamId): bool
+    {
+        return static::withoutGlobalScopes()
+            ->where('team_id', $teamId)
+            ->whereIn('type', [LedgerType::Purchase->value, LedgerType::Refund->value])
+            ->exists();
+    }
 }

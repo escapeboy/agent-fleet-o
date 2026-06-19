@@ -14,7 +14,9 @@ class ReserveBudgetAction
      * Reserve credits for an upcoming AI call.
      * Uses pessimistic locking to prevent over-reservation.
      *
-     * @return CreditLedger The reservation ledger entry
+     * @return CreditLedger|null The reservation ledger entry, or null when the team
+     *                           has no billing configured (no purchased credits) and
+     *                           credit enforcement is therefore skipped.
      *
      * @throws InsufficientBudgetException
      */
@@ -24,7 +26,15 @@ class ReserveBudgetAction
         int $amount,
         ?string $experimentId = null,
         string $description = 'Budget reservation',
-    ): CreditLedger {
+    ): ?CreditLedger {
+        // Skip credit enforcement entirely for teams without billing configured.
+        // Community/self-hosted installs and not-yet-billed teams never have purchase
+        // entries, so reserving against a zero balance would wrongly block their
+        // BYOK and platform-funded calls. Mirrors CheckBudgetAction / CheckBudgetAvailable.
+        if (! CreditLedger::teamHasPurchasedCredits($teamId)) {
+            return null;
+        }
+
         return DB::transaction(function () use ($userId, $teamId, $amount, $experimentId, $description) {
             // Check experiment budget cap
             if ($experimentId) {
@@ -41,11 +51,14 @@ class ReserveBudgetAction
                 }
             }
 
-            // Get current balance with lock (scoped by team)
+            // Get current balance with lock (scoped by team). Secondary sort by id
+            // (UUIDv7 is time-ordered) guarantees deterministic ordering when several
+            // entries share the same created_at timestamp.
             $lastEntry = CreditLedger::withoutGlobalScopes()
                 ->where('team_id', $teamId)
                 ->lockForUpdate()
                 ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->first();
 
             $currentBalance = $lastEntry->balance_after ?? 0;

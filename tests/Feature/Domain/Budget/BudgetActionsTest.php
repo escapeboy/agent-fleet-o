@@ -85,8 +85,20 @@ class BudgetActionsTest extends TestCase
         );
     }
 
-    public function test_cannot_reserve_with_zero_balance(): void
+    public function test_cannot_reserve_with_zero_balance_when_billing_enabled(): void
     {
+        // Purchase entry present (billing enabled) but balance spent down to zero.
+        $this->seedBalance(100);
+        CreditLedger::withoutGlobalScopes()->create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'type' => LedgerType::Deduction,
+            'amount' => -100,
+            'balance_after' => 0,
+            'description' => 'Spent',
+            'metadata' => [],
+        ]);
+
         $this->expectException(InsufficientBudgetException::class);
 
         $this->reserveAction->execute(
@@ -94,6 +106,23 @@ class BudgetActionsTest extends TestCase
             teamId: $this->team->id,
             amount: 10,
         );
+    }
+
+    public function test_skips_reservation_and_settlement_when_no_billing_configured(): void
+    {
+        // No purchase entry: reservation is skipped (returns null) and settling a
+        // null reservation is a no-op — no ledger entries are ever created.
+        $reservation = $this->reserveAction->execute(
+            userId: $this->user->id,
+            teamId: $this->team->id,
+            amount: 49,
+        );
+
+        $this->assertNull($reservation);
+
+        $this->settleAction->execute($reservation, actualCost: 30);
+
+        $this->assertDatabaseCount('credit_ledgers', 0);
     }
 
     public function test_settle_creates_release_entry_when_actual_less_than_reserved(): void

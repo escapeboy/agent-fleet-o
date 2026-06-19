@@ -15,18 +15,26 @@ class SettleBudgetAction
      * If actual > reserved, deduct the difference.
      */
     public function execute(
-        CreditLedger $reservation,
+        ?CreditLedger $reservation,
         int $actualCost,
         ?string $aiRunId = null,
     ): void {
+        // No reservation was made (team without billing configured) — nothing to settle.
+        if ($reservation === null) {
+            return;
+        }
+
         DB::transaction(function () use ($reservation, $actualCost, $aiRunId) {
             $reservedAmount = abs($reservation->amount);
             $difference = $reservedAmount - $actualCost;
 
+            // Secondary sort by id (UUIDv7 is time-ordered) guarantees deterministic
+            // ordering when several entries share the same created_at timestamp.
             $lastEntry = CreditLedger::withoutGlobalScopes()
                 ->where('team_id', $reservation->team_id)
                 ->lockForUpdate()
                 ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->first();
 
             $currentBalance = $lastEntry->balance_after;
