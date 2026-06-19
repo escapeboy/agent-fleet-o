@@ -236,7 +236,7 @@ class StuckDetector
         // Get spend in the last 10 minutes
         $recentSpend = abs((int) CreditLedger::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)
-            ->where('type', 'spend')
+            ->spend()
             ->where('created_at', '>=', now()->subMinutes(10))
             ->sum('amount'));
 
@@ -247,7 +247,7 @@ class StuckDetector
         // Get total spend and total runtime to compute average rate
         $totalSpend = abs((int) CreditLedger::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)
-            ->where('type', 'spend')
+            ->spend()
             ->sum('amount'));
 
         $runtimeMinutes = max(1, $experiment->created_at->diffInMinutes(now()));
@@ -333,13 +333,13 @@ class StuckDetector
     {
         $recentSpend = abs((int) CreditLedger::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)
-            ->where('type', 'spend')
+            ->spend()
             ->where('created_at', '>=', now()->subMinutes(10))
             ->sum('amount'));
 
         $totalSpend = abs((int) CreditLedger::withoutGlobalScopes()
             ->where('experiment_id', $experiment->id)
-            ->where('type', 'spend')
+            ->spend()
             ->sum('amount'));
 
         $runtimeMinutes = max(1, $experiment->created_at->diffInMinutes(now()));
