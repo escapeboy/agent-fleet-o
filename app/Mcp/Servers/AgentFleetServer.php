@@ -381,6 +381,12 @@ use App\Mcp\Tools\Phoenix\PhoenixProjectListTool;
 use App\Mcp\Tools\Phoenix\PhoenixSpanSearchTool;
 use App\Mcp\Tools\Phoenix\PhoenixTraceGetTool;
 use App\Mcp\Tools\Phoenix\PhoenixTraceListTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphChangesListTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphImpactTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphNodeTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphProposeTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphQueryTool;
+use App\Mcp\Tools\ProductGraph\ProductGraphReviewTool;
 use App\Mcp\Tools\Profile\ProfileConnectedAccountsTool;
 use App\Mcp\Tools\Profile\ProfileGetTool;
 use App\Mcp\Tools\Profile\ProfileTwoFactorStatusTool;
@@ -1149,6 +1155,14 @@ class AgentFleetServer extends Server
         KgCommunitySearchTool::class,
         KgSuggestMergesTool::class,
         KgMergeEntitiesTool::class,
+
+        // ProductGraph (6)
+        ProductGraphQueryTool::class,
+        ProductGraphNodeTool::class,
+        ProductGraphImpactTool::class,
+        ProductGraphChangesListTool::class,
+        ProductGraphProposeTool::class,
+        ProductGraphReviewTool::class,
 
         // Budget (8)
         BudgetSummaryTool::class,
