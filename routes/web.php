@@ -120,6 +120,9 @@ use App\Livewire\OutboundConnectors\WhatsAppOutboundPage;
 use App\Livewire\Policies\CreatePolicyForm;
 use App\Livewire\Policies\PolicyDetailPage;
 use App\Livewire\Policies\PolicyListPage;
+use App\Livewire\ProductGraph\ProductGraphBrowserPage;
+use App\Livewire\ProductGraph\ProductGraphChangesPage;
+use App\Livewire\ProductGraph\ProductGraphImpactPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Projects\CreateProjectForm as CreateProjectFormPage;
 use App\Livewire\Projects\EditProjectForm;
@@ -465,6 +468,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/knowledge', KnowledgeSourcesPage::class)->name('knowledge.index');
     Route::get('/knowledge-graph', KnowledgeGraphBrowserPage::class)->name('knowledge-graph.index');
     Route::get('/knowledge-graph/communities', KgCommunitiesPage::class)->name('knowledge-graph.communities');
+
+    Route::get('/product-graph', ProductGraphBrowserPage::class)->name('product-graph.index');
+    Route::get('/product-graph/impact', ProductGraphImpactPage::class)->name('product-graph.impact');
+    Route::get('/product-graph/changes', ProductGraphChangesPage::class)->name('product-graph.changes');
 
     Route::get('/signals', SignalBrowserPage::class)->name('signals.index');
     Route::get('/signals/new', ManualSignalForm::class)->name('signals.create');
