@@ -7,11 +7,11 @@ use App\Domain\Shared\Models\Team;
 use App\Domain\Simulation\Actions\GenerateSimulationPersonasAction;
 use App\Domain\Simulation\Actions\ScoreSimulationTranscriptAction;
 use App\Domain\Simulation\Models\SimulationSuite;
-use App\Mcp\Tools\Simulation\SimulationCreateTool;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Mcp\Tools\Simulation\SimulationCreateTool;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

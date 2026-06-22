@@ -18,6 +18,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SimulationRunTest extends TestCase
@@ -157,7 +158,7 @@ class SimulationRunTest extends TestCase
     public function test_missing_target_agent_fails_run(): void
     {
         $this->bindJudge(8.0);
-        $suite = $this->makeSuite((string) \Illuminate\Support\Str::uuid(), personas: 1);
+        $suite = $this->makeSuite((string) Str::uuid(), personas: 1);
         $run = SimulationRun::factory()->create([
             'team_id' => $this->team->id,
             'suite_id' => $suite->id,

@@ -5,6 +5,7 @@ namespace App\Domain\Simulation\Models;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Simulation\Enums\SimulationTargetType;
 use Database\Factories\Domain\Simulation\SimulationSuiteFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,8 +23,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $max_turns
  * @property float $pass_threshold
  * @property string|null $created_by
- * @property-read \Illuminate\Database\Eloquent\Collection<int, SimulationPersona> $personas
- * @property-read \Illuminate\Database\Eloquent\Collection<int, SimulationRun> $runs
+ * @property-read Collection<int, SimulationPersona> $personas
+ * @property-read Collection<int, SimulationRun> $runs
  */
 class SimulationSuite extends Model
 {
