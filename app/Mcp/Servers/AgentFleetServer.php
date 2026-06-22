@@ -506,6 +506,10 @@ use App\Mcp\Tools\Signal\SupabaseConnectorTool;
 use App\Mcp\Tools\Signal\TicketConnectorTool;
 use App\Mcp\Tools\Signal\WebclawCrawlTool;
 use App\Mcp\Tools\Signal\WebclawScrapeTool;
+use App\Mcp\Tools\Simulation\SimulationCreateTool;
+use App\Mcp\Tools\Simulation\SimulationGetTool;
+use App\Mcp\Tools\Simulation\SimulationPersonasGenerateTool;
+use App\Mcp\Tools\Simulation\SimulationRunTool;
 use App\Mcp\Tools\Skill\BrowserSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
@@ -877,6 +881,12 @@ class AgentFleetServer extends Server
         SkillEvolveTool::class,
         SkillMutationListTool::class,
         SkillMutationApplyTool::class,
+
+        // Simulation (4)
+        SimulationCreateTool::class,
+        SimulationPersonasGenerateTool::class,
+        SimulationRunTool::class,
+        SimulationGetTool::class,
 
         // Crew (16)
         CrewListTool::class,
