@@ -83,6 +83,35 @@ return [
     ],
 
     /*
+    |--------------------------------------------------------------------------
+    | Typed Guardrail Scanners
+    |--------------------------------------------------------------------------
+    |
+    | Purpose-built scanners (App\Infrastructure\AI\Guardrails\Scanners\*) that
+    | run inside SafetyClassifier alongside the regex/contains rule packs above.
+    | They catch high-value cases generic regex handles poorly: invisible-char
+    | / ASCII-smuggling, leaked secrets (reuses SecretPatternLibrary), and
+    | structured PII. Gated independently of the rule packs and OFF by default.
+    |
+    | Each scanner entry: enabled (bool), target ('input'|'output'|'both'),
+    | severity ('low'|'medium'|'high'|'critical'), plus scanner-specific options.
+    | Block-vs-advisory remains governed by the global 'mode' above.
+    |
+    */
+    'scanners_enabled' => env('AI_SAFETY_SCANNERS_ENABLED', false),
+
+    'scanners' => [
+        'invisible_chars' => ['enabled' => true, 'target' => 'both', 'severity' => 'high'],
+        'secrets' => ['enabled' => true, 'target' => 'output', 'severity' => 'critical'],
+        'pii' => ['enabled' => true, 'target' => 'output', 'severity' => 'high'],
+        'prompt_injection' => ['enabled' => true, 'target' => 'input', 'severity' => 'high'],
+        'jailbreak' => ['enabled' => true, 'target' => 'input', 'severity' => 'high'],
+        'url' => ['enabled' => false, 'target' => 'output', 'severity' => 'low', 'allowlist' => []],
+        'profanity' => ['enabled' => false, 'target' => 'output', 'severity' => 'low', 'words' => []],
+        'code_exfil' => ['enabled' => false, 'target' => 'output', 'severity' => 'medium', 'min_bytes' => 512],
+    ],
+
+    /*
     | Optional callable resolver for an LLM-based safety classifier. When set,
     | the resolver returns an instance with a `classify(string $content,
     | string $direction): array` method that yields ['safe' => bool,
