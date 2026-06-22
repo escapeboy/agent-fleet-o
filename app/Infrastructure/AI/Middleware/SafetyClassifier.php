@@ -8,6 +8,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Events\SafetyViolationDetected;
+use App\Infrastructure\AI\Guardrails\ScannerRegistry;
 use Closure;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,13 @@ use Illuminate\Support\Facades\Log;
  */
 class SafetyClassifier implements AiMiddlewareInterface
 {
+    private readonly ScannerRegistry $scanners;
+
+    public function __construct(?ScannerRegistry $scanners = null)
+    {
+        $this->scanners = $scanners ?? app(ScannerRegistry::class);
+    }
+
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
         if (! $this->isEnabledFor($request)) {
@@ -106,6 +114,30 @@ class SafetyClassifier implements AiMiddlewareInterface
                     'target' => $direction,
                     'snippet' => $this->extractSnippet($content, $rule),
                 ];
+            }
+        }
+
+        if ((bool) config('ai_safety.scanners_enabled', false)) {
+            foreach ($this->scanners->enabledFor($direction) as $scanner) {
+                try {
+                    $hit = $scanner->scan($content, $direction);
+                } catch (\Throwable $e) {
+                    Log::warning('SafetyClassifier: scanner failed', [
+                        'scanner' => $scanner->id(),
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
+                if ($hit !== null) {
+                    return [
+                        'rule_id' => 'scanner:'.$hit->scannerId,
+                        'severity' => $hit->severity,
+                        'target' => $direction,
+                        'snippet' => $hit->snippet,
+                    ];
+                }
             }
         }
 
