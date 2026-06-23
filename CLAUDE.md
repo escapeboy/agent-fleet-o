@@ -554,6 +554,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/horizon (HORIZON) - v5
 - laravel/mcp (MCP) - v0
 - laravel/passport (PASSPORT) - v13
+- laravel/pennant (PENNANT) - v1
 - laravel/prompts (PROMPTS) - v0
 - laravel/pulse (PULSE) - v1
 - laravel/reverb (REVERB) - v1
@@ -688,7 +689,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
 - When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
-- **Run base tests STANDALONE before pushing base-only changes** — `composer test` (or `vendor/bin/phpunit`, exactly what CI runs: SQLite `:memory:`, base migrations only). Running the suite via the *cloud* container (`cd /var/www/base` inside the cloud app) applies cloud migrations and **masks base/cloud coupling** — e.g. a base test that depends on a cloud-only column (`teams.sub_program_slug`) passes in the cloud container but fails red in base CI. Base tests must not depend on cloud-only schema/fillable; if they do, the test belongs in `cloud/tests/`.
 
 ## Vite Error
 

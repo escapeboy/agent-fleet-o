@@ -58,6 +58,7 @@
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.43",
         "laravel/mcp": "^0.7.0",
+        "laravel/pennant": "^1.23",
         "laravel/passport": "^13.6",
         "laravel/pulse": "^1.7",
         "laravel/reverb": "^1.8",
