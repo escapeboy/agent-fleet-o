@@ -39,6 +39,8 @@ use App\Domain\Experiment\Listeners\RecordReasoningBankEntry;
 use App\Domain\Experiment\Listeners\RecordTransitionMetrics;
 use App\Domain\Experiment\Listeners\ResumeParentOnSubWorkflowComplete;
 use App\Domain\Experiment\Listeners\SendSentryFixPrOpenedEmailListener;
+use App\Domain\FeatureFlag\Listeners\RecordFeatureFlagAudit;
+use App\Domain\FeatureFlag\Services\FeatureFlagService;
 use App\Domain\GitRepository\Listeners\QueueContextGitPush;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
@@ -181,6 +183,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Events\SessionInitialized;
 use Laravel\Passport\Passport;
+use Laravel\Pennant\Events\FeatureUpdated;
+use Laravel\Pennant\Feature;
 use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Reverb\Events\MessageReceived;
 use Laravel\Sanctum\Sanctum;
@@ -493,6 +497,14 @@ class AppServiceProvider extends ServiceProvider
         // Blade directives for deployment mode
         Blade::if('cloud', fn () => app(DeploymentMode::class)->isCloud());
         Blade::if('selfhosted', fn () => app(DeploymentMode::class)->isSelfHosted());
+
+        // Tier-2 runtime feature flags (Pennant). Definitions are registered at
+        // boot; resolution is team-scoped; the whole tier is gated by
+        // config('feature_flags.runtime_enabled') inside the service/closure.
+        app(FeatureFlagService::class)->defineAll();
+        Feature::resolveScopeUsing(fn () => app(FeatureFlagService::class)->currentTeam());
+        Blade::if('runtimeFeature', fn (string $key) => app(FeatureFlagService::class)->active($key));
+        Event::listen(FeatureUpdated::class, RecordFeatureFlagAudit::class);
 
         // Plugin lifecycle hook: allows plugins to react to Livewire component events
         Livewire::componentHook(PluginDispatchHook::class);

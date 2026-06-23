@@ -288,6 +288,11 @@ use App\Mcp\Tools\Experiment\UncertaintyResolveTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Experiment\WorklogAppendTool;
 use App\Mcp\Tools\Experiment\WorklogReadTool;
+use App\Mcp\Tools\FeatureFlag\FeatureArchiveTool;
+use App\Mcp\Tools\FeatureFlag\FeatureListTool;
+use App\Mcp\Tools\FeatureFlag\FeatureRolloutTool;
+use App\Mcp\Tools\FeatureFlag\FeatureStatusTool;
+use App\Mcp\Tools\FeatureFlag\FeatureToggleTool;
 use App\Mcp\Tools\Feedback\FeedbackListTool;
 use App\Mcp\Tools\Feedback\FeedbackUpdateTool;
 use App\Mcp\Tools\FounderMode\FounderModeInstallTool;
@@ -1377,6 +1382,13 @@ class AgentFleetServer extends Server
 
         // RunPod (1)
         RunPodManageTool::class,
+
+        // Feature Flag — Tier-2 runtime flags (5)
+        FeatureListTool::class,
+        FeatureStatusTool::class,
+        FeatureToggleTool::class,
+        FeatureRolloutTool::class,
+        FeatureArchiveTool::class,
 
         // Email (11)
         EmailThemeListTool::class,
