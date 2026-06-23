@@ -133,8 +133,8 @@ class UpdateWorkflowAction
 
         // Create new edges
         foreach ($edges as $edgeData) {
-            $sourceNode = $createdNodes[$edgeData['source_node_id']] ?? null;
-            $targetNode = $createdNodes[$edgeData['target_node_id']] ?? null;
+            $sourceNode = $createdNodes[$edgeData['source_node_id'] ?? ''] ?? null;
+            $targetNode = $createdNodes[$edgeData['target_node_id'] ?? ''] ?? null;
 
             if (! $sourceNode || ! $targetNode) {
                 continue;
