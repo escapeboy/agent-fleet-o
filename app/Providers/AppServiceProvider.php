@@ -501,10 +501,16 @@ class AppServiceProvider extends ServiceProvider
         // Tier-2 runtime feature flags (Pennant). Definitions are registered at
         // boot; resolution is team-scoped; the whole tier is gated by
         // config('feature_flags.runtime_enabled') inside the service/closure.
-        app(FeatureFlagService::class)->defineAll();
-        Feature::resolveScopeUsing(fn () => app(FeatureFlagService::class)->currentTeam());
-        Blade::if('runtimeFeature', fn (string $key) => app(FeatureFlagService::class)->active($key));
-        Event::listen(FeatureUpdated::class, RecordFeatureFlagAudit::class);
+        // Guarded by class_exists: deploy.sh does not run composer install, so a
+        // release that adds Pennant before its vendor lands would otherwise fatal
+        // boot() on every request (Sentry #877). Missing package → Tier-2 flags
+        // are simply unavailable; Tier-1 env flags keep working.
+        if (class_exists(Feature::class)) {
+            app(FeatureFlagService::class)->defineAll();
+            Feature::resolveScopeUsing(fn () => app(FeatureFlagService::class)->currentTeam());
+            Blade::if('runtimeFeature', fn (string $key) => app(FeatureFlagService::class)->active($key));
+            Event::listen(FeatureUpdated::class, RecordFeatureFlagAudit::class);
+        }
 
         // Plugin lifecycle hook: allows plugins to react to Livewire component events
         Livewire::componentHook(PluginDispatchHook::class);
