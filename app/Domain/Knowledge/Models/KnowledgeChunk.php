@@ -17,12 +17,14 @@ class KnowledgeChunk extends Model
         'source_type',
         'metadata',
         'embedding',
+        'source_acl',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'source_acl' => 'array',
         ];
     }
 

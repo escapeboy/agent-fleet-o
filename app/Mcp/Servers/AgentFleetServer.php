@@ -140,6 +140,9 @@ use App\Mcp\Tools\Boruna\BorunaRunTool;
 use App\Mcp\Tools\Boruna\BorunaSkillManageTool;
 use App\Mcp\Tools\Boruna\BorunaValidateTool;
 use App\Mcp\Tools\Bridge\BridgeConnectTool;
+use App\Mcp\Tools\Research\DeepResearchBenchmarkImportTool;
+use App\Mcp\Tools\Research\DeepResearchBuildTool;
+use App\Mcp\Tools\Search\WebSearchTool;
 use App\Mcp\Tools\Bridge\BridgeDisconnectTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointListTool;
 use App\Mcp\Tools\Bridge\BridgeEndpointToggleTool;
@@ -1382,6 +1385,13 @@ class AgentFleetServer extends Server
 
         // RunPod (1)
         RunPodManageTool::class,
+
+        // Web Search — provider-agnostic seam (1)
+        WebSearchTool::class,
+
+        // Deep Research — workflow builder + benchmark eval (2)
+        DeepResearchBuildTool::class,
+        DeepResearchBenchmarkImportTool::class,
 
         // Feature Flag — Tier-2 runtime flags (5)
         FeatureListTool::class,

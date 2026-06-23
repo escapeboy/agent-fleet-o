@@ -2,7 +2,9 @@
 
 namespace App\Domain\Knowledge\Services;
 
+use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Knowledge\Models\KnowledgeChunk;
+use App\Domain\Shared\Services\UserGroupResolver;
 use Illuminate\Support\Facades\DB;
 use NeuronAI\RAG\Document;
 use NeuronAI\RAG\VectorStore\VectorStoreInterface;
@@ -52,15 +54,23 @@ class PgVectorKnowledgeStore implements VectorStoreInterface
     {
         $vector = '['.implode(',', $embedding).']';
 
+        // Source-ACL filter (dark-shipped): when enabled, restrict chunks to those
+        // visible to the requesting user's groups; empty clause when disabled.
+        $gate = app(SourceAclGate::class);
+        $groups = $gate->enabled()
+            ? app(UserGroupResolver::class)->groupsFor(auth()->user(), $this->resolveTeamId())
+            : [];
+        $acl = $gate->sqlClause($groups);
+
         $rows = DB::select(
             'SELECT id, content, source_name, source_type, metadata,
                     1 - (embedding <=> ?) AS score
              FROM knowledge_chunks
              WHERE knowledge_base_id = ?
-               AND embedding IS NOT NULL
+               AND embedding IS NOT NULL'.$acl['sql'].'
              ORDER BY embedding <=> ?
              LIMIT ?',
-            [$vector, $this->knowledgeBaseId, $vector, $this->topK],
+            array_merge([$vector, $this->knowledgeBaseId], $acl['bindings'], [$vector, $this->topK]),
         );
 
         return array_map(function (object $row): Document {
@@ -73,6 +83,13 @@ class PgVectorKnowledgeStore implements VectorStoreInterface
 
             return $doc;
         }, $rows);
+    }
+
+    private function resolveTeamId(): ?string
+    {
+        return KnowledgeBase::withoutGlobalScopes()
+            ->whereKey($this->knowledgeBaseId)
+            ->value('team_id');
     }
 
     public function deleteBySource(string $sourceType, string $sourceName): VectorStoreInterface

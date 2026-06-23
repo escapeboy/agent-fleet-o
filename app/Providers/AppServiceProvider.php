@@ -42,6 +42,9 @@ use App\Domain\Experiment\Listeners\SendSentryFixPrOpenedEmailListener;
 use App\Domain\FeatureFlag\Listeners\RecordFeatureFlagAudit;
 use App\Domain\FeatureFlag\Services\FeatureFlagService;
 use App\Domain\GitRepository\Listeners\QueueContextGitPush;
+use App\Domain\Search\Contracts\WebSearchProviderInterface;
+use App\Domain\Search\Providers\SearxngWebSearchProvider;
+use App\Domain\Search\Providers\SerperWebSearchProvider;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
@@ -226,6 +229,19 @@ class AppServiceProvider extends ServiceProvider
                 ),
                 'local' => throw new LocalEmbeddingNotConfiguredException,
                 default => throw new \InvalidArgumentException("Unknown embedding driver [{$driver}]. Use 'cloud' or 'local'."),
+            };
+        });
+
+        // Web-search provider seam — provider chosen by config('web_search.driver').
+        // 'searxng' (default) preserves existing self-hosted behaviour; 'serper' is
+        // an opt-in BYOK provider. Mirrors the embedding-provider seam above.
+        $this->app->bind(WebSearchProviderInterface::class, function ($app) {
+            $driver = config('web_search.driver', 'searxng');
+
+            return match ($driver) {
+                'searxng' => $app->make(SearxngWebSearchProvider::class),
+                'serper' => $app->make(SerperWebSearchProvider::class),
+                default => throw new \InvalidArgumentException("Unknown web_search driver [{$driver}]. Use 'searxng' or 'serper'."),
             };
         });
 
