@@ -50,7 +50,7 @@ class FeatureToggleTool extends Tool
             return $this->invalidArgumentError("Unknown feature flag: {$key}");
         }
 
-        $team = Team::withoutGlobalScopes()->findOrFail($teamId);
+        $team = Team::findOrFail($teamId);
 
         $result = app(SetFeatureFlagAction::class)->execute($key, (bool) $request->get('value'), $team, auth()->user());
 

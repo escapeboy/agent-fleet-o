@@ -48,7 +48,7 @@ class FeatureStatusTool extends Tool
             return $this->invalidArgumentError("Unknown feature flag: {$key}");
         }
 
-        $team = Team::withoutGlobalScopes()->find($teamId);
+        $team = Team::find($teamId);
         $def = $service->definition($key);
 
         return Response::text(json_encode([

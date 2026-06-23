@@ -38,7 +38,7 @@ class FeatureListTool extends Tool
             return $this->permissionDeniedError('No team context.');
         }
 
-        $team = Team::withoutGlobalScopes()->find($teamId);
+        $team = Team::find($teamId);
 
         $flags = collect($service->definitions())->map(fn (array $def, string $key) => [
             'key' => $key,
