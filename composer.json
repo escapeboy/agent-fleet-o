@@ -77,6 +77,7 @@
         "promphp/prometheus_client_php": "^2.13",
         "propaganistas/laravel-disposable-email": "*",
         "sabre/vobject": "^4.5",
+        "symfony/yaml": "^8.1",
         "sentry/sentry-laravel": "^4.21",
         "socialiteproviders/apple": "^5.9",
         "socialiteproviders/manager": "^4.8",
