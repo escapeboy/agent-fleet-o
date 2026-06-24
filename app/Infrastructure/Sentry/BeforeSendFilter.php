@@ -86,6 +86,46 @@ final class BeforeSendFilter
             return null;
         }
 
+        // No usable provider for a team mid-run (BYOK key removed / bridge
+        // disconnected / budget exhausted after the experiment was created).
+        // FallbackAiGateway has already exhausted the chain; the experiment is
+        // paused/failed cleanly. Expected, not a FleetQ defect. (#840/#830)
+        if (str_contains($msg, 'No available providers in fallback chain')) {
+            return null;
+        }
+
+        // Upstream provider billing failure on a team's BYOK key (e.g.
+        // "OpenRouter Insufficient Credits: This account never purchased
+        // credits"). The provider rejected the call, not FleetQ — the team must
+        // top up its own account. (#867)
+        if (str_contains($msg, 'Insufficient Credits')
+            || str_contains($msg, 'purchased credits')) {
+            return null;
+        }
+
+        // Playbook step references an agent with no skills/tools — a team
+        // configuration mistake surfaced in the experiment log/UI, not a code
+        // defect. (#819/#821/#818/#820)
+        if (str_contains($msg, 'Agent has no skills or tools assigned')) {
+            return null;
+        }
+
+        // Corrupt/non-image upload — spatie medialibrary's queued conversion
+        // can't decode it (imagecreatefromstring failed). The original upload
+        // is unaffected; only the derived thumbnail is skipped. Bad user input,
+        // not a FleetQ defect. (#815)
+        if (str_contains($msg, 'Could not load image at path')) {
+            return null;
+        }
+
+        // disposable-email weekly list refresh: the bundled fetcher uses
+        // file_get_contents(https://) but prod sets allow_url_fopen=0 for
+        // hardening. The package keeps serving its previously-stored list, so
+        // this is a degraded-but-safe weekly warning, not a defect. (#825)
+        if (str_contains($msg, 'allow_url_fopen=0')) {
+            return null;
+        }
+
         return $event;
     }
 }

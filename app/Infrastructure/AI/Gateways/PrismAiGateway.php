@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Gateways;
 
 use App\Domain\Budget\Services\CostCalculator;
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
@@ -686,12 +687,11 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         // No team credential — check if team's plan allows platform fallback.
+        // Throw the purpose-built exception (not a raw RuntimeException) so it is
+        // recognised as expected backpressure and excluded from Sentry. (#875/#848)
         $team = Team::find($request->teamId);
         if ($team && ! $team->hasFeature('platform_llm_fallback')) {
-            throw new RuntimeException(
-                'Your plan does not include platform AI keys. '
-                .'Please add your own API key in Team Settings, or upgrade your plan.',
-            );
+            throw AiAccessUnavailableException::forTeam();
         }
 
         // Restore the platform API key, clearing any BYOK key set by a prior
