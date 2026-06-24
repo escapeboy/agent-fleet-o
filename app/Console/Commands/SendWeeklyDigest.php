@@ -73,17 +73,27 @@ class SendWeeklyDigest extends Command
                     budgetSpentCredits: (int) abs($budgetSpent),
                 );
 
-                $owner->notify(new WeeklyDigestNotification(
-                    team: $team,
-                    experimentsCreated: $experimentsCreated,
-                    experimentsCompleted: $experimentsCompleted,
-                    outboundSent: $outboundSent,
-                    signalsIngested: $signalsIngested,
-                    budgetSpentCents: (int) abs($budgetSpent),
-                    executiveBrief: $executiveBrief,
-                ));
+                // Per-recipient guard: a single undeliverable owner address (SMTP
+                // 550 "recipient rejected") must not abort the digest for every
+                // remaining team in the chunk. Log and continue. (#839)
+                try {
+                    $owner->notify(new WeeklyDigestNotification(
+                        team: $team,
+                        experimentsCreated: $experimentsCreated,
+                        experimentsCompleted: $experimentsCompleted,
+                        outboundSent: $outboundSent,
+                        signalsIngested: $signalsIngested,
+                        budgetSpentCents: (int) abs($budgetSpent),
+                        executiveBrief: $executiveBrief,
+                    ));
 
-                $sent++;
+                    $sent++;
+                } catch (\Throwable $e) {
+                    Log::warning('SendWeeklyDigest: failed to notify team owner', [
+                        'team_id' => $team->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         });
 

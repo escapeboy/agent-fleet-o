@@ -35,6 +35,41 @@ class BeforeSendFilterWebhookTest extends TestCase
         $this->assertSame($event, $result);
     }
 
+    #[Test]
+    public function it_drops_no_available_providers(): void
+    {
+        $result = BeforeSendFilter::filter(
+            Event::createEvent(),
+            $this->hintFor(new RuntimeException('No available providers in fallback chain')),
+        );
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function it_drops_upstream_provider_billing_failures(): void
+    {
+        $result = BeforeSendFilter::filter(
+            Event::createEvent(),
+            $this->hintFor(new RuntimeException(
+                'OpenRouter Insufficient Credits: Insufficient credits. This account never purchased credits.',
+            )),
+        );
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function it_drops_agent_has_no_skills_step_failures(): void
+    {
+        $result = BeforeSendFilter::filter(
+            Event::createEvent(),
+            $this->hintFor(new RuntimeException('Step failed: Agent has no skills or tools assigned')),
+        );
+
+        $this->assertNull($result);
+    }
+
     private function hintFor(\Throwable $e): EventHint
     {
         $hint = new EventHint;
