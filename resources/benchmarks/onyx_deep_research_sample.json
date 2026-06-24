@@ -1,0 +1,36 @@
+{
+  "_note": "Representative SAMPLE in the shape of onyx-dot-app/onyx_deep_research_bench, used to seed a FlowEvaluationDataset for measuring the Deep Research workflow. This is a small starter slice, NOT the full benchmark — replace/extend by importing the real benchmark from the upstream repo. Each item: {id, question, reference?}.",
+  "source": "https://github.com/onyx-dot-app/onyx_deep_research_bench",
+  "questions": [
+    {
+      "id": "sample-001",
+      "question": "What are the main architectural differences between retrieval-augmented generation (RAG) and long-context LLMs, and when is each preferable?",
+      "reference": "Should compare retrieval (external index, cite-able, scalable corpus, staleness handled by re-index) vs long-context (no retrieval step, limited by window/cost, better for self-contained docs). Mentions hybrid approaches and cost/latency trade-offs."
+    },
+    {
+      "id": "sample-002",
+      "question": "Summarize the current state of self-hosted vector databases suitable for production RAG, with trade-offs.",
+      "reference": "Covers pgvector, Qdrant, Weaviate, Milvus, Vespa; trade-offs on scale, hybrid search, ops burden, filtering, HNSW/IVF indexing."
+    },
+    {
+      "id": "sample-003",
+      "question": "How do feature-flag platforms support progressive delivery, and what are the risks of percentage rollouts?",
+      "reference": "Targeting rules, % rollout, kill switches, deploy/release decoupling; risks: sticky bucketing, sample bias, observability gaps, flag debt."
+    },
+    {
+      "id": "sample-004",
+      "question": "Compare SearXNG, Serper, and Brave Search APIs for programmatic web search in an agent pipeline.",
+      "reference": "SearXNG self-hosted/free/meta-search; Serper/Brave hosted APIs with keys, rate limits, cost; quality, freshness, ToS considerations."
+    },
+    {
+      "id": "sample-005",
+      "question": "What are the key approaches to document-level permission enforcement in enterprise RAG?",
+      "reference": "ACL sync from source systems, per-chunk permission metadata, query-time filtering by user/group, late-binding vs index-time, SCIM/group sync."
+    },
+    {
+      "id": "sample-006",
+      "question": "Outline a benchmarking methodology for evaluating multi-step deep-research agents.",
+      "reference": "Reference reports, LLM-as-judge with rubrics, citation accuracy, factuality, coverage/recall of sub-questions, reproducibility, leaderboard."
+    }
+  ]
+}

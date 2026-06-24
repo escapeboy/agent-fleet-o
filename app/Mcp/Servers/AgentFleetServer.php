@@ -430,8 +430,11 @@ use App\Mcp\Tools\Release\ReleaseSigningKeyListTool;
 use App\Mcp\Tools\Release\ReleaseSigningKeyRevokeTool;
 use App\Mcp\Tools\Release\ReleaseSigningKeyRotateTool;
 use App\Mcp\Tools\Release\ReleaseVerifySignatureTool;
+use App\Mcp\Tools\Research\DeepResearchBenchmarkImportTool;
+use App\Mcp\Tools\Research\DeepResearchBuildTool;
 use App\Mcp\Tools\RunPod\RunPodManageTool;
 use App\Mcp\Tools\Schema\SchemaDescribeTool;
+use App\Mcp\Tools\Search\WebSearchTool;
 use App\Mcp\Tools\Shared\ApiTokenManageTool;
 use App\Mcp\Tools\Shared\ContactHealthScoreTool;
 use App\Mcp\Tools\Shared\CustomEndpointManageTool;
@@ -1382,6 +1385,13 @@ class AgentFleetServer extends Server
 
         // RunPod (1)
         RunPodManageTool::class,
+
+        // Web Search — provider-agnostic seam (1)
+        WebSearchTool::class,
+
+        // Deep Research — workflow builder + benchmark eval (2)
+        DeepResearchBuildTool::class,
+        DeepResearchBenchmarkImportTool::class,
 
         // Feature Flag — Tier-2 runtime flags (5)
         FeatureListTool::class,
