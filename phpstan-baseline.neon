@@ -3655,18 +3655,6 @@ parameters:
 			path: app/Domain/Integration/Services/WebclawResolver.php
 
 		-
-			message: '#^Offset ''api_key'' on string in isset\(\) does not exist\.$#'
-			identifier: isset.offset
-			count: 1
-			path: app/Domain/Knowledge/Jobs/IngestDocumentJob.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Knowledge/Jobs/IngestDocumentJob.php
-
-		-
 			message: '#^Offset ''chunk_count'' on array\{status\: string, chunk_count\: int, token_count\: int\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
