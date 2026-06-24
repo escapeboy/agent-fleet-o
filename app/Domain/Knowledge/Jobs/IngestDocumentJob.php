@@ -37,7 +37,19 @@ class IngestDocumentJob implements ShouldQueue
             return;
         }
 
-        $this->resolveTeamApiKey($kb->team_id);
+        // Resolve a usable embedding key (team BYOK → platform → env). If none
+        // is reachable, skip gracefully instead of letting the embedding call
+        // throw a provider 401 that floods Sentry (#872/#871) — the team needs
+        // to add an OpenAI key, surfaced via the KB's error state.
+        if (! $this->resolveEmbeddingKey($kb->team_id)) {
+            Log::warning('Knowledge base ingestion skipped — no embedding API key for team', [
+                'knowledge_base_id' => $this->knowledgeBaseId,
+                'team_id' => $kb->team_id,
+            ]);
+            $kb->markError();
+
+            return;
+        }
 
         $kb->markIngesting();
 
@@ -89,17 +101,33 @@ class IngestDocumentJob implements ShouldQueue
     }
 
     /**
-     * Set the team's BYOK OpenAI key in config so Prism uses it for embeddings.
+     * Resolve a usable embedding API key into Prism config, in order: team BYOK
+     * → platform key → existing env. Returns false when none is reachable so the
+     * caller can skip ingestion gracefully rather than attempting a 401.
      */
-    private function resolveTeamApiKey(string $teamId): void
+    private function resolveEmbeddingKey(string $teamId): bool
     {
         $credential = TeamProviderCredential::where('team_id', $teamId)
             ->where('provider', 'openai')
             ->where('is_active', true)
             ->first();
 
-        if ($credential && isset($credential->credentials['api_key'])) {
-            config(['prism.providers.openai.api_key' => $credential->credentials['api_key']]);
+        $byokKey = data_get($credential?->credentials, 'api_key');
+        if (is_string($byokKey) && $byokKey !== '') {
+            config(['prism.providers.openai.api_key' => $byokKey]);
+
+            return true;
         }
+
+        $platformKey = config('services.platform_api_keys.openai');
+        if (is_string($platformKey) && $platformKey !== '') {
+            config(['prism.providers.openai.api_key' => $platformKey]);
+
+            return true;
+        }
+
+        $existing = config('prism.providers.openai.api_key');
+
+        return is_string($existing) && $existing !== '';
     }
 }
