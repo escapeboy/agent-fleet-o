@@ -1,6 +1,11 @@
 <div>
     @php
         $payload = $signal->payload ?? [];
+        // Legacy/malformed payloads can store these sections as JSON strings; coerce
+        // each to an array so count()/@foreach below never throw a TypeError (500).
+        foreach (['breadcrumbs', 'action_log', 'console_log', 'network_log'] as $logSection) {
+            $payload[$logSection] = is_array($payload[$logSection] ?? null) ? $payload[$logSection] : [];
+        }
         $severity = $payload['severity'] ?? 'minor';
         $severityColors = [
             'critical' => 'bg-red-100 text-red-800',
