@@ -1,4 +1,7 @@
 <div wire:poll.10s x-data="wakeLock" x-init="{{ $experiment->status->isPausable() ? 'acquire()' : '' }}">
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
     {{-- Header --}}
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>

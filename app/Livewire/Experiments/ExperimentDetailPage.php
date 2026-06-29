@@ -92,9 +92,16 @@ class ExperimentDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        $action = app(PauseExperimentAction::class);
-        $action->execute($this->experiment, auth()->id());
-        $this->experiment = $this->experiment->fresh();
+        try {
+            $action = app(PauseExperimentAction::class);
+            $action->execute($this->experiment, auth()->id());
+            $this->experiment = $this->experiment->fresh();
+        } catch (\InvalidArgumentException $e) {
+            // The experiment moved out of a pausable state between render and
+            // click (stale UI / double action) — surface it, don't 500 to
+            // Sentry (#942).
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function resumeExperiment(): void
@@ -151,10 +158,17 @@ class ExperimentDetailPage extends Component
 
     public function killExperiment(): void
     {
-        $action = app(KillExperimentAction::class);
-        $action->execute($this->experiment, auth()->id(), 'Killed from admin panel');
-        $this->experiment = $this->experiment->fresh();
-        $this->showKillConfirm = false;
+        try {
+            $action = app(KillExperimentAction::class);
+            $action->execute($this->experiment, auth()->id(), 'Killed from admin panel');
+            $this->experiment = $this->experiment->fresh();
+        } catch (\InvalidArgumentException $e) {
+            // Already terminal (e.g. killed → killed double-click) — surface it,
+            // don't 500 to Sentry (#940).
+            session()->flash('error', $e->getMessage());
+        } finally {
+            $this->showKillConfirm = false;
+        }
     }
 
     public function resumeFromCheckpoint(): void

@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Infrastructure\Sentry;
 
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Infrastructure\Sentry\BeforeSendFilter;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -65,6 +66,17 @@ class BeforeSendFilterWebhookTest extends TestCase
         $result = BeforeSendFilter::filter(
             Event::createEvent(),
             $this->hintFor(new RuntimeException('Step failed: Agent has no skills or tools assigned')),
+        );
+
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function it_drops_ai_access_unavailable_from_queue_workers(): void
+    {
+        $result = BeforeSendFilter::filter(
+            Event::createEvent(),
+            $this->hintFor(AiAccessUnavailableException::forTeam()),
         );
 
         $this->assertNull($result);

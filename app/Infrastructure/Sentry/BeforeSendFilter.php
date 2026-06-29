@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Sentry;
 
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use ErrorException;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\MaxAttemptsExceededException;
@@ -35,6 +36,16 @@ final class BeforeSendFilter
 
         $e = $hint->exception;
         $msg = $e->getMessage();
+
+        // AiAccessUnavailableException: BYOK team with no key / no platform
+        // entitlement. It is in bootstrap/app.php's dontReport(), but Sentry's
+        // queue integration auto-captures unhandled job exceptions on a path
+        // that bypasses dontReport() — so it still floods Sentry from Horizon
+        // workers (#938/#880/#881). before_send is the only hook that reliably
+        // wins against that path. Expected backpressure, not a defect.
+        if ($e instanceof AiAccessUnavailableException) {
+            return null;
+        }
 
         // SQLSTATE[08006] — postgres connection_failure on container restart race.
         if ($e instanceof QueryException && str_contains($msg, 'SQLSTATE[08006]')) {
