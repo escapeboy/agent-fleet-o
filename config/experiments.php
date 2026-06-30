@@ -178,4 +178,19 @@ return [
     */
     'require_team_ai_access' => (bool) env('EXPERIMENTS_REQUIRE_TEAM_AI_ACCESS', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Warm build sandbox
+    |--------------------------------------------------------------------------
+    | When enabled, builds reuse a persistent per-(team, repo) base clone and an
+    | isolated worktree per run (WarmRepoManager) instead of re-cloning the repo
+    | every time — clone once, then `git fetch` + worktree (seconds vs minutes).
+    | base_dir should be a persistent volume in production so the warm clones
+    | survive container restarts. Off by default.
+    */
+    'warm_build' => [
+        'enabled' => (bool) env('EXPERIMENTS_WARM_BUILD', false),
+        'base_dir' => env('EXPERIMENTS_WARM_BUILD_DIR', storage_path('app/warm-repos')),
+    ],
+
 ];
