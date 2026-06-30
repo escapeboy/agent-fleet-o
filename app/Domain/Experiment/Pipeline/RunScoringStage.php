@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -106,8 +107,12 @@ class RunScoringStage extends BaseStageJob
             'output_snapshot' => $parsedOutput,
         ]);
 
-        // Decide next transition
-        $threshold = $experiment->constraints['score_threshold'] ?? 0.3;
+        // Decide next transition. Debug-track (bug-fix) runs are triaged work,
+        // not business bets, so they must not be gated by the business-potential
+        // score — default their threshold to 0.0 (always advance) unless an
+        // explicit per-experiment score_threshold overrides it.
+        $defaultThreshold = $experiment->track === ExperimentTrack::Debug ? 0.0 : 0.3;
+        $threshold = $experiment->constraints['score_threshold'] ?? $defaultThreshold;
 
         if ($score >= $threshold) {
             $transition->execute(
