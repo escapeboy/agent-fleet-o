@@ -80,7 +80,7 @@ class PollIntegrations extends Command
                 Log::error('PollIntegrations: error polling integration', [
                     'integration_id' => $integration->getKey(),
                     'driver' => $driverSlug,
-                    'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
                 $this->error("{$integration->getAttribute('name')} ({$driverSlug}): {$e->getMessage()}");
             }

@@ -41,10 +41,12 @@ class SocialAuthController extends Controller
 
             $socialUser = $driver->user();
         } catch (\Throwable $e) {
+            // Pass the Throwable itself (not just the message) so Sentry captures
+            // the class + stacktrace for grouping — the message-only form left
+            // these undiagnosable (#826).
             Log::error('Social login callback failed', [
                 'provider' => $provider,
-                'exception' => $e->getMessage(),
-                'class' => get_class($e),
+                'exception' => $e,
             ]);
 
             return redirect()->route('login')
@@ -63,6 +65,13 @@ class SocialAuthController extends Controller
         try {
             $socialUser = Socialite::driver('apple')->user();
         } catch (\Throwable $e) {
+            // The Apple form_post POST path previously failed SILENTLY (no log at
+            // all), so real Apple Sign In failures were invisible in Sentry and
+            // the file log. Capture the exception so the cause is diagnosable.
+            Log::error('Apple Sign In callback failed', [
+                'exception' => $e,
+            ]);
+
             return redirect()->route('login')
                 ->withErrors(['social' => 'Apple Sign In failed. Please try again.']);
         }
