@@ -193,4 +193,46 @@ return [
         'default_sort' => env('AI_PROVIDER_RANKING_SORT'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Savings Baseline (counterfactual "credits saved vs flagship")
+    |--------------------------------------------------------------------------
+    |
+    | AiRoutingPage re-prices the period's actual token volume at this single
+    | flagship model to compute "credits saved vs always-flagship". The baseline
+    | must be a model present in config/llm_pricing.php; if it has no pricing the
+    | savings metric degrades gracefully to zero (never throws).
+    |
+    */
+    'savings_baseline' => [
+        'provider' => env('AI_SAVINGS_BASELINE_PROVIDER', 'anthropic'),
+        'model' => env('AI_SAVINGS_BASELINE_MODEL', 'claude-opus-4-6'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Eval-Grounded Routing (SHADOW / advisory — Cast AI "AI Enabler" borrow)
+    |--------------------------------------------------------------------------
+    |
+    | Observe-only: for each request, recommend the cheapest model whose recent
+    | recorded quality outcomes (ai_runs verification_passed / schema_valid /
+    | completion) clear a success threshold for the same task-type (purpose).
+    | The recommendation is LOGGED and counted — the live routing decision is
+    | NEVER changed. Flip to active routing only after shadow data proves the
+    | cheaper picks hold quality. Disabled by default.
+    |
+    */
+    'eval_grounded' => [
+        'enabled' => (bool) env('AI_ROUTING_EVAL_GROUNDED', false),
+        // Recent window of ai_runs outcomes used to score each (purpose, model).
+        'window_days' => (int) env('AI_ROUTING_EVAL_WINDOW_DAYS', 30),
+        // Minimum runs for a (purpose, model) cell to be eligible — guards noise.
+        'min_samples' => (int) env('AI_ROUTING_EVAL_MIN_SAMPLES', 20),
+        // Success rate a model must clear to be a routing candidate (0..1).
+        'success_threshold' => (float) env('AI_ROUTING_EVAL_SUCCESS_THRESHOLD', 0.9),
+        // When team-scoped data is too sparse, fall back to platform-wide outcomes.
+        'platform_fallback' => (bool) env('AI_ROUTING_EVAL_PLATFORM_FALLBACK', true),
+        'log_channel' => env('AI_ROUTING_EVAL_LOG_CHANNEL', 'stack'),
+    ],
+
 ];

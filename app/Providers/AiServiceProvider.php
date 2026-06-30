@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\BudgetPressureRouting;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
+use App\Infrastructure\AI\Middleware\EvalGroundedRoutingShadow;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
 use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
@@ -79,6 +80,10 @@ class AiServiceProvider extends ServiceProvider
             $middleware = [
                 $app->make(RateLimiting::class),
                 $app->make(BudgetPressureRouting::class),
+                // SHADOW eval-grounded routing — observes the post-budget chosen model,
+                // logs the cheapest model that historically cleared the quality bar, and
+                // forwards the request untouched. Self-gated by config flag (default off).
+                $app->make(EvalGroundedRoutingShadow::class),
                 $app->make(BudgetEnforcement::class),
                 $app->make(IdempotencyCheck::class),
                 // SteeringInjection runs AFTER IdempotencyCheck so steering creates a new
