@@ -192,7 +192,7 @@ class AiRoutingPage extends Component
     private function getTopModels($query): array
     {
         return $query->select(
-            DB::raw("CONCAT(provider, '/', model) as model_key"),
+            DB::raw("(provider || '/' || model) as model_key"),
             DB::raw('COUNT(*) as requests'),
             DB::raw('AVG(latency_ms) as avg_latency'),
             DB::raw('AVG(cost_credits) as avg_cost'),
