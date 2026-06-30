@@ -18,9 +18,10 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * A low business-potential score (0.2, below the standard 0.3 threshold)
- * discards a normal experiment but must ADVANCE a Debug-track (bug-fix) run:
- * triaged bugs are work to do, not business bets to gate.
+ * RunScoringStage resolves its rubric (scoring question + threshold) per
+ * experiment via: constraints.score_threshold → signal source_type → track →
+ * default. Different signal types are judged by the right criteria, and a
+ * triaged bug is no longer discarded under a business-potential lens.
  */
 class ScoringTrackThresholdTest extends TestCase
 {
@@ -44,7 +45,6 @@ class ScoringTrackThresholdTest extends TestCase
         $this->user->update(['current_team_id' => $this->team->id]);
         $this->team->users()->attach($this->user, ['role' => 'owner']);
 
-        // Skip the verification gate so the test exercises only the threshold logic.
         config(['ai_routing.verification.enabled' => false]);
     }
 
@@ -52,7 +52,7 @@ class ScoringTrackThresholdTest extends TestCase
     {
         $gateway = $this->createMock(AiGatewayInterface::class);
         $gateway->method('complete')->willReturn(new AiResponseDTO(
-            content: json_encode(['score' => $score, 'reasoning' => 'low', 'recommended_track' => 'revenue']),
+            content: json_encode(['score' => $score, 'reasoning' => 'x', 'recommended_track' => 'high']),
             parsedOutput: null,
             usage: new AiUsageDTO(promptTokens: 10, completionTokens: 10, costCredits: 1),
             provider: 'anthropic',
@@ -62,7 +62,7 @@ class ScoringTrackThresholdTest extends TestCase
         $this->app->instance(AiGatewayInterface::class, $gateway);
     }
 
-    private function makeScoringExperiment(ExperimentTrack $track): Experiment
+    private function makeScoringExperiment(ExperimentTrack $track, string $sourceType = 'manual'): Experiment
     {
         $exp = Experiment::factory()->create([
             'team_id' => $this->team->id,
@@ -76,43 +76,71 @@ class ScoringTrackThresholdTest extends TestCase
         Signal::factory()->create([
             'team_id' => $this->team->id,
             'experiment_id' => $exp->id,
+            'source_type' => $sourceType,
             'payload' => ['thesis' => $exp->thesis],
         ]);
 
         return $exp;
     }
 
-    public function test_debug_track_advances_to_planning_on_low_score(): void
+    private function runScoring(Experiment $exp): ExperimentStatus
     {
         Queue::fake();
-        $this->fakeScore(0.2);
+        (new RunScoringStage($exp->id, $this->team->id))->handle();
+
+        return $exp->fresh()->status;
+    }
+
+    public function test_bug_report_source_routes_to_severity_rubric_and_beats_track(): void
+    {
+        // source=bug_report → debug/severity (threshold 0.2); track=Growth would
+        // be default (0.3). Score 0.25 advances only if the source rubric wins.
+        $this->fakeScore(0.25);
+        $exp = $this->makeScoringExperiment(ExperimentTrack::Growth, 'bug_report');
+
+        $this->assertSame(ExperimentStatus::Planning, $this->runScoring($exp));
+    }
+
+    public function test_debug_track_advances_on_real_bug_score(): void
+    {
+        $this->fakeScore(0.5);
         $exp = $this->makeScoringExperiment(ExperimentTrack::Debug);
 
-        (new RunScoringStage($exp->id, $this->team->id))->handle();
-
-        $this->assertSame(ExperimentStatus::Planning, $exp->fresh()->status);
+        $this->assertSame(ExperimentStatus::Planning, $this->runScoring($exp));
     }
 
-    public function test_non_debug_track_is_discarded_on_low_score(): void
+    public function test_debug_filters_noise_below_severity_threshold(): void
     {
-        Queue::fake();
-        $this->fakeScore(0.2);
-        $exp = $this->makeScoringExperiment(ExperimentTrack::Growth);
+        $this->fakeScore(0.1);
+        $exp = $this->makeScoringExperiment(ExperimentTrack::Debug);
 
-        (new RunScoringStage($exp->id, $this->team->id))->handle();
-
-        $this->assertSame(ExperimentStatus::Discarded, $exp->fresh()->status);
+        $this->assertSame(ExperimentStatus::Discarded, $this->runScoring($exp));
     }
 
-    public function test_explicit_constraint_threshold_still_wins_for_debug(): void
+    public function test_default_business_rubric_discards_low_score(): void
     {
-        Queue::fake();
-        $this->fakeScore(0.2);
+        $this->fakeScore(0.25);
+        $exp = $this->makeScoringExperiment(ExperimentTrack::Growth, 'manual');
+
+        $this->assertSame(ExperimentStatus::Discarded, $this->runScoring($exp));
+    }
+
+    public function test_explicit_constraint_threshold_overrides_rubric(): void
+    {
+        $this->fakeScore(0.5);
         $exp = $this->makeScoringExperiment(ExperimentTrack::Debug);
         $exp->update(['constraints' => ['score_threshold' => 0.9]]);
 
-        (new RunScoringStage($exp->id, $this->team->id))->handle();
+        $this->assertSame(ExperimentStatus::Discarded, $this->runScoring($exp));
+    }
 
-        $this->assertSame(ExperimentStatus::Discarded, $exp->fresh()->status);
+    public function test_falls_back_to_default_when_rubrics_config_empty(): void
+    {
+        config(['experiments.scoring_rubrics' => [], 'experiments.scoring_rubric_by_source' => []]);
+        $this->fakeScore(0.5);
+        $exp = $this->makeScoringExperiment(ExperimentTrack::Growth, 'manual');
+
+        // Fallback business prompt + 0.3: 0.5 >= 0.3 → advances, no crash.
+        $this->assertSame(ExperimentStatus::Planning, $this->runScoring($exp));
     }
 }

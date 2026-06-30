@@ -4,17 +4,24 @@ namespace App\Domain\Experiment\Pipeline;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
-use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Memory\Services\MemoryContextInjector;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 
 class RunScoringStage extends BaseStageJob
 {
+    /**
+     * Ultimate fallback scoring question, used when config('experiments.scoring_rubrics')
+     * is missing/empty — so a config-cache miss can never break scoring; it
+     * degrades to the historical business-potential behaviour.
+     */
+    private const FALLBACK_PROMPT = 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. If context from predecessor projects is provided, factor it into your evaluation. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.';
+
     public function __construct(string $experimentId, ?string $teamId = null)
     {
         parent::__construct($experimentId, $teamId);
@@ -37,8 +44,10 @@ class RunScoringStage extends BaseStageJob
         $transition = app(TransitionExperimentAction::class);
         $llm = $this->resolvePipelineLlm($experiment);
 
+        /** @var Signal|null $signal */
         $signal = $experiment->signals()->latest()->first();
         $signalPayload = $signal->payload ?? ['thesis' => $experiment->thesis];
+        $rubric = $this->resolveScoringRubric($experiment, $signal);
 
         // Inject relevant memories from past experiments
         $memoryContext = '';
@@ -78,7 +87,7 @@ class RunScoringStage extends BaseStageJob
         $request = new AiRequestDTO(
             provider: $llm['provider'],
             model: $llm['model'],
-            systemPrompt: 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. If context from predecessor projects is provided, factor it into your evaluation. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.',
+            systemPrompt: $rubric['system_prompt'],
             userPrompt: $userPrompt,
             maxTokens: 1024,
             userId: $experiment->user_id,
@@ -107,12 +116,10 @@ class RunScoringStage extends BaseStageJob
             'output_snapshot' => $parsedOutput,
         ]);
 
-        // Decide next transition. Debug-track (bug-fix) runs are triaged work,
-        // not business bets, so they must not be gated by the business-potential
-        // score — default their threshold to 0.0 (always advance) unless an
-        // explicit per-experiment score_threshold overrides it.
-        $defaultThreshold = $experiment->track === ExperimentTrack::Debug ? 0.0 : 0.3;
-        $threshold = $experiment->constraints['score_threshold'] ?? $defaultThreshold;
+        // Decide next transition. The rubric (resolved by signal type / track)
+        // sets the default threshold; an explicit per-experiment score_threshold
+        // still overrides it.
+        $threshold = $experiment->constraints['score_threshold'] ?? $rubric['threshold'];
 
         if ($score >= $threshold) {
             $transition->execute(
@@ -127,5 +134,40 @@ class RunScoringStage extends BaseStageJob
                 reason: "Score {$score} below threshold {$threshold}",
             );
         }
+    }
+
+    /**
+     * Resolve the scoring rubric via a priority chain:
+     * signal source_type → experiment track → default. Each rubric supplies the
+     * scoring question (system_prompt) and a default threshold, so different
+     * signal types are judged by the right criteria (e.g. business potential vs
+     * bug severity). The per-experiment constraints.score_threshold (applied by
+     * the caller) still overrides the threshold.
+     *
+     * recommended_track / scoring_details are display-only, so a rubric may use
+     * its own vocabulary without downstream coupling. Falls back to the built-in
+     * business prompt + 0.3 when config is absent.
+     *
+     * @return array{system_prompt: string, threshold: float}
+     */
+    private function resolveScoringRubric(Experiment $experiment, ?Signal $signal): array
+    {
+        $rubrics = config('experiments.scoring_rubrics', []);
+        $key = 'default';
+
+        $source = $signal?->source_type;
+        $bySource = config('experiments.scoring_rubric_by_source', []);
+        if (is_string($source) && isset($bySource[$source], $rubrics[$bySource[$source]])) {
+            $key = $bySource[$source];
+        } elseif (($track = $experiment->track?->value) !== null && isset($rubrics[$track])) {
+            $key = $track;
+        }
+
+        $rubric = is_array($rubrics[$key] ?? null) ? $rubrics[$key] : [];
+
+        return [
+            'system_prompt' => is_string($rubric['system_prompt'] ?? null) ? $rubric['system_prompt'] : self::FALLBACK_PROMPT,
+            'threshold' => (float) ($rubric['threshold'] ?? 0.3),
+        ];
     }
 }
