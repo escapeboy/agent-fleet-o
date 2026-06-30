@@ -185,7 +185,6 @@ use App\Livewire\Workflows\WorkflowOpsPage;
 use App\Livewire\Workflows\WorkflowSimulationPanel;
 use App\Livewire\WorldModel\WorldModelPage;
 use App\Models\User;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 // A2A Agent Card — public discovery endpoint (RFC 8615 well-known URI, no auth required).
@@ -274,10 +273,10 @@ Route::middleware(['guest', 'throttle:10,1'])
             ->where('provider', '[a-z0-9\-]+')
             ->name('auth.social.callback');
 
-        // Apple sends callback as POST (response_mode=form_post); must bypass CSRF
+        // Apple sends callback as POST (response_mode=form_post); CSRF is bypassed
+        // for this path via validateCsrfTokens(except:) in bootstrap/app.php.
         Route::post('/auth/apple/callback', [SocialAuthController::class, 'appleCallback'])
-            ->name('auth.apple.callback')
-            ->withoutMiddleware([VerifyCsrfToken::class]);
+            ->name('auth.apple.callback');
     });
 
 // Email collection when provider returns no email (e.g. X/Twitter)

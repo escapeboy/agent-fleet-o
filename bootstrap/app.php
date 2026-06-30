@@ -54,6 +54,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        // Apple Sign In uses response_mode=form_post → a cross-site POST with no
+        // CSRF token. Exempt it via the framework's public API (not a route-level
+        // withoutMiddleware on a hardcoded CSRF class name, which silently broke
+        // when Laravel renamed the middleware to PreventRequestForgery → 419).
+        $middleware->validateCsrfTokens(except: ['auth/apple/callback']);
         $middleware->append(SecurityHeaders::class);
         $middleware->prepend(ResolveWebsiteByDomain::class);
         $middleware->appendToGroup('web', BypassAuth::class);
