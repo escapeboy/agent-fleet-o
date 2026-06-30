@@ -14,6 +14,7 @@ enum BuiltInToolKind: string
     case ExecuteCode = 'execute_code';
     case BrowserHarness = 'browser_harness';
     case ProgressAppend = 'progress_append';
+    case Plan = 'plan';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum BuiltInToolKind: string
             self::ExecuteCode => 'Execute Code',
             self::BrowserHarness => 'Browser Harness (self-healing CDP)',
             self::ProgressAppend => 'Progress Log (workspace contract)',
+            self::Plan => 'Plan / To-Do (self-managed task list)',
         };
     }
 }

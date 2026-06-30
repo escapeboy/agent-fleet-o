@@ -190,6 +190,7 @@ class ToolTranslator
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
             BuiltInToolKind::ExecuteCode => $this->buildExecuteCodeTools($tool, $workspace),
+            BuiltInToolKind::Plan => $this->buildPlanTools($workspace),
             default => [],
         };
     }
@@ -468,6 +469,147 @@ class ToolTranslator
         }
 
         return $tools;
+    }
+
+    /**
+     * Build the `update_plan` planning tool (deepagents write_todos borrow).
+     *
+     * Gives a solo agent a live, self-authored to-do list it rewrites in full
+     * on every call (replace semantics). The rendered plan is returned as the
+     * tool result so the model always sees its current plan as fresh context —
+     * that echo-back is the coherence mechanism — and persisted to plan.md in
+     * the sandbox workspace when one is present. Flag-gated: returns no tool
+     * unless agent.planning_tool.enabled is true.
+     *
+     * Distinct from the system-authored feature-list.json (done-criteria) and
+     * the append-only progress.md (iteration log) in the workspace contract.
+     *
+     * @return array<PrismToolObject>
+     */
+    private function buildPlanTools(?SandboxedWorkspace $workspace = null): array
+    {
+        if (! config('agent.planning_tool.enabled', false)) {
+            return [];
+        }
+
+        return [
+            PrismTool::as('update_plan')
+                ->for(
+                    'Maintain your live working plan / to-do list for this task (alias: write_todos). '
+                    .'Call this at the start of a multi-step task and again whenever the plan changes. '
+                    .'Always pass the COMPLETE current list — it replaces the previous plan, it does not append. '
+                    .'Keep exactly one item in_progress at a time and mark items completed as you finish them.',
+                )
+                ->withStringParameter(
+                    'todos',
+                    'JSON array of plan items. Each item: {"content": "<step>", "status": "pending|in_progress|completed"}.',
+                )
+                ->withStringParameter(
+                    'note',
+                    'Optional one-line rationale for this plan update.',
+                    required: false,
+                )
+                ->using(function (string $todos, ?string $note = null) use ($workspace): string {
+                    try {
+                        $items = $this->parsePlanTodos($todos);
+                    } catch (\InvalidArgumentException $e) {
+                        return 'Error: '.$e->getMessage();
+                    }
+
+                    $rendered = $this->renderPlan($items, $note);
+
+                    if ($workspace !== null) {
+                        // resolve() guards traversal; 'plan.md' is a literal name.
+                        file_put_contents($workspace->resolve('plan.md'), $rendered);
+                    }
+
+                    return $rendered;
+                }),
+        ];
+    }
+
+    /**
+     * Parse and validate the agent-supplied todo list, tolerant of the
+     * markdown-fenced / dirty JSON that local agents emit.
+     *
+     * @return list<array{content: string, status: string}>
+     *
+     * @throws \InvalidArgumentException with an actionable message the model can self-correct from
+     */
+    private function parsePlanTodos(string $raw): array
+    {
+        $valid = ['pending', 'in_progress', 'completed'];
+        $shape = 'Expected a non-empty JSON array of {"content": string, "status": "pending|in_progress|completed"}.';
+
+        $trimmed = trim($raw);
+        // Strip a leading/trailing markdown code fence if present.
+        $trimmed = trim(preg_replace('/^```[a-zA-Z0-9]*\s*|\s*```$/m', '', $trimmed) ?? $trimmed);
+
+        $decoded = json_decode($trimmed, true);
+        if (! is_array($decoded)) {
+            // Fallback: extract the outermost array literal.
+            $start = strpos($trimmed, '[');
+            $end = strrpos($trimmed, ']');
+            if ($start !== false && $end !== false && $end > $start) {
+                $decoded = json_decode(substr($trimmed, $start, $end - $start + 1), true);
+            }
+        }
+
+        if (! is_array($decoded) || $decoded === []) {
+            throw new \InvalidArgumentException("Could not parse `todos`. {$shape}");
+        }
+
+        $items = [];
+        foreach ($decoded as $entry) {
+            if (! is_array($entry)) {
+                throw new \InvalidArgumentException("Each plan item must be an object. {$shape}");
+            }
+            $content = trim((string) ($entry['content'] ?? ''));
+            $status = (string) ($entry['status'] ?? '');
+            if ($content === '') {
+                throw new \InvalidArgumentException("A plan item is missing `content`. {$shape}");
+            }
+            if (! in_array($status, $valid, true)) {
+                throw new \InvalidArgumentException(
+                    "Invalid status '{$status}' for item '{$content}'. Use one of: ".implode(', ', $valid).'.',
+                );
+            }
+            $items[] = ['content' => $content, 'status' => $status];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Render the plan as an ASCII checklist with a counts summary.
+     *
+     * @param  list<array{content: string, status: string}>  $items
+     */
+    private function renderPlan(array $items, ?string $note = null): string
+    {
+        $glyph = [
+            'pending' => '[ ]',
+            'in_progress' => '[~]',
+            'completed' => '[x]',
+        ];
+
+        $lines = ['# Plan'];
+        if ($note !== null && trim($note) !== '') {
+            $lines[] = '';
+            $lines[] = '_'.trim($note).'_';
+        }
+        $lines[] = '';
+
+        $counts = ['pending' => 0, 'in_progress' => 0, 'completed' => 0];
+        foreach ($items as $item) {
+            $counts[$item['status']]++;
+            $lines[] = $glyph[$item['status']].' '.$item['content'];
+        }
+
+        $lines[] = '';
+        $lines[] = "{$counts['completed']} done, {$counts['in_progress']} in progress, {$counts['pending']} todo";
+
+        return implode("\n", $lines)."\n";
     }
 
     private function buildBrowserTools(Tool $tool): array
