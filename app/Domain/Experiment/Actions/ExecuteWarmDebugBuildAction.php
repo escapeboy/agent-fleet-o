@@ -34,7 +34,6 @@ class ExecuteWarmDebugBuildAction
         private readonly WarmRepoManager $warmRepo,
         private readonly GitCloneUrlResolver $cloneUrls,
         private readonly GitOperationRouter $gitRouter,
-        private readonly LocalAgentGateway $localAgent,
         private readonly CompleteBuildingAction $completeBuilding,
         private readonly TransitionExperimentAction $transition,
     ) {}
@@ -66,7 +65,12 @@ class ExecuteWarmDebugBuildAction
 
             $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
 
-            $this->localAgent->complete($this->buildRequest($experiment, $worktree));
+            // Resolve by class (not constructor DI): the cloud edition binds
+            // LocalAgentGateway::class to DisabledLocalAgentGateway (implements
+            // AiGatewayInterface, not a subclass — DI-hinting the concrete class
+            // would TypeError). Disabled delegates vps_only providers to a real
+            // gateway, so calling complete() directly preserves workingDirectory.
+            app(LocalAgentGateway::class)->complete($this->buildRequest($experiment, $worktree));
 
             // The agent edits files with the CLI's own tools; capture whatever it
             // changed as a single commit (a no-op when it already committed).

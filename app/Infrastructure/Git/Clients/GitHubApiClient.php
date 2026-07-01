@@ -20,10 +20,12 @@ class GitHubApiClient implements GitClientInterface
 
     private string $token;
 
-    public function __construct(GitRepository $gitRepository)
+    public function __construct(GitRepository $repo)
     {
-        [$this->owner, $this->repo] = $this->parseOwnerRepo($gitRepository->url);
-        $this->token = $gitRepository->credential?->secret_data['token'] ?? '';
+        // Param is named $repo to match GitOperationRouter's container binding
+        // (app(GitHubApiClient::class, ['repo' => $repo])) and the other clients.
+        [$this->owner, $this->repo] = $this->parseOwnerRepo($repo->url);
+        $this->token = (string) (data_get($repo->credential, 'secret_data.token') ?? '');
     }
 
     public function ping(): bool
