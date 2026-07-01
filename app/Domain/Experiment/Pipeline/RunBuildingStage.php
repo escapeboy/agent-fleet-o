@@ -69,10 +69,12 @@ class RunBuildingStage extends BaseStageJob
         $stage = $this->findOrCreateStage($experiment);
 
         // Idempotency: if this stage already has a batch_id or the debug-track flag, it was already dispatched.
+        // Debug-track stages never carry a batch_id, so read it null-safely — a raw
+        // access here turns a benign re-entry into an ErrorException that fails the build.
         if (! empty($stage->output_snapshot['batch_id']) || ! empty($stage->output_snapshot['debug_track'])) {
             Log::info('RunBuildingStage: Batch already dispatched for this stage, skipping', [
                 'experiment_id' => $experiment->id,
-                'batch_id' => $stage->output_snapshot['batch_id'],
+                'batch_id' => $stage->output_snapshot['batch_id'] ?? null,
             ]);
 
             return;
