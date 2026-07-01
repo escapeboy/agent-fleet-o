@@ -8,6 +8,7 @@ use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageStatus;
+use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Events\StuckPatternDetected;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
@@ -370,6 +371,20 @@ class RecoverStuckTasks extends Command
                 ExperimentStatus::BuildingFailed,
                 'Debug-track agent timed out after 90 minutes without signaling completion',
             );
+
+            // Close the building stage too — otherwise it lingers as a
+            // status=running row forever and inflates the stuck_experiments
+            // alert metric (orphaned stage on a now-terminal experiment).
+            ExperimentStage::withoutGlobalScopes()
+                ->where('experiment_id', $experiment->id)
+                ->where('stage', StageType::Building)
+                ->whereIn('status', [StageStatus::Running, StageStatus::Pending])
+                ->update([
+                    'status' => StageStatus::Failed,
+                    'completed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
             $recovered++;
         }
 
