@@ -70,4 +70,39 @@ class RunBuildingStageDebugDispatchTest extends TestCase
         $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
         $this->assertSame('bridge', $stage->output_snapshot['builder']);
     }
+
+    /**
+     * Regression: re-entering the building stage after a debug-track dispatch
+     * (e.g. a duplicate ExperimentTransitioned or a manual retry) must be an
+     * idempotent skip, not a crash. Debug-track stages carry `debug_track` but
+     * never a `batch_id`; a raw read of the missing key promotes to an
+     * ErrorException at runtime and flips the experiment to building_failed.
+     */
+    public function test_reentry_on_debug_track_stage_skips_without_crashing(): void
+    {
+        config(['experiments.warm_build.enabled' => false]);
+        Bus::fake();
+        $exp = $this->debugExperimentInBuilding();
+
+        $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
+        $stage->update([
+            'status' => StageStatus::Running,
+            'output_snapshot' => ['debug_track' => true, 'builder' => 'bridge'],
+        ]);
+
+        // Mirror Laravel's runtime HandleExceptions: warnings ("Undefined array
+        // key batch_id") become ErrorExceptions, which is what fails the build.
+        set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+            throw new \ErrorException($message, 0, $severity, $file, $line);
+        });
+
+        try {
+            (new RunBuildingStage($exp->id, $exp->team_id))->handle();
+        } finally {
+            restore_error_handler();
+        }
+
+        $stage->refresh();
+        $this->assertSame(StageStatus::Running, $stage->status);
+    }
 }
