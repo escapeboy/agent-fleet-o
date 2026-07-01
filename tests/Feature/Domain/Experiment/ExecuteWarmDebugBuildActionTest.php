@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Domain\Experiment;
 
+use App\Domain\Agent\Services\WarmBuildSandbox;
 use App\Domain\Experiment\Actions\ExecuteWarmDebugBuildAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
@@ -14,9 +15,6 @@ use App\Domain\GitRepository\Contracts\GitClientInterface;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
-use App\Infrastructure\AI\DTOs\AiResponseDTO;
-use App\Infrastructure\AI\DTOs\AiUsageDTO;
-use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -129,21 +127,18 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         return $exp;
     }
 
-    /** Fake the VPS agent: on complete() it edits a file in the worktree. */
+    /** Fake the sandbox agent run: it edits a file in the mounted workspace. */
     private function fakeAgentWriting(?string $file, string $content = 'patched'): void
     {
-        $gw = Mockery::mock(LocalAgentGateway::class);
-        $gw->shouldReceive('complete')->andReturnUsing(function ($request) use ($file, $content) {
+        $sandbox = Mockery::mock(WarmBuildSandbox::class);
+        $sandbox->shouldReceive('run')->andReturnUsing(function (string $ws, array $cmd, array $opts = []) use ($file, $content) {
             if ($file !== null) {
-                File::put($request->workingDirectory.'/'.$file, $content);
+                File::put($ws.'/'.$file, $content);
             }
 
-            return new AiResponseDTO(
-                content: 'done', parsedOutput: null, usage: new AiUsageDTO(0, 0, 0),
-                provider: 'claude-code-vps', model: '', latencyMs: 1,
-            );
+            return ['exit_code' => 0, 'stdout' => 'done', 'stderr' => '', 'timed_out' => false];
         });
-        $this->app->instance(LocalAgentGateway::class, $gw);
+        $this->app->instance(WarmBuildSandbox::class, $sandbox);
     }
 
     /** Fake the git client so createPullRequest returns a PR and records the draft flag. */

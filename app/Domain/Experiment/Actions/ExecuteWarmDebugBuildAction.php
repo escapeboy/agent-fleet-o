@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Services\WarmBuildSandbox;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageStatus;
@@ -14,8 +15,6 @@ use App\Domain\GitRepository\Services\GitCloneUrlResolver;
 use App\Domain\GitRepository\Services\GitCredentialHelper;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
-use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -69,12 +68,14 @@ class ExecuteWarmDebugBuildAction
 
             $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
 
-            // Resolve by class (not constructor DI): the cloud edition binds
-            // LocalAgentGateway::class to DisabledLocalAgentGateway (implements
-            // AiGatewayInterface, not a subclass — DI-hinting the concrete class
-            // would TypeError). Disabled delegates vps_only providers to a real
-            // gateway, so calling complete() directly preserves workingDirectory.
-            app(LocalAgentGateway::class)->complete($this->buildRequest($experiment, $worktree));
+            // Run the agent INSIDE the hardened sandbox (rootless container), not
+            // in horizon. The container is the security boundary; the ONLY secret
+            // it receives is the model OAuth token it needs to reach Anthropic
+            // (egress-allowlisted). This is safe for trusted teams (warm_build_allowed);
+            // for fully-untrusted tenants the token must move behind an
+            // auth-injecting egress proxy first (documented gate — do not enable
+            // warm_build_allowed for untrusted tenants until then).
+            $this->runAgentInSandbox($experiment, $worktree);
 
             // The agent edits files with the CLI's own tools; capture whatever it
             // changed as a single commit (a no-op when it already committed).
@@ -151,25 +152,45 @@ class ExecuteWarmDebugBuildAction
             ->find($repoId);
     }
 
-    private function buildRequest(Experiment $experiment, string $worktree): AiRequestDTO
+    private function runAgentInSandbox(Experiment $experiment, string $worktree): void
     {
         $system = 'You are a senior software engineer fixing a reported bug in the checked-out '
             .'repository (your current working directory). Make the smallest correct change that '
             .'resolves the issue. If the project has tests, run them and ensure they pass. Do NOT '
             .'push or open a pull request — that is handled for you. When done, stop.';
+        $prompt = $system."\n\n".trim($experiment->title."\n\n".($experiment->thesis ?? ''));
 
-        $user = trim($experiment->title."\n\n".($experiment->thesis ?? ''));
+        $flags = (array) config('local_agents.claude-code-vps.execute_flags',
+            ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions']);
+        $command = array_merge(['claude'], $flags);
+        $model = (string) config('local_agents.vps.build_model', '');
+        if ($model !== '') {
+            $command[] = '--model';
+            $command[] = $model;
+        }
 
-        return new AiRequestDTO(
-            provider: 'claude-code-vps',
-            model: (string) config('local_agents.vps.build_model', ''),
-            systemPrompt: $system,
-            userPrompt: $user,
-            teamId: $experiment->team_id,
-            experimentId: $experiment->id,
-            purpose: 'experiment.debug_build',
-            workingDirectory: $worktree,
-        );
+        $result = app(WarmBuildSandbox::class)->run($worktree, $command, [
+            'input' => $prompt,
+            'name' => 'warm-build-'.substr($experiment->id, 0, 8),
+            'timeout' => (int) config('local_agents.vps.build_timeout_seconds', 1800),
+            // The one whitelisted secret: the model credential. HOME on tmpfs
+            // because the container root fs is read-only.
+            'env' => array_filter([
+                'CLAUDE_CODE_OAUTH_TOKEN' => (string) config('local_agents.vps.oauth_token'),
+                'HOME' => '/tmp',
+                'IS_SANDBOX' => '1',
+            ]),
+        ]);
+
+        if ($result['timed_out']) {
+            throw new \RuntimeException('Agent timed out in sandbox after the build window.');
+        }
+        // A non-zero exit is not necessarily fatal (the agent may finish with a
+        // dirty tree); the caller decides based on the resulting git diff.
+        Log::info('ExecuteWarmDebugBuildAction: sandbox agent finished', [
+            'experiment_id' => $experiment->id,
+            'exit_code' => $result['exit_code'],
+        ]);
     }
 
     private function prBody(Experiment $experiment): string

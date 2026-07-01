@@ -131,8 +131,12 @@ class WarmBuildSandbox
         // `docker run` client is killed on timeout and orphans the container.
         $name = (string) ($opts['name'] ?? 'warm-build-'.bin2hex(random_bytes(6)));
 
+        // Optional stdin (e.g. the agent's prompt) — needs `docker run -i`.
+        $input = $opts['input'] ?? null;
+        $runFlags = $input !== null ? ['docker', 'run', '-i', '--name', $name] : ['docker', 'run', '--name', $name];
+
         $args = array_merge(
-            ['docker', 'run', '--name', $name],
+            $runFlags,
             $this->hardenedRunArgs($workspacePath, $opts),
             [$image],
             $command,
@@ -141,7 +145,11 @@ class WarmBuildSandbox
         $timedOut = false;
 
         try {
-            $p = Process::timeout($timeout)->run($args);
+            $pending = Process::timeout($timeout);
+            if ($input !== null) {
+                $pending = $pending->input($input);
+            }
+            $p = $pending->run($args);
 
             return [
                 'exit_code' => $p->exitCode(),
