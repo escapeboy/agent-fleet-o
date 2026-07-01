@@ -9,6 +9,7 @@ use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStateTransition;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Signal\Actions\DelegateBugReportToAgentAction;
 use App\Domain\Signal\Actions\UpdateSignalStatusAction;
 use App\Domain\Signal\Models\Signal;
@@ -300,6 +301,36 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
                 && $e->fromState === ExperimentStatus::Draft
                 && $e->toState === ExperimentStatus::Scoring,
         );
+    }
+
+    public function test_delegation_sets_git_repository_id_when_repo_matches_target(): void
+    {
+        $repo = GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet-o',
+            'url' => 'https://github.com/escapeboy/agent-fleet-o.git',
+            'default_branch' => 'develop',
+        ]);
+
+        $signal = $this->makeSignal(['target_repository' => 'escapeboy/agent-fleet-o']);
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertSame($repo->id, $experiment->constraints['git_repository_id'] ?? null);
+    }
+
+    public function test_delegation_omits_git_repository_id_when_no_matching_repo(): void
+    {
+        // Team has no GitRepository → bridge path; constraint stays unset.
+        $signal = $this->makeSignal(['target_repository' => 'escapeboy/agent-fleet-o']);
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertArrayNotHasKey('git_repository_id', $experiment->constraints ?? []);
     }
 
     public function test_thesis_sanitizes_reporter_comments(): void

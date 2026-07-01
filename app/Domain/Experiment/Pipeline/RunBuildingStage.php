@@ -12,6 +12,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\GitRepository\Services\WarmRepoManager;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Website\Actions\CreateWebsiteAction;
 use App\Domain\Website\Actions\GenerateWebsiteStructureAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
@@ -103,7 +104,9 @@ class RunBuildingStage extends BaseStageJob
         //    experiment_complete_building MCP tool (legacy default).
         // Either way the stage just stays Running here.
         if ($experiment->track === ExperimentTrack::Debug) {
-            $useWarmBuild = WarmRepoManager::enabled();
+            // Per-team gate: master switch AND this team explicitly trusted.
+            $team = Team::withoutGlobalScopes()->find($experiment->team_id);
+            $useWarmBuild = WarmRepoManager::enabledForTeam($team);
 
             $stage->update([
                 'output_snapshot' => array_merge($stage->output_snapshot ?? [], [

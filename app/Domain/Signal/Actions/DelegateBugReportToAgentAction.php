@@ -8,6 +8,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\BugReportProjectConfig;
@@ -131,6 +132,16 @@ class DelegateBugReportToAgentAction
 
         $workflowId = $this->resolveDefaultWorkflowId($agentId, $signal->team_id);
 
+        // Warm-build resolves the repo from constraints.git_repository_id. When the
+        // team has a GitRepository matching the routed target_repository, wire it
+        // through so the platform-side builder can check it out; otherwise leave it
+        // unset and the legacy bridge path (agent gh-clones from the thesis) stands.
+        $constraints = [];
+        $repoId = $this->resolveGitRepositoryId($signal);
+        if ($repoId !== null) {
+            $constraints['git_repository_id'] = $repoId;
+        }
+
         $experiment = $this->createExperiment->execute(
             userId: $actor->id,
             title: "Fix bug: {$title}",
@@ -139,6 +150,7 @@ class DelegateBugReportToAgentAction
             teamId: $signal->team_id,
             workflowId: $workflowId,
             agentId: $agentId,
+            constraints: $constraints,
         );
 
         // Append completion instruction with the concrete experiment ID so the bridge
@@ -168,6 +180,33 @@ class DelegateBugReportToAgentAction
             reason: 'Bug report delegated to agent',
             actorId: $actor->id,
         );
+    }
+
+    /**
+     * Resolve the team's GitRepository whose URL slug matches the routed
+     * target_repository ("owner/repo"), so warm-build can check it out. Returns
+     * null when the team has no matching repo — the bridge path then handles it.
+     *
+     * Bypasses TeamScope: this runs during webhook ingestion with no team context.
+     */
+    private function resolveGitRepositoryId(Signal $signal): ?string
+    {
+        $target = $signal->payload['target_repository'] ?? null;
+        if (! is_string($target) || $target === '') {
+            return null;
+        }
+
+        $repos = GitRepository::withoutGlobalScopes()
+            ->where('team_id', $signal->team_id)
+            ->get();
+
+        foreach ($repos as $repo) {
+            if (strcasecmp((string) $repo->repoSlug(), $target) === 0) {
+                return $repo->id;
+            }
+        }
+
+        return null;
     }
 
     /**

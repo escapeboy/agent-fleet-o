@@ -21,10 +21,13 @@ class RunBuildingStageDebugDispatchTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function debugExperimentInBuilding(): Experiment
+    private function debugExperimentInBuilding(bool $warmBuildAllowed = false): Experiment
     {
         $user = User::factory()->create();
-        $team = Team::create(['name' => 'T', 'slug' => 't-'.Str::random(6), 'owner_id' => $user->id, 'settings' => []]);
+        $team = Team::create([
+            'name' => 'T', 'slug' => 't-'.Str::random(6), 'owner_id' => $user->id,
+            'settings' => [], 'warm_build_allowed' => $warmBuildAllowed,
+        ]);
 
         $exp = Experiment::factory()->create([
             'team_id' => $team->id,
@@ -43,11 +46,11 @@ class RunBuildingStageDebugDispatchTest extends TestCase
         return $exp;
     }
 
-    public function test_dispatches_warm_build_job_when_flag_enabled(): void
+    public function test_dispatches_warm_build_job_when_flag_and_team_allowed(): void
     {
         config(['experiments.warm_build.enabled' => true]);
         Bus::fake();
-        $exp = $this->debugExperimentInBuilding();
+        $exp = $this->debugExperimentInBuilding(warmBuildAllowed: true);
 
         (new RunBuildingStage($exp->id, $exp->team_id))->handle();
 
@@ -61,7 +64,21 @@ class RunBuildingStageDebugDispatchTest extends TestCase
     {
         config(['experiments.warm_build.enabled' => false]);
         Bus::fake();
-        $exp = $this->debugExperimentInBuilding();
+        $exp = $this->debugExperimentInBuilding(warmBuildAllowed: true);
+
+        (new RunBuildingStage($exp->id, $exp->team_id))->handle();
+
+        Bus::assertNotDispatched(RunWarmDebugBuildJob::class);
+
+        $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
+        $this->assertSame('bridge', $stage->output_snapshot['builder']);
+    }
+
+    public function test_does_not_dispatch_when_flag_on_but_team_not_allowed(): void
+    {
+        config(['experiments.warm_build.enabled' => true]);
+        Bus::fake();
+        $exp = $this->debugExperimentInBuilding(warmBuildAllowed: false);
 
         (new RunBuildingStage($exp->id, $exp->team_id))->handle();
 

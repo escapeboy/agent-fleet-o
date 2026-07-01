@@ -3,6 +3,7 @@
 namespace App\Domain\GitRepository\Services;
 
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\Shared\Models\Team;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -21,9 +22,24 @@ use RuntimeException;
  */
 class WarmRepoManager
 {
+    /**
+     * Global master kill-switch. Off = warm-build is off for EVERY team,
+     * regardless of per-team allow.
+     */
     public static function enabled(): bool
     {
         return (bool) config('experiments.warm_build.enabled', false);
+    }
+
+    /**
+     * Per-team gate: warm-build runs for a team ONLY when the global master
+     * switch is on AND that team is explicitly trusted. Default OFF — an
+     * untrusted external tenant never gets it by flag alone; it requires the
+     * team to be marked warm_build_allowed after the hardened path is proven.
+     */
+    public static function enabledForTeam(?Team $team): bool
+    {
+        return self::enabled() && $team !== null && (bool) $team->warm_build_allowed;
     }
 
     /**
