@@ -3,6 +3,8 @@
 namespace App\Livewire\Metrics;
 
 use App\Domain\Agent\Models\AiRun;
+use App\Domain\Budget\Services\CostCalculator;
+use App\Infrastructure\AI\Services\EvalShadowCounters;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -21,7 +23,7 @@ class AiRoutingPage extends Component
         $teamId = auth()->user()->current_team_id;
         $cacheKey = "ai_routing.stats:{$teamId}:{$this->timeWindow}";
 
-        $stats = Cache::remember($cacheKey, 30, function () {
+        $stats = Cache::remember($cacheKey, 30, function () use ($teamId) {
             $cutoff = match ($this->timeWindow) {
                 '24h' => now()->subDay(),
                 '7d' => now()->subWeek(),
@@ -39,6 +41,7 @@ class AiRoutingPage extends Component
                 'costSavings' => $this->getCostSavings($query->clone()),
                 'topModels' => $this->getTopModels($query->clone()),
                 'totalRequests' => $query->clone()->count(),
+                'evalShadow' => $this->getEvalShadow($teamId),
             ];
         });
 
@@ -119,57 +122,77 @@ class AiRoutingPage extends Component
         ];
     }
 
+    /**
+     * Counterfactual "credits saved vs always-flagship": re-price the period's
+     * actual token volume at the configured baseline (flagship) model and
+     * compare to what was actually spent. Both sides are in credits (via
+     * CostCalculator), so the figure is unit-coherent — the previous version
+     * mixed credits with raw USD-per-token rates and always reported 0%.
+     */
     private function getCostSavings($query): object
     {
         $actualCost = (int) $query->clone()->sum('cost_credits');
 
-        // Find the most expensive model's output pricing as the "expensive tier" baseline
-        $models = config('llm_pricing.models', config('llm_pricing.providers', []));
-        $maxOutputRate = 0;
-        foreach ($models as $providerModels) {
-            foreach ($providerModels as $pricing) {
-                if (isset($pricing['output']) && $pricing['output'] > $maxOutputRate) {
-                    $maxOutputRate = $pricing['output'];
-                }
-            }
-        }
-
-        // Theoretical cost: re-price all tokens at the most expensive rate
         $tokenStats = $query->clone()->select(
-            DB::raw('SUM(input_tokens) as total_input'),
-            DB::raw('SUM(output_tokens) as total_output'),
+            DB::raw('COALESCE(SUM(input_tokens), 0) as total_input'),
+            DB::raw('COALESCE(SUM(output_tokens), 0) as total_output'),
         )->first();
 
-        $maxInputRate = 0;
-        foreach ($models as $providerModels) {
-            foreach ($providerModels as $pricing) {
-                if (isset($pricing['input']) && $pricing['input'] > $maxInputRate) {
-                    $maxInputRate = $pricing['input'];
-                }
-            }
-        }
+        $baseline = config('ai_routing.savings_baseline');
+        $baselineModel = (string) ($baseline['model'] ?? '');
 
-        $theoreticalCost = 0;
-        if ($tokenStats) {
-            $theoreticalCost = (int) (
-                (($tokenStats->total_input ?? 0) / 1000 * $maxInputRate) +
-                (($tokenStats->total_output ?? 0) / 1000 * $maxOutputRate)
-            );
-        }
+        $theoreticalCost = app(CostCalculator::class)->calculateCost(
+            (string) ($baseline['provider'] ?? ''),
+            $baselineModel,
+            (int) ($tokenStats->total_input ?? 0),
+            (int) ($tokenStats->total_output ?? 0),
+        );
 
-        $savings = $theoreticalCost > 0 ? round((1 - ($actualCost / $theoreticalCost)) * 100, 1) : 0;
+        $saved = max(0, $theoreticalCost - $actualCost);
+        $savingsPct = $theoreticalCost > 0 ? round(($saved / $theoreticalCost) * 100, 1) : 0;
 
         return (object) [
             'actual' => $actualCost,
             'theoretical' => $theoreticalCost,
-            'savings_pct' => max(0, $savings),
+            'saved_credits' => $saved,
+            'savings_pct' => $savingsPct,
+            'baseline_model' => $baselineModel,
+        ];
+    }
+
+    /**
+     * Eval-grounded routing shadow telemetry (advisory only — never changes
+     * live routing). Reads the rolling Redis counters the shadow middleware
+     * writes; empty/zeroed when the feature is off or no traffic recorded.
+     *
+     * @return object{enabled: bool, total: int, would_downgrade: int, downgrade_pct: float, est_savings_credits: int}
+     */
+    private function getEvalShadow(string $teamId): object
+    {
+        $days = match ($this->timeWindow) {
+            '24h' => 1,
+            '30d' => 30,
+            default => 7,
+        };
+
+        $totals = app(EvalShadowCounters::class)->totals($teamId, $days);
+
+        $total = (int) $totals['total'];
+        $downgrade = (int) $totals['would_downgrade'];
+
+        return (object) [
+            'enabled' => (bool) config('ai_routing.eval_grounded.enabled'),
+            'total' => $total,
+            'would_downgrade' => $downgrade,
+            'downgrade_pct' => $total > 0 ? round(($downgrade / $total) * 100, 1) : 0,
+            'est_savings_credits' => (int) $totals['est_savings_credits'],
         ];
     }
 
     private function getTopModels($query): array
     {
         return $query->select(
-            DB::raw("CONCAT(provider, '/', model) as model_key"),
+            DB::raw("(provider || '/' || model) as model_key"),
             DB::raw('COUNT(*) as requests'),
             DB::raw('AVG(latency_ms) as avg_latency'),
             DB::raw('AVG(cost_credits) as avg_cost'),
