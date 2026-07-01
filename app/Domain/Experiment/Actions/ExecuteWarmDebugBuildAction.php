@@ -11,6 +11,7 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitCloneUrlResolver;
+use App\Domain\GitRepository\Services\GitCredentialHelper;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -52,7 +53,10 @@ class ExecuteWarmDebugBuildAction
         }
 
         $ref = 'origin/'.($repo->default_branch ?: 'main');
-        $cloneUrl = $this->cloneUrls->authenticatedUrl($repo);
+        // Token supplied transiently via askpass (never in the clone URL / .git
+        // config), so the sandbox that mounts the worktree cannot read it.
+        $token = $this->cloneUrls->token($repo);
+        [$gitEnv, $gitCleanup] = app(GitCredentialHelper::class)->prepare($token);
         $worktree = null;
         $prUrls = [];
 
@@ -61,7 +65,7 @@ class ExecuteWarmDebugBuildAction
         // block so a throwing downstream transition listener can't be mistaken
         // for a build failure and re-transition an already-completed experiment.
         try {
-            $worktree = $this->warmRepo->checkout($repo, $ref, $experiment->id, $cloneUrl);
+            $worktree = $this->warmRepo->checkout($repo, $ref, $experiment->id, null, $token);
 
             $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
 
@@ -90,7 +94,9 @@ class ExecuteWarmDebugBuildAction
             }
 
             $branch = 'fleetq/fix-'.substr($experiment->id, 0, 8);
-            $this->git($worktree, ['push', 'origin', 'HEAD:refs/heads/'.$branch, '--force']);
+            // Push authenticates via the transient askpass env; the remote URL
+            // stays credential-free.
+            $this->git($worktree, ['push', 'origin', 'HEAD:refs/heads/'.$branch, '--force'], $gitEnv);
 
             $pr = $this->gitRouter->resolve($repo)->createPullRequest(
                 title: '[FleetQ] Fix: '.$experiment->title,
@@ -101,11 +107,12 @@ class ExecuteWarmDebugBuildAction
             );
             $prUrls = array_filter([$pr['pr_url']]);
         } catch (\Throwable $e) {
-            // Never leak an authenticated clone URL into the failure reason/logs.
-            $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $cloneUrl));
+            // Never leak the tenant token into the failure reason/logs.
+            $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $token));
 
             return;
         } finally {
+            $gitCleanup();
             if ($worktree !== null) {
                 $this->warmRepo->release($repo, $worktree);
                 $this->warmRepo->prune($repo);
@@ -198,10 +205,12 @@ class ExecuteWarmDebugBuildAction
 
     /**
      * @param  list<string>  $args
+     * @param  array<string,string>  $env  transient credential env (askpass) for authed ops
      */
-    private function git(string $worktree, array $args): string
+    private function git(string $worktree, array $args, array $env = []): string
     {
-        $result = Process::timeout(120)->run(array_merge(['git', '-C', $worktree], $args));
+        $pending = $env === [] ? Process::timeout(120) : Process::timeout(120)->env($env);
+        $result = $pending->run(array_merge(['git', '-C', $worktree], $args));
         if (! $result->successful()) {
             throw new \RuntimeException('git '.($args[0] ?? '').' failed: '.trim($result->errorOutput()));
         }
@@ -209,10 +218,10 @@ class ExecuteWarmDebugBuildAction
         return trim($result->output());
     }
 
-    private function scrub(string $message, ?string $cloneUrl): string
+    private function scrub(string $message, ?string $token): string
     {
-        if ($cloneUrl) {
-            $message = str_replace($cloneUrl, '[repo-url]', $message);
+        if ($token) {
+            $message = str_replace($token, '[redacted-token]', $message);
         }
 
         // Strip any embedded userinfo token from stray git error output.

@@ -281,4 +281,29 @@ return [
     'planning_tool' => [
         'enabled' => (bool) env('AGENT_PLANNING_TOOL_ENABLED', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Warm-Build Sandbox (hostile-isolation execution profile)
+    |--------------------------------------------------------------------------
+    | Writable-hardened per-execution container for building UNTRUSTED external
+    | repos (see App\Domain\Agent\Services\WarmBuildSandbox). Non-root, cap-drop
+    | ALL, no-new-privileges, per-exec pids/mem/cpu, read-only root + tmpfs, only
+    | the workspace writable, no host env inheritance. `network` is 'none' here
+    | (Phase 1); Phase 2 replaces it with an egress-allowlisted network.
+    */
+    'warm_build_sandbox' => [
+        'image' => env('WARM_BUILD_SANDBOX_IMAGE', 'agent-fleet/warm-build-sandbox:latest'),
+        'user' => env('WARM_BUILD_SANDBOX_USER', '65534:65534'),
+        'pids' => (int) env('WARM_BUILD_SANDBOX_PIDS', 256),
+        'memory' => env('WARM_BUILD_SANDBOX_MEMORY', '2g'),
+        'cpus' => env('WARM_BUILD_SANDBOX_CPUS', '2'),
+        'tmpfs_size' => env('WARM_BUILD_SANDBOX_TMPFS', '512m'),
+        'timeout_seconds' => (int) env('WARM_BUILD_SANDBOX_TIMEOUT', 1800),
+        // Egress (Phase 2): an `internal: true` docker network + an allowlist
+        // CONNECT proxy. Both must be set to permit any egress; if either is
+        // blank the runner falls back to --network none (fail-closed).
+        'egress_network' => env('WARM_BUILD_SANDBOX_NETWORK', 'none'),
+        'egress_proxy' => env('WARM_BUILD_SANDBOX_PROXY'), // e.g. http://warm-build-egress:3128
+    ],
 ];
