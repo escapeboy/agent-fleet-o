@@ -285,7 +285,21 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         $workdir = $this->makeEphemeralWorkdir();
-        $timeout = (int) config('local_agents.vps.timeout_seconds', 300);
+
+        // For in-repo builds the caller passes a checked-out worktree as the
+        // working directory: run the CLI THERE so its file edits land in the repo,
+        // while HOME stays on the ephemeral dir so the agent's config/caches never
+        // pollute the checkout. Such runs also get a longer timeout than a normal
+        // one-shot completion (a real fix takes minutes, not seconds).
+        $cwd = $workdir;
+        $isRepoBuild = $request->workingDirectory !== null && is_dir($request->workingDirectory);
+        if ($isRepoBuild) {
+            $cwd = $request->workingDirectory;
+        }
+
+        $timeout = $isRepoBuild
+            ? (int) config('local_agents.vps.build_timeout_seconds', 1800)
+            : (int) config('local_agents.vps.timeout_seconds', 300);
         $oauthToken = (string) config('local_agents.vps.oauth_token');
 
         // Assistant mode uses the same --system-prompt / --tools "" separation as
@@ -368,7 +382,7 @@ class LocalAgentGateway implements AiGatewayInterface
         $stderr = '';
 
         try {
-            $process = new Process($args, $workdir, $env, $prompt, $timeout);
+            $process = new Process($args, $cwd, $env, $prompt, $timeout);
 
             if ($useStreaming) {
                 $this->runVpsProcessStreaming($process, $onChunk);

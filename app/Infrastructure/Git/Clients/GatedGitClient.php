@@ -136,16 +136,17 @@ class GatedGitClient implements GitClientInterface
         $this->inner->push($branch);
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         $this->gate->check($this->repo, 'createPullRequest', [
             'title' => $title,
             'body' => $body,
             'head' => $head,
             'base' => $base,
+            'draft' => $draft,
         ]);
 
-        return $this->inner->createPullRequest($title, $body, $head, $base);
+        return $this->inner->createPullRequest($title, $body, $head, $base, $draft);
     }
 
     public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array

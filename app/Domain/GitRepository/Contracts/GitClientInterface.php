@@ -54,11 +54,12 @@ interface GitClientInterface
     public function push(string $branch): void;
 
     /**
-     * Open a pull request.
+     * Open a pull request. When $draft is true the PR is opened in draft state
+     * (agent-authored fixes ship as draft for mandatory human review before merge).
      *
      * @return array{pr_number: string, pr_url: string, title: string, status: string}
      */
-    public function createPullRequest(string $title, string $body, string $head, string $base): array;
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array;
 
     /**
      * List pull requests.

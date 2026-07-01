@@ -191,9 +191,14 @@ class GitLabApiClient implements GitClientInterface
         // No-op for API-only mode
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         $id = urlencode($this->projectPath);
+
+        // GitLab marks a merge request as draft via a "Draft:" title prefix.
+        if ($draft && ! str_starts_with($title, 'Draft:')) {
+            $title = 'Draft: '.$title;
+        }
 
         $response = $this->http()->post("/projects/{$id}/merge_requests", [
             'title' => $title,

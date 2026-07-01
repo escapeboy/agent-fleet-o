@@ -1,11 +1,15 @@
 FROM php:8.4-fpm-alpine AS base
 
 # Install system dependencies
+# git + openssh-client: required by the warm-build debug builder (WarmRepoManager
+# clones/worktrees the target repo on the VPS so claude-code-vps can build in it).
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
     icu-dev \
     linux-headers \
+    git \
+    openssh-client \
     $PHPIZE_DEPS
 
 # Install system dependencies for exif

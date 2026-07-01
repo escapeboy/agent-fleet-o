@@ -212,6 +212,10 @@ return [
         'binary_path' => env('CLAUDE_CODE_VPS_BINARY', '/usr/local/bin/claude'),
         'max_concurrency_per_team' => (int) env('CLAUDE_CODE_VPS_MAX_CONCURRENCY', 2),
         'timeout_seconds' => (int) env('CLAUDE_CODE_VPS_TIMEOUT', 300),
+        // In-repo debug builds run an agentic coding session (edit → test → commit)
+        // in a checked-out worktree — they need minutes, not the one-shot timeout.
+        // Kept under the debug-track stage's 90-minute stuck-recovery net.
+        'build_timeout_seconds' => (int) env('CLAUDE_CODE_VPS_BUILD_TIMEOUT', 1800),
     ],
 
     // Host bridge — allows Docker containers to reach host-installed agents
