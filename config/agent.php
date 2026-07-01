@@ -265,4 +265,20 @@ return [
         */
         'argument_predicates' => (bool) env('AGENT_TOOL_ARG_PREDICATES', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Planning tool (deepagents write_todos borrow)
+    |--------------------------------------------------------------------------
+    | When enabled, the built-in `plan` tool kind exposes an `update_plan`
+    | tool that lets a solo agent maintain a live, self-authored to-do list
+    | (replace-semantics) during a long-horizon run — distinct from the
+    | system-authored feature-list.json and the append-only progress.md.
+    | Off by default: the `plan` kind translates to no tool while disabled,
+    | so no agent gains the capability until both the flag is on AND the
+    | tool is explicitly attached.
+    */
+    'planning_tool' => [
+        'enabled' => (bool) env('AGENT_PLANNING_TOOL_ENABLED', false),
+    ],
 ];

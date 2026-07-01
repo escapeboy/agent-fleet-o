@@ -101,6 +101,43 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Scoring Rubrics (signal-aware experiment scoring)
+    |--------------------------------------------------------------------------
+    | RunScoringStage picks a rubric — its scoring question (system_prompt) +
+    | default threshold — per experiment via this chain:
+    |   constraints.score_threshold (per-run override, threshold only)
+    |     → scoring_rubric_by_source[signal.source_type]
+    |     → scoring_rubrics[experiment.track]
+    |     → 'default'
+    | Different signal types are judged by the right criteria (business potential
+    | vs bug severity). recommended_track / scoring_details are display-only, so a
+    | rubric may use its own vocabulary. Add a signal type → add a rubric or a
+    | source route here, no code change. A missing 'default' falls back to a
+    | built-in business prompt + 0.3 in RunScoringStage.
+    */
+    'scoring_rubrics' => [
+        'default' => [
+            'threshold' => 0.3,
+            'system_prompt' => 'You are an experiment scoring agent. Evaluate the business potential of the given signal or thesis. If context from predecessor projects is provided, factor it into your evaluation. Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (growth|retention|revenue|engagement), and key_metrics (array of max 5 short strings). Keep the response compact.',
+        ],
+        'debug' => [
+            'threshold' => 0.2,
+            'system_prompt' => 'You are a bug-triage scoring agent. Assess the SEVERITY and IMPACT of the reported bug, NOT its business novelty. Weigh reproducibility, blast radius (users/flows affected), user- and revenue-impact, and frequency. A real, reproducible production error scores HIGH (0.7-1.0); a minor or cosmetic issue scores MEDIUM; noise — non-reproducible, third-party, duplicate, or non-actionable — scores LOW (near 0). Return ONLY a valid JSON object (no markdown, no code fences) with: score (0.0-1.0), reasoning (string, max 2 sentences), recommended_track (critical|high|medium|low), and key_metrics (array of max 5 short strings, e.g. affected flow, error frequency). Keep the response compact.',
+        ],
+    ],
+
+    /*
+    | Map a signal's AI-classified source_type to a rubric key. Strongest signal
+    | of intent (known at ingestion). Unlisted types fall through to track/default.
+    */
+    'scoring_rubric_by_source' => [
+        'bug_report' => 'debug',
+        'incident' => 'debug',
+        'alert' => 'debug',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Model Tiers
     |--------------------------------------------------------------------------
     |
@@ -140,5 +177,20 @@ return [
     | run fail mid-pipeline. Default off so it can be flipped per environment.
     */
     'require_team_ai_access' => (bool) env('EXPERIMENTS_REQUIRE_TEAM_AI_ACCESS', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Warm build sandbox
+    |--------------------------------------------------------------------------
+    | When enabled, builds reuse a persistent per-(team, repo) base clone and an
+    | isolated worktree per run (WarmRepoManager) instead of re-cloning the repo
+    | every time — clone once, then `git fetch` + worktree (seconds vs minutes).
+    | base_dir should be a persistent volume in production so the warm clones
+    | survive container restarts. Off by default.
+    */
+    'warm_build' => [
+        'enabled' => (bool) env('EXPERIMENTS_WARM_BUILD', false),
+        'base_dir' => env('EXPERIMENTS_WARM_BUILD_DIR', storage_path('app/warm-repos')),
+    ],
 
 ];
