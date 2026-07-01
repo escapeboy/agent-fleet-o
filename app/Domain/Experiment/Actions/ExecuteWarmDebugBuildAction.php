@@ -165,7 +165,7 @@ class ExecuteWarmDebugBuildAction
     {
         return "Automated fix opened by FleetQ for experiment `{$experiment->id}`.\n\n"
             ."**Issue:** {$experiment->title}\n\n"
-            ."⚠️ Draft PR — requires human review before merge.";
+            .'⚠️ Draft PR — requires human review before merge.';
     }
 
     private function fail(Experiment $experiment, string $reason): void
