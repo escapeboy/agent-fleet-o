@@ -253,7 +253,7 @@ class FakeGitClient implements GitClientInterface
 
     public function push(string $branch): void {}
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         return ['pr_number' => '1', 'pr_url' => 'http://x', 'title' => $title, 'status' => 'open'];
     }

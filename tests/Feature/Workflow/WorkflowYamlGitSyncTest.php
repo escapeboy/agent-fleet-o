@@ -181,7 +181,7 @@ class WorkflowYamlGitSyncTest extends TestCase
 
             public function push(string $branch): void {}
 
-            public function createPullRequest(string $title, string $body, string $head, string $base): array
+            public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
             {
                 return [];
             }
