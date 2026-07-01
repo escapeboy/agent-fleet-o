@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Observability\Alerts;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Infrastructure\AI\Models\CircuitBreakerState;
 use Carbon\CarbonImmutable;
@@ -11,6 +12,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Throwable;
@@ -132,9 +134,29 @@ final class AlertEvaluator
 
     private function stuckExperiments(): int
     {
+        // A running/pending stage is only "stuck pipeline" if its experiment is
+        // still meant to be progressing. Exclude stages whose parent already
+        // reached a terminal/failed/rejected/paused state — those are orphaned
+        // rows (the stage was never closed when the experiment ended), not a
+        // locked pipeline, and would otherwise inflate the metric forever.
+        $inactive = array_map(
+            static fn (ExperimentStatus $s) => $s->value,
+            array_filter(
+                ExperimentStatus::cases(),
+                static fn (ExperimentStatus $s) => $s->isTerminal() || $s->isFailed()
+                    || $s === ExperimentStatus::Rejected || $s === ExperimentStatus::Paused,
+            ),
+        );
+
         return ExperimentStage::withoutGlobalScopes()
             ->whereIn('status', ['running', 'pending'])
             ->where('updated_at', '<', now()->subMinutes(15))
+            ->whereExists(function ($q) use ($inactive) {
+                $q->select(DB::raw(1))
+                    ->from('experiments')
+                    ->whereColumn('experiments.id', 'experiment_stages.experiment_id')
+                    ->whereNotIn('experiments.status', $inactive);
+            })
             ->count();
     }
 
