@@ -71,11 +71,15 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
-            // 0664 (group-writable) lets every container's php-fpm worker
-            // append to the daily file regardless of which one created it.
-            // Pairs with deploy.sh's chown www-data:www-data on storage/.
-            // (FLEETQ-67 #683 / FLEETQ-89 #778)
-            'permission' => 0664,
+            // No explicit 'permission' here: Monolog chmod()s the file on every
+            // stream open when this is set, which throws UnexpectedValueException
+            // ("could not be opened in append mode: chmod(): Operation not permitted")
+            // whenever the log file is owned by a different user/container than the
+            // one currently writing — chmod requires file ownership, unlike append
+            // writes. Group-writable access across containers should be handled via
+            // umask/setgid on storage/logs, not a forced per-write chmod.
+            // (Previously 'permission' => 0664 per FLEETQ-67 #683 / FLEETQ-89 #778;
+            // reverted after it caused FLEETQ-121.)
             'replace_placeholders' => true,
         ],
 
