@@ -11,6 +11,7 @@ use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
+use App\Domain\GitRepository\Services\WarmRepoManager;
 use App\Domain\Website\Actions\CreateWebsiteAction;
 use App\Domain\Website\Actions\GenerateWebsiteStructureAction;
 use App\Domain\Website\Actions\PublishWebsitePageAction;
@@ -92,14 +93,26 @@ class RunBuildingStage extends BaseStageJob
 
         $plan = $planningStage->output_snapshot ?? [];
 
-        // Debug track: the bridge agent signals completion via experiment_complete_building MCP tool.
-        // No tasks, no batch — just mark the stage Running and return.
+        // Debug track: the fix is applied by an agent, not by in-process artifact
+        // jobs. Two builders can do it:
+        //  - warm-build (flag on + a repo resolvable): a claude-code-vps agent runs
+        //    on the VPS in a checked-out worktree and opens a draft PR itself;
+        //  - otherwise, an EXTERNAL bridge agent signals completion via the
+        //    experiment_complete_building MCP tool (legacy default).
+        // Either way the stage just stays Running here.
         if ($experiment->track === ExperimentTrack::Debug) {
+            $useWarmBuild = WarmRepoManager::enabled();
+
             $stage->update([
                 'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
                     'debug_track' => true,
+                    'builder' => $useWarmBuild ? 'warm_build' : 'bridge',
                 ]),
             ]);
+
+            if ($useWarmBuild) {
+                RunWarmDebugBuildJob::dispatch($experiment->id, $experiment->team_id);
+            }
 
             return;
         }

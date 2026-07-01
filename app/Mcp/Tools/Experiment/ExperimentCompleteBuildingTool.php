@@ -2,12 +2,9 @@
 
 namespace App\Mcp\Tools\Experiment;
 
-use App\Domain\Experiment\Actions\TransitionExperimentAction;
+use App\Domain\Experiment\Actions\CompleteBuildingAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
-use App\Domain\Experiment\Enums\StageStatus;
-use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
-use App\Domain\Experiment\Models\ExperimentStage;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -65,30 +62,11 @@ class ExperimentCompleteBuildingTool extends Tool
             return $this->validationError("Experiment is in '{$experiment->status->value}' state, not 'building'. Cannot complete.");
         }
 
-        $stage = ExperimentStage::withoutGlobalScopes()
-            ->where('experiment_id', $experiment->id)
-            ->where('stage', StageType::Building)
-            ->where('status', StageStatus::Running)
-            ->latest()
-            ->first();
-
-        if ($stage) {
-            $stage->update([
-                'status' => StageStatus::Completed,
-                'completed_at' => now(),
-                'duration_ms' => $stage->started_at ? (int) $stage->started_at->diffInMilliseconds(now()) : null,
-                'output_snapshot' => array_merge($stage->output_snapshot ?? [], array_filter([
-                    'pr_urls' => $validated['pr_urls'] ?? [],
-                    'summary' => $validated['summary'] ?? null,
-                    'completed_by' => 'agent_mcp',
-                ])),
-            ]);
-        }
-
-        app(TransitionExperimentAction::class)->execute(
+        app(CompleteBuildingAction::class)->execute(
             experiment: $experiment,
-            toState: ExperimentStatus::AwaitingApproval,
-            reason: 'Agent completed building via MCP tool',
+            prUrls: $validated['pr_urls'] ?? [],
+            summary: $validated['summary'] ?? null,
+            completedBy: 'agent_mcp',
         );
 
         return Response::text(json_encode([

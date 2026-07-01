@@ -124,13 +124,14 @@ class SandboxGitClient implements GitClientInterface
         $this->dispatch('push', ['branch' => $branch]);
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         $result = $this->dispatch('create_pr', [
             'title' => $title,
             'body' => $body,
             'head' => $head,
             'base' => $base,
+            'draft' => $draft,
         ]);
 
         return [

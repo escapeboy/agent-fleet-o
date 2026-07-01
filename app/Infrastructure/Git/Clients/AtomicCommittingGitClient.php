@@ -77,9 +77,9 @@ class AtomicCommittingGitClient implements GitClientInterface
         $this->inner->push($branch);
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
-        return $this->inner->createPullRequest($title, $body, $head, $base);
+        return $this->inner->createPullRequest($title, $body, $head, $base, $draft);
     }
 
     public function mergePullRequest(int $prNumber, string $method = 'squash', ?string $commitTitle = null, ?string $commitMessage = null): array

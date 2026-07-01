@@ -90,7 +90,7 @@ class BridgeGitClient implements GitClientInterface
         $this->dispatch('push', ['branch' => $branch]);
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         // Bridge mode delegates PR creation to the local agent (e.g. via gh CLI)
         $result = $this->dispatch('create_pr', [
@@ -98,6 +98,7 @@ class BridgeGitClient implements GitClientInterface
             'body' => $body,
             'head' => $head,
             'base' => $base,
+            'draft' => $draft,
         ]);
 
         return [

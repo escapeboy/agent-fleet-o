@@ -229,13 +229,14 @@ class GitHubApiClient implements GitClientInterface
         // No-op for API-only mode — commits are pushed atomically via the API
     }
 
-    public function createPullRequest(string $title, string $body, string $head, string $base): array
+    public function createPullRequest(string $title, string $body, string $head, string $base, bool $draft = false): array
     {
         $response = $this->http()->post("/repos/{$this->owner}/{$this->repo}/pulls", [
             'title' => $title,
             'body' => $body,
             'head' => $head,
             'base' => $base,
+            'draft' => $draft,
         ]);
 
         $this->checkAuth($response);
