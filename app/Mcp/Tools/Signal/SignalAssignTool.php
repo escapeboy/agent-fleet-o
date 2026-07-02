@@ -44,7 +44,7 @@ class SignalAssignTool extends Tool
             'reason' => 'nullable|string|max:2000',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
             return $this->permissionDeniedError('Team context is required.');

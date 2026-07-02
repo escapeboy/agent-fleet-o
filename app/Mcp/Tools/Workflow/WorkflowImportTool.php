@@ -43,7 +43,7 @@ class WorkflowImportTool extends Tool
 
         $user = auth()->user();
 
-        $teamId = $validated['team_id'] ?? app('mcp.team_id') ?? $user?->current_team_id;
+        $teamId = $validated['team_id'] ?? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? $user?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No team context available.');
         }

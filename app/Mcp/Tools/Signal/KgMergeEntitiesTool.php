@@ -38,7 +38,7 @@ class KgMergeEntitiesTool extends Tool
             'duplicate_entity_id' => 'required|string|uuid',
         ]);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $canonicalId = $validated['canonical_entity_id'];
         $duplicateId = $validated['duplicate_entity_id'];
 

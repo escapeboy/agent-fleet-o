@@ -43,7 +43,7 @@ class CredentialAccessLogTool extends Tool
             'limit' => 'integer|min:1|max:200',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         $credential = Credential::withoutGlobalScopes()
             ->where('team_id', $teamId)

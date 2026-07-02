@@ -42,7 +42,7 @@ class RagflowDocumentUploadTool extends Tool
             'content' => 'required|string|min:1',
         ]);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $kb = KnowledgeBase::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->where('id', $request->get('knowledge_base_id'))

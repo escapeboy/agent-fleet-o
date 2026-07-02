@@ -40,7 +40,7 @@ class CredentialOAuthFinalizeTool extends Tool
             return $this->notFoundError('OAuth session');
         }
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         if ($session['team_id'] !== $teamId) {
             return $this->permissionDeniedError('OAuth session belongs to a different team.');

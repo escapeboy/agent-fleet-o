@@ -51,7 +51,7 @@ class ConnectorConfigSaveTool extends Tool
             return $this->invalidArgumentError('Credentials must be a non-empty object with at least one value');
         }
 
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $config = OutboundConnectorConfig::withoutGlobalScopes()->updateOrCreate(
             ['team_id' => $teamId, 'channel' => $channel],

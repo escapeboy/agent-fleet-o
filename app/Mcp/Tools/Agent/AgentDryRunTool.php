@@ -65,7 +65,7 @@ class AgentDryRunTool extends Tool
         ]);
 
         $teamId = app()->bound('mcp.team_id')
-            ? app('mcp.team_id')
+            ? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null)
             : auth()->user()?->current_team_id;
 
         if ($teamId === null) {

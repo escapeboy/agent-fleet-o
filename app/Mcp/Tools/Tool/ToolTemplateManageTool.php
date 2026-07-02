@@ -130,7 +130,7 @@ class ToolTemplateManageTool extends Tool
             return $this->notFoundError('template', $slug);
         }
 
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         if (! $teamId) {
             return $this->permissionDeniedError('Team context required to deploy a template.');

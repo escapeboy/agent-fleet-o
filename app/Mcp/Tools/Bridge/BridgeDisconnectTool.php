@@ -29,7 +29,7 @@ class BridgeDisconnectTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $connectionId = $request->input('connection_id');
 
         $query = BridgeConnection::where('team_id', $teamId)->active();

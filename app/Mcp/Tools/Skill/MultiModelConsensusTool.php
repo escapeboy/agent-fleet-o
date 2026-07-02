@@ -115,7 +115,7 @@ class MultiModelConsensusTool extends Tool
         ];
 
         if ($skillId) {
-            $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
             $skill = $teamId ? Skill::withoutGlobalScopes()->where('team_id', $teamId)->find($skillId) : null;
             if ($skill) {
                 $exampleConfig = is_array($skill->configuration) ? $skill->configuration : $exampleConfig;

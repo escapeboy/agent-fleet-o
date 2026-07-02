@@ -34,7 +34,7 @@ class BugReportDeleteTool extends Tool
     {
         $validated = $request->validate(['signal_id' => 'required|string|uuid']);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         $report = Signal::withoutGlobalScopes()
             ->where('source_type', 'bug_report')

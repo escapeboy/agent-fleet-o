@@ -36,7 +36,7 @@ class MemoryAuditProposalsTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         $validated = $request->validate([
             'limit' => 'nullable|integer|min:1|max:1000',

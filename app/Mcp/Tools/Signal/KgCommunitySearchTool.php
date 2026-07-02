@@ -40,7 +40,7 @@ class KgCommunitySearchTool extends Tool
             'limit' => 'nullable|integer|min:1|max:20',
         ]);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $limit = min((int) ($validated['limit'] ?? 5), 20);
 
         $communities = $this->searchCommunities($teamId, $validated['query'], $limit);
