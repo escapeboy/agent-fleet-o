@@ -13,7 +13,7 @@ class GuardedRedisSupervisorRepositoryTest extends TestCase
     {
         $this->assertInstanceOf(
             GuardedRedisSupervisorRepository::class,
-            $this->app->make(SupervisorRepository::class)
+            $this->app->make(SupervisorRepository::class),
         );
     }
 
