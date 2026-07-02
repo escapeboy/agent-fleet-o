@@ -40,7 +40,14 @@
                             'matrix'          => $target['room_id'] ?? null,
                             default           => null,
                         };
-                        $recipient ??= '—';
+
+                        // No deliverable address was resolved (e.g. an experiment-summary
+                        // proposal whose target is only an audience description). Surface
+                        // that description honestly and mark it as an audience, not an
+                        // address, rather than showing a bare dash.
+                        $audienceDescription = is_array($target) ? ($target['description'] ?? null) : null;
+                        $recipientIsAudience = $recipient === null && $audienceDescription !== null;
+                        $recipient ??= $audienceDescription ?? '—';
 
                         // Channel icon
                         $channelIcon = match($proposal->channel->value) {
@@ -65,7 +72,10 @@
                                 @endif
                             </div>
                         </td>
-                        <td class="max-w-[180px] truncate px-4 py-3 text-sm text-gray-600" title="{{ $recipient }}">
+                        <td class="max-w-[180px] truncate px-4 py-3 text-sm {{ $recipientIsAudience ? 'italic text-gray-500' : 'text-gray-600' }}" title="{{ $recipient }}">
+                            @if($recipientIsAudience)
+                                <span class="mr-1 rounded bg-gray-100 px-1 py-0.5 text-[10px] not-italic text-gray-500">audience</span>
+                            @endif
                             {{ $recipient }}
                         </td>
                         <td class="px-4 py-3">
@@ -125,16 +135,21 @@
 
                                             {{-- Recipient details (credential-safe) --}}
                                             <div>
-                                                <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Recipient</h4>
+                                                <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">{{ $recipientIsAudience ? 'Intended audience' : 'Recipient' }}</h4>
                                                 <div class="rounded-lg bg-gray-50 p-3">
-                                                    @forelse($safeTarget as $key => $value)
-                                                        <div class="flex gap-2 py-0.5">
-                                                            <span class="w-32 shrink-0 text-xs font-medium text-gray-500">{{ $key }}</span>
-                                                            <span class="break-all text-xs text-gray-900">{{ is_string($value) ? $value : json_encode($value) }}</span>
-                                                        </div>
-                                                    @empty
-                                                        <span class="text-xs text-gray-400">No recipient data.</span>
-                                                    @endforelse
+                                                    @if($recipientIsAudience)
+                                                        <p class="text-xs text-gray-900">{{ $audienceDescription }}</p>
+                                                        <p class="mt-1 text-[11px] text-gray-400">No deliverable address was resolved — nothing was sent.</p>
+                                                    @else
+                                                        @forelse($safeTarget as $key => $value)
+                                                            <div class="flex gap-2 py-0.5">
+                                                                <span class="w-32 shrink-0 text-xs font-medium text-gray-500">{{ $key }}</span>
+                                                                <span class="break-all text-xs text-gray-900">{{ is_string($value) ? $value : json_encode($value) }}</span>
+                                                            </div>
+                                                        @empty
+                                                            <span class="text-xs text-gray-400">No recipient data.</span>
+                                                        @endforelse
+                                                    @endif
                                                 </div>
                                             </div>
 
