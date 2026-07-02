@@ -38,7 +38,7 @@ class MarketplaceAnalyticsTool extends Tool
 
         $listing = MarketplaceListing::withoutGlobalScopes()->findOrFail($listingId);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         // Only the team that published the listing may access its analytics.
         if ($listing->team_id !== $teamId) {

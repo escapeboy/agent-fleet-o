@@ -40,7 +40,7 @@ class MemoryFeedbackTool extends Tool
             'feedback' => 'required|in:positive,negative',
         ]);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $memoryId = $request->get('memory_id');
         $feedback = $request->get('feedback');
 

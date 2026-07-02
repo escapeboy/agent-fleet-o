@@ -51,7 +51,7 @@ class CodeCallChainTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $repo = GitRepository::where('team_id', $teamId)->find($request->get('git_repository_id'));
 
         if (! $repo) {

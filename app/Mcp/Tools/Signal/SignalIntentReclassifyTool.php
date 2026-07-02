@@ -33,7 +33,7 @@ class SignalIntentReclassifyTool extends Tool
             return Response::error('signal_id is required');
         }
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         if (! $teamId) {
             return Response::error('Team context could not be resolved.');

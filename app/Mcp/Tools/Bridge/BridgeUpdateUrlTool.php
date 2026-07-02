@@ -43,7 +43,7 @@ class BridgeUpdateUrlTool extends Tool
             'endpoint_secret' => 'nullable|string|max:255',
         ]);
 
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $connection = BridgeConnection::where('team_id', $teamId)
             ->find($validated['connection_id']);

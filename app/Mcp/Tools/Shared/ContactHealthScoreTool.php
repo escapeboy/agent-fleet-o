@@ -33,7 +33,7 @@ class ContactHealthScoreTool extends Tool
     {
         $request->validate(['contact_id' => 'required|uuid']);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $contact = ContactIdentity::withoutGlobalScopes()
             ->where('team_id', $teamId)

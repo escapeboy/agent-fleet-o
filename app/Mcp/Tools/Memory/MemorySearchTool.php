@@ -67,7 +67,7 @@ class MemorySearchTool extends Tool
     {
         $validated = $request->validate(['query' => 'required|string']);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $searchMode = $request->get('search_mode', 'semantic');
 

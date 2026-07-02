@@ -31,7 +31,7 @@ class AuditConsoleVerifyBundleTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $decision = AuditableDecision::where('id', $request->get('decision_id'))
             ->where('team_id', $teamId)

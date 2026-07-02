@@ -40,7 +40,7 @@ class BridgePingTool extends Tool
             'connection_id' => 'required|uuid',
         ]);
 
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $connection = BridgeConnection::where('team_id', $teamId)
             ->find($validated['connection_id']);

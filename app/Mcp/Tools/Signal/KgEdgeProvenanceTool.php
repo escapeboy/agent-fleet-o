@@ -56,7 +56,7 @@ class KgEdgeProvenanceTool extends Tool
         ]);
 
         try {
-            $teamId = app('mcp.team_id');
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
             $limit = min((int) ($validated['limit'] ?? 20), 100);
 
             // Resolve entity UUID

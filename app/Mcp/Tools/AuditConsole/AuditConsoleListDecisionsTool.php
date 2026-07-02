@@ -41,7 +41,7 @@ class AuditConsoleListDecisionsTool extends McpTool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $query = AuditableDecision::where('team_id', $teamId)
             ->orderByDesc('created_at');

@@ -62,7 +62,7 @@ class WorkflowEdgeAddTool extends Tool
             'target_channel' => 'nullable|string|max:100',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         $workflow = Workflow::where('team_id', $teamId)->find($validated['workflow_id']);
 

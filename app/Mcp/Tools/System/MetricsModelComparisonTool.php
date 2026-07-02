@@ -33,7 +33,7 @@ class MetricsModelComparisonTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         if ($teamId === null) {
             return $this->permissionDeniedError('Authentication required.');

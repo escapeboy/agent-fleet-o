@@ -31,7 +31,7 @@ class BridgeEndpointListTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $type = $request->input('type', 'all');
 
         $connections = $teamId
