@@ -51,9 +51,24 @@ class WarmRepoManager
      */
     public function checkout(GitRepository $repo, string $ref, string $runId, ?string $cloneUrl = null): string
     {
+        $this->trustWarmRepos();
+
         $base = $this->ensureBase($repo, $cloneUrl);
 
         return $this->makeWorktree($repo, $base, $ref, $runId);
+    }
+
+    /**
+     * Warm clones live on a shared persistent volume that can be owned by a
+     * different uid than the worker process (container re-creates, volume perms),
+     * which makes git refuse every command with "detected dubious ownership".
+     * Trust our own managed tree. safe.directory is deliberately ignored when set
+     * via `-c`, so it must live in config; --system covers root AND the agent's
+     * ephemeral HOME. Best-effort — never break the run over this.
+     */
+    private function trustWarmRepos(): void
+    {
+        Process::run(['git', 'config', '--system', '--replace-all', 'safe.directory', '*']);
     }
 
     /**
