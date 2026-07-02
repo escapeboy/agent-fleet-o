@@ -191,19 +191,31 @@ class DelegateBugReportToAgentAction
      */
     private function resolveGitRepositoryId(Signal $signal): ?string
     {
-        $target = $signal->payload['target_repository'] ?? null;
-        if (! is_string($target) || $target === '') {
-            return null;
-        }
-
         $repos = GitRepository::withoutGlobalScopes()
             ->where('team_id', $signal->team_id)
             ->get();
 
-        foreach ($repos as $repo) {
-            if (strcasecmp((string) $repo->repoSlug(), $target) === 0) {
-                return $repo->id;
+        $target = $signal->payload['target_repository'] ?? null;
+        if (is_string($target) && $target !== '') {
+            foreach ($repos as $repo) {
+                if (strcasecmp((string) $repo->repoSlug(), $target) === 0) {
+                    return $repo->id;
+                }
             }
+        }
+
+        // No explicit target (the common Sentry case) or no match: fall back to
+        // the team's default repo so the build still has somewhere to open a PR
+        // instead of hard-failing with "no git repository configured". The draft
+        // PR + human review is the safety net if the default is the wrong repo.
+        $default = $repos->firstWhere('is_default', true);
+        if ($default) {
+            return $default->id;
+        }
+
+        // A single-repo team is unambiguous — use it.
+        if ($repos->count() === 1) {
+            return (string) $repos->first()->id;
         }
 
         return null;

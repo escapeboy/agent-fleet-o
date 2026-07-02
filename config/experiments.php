@@ -193,4 +193,20 @@ return [
         'base_dir' => env('EXPERIMENTS_WARM_BUILD_DIR', storage_path('app/warm-repos')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Transient capacity retries
+    |--------------------------------------------------------------------------
+    | A stage that hits a transient shared-resource limit (the per-team VPS
+    | concurrency cap) is re-dispatched after a backoff rather than failed. The
+    | budget is tracked per stage so it stays independent of the framework's
+    | $tries (which is reserved for genuine failures). max_retries * backoff is
+    | the worst-case wait for a slot; the default (~20 min) covers a couple of
+    | long-held build slots ahead of a queued burst.
+    */
+    'transient_capacity' => [
+        'max_retries' => (int) env('EXPERIMENTS_TRANSIENT_CAP_MAX_RETRIES', 20),
+        'backoff_seconds' => (int) env('EXPERIMENTS_TRANSIENT_CAP_BACKOFF', 60),
+    ],
+
 ];
