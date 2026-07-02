@@ -95,6 +95,7 @@ use App\Mcp\Tools\AgentSession\AgentSessionHandoffTool;
 use App\Mcp\Tools\AgentSession\AgentSessionListTool;
 use App\Mcp\Tools\AgentSession\AgentSessionReplayTool;
 use App\Mcp\Tools\AgentSession\AgentSessionSleepTool;
+use App\Mcp\Tools\AgentSession\AgentSessionStartTool;
 use App\Mcp\Tools\AgentSession\AgentSessionWakeTool;
 use App\Mcp\Tools\Approval\ActionProposalApproveTool;
 use App\Mcp\Tools\Approval\ActionProposalExplainTool;
@@ -1371,6 +1372,7 @@ class AgentFleetServer extends Server
         ActivepiecesListPiecesTool::class,
 
         // Agent Session (8)
+        AgentSessionStartTool::class,
         AgentSessionListTool::class,
         AgentSessionGetTool::class,
         AgentSessionEventsTool::class,
