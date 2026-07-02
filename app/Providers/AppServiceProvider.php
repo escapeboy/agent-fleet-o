@@ -10,7 +10,9 @@ use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
 use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
 use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
 use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
+use App\Domain\AgentSession\Listeners\CloseAgentSessionOnTerminal;
 use App\Domain\AgentSession\Listeners\MirrorExperimentTransition;
+use App\Domain\AgentSession\Listeners\OpenAgentSessionOnExecution;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Events\ActionProposalExecuted;
 use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
@@ -565,11 +567,20 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(AgentExecuted::class, CompressAndStoreExecutionMemoryListener::class);
         Event::listen(ExperimentTransitioned::class, BroadcastExperimentTransitioned::class);
 
-        // AgentSession event log — funnel existing experiment transitions into the session log
+        // AgentSession lifecycle + event log. Order is load-bearing:
+        //   Open (before Mirror)  → the opening transition is itself mirrored
+        //   Mirror                → appends the transition to the session log
+        //   Close (after Mirror)  → flips the session closed after the final
+        //                           transition was mirrored (Mirror only sees
+        //                           open-status sessions)
+        // All three run before DispatchNextStageJob so a debug run's nested
+        // executing→completed short-circuit still finds an open session.
+        Event::listen(ExperimentTransitioned::class, OpenAgentSessionOnExecution::class);
         Event::listen(
             ExperimentTransitioned::class,
             MirrorExperimentTransition::class,
         );
+        Event::listen(ExperimentTransitioned::class, CloseAgentSessionOnTerminal::class);
 
         // ActionProposal auto-execute on approval — dispatches a queued job
         Event::listen(ActionProposalApproved::class, DispatchActionProposalExecution::class);

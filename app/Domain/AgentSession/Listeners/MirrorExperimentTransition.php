@@ -22,7 +22,13 @@ class MirrorExperimentTransition
 
     public function handle(ExperimentTransitioned $event): void
     {
-        $session = AgentSession::query()
+        // Team-explicit + scope-free: transitions fire from Horizon queue jobs
+        // where TeamScope short-circuits (runningInConsole), so a plain
+        // where('experiment_id') would match sessions across ALL teams and could
+        // mirror one team's transition into another team's session log. Pin to
+        // the experiment's own team, matching Open/CloseAgentSession listeners.
+        $session = AgentSession::withoutGlobalScopes()
+            ->where('team_id', $event->experiment->team_id)
             ->where('experiment_id', $event->experiment->id)
             ->whereIn('status', ['pending', 'active', 'sleeping'])
             ->latest('created_at')
