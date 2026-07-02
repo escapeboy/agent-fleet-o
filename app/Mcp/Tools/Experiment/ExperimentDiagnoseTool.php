@@ -53,7 +53,7 @@ class ExperimentDiagnoseTool extends Tool
         ]);
 
         $teamId = app()->bound('mcp.team_id')
-            ? (app()->bound('mcp.team_id') ? app('mcp.team_id') : null)
+            ? app('mcp.team_id')
             : auth()->user()?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No current team.');
