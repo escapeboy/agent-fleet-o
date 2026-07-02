@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $last_indexed_at
  * @property string|null $indexed_commit_sha
  * @property CommitDiscipline $commit_discipline
+ * @property bool $is_default
  */
 class GitRepository extends Model
 {
@@ -44,6 +45,7 @@ class GitRepository extends Model
         'url',
         'provider',
         'mode',
+        'is_default',
         'default_branch',
         'config',
         'status',
@@ -63,6 +65,7 @@ class GitRepository extends Model
             'status' => GitRepositoryStatus::class,
             'commit_discipline' => CommitDiscipline::class,
             'config' => 'array',
+            'is_default' => 'boolean',
             'last_ping_at' => 'datetime',
             'last_indexed_at' => 'datetime',
         ];

@@ -333,6 +333,50 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $this->assertArrayNotHasKey('git_repository_id', $experiment->constraints ?? []);
     }
 
+    public function test_delegation_falls_back_to_team_default_repo_when_no_target(): void
+    {
+        GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet',
+            'url' => 'https://github.com/escapeboy/agent-fleet.git',
+            'default_branch' => 'master',
+        ]);
+        $default = GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet-o',
+            'url' => 'https://github.com/escapeboy/agent-fleet-o.git',
+            'default_branch' => 'develop',
+            'is_default' => true,
+        ]);
+
+        // No target_repository on the signal (the common Sentry case).
+        $signal = $this->makeSignal();
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertSame($default->id, $experiment->constraints['git_repository_id'] ?? null);
+    }
+
+    public function test_delegation_uses_single_repo_when_no_target_and_one_exists(): void
+    {
+        $repo = GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet-o',
+            'url' => 'https://github.com/escapeboy/agent-fleet-o.git',
+            'default_branch' => 'develop',
+        ]);
+
+        $signal = $this->makeSignal();
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertSame($repo->id, $experiment->constraints['git_repository_id'] ?? null);
+    }
+
     public function test_thesis_sanitizes_reporter_comments(): void
     {
         $signal = $this->makeSignal();

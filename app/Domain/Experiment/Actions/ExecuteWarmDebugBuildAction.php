@@ -14,6 +14,7 @@ use App\Domain\GitRepository\Services\GitCloneUrlResolver;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -101,6 +102,13 @@ class ExecuteWarmDebugBuildAction
             );
             $prUrls = array_filter([$pr['pr_url']]);
         } catch (\Throwable $e) {
+            // Transient capacity (VPS concurrency cap): the slot is acquired before
+            // any agent work, so nothing was spent — surface it so the job can
+            // re-dispatch after a backoff rather than failing the run.
+            if ($e instanceof VpsLocalAgentException && $e->retryable) {
+                throw $e;
+            }
+
             // Never leak an authenticated clone URL into the failure reason/logs.
             $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $cloneUrl));
 
@@ -124,6 +132,15 @@ class ExecuteWarmDebugBuildAction
             'repo_id' => $repo->id,
             'pr_urls' => $prUrls,
         ]);
+    }
+
+    /**
+     * Terminal failure for the case where the VPS concurrency cap never cleared
+     * within the retry budget (called by RunWarmDebugBuildJob).
+     */
+    public function failCapacityExhausted(Experiment $experiment): void
+    {
+        $this->fail($experiment, 'Warm build deferred: VPS capacity unavailable after repeated retries.');
     }
 
     private function resolveRepository(Experiment $experiment): ?GitRepository

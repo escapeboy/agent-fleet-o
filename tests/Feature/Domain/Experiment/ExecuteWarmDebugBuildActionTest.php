@@ -16,6 +16,7 @@ use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -210,5 +211,29 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
 
         $exp->refresh();
         $this->assertSame(ExperimentStatus::BuildingFailed, $exp->status);
+    }
+
+    public function test_transient_capacity_rethrows_and_leaves_run_building(): void
+    {
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+
+        // The VPS slot is acquired before any agent work: a cap failure means
+        // nothing was spent. The action must surface it (retryable) so the job
+        // can re-dispatch — NOT flip the run to BuildingFailed.
+        $gw = Mockery::mock(LocalAgentGateway::class);
+        $gw->shouldReceive('complete')
+            ->andThrow(VpsLocalAgentException::concurrencyCapReached(2));
+        $this->app->instance(LocalAgentGateway::class, $gw);
+
+        try {
+            app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+            $this->fail('expected the transient cap exception to propagate');
+        } catch (VpsLocalAgentException $e) {
+            $this->assertTrue($e->retryable);
+        }
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::Building, $exp->status);
     }
 }
