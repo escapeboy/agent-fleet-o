@@ -431,17 +431,45 @@
         </div>
     </div>
 
+    {{-- Result: draft PR (debug experiments deliver a pull request, not artifacts) --}}
+    @if(!empty($resultPrUrls))
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-code-pull-request text-green-600"></i>
+                <span class="text-xs font-semibold uppercase tracking-wider text-green-700">Result — Pull Request</span>
+            </div>
+            <ul class="mt-2 space-y-1">
+                @foreach($resultPrUrls as $prUrl)
+                    <li class="flex items-center gap-2">
+                        <a href="{{ $prUrl }}" target="_blank" rel="noopener noreferrer"
+                           class="break-all text-sm font-medium text-green-800 underline hover:text-green-900">{{ $prUrl }}</a>
+                        <span class="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">draft · needs review</span>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     {{-- Tab Navigation --}}
     <div class="mb-4 border-b border-gray-200">
         <nav class="-mb-px flex gap-6 overflow-x-auto scrollbar-none">
             @php
                 $workflowTabs = ['activity' => 'Activity', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'time-travel' => 'Time Travel', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'chain' => 'Execution Chain', 'suggestions' => 'Suggestions', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
                 $standardTabs = ['timeline' => 'Timeline', 'activity' => 'Activity', 'tasks' => 'Tasks', 'artifacts' => 'Artifacts', 'outbound' => 'Outbound', 'metrics' => 'Metrics', 'cost' => 'Cost', 'reasoning' => 'Reasoning', 'execution-log' => 'Execution Log', 'transitions' => 'Transitions', 'worklog' => 'Worklog'.($worklogCount > 0 ? " ({$worklogCount})" : ''), 'uncertainty' => 'Signals'.($uncertaintyCount > 0 ? " ({$uncertaintyCount})" : '')];
+                // Debug experiments deliver a PR — they never build artifacts/tasks,
+                // run a workflow, or emit reasoning/worklog, so those tabs are always
+                // empty. Show only the tabs that carry data for this flow.
+                $debugTabs = ['activity' => 'Activity', 'transitions' => 'Transitions', 'metrics' => 'Metrics', 'outbound' => 'Outbound', 'execution-log' => 'Execution Log'];
                 if ($experiment->status->isFailed()) {
                     $workflowTabs['lessons'] = 'Lessons Learned';
                     $standardTabs['lessons'] = 'Lessons Learned';
+                    $debugTabs['lessons'] = 'Lessons Learned';
                 }
-                $tabs = $experiment->hasWorkflow() ? $workflowTabs : $standardTabs;
+                $tabs = match (true) {
+                    $experiment->track->value === 'debug' => $debugTabs,
+                    $experiment->hasWorkflow() => $workflowTabs,
+                    default => $standardTabs,
+                };
             @endphp
             @foreach($tabs as $tab => $label)
                 <button wire:click="$set('activeTab', '{{ $tab }}')"
