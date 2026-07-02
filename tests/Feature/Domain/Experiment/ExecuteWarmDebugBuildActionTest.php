@@ -213,6 +213,45 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         $this->assertSame(ExperimentStatus::BuildingFailed, $exp->status);
     }
 
+    public function test_falls_back_to_default_repo_when_no_constraint(): void
+    {
+        // Retry of an experiment delegated before a repo was configured: no
+        // git_repository_id in constraints. It must resolve the team default repo.
+        GitRepository::create([
+            'team_id' => $this->team->id, 'name' => 'other',
+            'url' => 'https://example.test/other.git', 'default_branch' => 'main',
+        ]);
+        GitRepository::create([
+            'team_id' => $this->team->id, 'name' => 'r',
+            'url' => $this->bare, 'default_branch' => 'main', 'is_default' => true,
+        ]);
+
+        $exp = $this->experiment([]); // no git_repository_id
+        $this->fakeAgentWriting('fix.txt');
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertTrue($captured['draft']);
+    }
+
+    public function test_falls_back_to_single_repo_when_no_constraint(): void
+    {
+        $this->repo(); // single team repo → the bare remote
+        $exp = $this->experiment([]); // no git_repository_id
+        $this->fakeAgentWriting('fix.txt');
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+    }
+
     public function test_transient_capacity_rethrows_and_leaves_run_building(): void
     {
         $repo = $this->repo();

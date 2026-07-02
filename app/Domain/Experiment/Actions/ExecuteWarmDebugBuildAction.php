@@ -152,13 +152,22 @@ class ExecuteWarmDebugBuildAction
             $repoId = $agent?->config['git_repository_ids'][0] ?? null;
         }
 
-        if (! $repoId) {
-            return null;
+        if ($repoId) {
+            return GitRepository::withoutGlobalScopes()
+                ->where('team_id', $experiment->team_id)
+                ->find($repoId);
         }
 
-        return GitRepository::withoutGlobalScopes()
+        // No explicit repo — e.g. a retry of an experiment delegated before a repo
+        // was configured. Fall back to the team default repo, or its single repo.
+        // Mirrors DelegateBugReportToAgentAction::resolveGitRepositoryId so both
+        // the delegation and warm-build paths resolve the same target.
+        $repos = GitRepository::withoutGlobalScopes()
             ->where('team_id', $experiment->team_id)
-            ->find($repoId);
+            ->get();
+
+        return $repos->firstWhere('is_default', true)
+            ?? ($repos->count() === 1 ? $repos->first() : null);
     }
 
     private function buildRequest(Experiment $experiment, string $worktree): AiRequestDTO
