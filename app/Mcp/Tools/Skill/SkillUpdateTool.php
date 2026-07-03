@@ -48,7 +48,7 @@ class SkillUpdateTool extends Tool
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No current team.');
         }

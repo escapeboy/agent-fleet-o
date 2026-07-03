@@ -38,7 +38,7 @@ class KgSuggestMergesTool extends Tool
             'limit' => 'nullable|integer|min:1|max:50',
         ]);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $threshold = (float) ($validated['threshold'] ?? 0.85);
         $limit = min((int) ($validated['limit'] ?? 20), 50);
 

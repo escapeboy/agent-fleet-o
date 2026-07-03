@@ -4,6 +4,7 @@ namespace App\Domain\Experiment\Listeners;
 
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
 use App\Domain\Experiment\Pipeline\CollectMetrics;
 use App\Domain\Experiment\Pipeline\CreateOutboundProposals;
@@ -43,6 +44,25 @@ class DispatchNextStageJob
                 'experiment_id' => $experiment->id,
                 'children_count' => $experiment->children()->count(),
             ]);
+
+            return;
+        }
+
+        // Debug-track experiments deliver their fix as a pull request during the
+        // building stage; there is nothing to execute afterwards. A stale
+        // workflow_graph they may carry (e.g. a legacy Sentry Auto-Fix node) would
+        // fail in the executing stage and wrongly mark the run execution_failed.
+        // Short-circuit to Completed — the draft PR + human GitHub review is the gate.
+        if ($newState === 'executing' && $experiment->track === ExperimentTrack::Debug) {
+            Log::info('DispatchNextStageJob: Debug experiment short-circuits executing → completed', [
+                'experiment_id' => $experiment->id,
+            ]);
+
+            app(TransitionExperimentAction::class)->execute(
+                experiment: $experiment,
+                toState: ExperimentStatus::Completed,
+                reason: 'Debug fix delivered as pull request; nothing to execute',
+            );
 
             return;
         }

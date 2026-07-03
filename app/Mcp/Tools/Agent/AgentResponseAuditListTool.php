@@ -44,7 +44,7 @@ class AgentResponseAuditListTool extends Tool
             'violations_only' => 'boolean',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $limit = $validated['limit'] ?? 50;
 
         $query = AgentResponseAudit::withoutGlobalScopes()

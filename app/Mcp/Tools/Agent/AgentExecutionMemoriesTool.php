@@ -41,7 +41,7 @@ class AgentExecutionMemoriesTool extends Tool
             'limit' => 'integer|min:1|max:100',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $limit = $validated['limit'] ?? 20;
 
         $memories = Memory::withoutGlobalScopes()

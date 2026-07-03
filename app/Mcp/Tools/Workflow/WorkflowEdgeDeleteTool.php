@@ -32,7 +32,7 @@ class WorkflowEdgeDeleteTool extends Tool
     {
         $validated = $request->validate(['edge_id' => 'required|string']);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         $edge = WorkflowEdge::whereHas('workflow', fn ($q) => $q->where('team_id', $teamId))
             ->find($validated['edge_id']);

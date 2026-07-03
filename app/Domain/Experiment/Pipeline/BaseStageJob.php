@@ -21,6 +21,7 @@ use App\Domain\Experiment\Services\PipelineContextCompressor;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\ContextHealthService;
 use App\Infrastructure\Telemetry\Sentry\SentryEventCapturer;
@@ -286,6 +287,16 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
+            // Transient shared-resource limit (the per-team VPS concurrency cap
+            // saturated by a burst of experiments): wait for a slot by re-dispatching
+            // a fresh copy of this stage job after a backoff, instead of failing the
+            // run. A fresh dispatch resets the framework attempt counter, so the wait
+            // is bounded by a per-stage counter rather than $tries (reserved for
+            // genuine failures). Without this, every experiment beyond the cap died.
+            if ($this->isTransientCapacityLimit($e) && $this->reDispatchForCapacity($stage)) {
+                return;
+            }
+
             // Log::warning (not error): we re-throw the exception below, and
             // Horizon will route the actual throwable through this job's
             // failed() callback, which calls SentryEventCapturer with the
@@ -312,6 +323,51 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * A transient capacity limit is a shared-resource exhaustion (the per-team
+     * VPS concurrency cap), not a defect — safe to retry once a slot frees.
+     */
+    protected function isTransientCapacityLimit(\Throwable $e): bool
+    {
+        return $e instanceof VpsLocalAgentException && $e->retryable;
+    }
+
+    /**
+     * Re-dispatch this stage after a backoff while the per-stage capacity budget
+     * lasts. Returns false once the budget is exhausted so the caller falls
+     * through to the normal failure path.
+     */
+    private function reDispatchForCapacity(ExperimentStage $stage): bool
+    {
+        $attempts = (int) ($stage->output_snapshot['_transient_retries'] ?? 0);
+        $max = (int) config('experiments.transient_capacity.max_retries', 20);
+
+        if ($attempts >= $max) {
+            return false;
+        }
+
+        $stage->update([
+            'status' => StageStatus::Pending,
+            'output_snapshot' => array_merge($stage->output_snapshot ?? [], [
+                '_transient_retries' => $attempts + 1,
+            ]),
+        ]);
+
+        $backoff = (int) config('experiments.transient_capacity.backoff_seconds', 60);
+
+        Log::info('BaseStageJob: transient capacity limit — re-dispatching after backoff', [
+            'experiment_id' => $this->experimentId,
+            'stage' => $this->stageType()->value,
+            'transient_retry' => $attempts + 1,
+            'max_retries' => $max,
+            'backoff_seconds' => $backoff,
+        ]);
+
+        static::dispatch($this->experimentId, $this->teamId)->delay(now()->addSeconds($backoff));
+
+        return true;
     }
 
     public function failed(\Throwable $exception): void

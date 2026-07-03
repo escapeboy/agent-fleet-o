@@ -59,7 +59,7 @@ class KgSearchTool extends Tool
             $action = app(SearchKgFactsAction::class);
 
             $facts = $action->execute(
-                teamId: app('mcp.team_id'),
+                teamId: (app()->bound('mcp.team_id') ? app('mcp.team_id') : null),
                 query: $validated['query'],
                 relationType: $validated['relation_type'] ?? null,
                 entityType: $validated['entity_type'] ?? null,

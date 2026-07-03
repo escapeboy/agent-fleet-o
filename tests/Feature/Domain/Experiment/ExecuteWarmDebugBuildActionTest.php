@@ -15,6 +15,8 @@ use App\Domain\GitRepository\Contracts\GitClientInterface;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -205,5 +207,69 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
 
         $exp->refresh();
         $this->assertSame(ExperimentStatus::BuildingFailed, $exp->status);
+    }
+
+    public function test_falls_back_to_default_repo_when_no_constraint(): void
+    {
+        // Retry of an experiment delegated before a repo was configured: no
+        // git_repository_id in constraints. It must resolve the team default repo.
+        GitRepository::create([
+            'team_id' => $this->team->id, 'name' => 'other',
+            'url' => 'https://example.test/other.git', 'default_branch' => 'main',
+        ]);
+        GitRepository::create([
+            'team_id' => $this->team->id, 'name' => 'r',
+            'url' => $this->bare, 'default_branch' => 'main', 'is_default' => true,
+        ]);
+
+        $exp = $this->experiment([]); // no git_repository_id
+        $this->fakeAgentWriting('fix.txt');
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertTrue($captured['draft']);
+    }
+
+    public function test_falls_back_to_single_repo_when_no_constraint(): void
+    {
+        $this->repo(); // single team repo → the bare remote
+        $exp = $this->experiment([]); // no git_repository_id
+        $this->fakeAgentWriting('fix.txt');
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+    }
+
+    public function test_transient_capacity_rethrows_and_leaves_run_building(): void
+    {
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+
+        // The per-team slot is acquired before the sandbox container starts: a
+        // cap failure means nothing was spent. The action must surface it
+        // (retryable) so the job can re-dispatch — NOT flip the run to
+        // BuildingFailed.
+        $cap = Mockery::mock(ClaudeCodeVpsConcurrencyCap::class);
+        $cap->shouldReceive('acquire')->andReturn(false);
+        $cap->shouldReceive('cap')->andReturn(2);
+        $this->app->instance(ClaudeCodeVpsConcurrencyCap::class, $cap);
+
+        try {
+            app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+            $this->fail('expected the transient cap exception to propagate');
+        } catch (VpsLocalAgentException $e) {
+            $this->assertTrue($e->retryable);
+        }
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::Building, $exp->status);
     }
 }

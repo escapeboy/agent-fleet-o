@@ -74,7 +74,7 @@ class IntegrationManageTool extends Tool
     public function handle(Request $request): Response
     {
         $action = $request->get('action');
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         if (! $teamId) {
             return $this->permissionDeniedError('No team context. Ensure MCP authentication is configured.');

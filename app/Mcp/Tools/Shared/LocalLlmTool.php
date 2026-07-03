@@ -67,7 +67,7 @@ class LocalLlmTool extends Tool
             ]));
         }
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $credentials = TeamProviderCredential::where('team_id', $teamId)
             ->whereIn('provider', ['ollama', 'openai_compatible'])
             ->get()
@@ -101,7 +101,7 @@ class LocalLlmTool extends Tool
 
         app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         TeamProviderCredential::updateOrCreate(
             ['team_id' => $teamId, 'provider' => 'ollama'],
@@ -124,7 +124,7 @@ class LocalLlmTool extends Tool
         app(LocalLlmUrlValidator::class)->validate($baseUrl);
 
         $models = array_filter(array_map('trim', explode(',', $request->get('models', ''))));
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
 
         TeamProviderCredential::updateOrCreate(
             ['team_id' => $teamId, 'provider' => 'openai_compatible'],
@@ -145,7 +145,7 @@ class LocalLlmTool extends Tool
             return $this->invalidArgumentError("provider must be 'ollama' or 'openai_compatible'");
         }
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $credential = TeamProviderCredential::where('team_id', $teamId)
             ->where('provider', $provider)
             ->where('is_active', true)
@@ -224,7 +224,7 @@ class LocalLlmTool extends Tool
             return $this->invalidArgumentError("provider must be 'ollama' or 'openai_compatible'");
         }
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $deleted = TeamProviderCredential::where('team_id', $teamId)
             ->where('provider', $provider)
             ->delete();

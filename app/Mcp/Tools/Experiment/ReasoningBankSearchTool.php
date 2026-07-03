@@ -34,7 +34,7 @@ class ReasoningBankSearchTool extends Tool
     {
         $request->validate(['goal_text' => 'required|string|max:2000']);
 
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $limit = min(max((int) $request->get('limit', 3), 1), 10);
 
         $service = app(ReasoningBankService::class);

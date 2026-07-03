@@ -25,7 +25,7 @@ class RagflowDatasetListTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $bases = KnowledgeBase::withoutGlobalScopes()
             ->where('team_id', $teamId)

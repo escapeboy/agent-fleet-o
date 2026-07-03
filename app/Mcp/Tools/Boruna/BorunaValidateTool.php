@@ -41,7 +41,7 @@ class BorunaValidateTool extends McpTool
             'boruna_tool_id' => 'nullable|uuid',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         $tool = $this->resolveTool($teamId, $validated['boruna_tool_id'] ?? null);
 
         if (! $tool) {

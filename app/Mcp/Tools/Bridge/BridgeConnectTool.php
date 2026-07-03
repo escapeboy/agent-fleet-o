@@ -56,7 +56,7 @@ DESC;
             'endpoint_secret' => 'nullable|string|max:255',
         ]);
 
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $endpointUrl = rtrim($validated['endpoint_url'], '/');
 
         $headers = [];

@@ -45,7 +45,7 @@ class CrewExecuteTool extends Tool
             'confirm_cost' => 'sometimes|boolean',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No current team.');
         }

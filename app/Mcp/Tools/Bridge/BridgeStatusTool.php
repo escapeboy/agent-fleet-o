@@ -28,7 +28,7 @@ class BridgeStatusTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         $connections = $teamId
             ? app(BridgeRouter::class)->allConnections($teamId)

@@ -69,7 +69,7 @@ class RunPodManageTool extends Tool
     public function handle(Request $request): Response
     {
         $action = $request->get('action');
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         return match ($action) {
             'credential_save' => $this->saveCredential($request, $teamId),

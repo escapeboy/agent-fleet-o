@@ -77,7 +77,7 @@ class KgAddFactTool extends Tool
             $action = app(AddKnowledgeFactAction::class);
 
             $edge = $action->execute(
-                teamId: app('mcp.team_id'),
+                teamId: (app()->bound('mcp.team_id') ? app('mcp.team_id') : null),
                 sourceName: $validated['source_entity'],
                 sourceType: $validated['source_type'],
                 relationType: $validated['relation_type'],

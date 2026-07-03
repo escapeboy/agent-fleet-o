@@ -35,7 +35,7 @@ class WorkflowExportYamlTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return Response::text(json_encode(['error' => 'no_team_resolved']));
         }

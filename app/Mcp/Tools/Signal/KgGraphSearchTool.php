@@ -67,7 +67,7 @@ class KgGraphSearchTool extends Tool
         ]);
 
         try {
-            $teamId = app('mcp.team_id');
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
             $mode = $validated['mode'] ?? 'local';
             $hops = (int) ($validated['hops'] ?? 1);
             $topK = (int) ($validated['top_k'] ?? 20);

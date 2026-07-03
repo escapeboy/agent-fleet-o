@@ -75,7 +75,7 @@ class WorkflowDuplicateTool extends Tool
                     ];
                 })->toArray(),
                 maxLoopIterations: $workflow->max_loop_iterations,
-                teamId: app('mcp.team_id') ?? auth()->user()?->current_team_id,
+                teamId: (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id,
             );
 
             return Response::text(json_encode([

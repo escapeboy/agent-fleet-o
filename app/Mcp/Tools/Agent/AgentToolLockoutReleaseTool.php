@@ -33,7 +33,7 @@ class AgentToolLockoutReleaseTool extends Tool
     {
         $validated = $request->validate(['lockout_id' => 'required|string']);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No current team.');
         }

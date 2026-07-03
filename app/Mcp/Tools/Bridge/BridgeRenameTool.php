@@ -34,7 +34,7 @@ class BridgeRenameTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $connectionId = $request->input('connection_id');
         $label = $request->input('label');
 

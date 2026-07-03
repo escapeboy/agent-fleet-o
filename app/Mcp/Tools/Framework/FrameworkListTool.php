@@ -39,7 +39,7 @@ class FrameworkListTool extends Tool
         $categoryFilter = $request->get('category');
         $selected = $categoryFilter !== null ? FrameworkCategory::tryFrom($categoryFilter) : null;
 
-        $teamId = app('mcp.team_id') ?? Auth::user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? Auth::user()?->current_team_id;
 
         $counts = [];
         if ($teamId !== null) {

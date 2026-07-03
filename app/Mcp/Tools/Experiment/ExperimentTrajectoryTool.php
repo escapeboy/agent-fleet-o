@@ -36,7 +36,7 @@ class ExperimentTrajectoryTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id');
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $experimentId = $request->get('experiment_id');
         $format = $request->get('format') ?? 'csv';
 

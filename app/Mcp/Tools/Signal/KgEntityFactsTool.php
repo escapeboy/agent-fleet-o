@@ -50,7 +50,7 @@ class KgEntityFactsTool extends Tool
         ]);
 
         try {
-            $teamId = app('mcp.team_id');
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
             $canonicalName = Str::lower(Str::ascii(trim($validated['entity_name'])));
 
             $entityQuery = Entity::withoutGlobalScopes()

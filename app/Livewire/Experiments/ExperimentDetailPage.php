@@ -11,7 +11,10 @@ use App\Domain\Experiment\Actions\RetryExperimentAction;
 use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
+use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\UncertaintySignal;
 use App\Domain\Experiment\Models\WorklogEntry;
 use App\Domain\Memory\Enums\MemoryTier;
@@ -69,6 +72,34 @@ class ExperimentDetailPage extends Component
         ])) {
             $this->activeTab = 'tasks';
         }
+
+        // Debug experiments deliver a pull request — they don't build artifacts,
+        // run a workflow, or emit reasoning/worklog. They use a tailored tab set
+        // that opens on Activity (see the blade), so default there.
+        if ($experiment->track === ExperimentTrack::Debug) {
+            $this->activeTab = 'activity';
+        }
+    }
+
+    /**
+     * PR URLs a debug experiment opened during building — the real deliverable,
+     * surfaced prominently since debug runs produce no artifacts.
+     *
+     * @return list<string>
+     */
+    public function resultPrUrls(): array
+    {
+        if ($this->experiment->track !== ExperimentTrack::Debug) {
+            return [];
+        }
+
+        $building = ExperimentStage::withoutGlobalScopes()
+            ->where('experiment_id', $this->experiment->id)
+            ->where('stage', StageType::Building)
+            ->latest()
+            ->first();
+
+        return array_values(array_filter((array) ($building?->output_snapshot['pr_urls'] ?? [])));
     }
 
     public function startExperiment(): void
@@ -347,6 +378,7 @@ class ExperimentDetailPage extends Component
             'worklogCount' => $worklogCount,
             'uncertaintySignals' => $uncertaintySignals,
             'uncertaintyCount' => $uncertaintyCount,
+            'resultPrUrls' => $this->resultPrUrls(),
         ])->layout('layouts.app', ['header' => $this->experiment->title]);
     }
 

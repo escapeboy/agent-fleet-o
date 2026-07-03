@@ -39,7 +39,7 @@ class AgentSessionWakeTool extends Tool
             'recent_event_limit' => 'nullable|integer|min:1|max:500',
         ]);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return $this->permissionDeniedError('No current team.');
         }

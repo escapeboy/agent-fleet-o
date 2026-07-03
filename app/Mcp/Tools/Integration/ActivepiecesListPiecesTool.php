@@ -44,7 +44,7 @@ class ActivepiecesListPiecesTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $integrationId = $request->get('integration_id');
         $includeDisabled = (bool) $request->get('include_disabled', false);
 

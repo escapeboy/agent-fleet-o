@@ -15,6 +15,8 @@ use App\Domain\GitRepository\Services\GitCloneUrlResolver;
 use App\Domain\GitRepository\Services\GitCredentialHelper;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -108,6 +110,13 @@ class ExecuteWarmDebugBuildAction
             );
             $prUrls = array_filter([$pr['pr_url']]);
         } catch (\Throwable $e) {
+            // Transient capacity (VPS concurrency cap): the slot is acquired before
+            // any agent work, so nothing was spent — surface it so the job can
+            // re-dispatch after a backoff rather than failing the run.
+            if ($e instanceof VpsLocalAgentException && $e->retryable) {
+                throw $e;
+            }
+
             // Never leak the tenant token into the failure reason/logs.
             $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $token));
 
@@ -134,6 +143,15 @@ class ExecuteWarmDebugBuildAction
         ]);
     }
 
+    /**
+     * Terminal failure for the case where the VPS concurrency cap never cleared
+     * within the retry budget (called by RunWarmDebugBuildJob).
+     */
+    public function failCapacityExhausted(Experiment $experiment): void
+    {
+        $this->fail($experiment, 'Warm build deferred: VPS capacity unavailable after repeated retries.');
+    }
+
     private function resolveRepository(Experiment $experiment): ?GitRepository
     {
         $repoId = $experiment->constraints['git_repository_id'] ?? null;
@@ -143,13 +161,22 @@ class ExecuteWarmDebugBuildAction
             $repoId = $agent?->config['git_repository_ids'][0] ?? null;
         }
 
-        if (! $repoId) {
-            return null;
+        if ($repoId) {
+            return GitRepository::withoutGlobalScopes()
+                ->where('team_id', $experiment->team_id)
+                ->find($repoId);
         }
 
-        return GitRepository::withoutGlobalScopes()
+        // No explicit repo — e.g. a retry of an experiment delegated before a repo
+        // was configured. Fall back to the team default repo, or its single repo.
+        // Mirrors DelegateBugReportToAgentAction::resolveGitRepositoryId so both
+        // the delegation and warm-build paths resolve the same target.
+        $repos = GitRepository::withoutGlobalScopes()
             ->where('team_id', $experiment->team_id)
-            ->find($repoId);
+            ->get();
+
+        return $repos->firstWhere('is_default', true)
+            ?? ($repos->count() === 1 ? $repos->first() : null);
     }
 
     private function runAgentInSandbox(Experiment $experiment, string $worktree): void
@@ -169,18 +196,34 @@ class ExecuteWarmDebugBuildAction
             $command[] = $model;
         }
 
-        $result = app(WarmBuildSandbox::class)->run($worktree, $command, [
-            'input' => $prompt,
-            'name' => 'warm-build-'.substr($experiment->id, 0, 8),
-            'timeout' => (int) config('local_agents.vps.build_timeout_seconds', 1800),
-            // The one whitelisted secret: the model credential. HOME on tmpfs
-            // because the container root fs is read-only.
-            'env' => array_filter([
-                'CLAUDE_CODE_OAUTH_TOKEN' => (string) config('local_agents.vps.oauth_token'),
-                'HOME' => '/tmp',
-                'IS_SANDBOX' => '1',
-            ]),
-        ]);
+        // Per-team concurrency cap, shared with the VPS gateway: at most N heavy
+        // agent runs per team at once (scoring on the VPS + a warm-build sandbox
+        // compete for the same pool). The slot is acquired BEFORE the container
+        // starts, so a cap hit means nothing was spent — surface it as retryable
+        // (VpsLocalAgentException) so the job re-dispatches after a backoff rather
+        // than flipping the run to BuildingFailed.
+        $cap = app(ClaudeCodeVpsConcurrencyCap::class);
+        $slot = $cap->acquire($experiment->team_id);
+        if ($slot === false) {
+            throw VpsLocalAgentException::concurrencyCapReached($cap->cap());
+        }
+
+        try {
+            $result = app(WarmBuildSandbox::class)->run($worktree, $command, [
+                'input' => $prompt,
+                'name' => 'warm-build-'.substr($experiment->id, 0, 8),
+                'timeout' => (int) config('local_agents.vps.build_timeout_seconds', 1800),
+                // The one whitelisted secret: the model credential. HOME on tmpfs
+                // because the container root fs is read-only.
+                'env' => array_filter([
+                    'CLAUDE_CODE_OAUTH_TOKEN' => (string) config('local_agents.vps.oauth_token'),
+                    'HOME' => '/tmp',
+                    'IS_SANDBOX' => '1',
+                ]),
+            ]);
+        } finally {
+            $cap->release($experiment->team_id, $slot);
+        }
 
         if ($result['timed_out']) {
             throw new \RuntimeException('Agent timed out in sandbox after the build window.');

@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Infrastructure\Horizon\GuardedRedisSupervisorRepository;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
 use Monolog\ResettableInterface;
@@ -16,6 +18,11 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        // Horizon's own RedisSupervisorRepository::get() calls array_values()
+        // on unguarded pipeline results (TypeError when Redis returns false
+        // for a hiccuping pipelined command). Override with a guarded version.
+        $this->app->singleton(SupervisorRepository::class, GuardedRedisSupervisorRepository::class);
 
         // Defensive: reset Monolog handler buffers after each job.
         // StreamHandler (current default) is a no-op. This guards against future

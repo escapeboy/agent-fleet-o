@@ -46,7 +46,7 @@ class MemoryUnifiedSearchTool extends Tool
     {
         $validated = $request->validate(['query' => 'required|string']);
 
-        $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
         if (! $teamId) {
             return Response::text(json_encode(['error' => 'No team context']));
         }

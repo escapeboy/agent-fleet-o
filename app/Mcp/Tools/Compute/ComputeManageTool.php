@@ -65,7 +65,7 @@ class ComputeManageTool extends Tool
     public function handle(Request $request): Response
     {
         $action = $request->get('action');
-        $teamId = app('mcp.team_id') ?? null;
+        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
 
         return match ($action) {
             'provider_list' => $this->listProviders($teamId),

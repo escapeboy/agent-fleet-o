@@ -63,7 +63,7 @@ class MarketplacePublishTool extends Tool
 
         try {
             $visibility = ListingVisibility::from($validated['visibility'] ?? 'public');
-            $teamId = app('mcp.team_id') ?? auth()->user()?->current_team_id;
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
             $userId = auth()->id();
 
             if ($validated['entity_type'] === 'bundle') {
