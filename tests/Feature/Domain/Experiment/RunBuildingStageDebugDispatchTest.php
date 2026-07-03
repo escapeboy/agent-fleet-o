@@ -55,12 +55,11 @@ class RunBuildingStageDebugDispatchTest extends TestCase
         (new RunBuildingStage($exp->id, $exp->team_id))->handle();
 
         Bus::assertDispatched(RunWarmDebugBuildJob::class);
-
         $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
         $this->assertSame('warm_build', $stage->output_snapshot['builder']);
     }
 
-    public function test_does_not_dispatch_when_flag_disabled_bridge_path(): void
+    public function test_does_not_dispatch_when_master_off(): void
     {
         config(['experiments.warm_build.enabled' => false]);
         Bus::fake();
@@ -69,7 +68,19 @@ class RunBuildingStageDebugDispatchTest extends TestCase
         (new RunBuildingStage($exp->id, $exp->team_id))->handle();
 
         Bus::assertNotDispatched(RunWarmDebugBuildJob::class);
+        $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
+        $this->assertSame('bridge', $stage->output_snapshot['builder']);
+    }
 
+    public function test_does_not_dispatch_when_team_not_allowed(): void
+    {
+        config(['experiments.warm_build.enabled' => true]); // master on, but team NOT trusted
+        Bus::fake();
+        $exp = $this->debugExperimentInBuilding(warmBuildAllowed: false);
+
+        (new RunBuildingStage($exp->id, $exp->team_id))->handle();
+
+        Bus::assertNotDispatched(RunWarmDebugBuildJob::class);
         $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
         $this->assertSame('bridge', $stage->output_snapshot['builder']);
     }

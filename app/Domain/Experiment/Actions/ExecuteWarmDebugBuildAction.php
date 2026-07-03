@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Services\WarmBuildSandbox;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageStatus;
@@ -11,11 +12,11 @@ use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitCloneUrlResolver;
+use App\Domain\GitRepository\Services\GitCredentialHelper;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
-use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
-use App\Infrastructure\AI\Gateways\LocalAgentGateway;
+use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -53,7 +54,10 @@ class ExecuteWarmDebugBuildAction
         }
 
         $ref = 'origin/'.($repo->default_branch ?: 'main');
-        $cloneUrl = $this->cloneUrls->authenticatedUrl($repo);
+        // Token supplied transiently via askpass (never in the clone URL / .git
+        // config), so the sandbox that mounts the worktree cannot read it.
+        $token = $this->cloneUrls->token($repo);
+        [$gitEnv, $gitCleanup] = app(GitCredentialHelper::class)->prepare($token);
         $worktree = null;
         $prUrls = [];
 
@@ -62,16 +66,18 @@ class ExecuteWarmDebugBuildAction
         // block so a throwing downstream transition listener can't be mistaken
         // for a build failure and re-transition an already-completed experiment.
         try {
-            $worktree = $this->warmRepo->checkout($repo, $ref, $experiment->id, $cloneUrl);
+            $worktree = $this->warmRepo->checkout($repo, $ref, $experiment->id, null, $token);
 
             $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
 
-            // Resolve by class (not constructor DI): the cloud edition binds
-            // LocalAgentGateway::class to DisabledLocalAgentGateway (implements
-            // AiGatewayInterface, not a subclass — DI-hinting the concrete class
-            // would TypeError). Disabled delegates vps_only providers to a real
-            // gateway, so calling complete() directly preserves workingDirectory.
-            app(LocalAgentGateway::class)->complete($this->buildRequest($experiment, $worktree));
+            // Run the agent INSIDE the hardened sandbox (rootless container), not
+            // in horizon. The container is the security boundary; the ONLY secret
+            // it receives is the model OAuth token it needs to reach Anthropic
+            // (egress-allowlisted). This is safe for trusted teams (warm_build_allowed);
+            // for fully-untrusted tenants the token must move behind an
+            // auth-injecting egress proxy first (documented gate — do not enable
+            // warm_build_allowed for untrusted tenants until then).
+            $this->runAgentInSandbox($experiment, $worktree);
 
             // The agent edits files with the CLI's own tools; capture whatever it
             // changed as a single commit (a no-op when it already committed).
@@ -91,7 +97,9 @@ class ExecuteWarmDebugBuildAction
             }
 
             $branch = 'fleetq/fix-'.substr($experiment->id, 0, 8);
-            $this->git($worktree, ['push', 'origin', 'HEAD:refs/heads/'.$branch, '--force']);
+            // Push authenticates via the transient askpass env; the remote URL
+            // stays credential-free.
+            $this->git($worktree, ['push', 'origin', 'HEAD:refs/heads/'.$branch, '--force'], $gitEnv);
 
             $pr = $this->gitRouter->resolve($repo)->createPullRequest(
                 title: '[FleetQ] Fix: '.$experiment->title,
@@ -109,11 +117,12 @@ class ExecuteWarmDebugBuildAction
                 throw $e;
             }
 
-            // Never leak an authenticated clone URL into the failure reason/logs.
-            $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $cloneUrl));
+            // Never leak the tenant token into the failure reason/logs.
+            $this->fail($experiment, 'Warm build failed: '.$this->scrub($e->getMessage(), $token));
 
             return;
         } finally {
+            $gitCleanup();
             if ($worktree !== null) {
                 $this->warmRepo->release($repo, $worktree);
                 $this->warmRepo->prune($repo);
@@ -170,25 +179,61 @@ class ExecuteWarmDebugBuildAction
             ?? ($repos->count() === 1 ? $repos->first() : null);
     }
 
-    private function buildRequest(Experiment $experiment, string $worktree): AiRequestDTO
+    private function runAgentInSandbox(Experiment $experiment, string $worktree): void
     {
         $system = 'You are a senior software engineer fixing a reported bug in the checked-out '
             .'repository (your current working directory). Make the smallest correct change that '
             .'resolves the issue. If the project has tests, run them and ensure they pass. Do NOT '
             .'push or open a pull request — that is handled for you. When done, stop.';
+        $prompt = $system."\n\n".trim($experiment->title."\n\n".($experiment->thesis ?? ''));
 
-        $user = trim($experiment->title."\n\n".($experiment->thesis ?? ''));
+        $flags = (array) config('local_agents.claude-code-vps.execute_flags',
+            ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions']);
+        $command = array_merge(['claude'], $flags);
+        $model = (string) config('local_agents.vps.build_model', '');
+        if ($model !== '') {
+            $command[] = '--model';
+            $command[] = $model;
+        }
 
-        return new AiRequestDTO(
-            provider: 'claude-code-vps',
-            model: (string) config('local_agents.vps.build_model', ''),
-            systemPrompt: $system,
-            userPrompt: $user,
-            teamId: $experiment->team_id,
-            experimentId: $experiment->id,
-            purpose: 'experiment.debug_build',
-            workingDirectory: $worktree,
-        );
+        // Per-team concurrency cap, shared with the VPS gateway: at most N heavy
+        // agent runs per team at once (scoring on the VPS + a warm-build sandbox
+        // compete for the same pool). The slot is acquired BEFORE the container
+        // starts, so a cap hit means nothing was spent — surface it as retryable
+        // (VpsLocalAgentException) so the job re-dispatches after a backoff rather
+        // than flipping the run to BuildingFailed.
+        $cap = app(ClaudeCodeVpsConcurrencyCap::class);
+        $slot = $cap->acquire($experiment->team_id);
+        if ($slot === false) {
+            throw VpsLocalAgentException::concurrencyCapReached($cap->cap());
+        }
+
+        try {
+            $result = app(WarmBuildSandbox::class)->run($worktree, $command, [
+                'input' => $prompt,
+                'name' => 'warm-build-'.substr($experiment->id, 0, 8),
+                'timeout' => (int) config('local_agents.vps.build_timeout_seconds', 1800),
+                // The one whitelisted secret: the model credential. HOME on tmpfs
+                // because the container root fs is read-only.
+                'env' => array_filter([
+                    'CLAUDE_CODE_OAUTH_TOKEN' => (string) config('local_agents.vps.oauth_token'),
+                    'HOME' => '/tmp',
+                    'IS_SANDBOX' => '1',
+                ]),
+            ]);
+        } finally {
+            $cap->release($experiment->team_id, $slot);
+        }
+
+        if ($result['timed_out']) {
+            throw new \RuntimeException('Agent timed out in sandbox after the build window.');
+        }
+        // A non-zero exit is not necessarily fatal (the agent may finish with a
+        // dirty tree); the caller decides based on the resulting git diff.
+        Log::info('ExecuteWarmDebugBuildAction: sandbox agent finished', [
+            'experiment_id' => $experiment->id,
+            'exit_code' => $result['exit_code'],
+        ]);
     }
 
     private function prBody(Experiment $experiment): string
@@ -224,10 +269,12 @@ class ExecuteWarmDebugBuildAction
 
     /**
      * @param  list<string>  $args
+     * @param  array<string,string>  $env  transient credential env (askpass) for authed ops
      */
-    private function git(string $worktree, array $args): string
+    private function git(string $worktree, array $args, array $env = []): string
     {
-        $result = Process::timeout(120)->run(array_merge(['git', '-C', $worktree], $args));
+        $pending = $env === [] ? Process::timeout(120) : Process::timeout(120)->env($env);
+        $result = $pending->run(array_merge(['git', '-C', $worktree], $args));
         if (! $result->successful()) {
             throw new \RuntimeException('git '.($args[0] ?? '').' failed: '.trim($result->errorOutput()));
         }
@@ -235,10 +282,10 @@ class ExecuteWarmDebugBuildAction
         return trim($result->output());
     }
 
-    private function scrub(string $message, ?string $cloneUrl): string
+    private function scrub(string $message, ?string $token): string
     {
-        if ($cloneUrl) {
-            $message = str_replace($cloneUrl, '[repo-url]', $message);
+        if ($token) {
+            $message = str_replace($token, '[redacted-token]', $message);
         }
 
         // Strip any embedded userinfo token from stray git error output.
