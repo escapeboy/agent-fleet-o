@@ -155,6 +155,23 @@ class WarmRepoManagerTest extends TestCase
         $this->assertFileDoesNotExist($b.'/only-a.txt');
     }
 
+    public function test_same_timestamp_prefix_runs_get_isolated_worktrees(): void
+    {
+        // UUIDv7 ids minted in the same batch share their leading 8 hex chars. The
+        // worktree slot MUST key on the full id; otherwise concurrent same-batch
+        // runs collide on one worktree and clobber each other mid-build — the
+        // observed "cannot change to worktree: No such file or directory" failure.
+        $repo = $this->repo();
+        $a = $this->mgr->checkout($repo, 'origin/main', '019f2736-531b-71d1-b97e-a6784b26e3a4');
+        $b = $this->mgr->checkout($repo, 'origin/main', '019f2736-5435-70ce-844c-8dca97af1a8b');
+
+        $this->assertNotSame($a, $b, 'same-prefix runs must not share a worktree slot');
+        File::put($a.'/only-a.txt', '1');
+        $this->assertDirectoryExists($a, 'run A worktree was clobbered by run B (collision)');
+        $this->assertFileExists($a.'/only-a.txt');
+        $this->assertFileDoesNotExist($b.'/only-a.txt');
+    }
+
     public function test_checkout_at_specific_commit_sha(): void
     {
         $repo = $this->repo();
@@ -178,18 +195,21 @@ class WarmRepoManagerTest extends TestCase
         $this->assertDirectoryExists($this->basePath($repo).'/.git');
     }
 
-    public function test_prune_keeps_only_recent_worktrees(): void
+    public function test_prune_removes_stale_worktrees_by_age_never_in_flight(): void
     {
         $repo = $this->repo();
-        foreach (['r1', 'r2', 'r3', 'r4'] as $id) {
-            $this->mgr->checkout($repo, 'origin/main', 'run-'.$id);
-        }
+        $stale = $this->mgr->checkout($repo, 'origin/main', 'run-stale');
+        $fresh = $this->mgr->checkout($repo, 'origin/main', 'run-fresh');
 
-        $removed = $this->mgr->prune($repo, keep: 2);
+        // Age the stale worktree well past the TTL; the fresh one stands in for an
+        // actively-building run that a sibling's prune must never remove.
+        touch($stale, time() - 10000);
 
-        $this->assertSame(2, $removed);
-        $remaining = array_filter(glob($this->tmp.'/warm/'.$repo->team_id.'/'.$repo->id.'.worktrees/*') ?: [], 'is_dir');
-        $this->assertCount(2, $remaining);
+        $removed = $this->mgr->prune($repo, ttlSeconds: 3600);
+
+        $this->assertSame(1, $removed);
+        $this->assertDirectoryDoesNotExist($stale);
+        $this->assertDirectoryExists($fresh, 'a fresh (in-flight) worktree must never be pruned');
     }
 
     public function test_enabled_reflects_config(): void

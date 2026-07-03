@@ -191,6 +191,9 @@ return [
     'warm_build' => [
         'enabled' => (bool) env('EXPERIMENTS_WARM_BUILD', false),
         'base_dir' => env('EXPERIMENTS_WARM_BUILD_DIR', storage_path('app/warm-repos')),
+        // Age-based worktree GC threshold. Must exceed the max build time so an
+        // in-flight worktree is never pruned by a sibling run. Default 2h.
+        'worktree_ttl_seconds' => (int) env('EXPERIMENTS_WARM_BUILD_WORKTREE_TTL', 7200),
     ],
 
     /*
