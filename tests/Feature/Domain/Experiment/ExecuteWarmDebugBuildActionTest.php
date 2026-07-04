@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Domain\Experiment;
 
-use App\Domain\Agent\Services\WarmBuildSandbox;
 use App\Domain\Experiment\Actions\ExecuteWarmDebugBuildAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
@@ -15,8 +14,10 @@ use App\Domain\GitRepository\Contracts\GitClientInterface;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
-use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
+use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -129,18 +130,21 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         return $exp;
     }
 
-    /** Fake the sandbox agent run: it edits a file in the mounted workspace. */
+    /** Fake the VPS agent: on complete() it edits a file in the worktree. */
     private function fakeAgentWriting(?string $file, string $content = 'patched'): void
     {
-        $sandbox = Mockery::mock(WarmBuildSandbox::class);
-        $sandbox->shouldReceive('run')->andReturnUsing(function (string $ws, array $cmd, array $opts = []) use ($file, $content) {
+        $gw = Mockery::mock(LocalAgentGateway::class);
+        $gw->shouldReceive('complete')->andReturnUsing(function ($request) use ($file, $content) {
             if ($file !== null) {
-                File::put($ws.'/'.$file, $content);
+                File::put($request->workingDirectory.'/'.$file, $content);
             }
 
-            return ['exit_code' => 0, 'stdout' => 'done', 'stderr' => '', 'timed_out' => false];
+            return new AiResponseDTO(
+                content: 'done', parsedOutput: null, usage: new AiUsageDTO(0, 0, 0),
+                provider: 'claude-code-vps', model: '', latencyMs: 1,
+            );
         });
-        $this->app->instance(WarmBuildSandbox::class, $sandbox);
+        $this->app->instance(LocalAgentGateway::class, $gw);
     }
 
     /** Fake the git client so createPullRequest returns a PR and records the draft flag. */
@@ -253,14 +257,13 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         $repo = $this->repo();
         $exp = $this->experiment(['git_repository_id' => $repo->id]);
 
-        // The per-team slot is acquired before the sandbox container starts: a
-        // cap failure means nothing was spent. The action must surface it
-        // (retryable) so the job can re-dispatch — NOT flip the run to
-        // BuildingFailed.
-        $cap = Mockery::mock(ClaudeCodeVpsConcurrencyCap::class);
-        $cap->shouldReceive('acquire')->andReturn(false);
-        $cap->shouldReceive('cap')->andReturn(2);
-        $this->app->instance(ClaudeCodeVpsConcurrencyCap::class, $cap);
+        // The VPS slot is acquired before any agent work: a cap failure means
+        // nothing was spent. The action must surface it (retryable) so the job
+        // can re-dispatch — NOT flip the run to BuildingFailed.
+        $gw = Mockery::mock(LocalAgentGateway::class);
+        $gw->shouldReceive('complete')
+            ->andThrow(VpsLocalAgentException::concurrencyCapReached(2));
+        $this->app->instance(LocalAgentGateway::class, $gw);
 
         try {
             app(ExecuteWarmDebugBuildAction::class)->execute($exp);

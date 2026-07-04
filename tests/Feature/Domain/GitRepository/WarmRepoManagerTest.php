@@ -192,24 +192,6 @@ class WarmRepoManagerTest extends TestCase
         $this->assertCount(2, $remaining);
     }
 
-    public function test_token_is_not_persisted_in_git_config(): void
-    {
-        // Cloning WITH a token must use the clean url + transient askpass, so the
-        // token never lands in .git/config (which the sandbox worktree exposes).
-        $repo = $this->repo();
-        $secret = 'ghp_MUST_NOT_PERSIST_'.Str::random(6);
-
-        $wt = $this->mgr->checkout($repo, 'origin/main', 'run-tok', cloneUrl: null, token: $secret);
-
-        $baseConfig = File::get($this->basePath($repo).'/.git/config');
-        $this->assertStringNotContainsString($secret, $baseConfig, 'token leaked into base .git/config');
-        $this->assertStringContainsString($this->bare, $baseConfig, 'remote should be the clean url');
-
-        // And it must not be reachable from the worktree the sandbox mounts.
-        $wtConfig = @file_get_contents($wt.'/.git') ?: '';
-        $this->assertStringNotContainsString($secret, $wtConfig);
-    }
-
     public function test_enabled_reflects_config(): void
     {
         config(['experiments.warm_build.enabled' => true]);

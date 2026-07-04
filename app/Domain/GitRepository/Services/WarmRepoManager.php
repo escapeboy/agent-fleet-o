@@ -45,19 +45,15 @@ class WarmRepoManager
     /**
      * Provision an isolated worktree for a run, reusing a warm base clone.
      *
-     * @param  string|null  $cloneUrl  Legacy authenticated clone URL (token in URL).
-     *                                 Prefer $token: it keeps the token OUT of the
-     *                                 remote URL / .git/config, so the sandbox that
-     *                                 later mounts the worktree cannot read it.
-     * @param  string|null  $token  Tenant git token, supplied transiently to the
-     *                              clone/fetch subprocess via GIT_ASKPASS.
+     * @param  string|null  $cloneUrl  Authenticated clone URL for private repos;
+     *                                 defaults to the repository's stored url.
      * @return string Absolute path to the worktree, hard-reset + cleaned to $ref.
      */
-    public function checkout(GitRepository $repo, string $ref, string $runId, ?string $cloneUrl = null, ?string $token = null): string
+    public function checkout(GitRepository $repo, string $ref, string $runId, ?string $cloneUrl = null): string
     {
         $this->trustWarmRepos();
 
-        $base = $this->ensureBase($repo, $cloneUrl, $token);
+        $base = $this->ensureBase($repo, $cloneUrl);
 
         return $this->makeWorktree($repo, $base, $ref, $runId);
     }
@@ -78,34 +74,26 @@ class WarmRepoManager
     /**
      * Ensure a persistent base clone exists: clone ONCE, otherwise fetch.
      */
-    private function ensureBase(GitRepository $repo, ?string $cloneUrl, ?string $token = null): string
+    private function ensureBase(GitRepository $repo, ?string $cloneUrl): string
     {
         $base = $this->basePath($repo);
         if (! is_dir(dirname($base))) {
             mkdir(dirname($base), 0700, true);
         }
 
-        // When a token is supplied, clone from the CLEAN url and authenticate via
-        // a transient askpass — the persisted remote URL stays credential-free.
-        [$env, $cleanup] = app(GitCredentialHelper::class)->prepare($token);
+        $this->withLock($base, function () use ($base, $repo, $cloneUrl): void {
+            if (is_dir($base.'/.git')) {
+                $this->git(['-C', $base, 'fetch', '--prune', 'origin']);
 
-        try {
-            $this->withLock($base, function () use ($base, $repo, $cloneUrl, $token, $env): void {
-                if (is_dir($base.'/.git')) {
-                    $this->git(['-C', $base, 'fetch', '--prune', 'origin'], $env);
+                return;
+            }
 
-                    return;
-                }
-
-                $url = $token !== null ? (string) $repo->url : ($cloneUrl ?: (string) $repo->url);
-                if ($url === '') {
-                    throw new RuntimeException("GitRepository {$repo->id} has no clone url.");
-                }
-                $this->git(['clone', $url, $base], $env);
-            });
-        } finally {
-            $cleanup();
-        }
+            $url = $cloneUrl ?: (string) $repo->url;
+            if ($url === '') {
+                throw new RuntimeException("GitRepository {$repo->id} has no clone url.");
+            }
+            $this->git(['clone', $url, $base]);
+        });
 
         return $base;
     }
@@ -182,14 +170,11 @@ class WarmRepoManager
 
     /**
      * @param  list<string>  $args
-     * @param  array<string,string>  $env  transient credential env (askpass) for authed ops
      */
-    private function git(array $args, array $env = []): void
+    private function git(array $args): void
     {
-        $pending = $env === [] ? Process::timeout(600) : Process::timeout(600)->env($env);
-        $result = $pending->run(array_merge(['git'], $args));
+        $result = Process::run(array_merge(['git'], $args));
         if (! $result->successful()) {
-            // Never echo $env — it carries the token; args are credential-free.
             throw new RuntimeException('git '.implode(' ', $args).' failed: '.trim($result->errorOutput()));
         }
     }

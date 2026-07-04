@@ -43,11 +43,7 @@ class GitCloneUrlResolver
         return 'https://'.$user.':'.rawurlencode($token).'@'.$host.$port.$path;
     }
 
-    /**
-     * The tenant's git token, for supply via GitCredentialHelper (transient
-     * askpass) rather than embedding in the clone URL.
-     */
-    public function token(GitRepository $repo): ?string
+    private function token(GitRepository $repo): ?string
     {
         // data_get (not ->credential->secret_data) so larastan doesn't trip on
         // the generic Model relation type; the TeamEncryptedArray cast still runs.
