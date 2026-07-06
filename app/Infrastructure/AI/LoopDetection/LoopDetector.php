@@ -116,8 +116,7 @@ class LoopDetector
             $allSimilar = true;
 
             for ($i = 0; $i < $needPrior; $i++) {
-                $priorBigrams = $recent[$i]['bg'] ?? [];
-                $score = SimilarityScorer::jaccard($bigrams, is_array($priorBigrams) ? $priorBigrams : []);
+                $score = SimilarityScorer::jaccard($bigrams, $recent[$i]['bg'] ?? []);
                 $minScore = min($minScore, $score);
 
                 if ($score < $simThreshold) {
@@ -160,10 +159,6 @@ class LoopDetector
     {
         $snapshot = $run->prompt_snapshot ?? [];
 
-        if (! is_array($snapshot)) {
-            return '';
-        }
-
         $system = (string) ($snapshot['system'] ?? '');
         $user = (string) ($snapshot['user'] ?? '');
 
@@ -174,10 +169,6 @@ class LoopDetector
     {
         $raw = $run->raw_output ?? [];
 
-        if (is_array($raw)) {
-            return isset($raw['text']) ? (string) $raw['text'] : (string) json_encode($raw);
-        }
-
-        return (string) $raw;
+        return isset($raw['text']) ? (string) $raw['text'] : (string) json_encode($raw);
     }
 }

@@ -13,6 +13,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
+ * @property string $id
+ * @property string|null $team_id
+ * @property string|null $agent_id
+ * @property string|null $experiment_id
+ * @property array<string, mixed>|null $prompt_snapshot
+ * @property array<string, mixed>|null $raw_output
  * @property array<string, mixed>|null $error_metadata
  */
 class AiRun extends Model
