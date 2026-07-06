@@ -5,7 +5,9 @@ namespace App\Domain\Agent\Models;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Traits\BelongsToTeam;
+use Database\Factories\Domain\Agent\AiRunFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -63,6 +65,11 @@ class AiRun extends Model
             'has_reasoning' => 'boolean',
             'error_metadata' => 'array',
         ];
+    }
+
+    protected static function newFactory(): Factory
+    {
+        return AiRunFactory::new();
     }
 
     public function agent(): BelongsTo

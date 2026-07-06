@@ -6,6 +6,8 @@ use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Agent\Models\AiRun;
+use App\Domain\Agent\Observers\AiRunObserver;
 use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
 use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
 use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
@@ -139,6 +141,10 @@ use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\Exceptions\LocalEmbeddingNotConfiguredException;
+use App\Infrastructure\AI\LoopDetection\Contracts\TurnHistoryStore;
+use App\Infrastructure\AI\LoopDetection\Events\AgentLoopDetected;
+use App\Infrastructure\AI\LoopDetection\Listeners\HandleAgentLoop;
+use App\Infrastructure\AI\LoopDetection\RedisTurnHistoryStore;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\RateLimiting;
@@ -380,6 +386,9 @@ class AppServiceProvider extends ServiceProvider
         // ChatbotMessage::feedback; downstream layers rebind it to record the
         // vote into their own pipeline.
         $this->app->bind(ChatbotFeedbackRecorderInterface::class, DefaultChatbotFeedbackRecorder::class);
+
+        // Loop detection: back the turn-history ring buffer with Redis (locks DB).
+        $this->app->singleton(TurnHistoryStore::class, RedisTurnHistoryStore::class);
     }
 
     /**
@@ -455,6 +464,9 @@ class AppServiceProvider extends ServiceProvider
         // whenever a page is saved or deleted so cached widget output becomes
         // unreachable (old cache keys are abandoned, TTL sweeps them up).
         WebsitePage::observe(WebsitePageObserver::class);
+
+        // Loop detection: inspect every recorded LLM turn for runaway agent loops.
+        AiRun::observe(AiRunObserver::class);
 
         // Community edition: all authenticated users have full access
         Gate::define('manage-team', fn ($user) => true);
@@ -616,6 +628,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ExperimentTransitioned::class, RecordTransitionMetrics::class);
         Event::listen(ExperimentTransitioned::class, NotifyOnCriticalTransition::class);
         Event::listen(ExperimentTransitioned::class, PauseOnBudgetExceeded::class);
+
+        // Runaway agent loop → pause/kill/alert the experiment.
+        Event::listen(AgentLoopDetected::class, HandleAgentLoop::class);
         Event::listen(ExperimentTransitioned::class, LogExperimentTransition::class);
 
         // Workflow artifact collection (must fire BEFORE SyncProjectStatusOnRunComplete
