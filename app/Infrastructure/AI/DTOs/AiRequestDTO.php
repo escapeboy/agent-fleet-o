@@ -78,6 +78,16 @@ final readonly class AiRequestDTO
          * Null = no per-request ceiling (standing cap still applies).
          */
         public ?int $maxCostCredits = null,
+        /**
+         * Absolute writable subtrees for a sandboxed local-agent run (Shepherd
+         * borrow #2 — warm-build write-jail). When set on a claude-code-vps repo
+         * build, LocalAgentGateway compiles these into a Landlock ruleset so the
+         * agent can only write under them. Null = no jail (default; every non
+         * warm-build caller is unaffected).
+         *
+         * @var list<string>|null
+         */
+        public ?array $writableRoots = null,
     ) {}
 
     /**
@@ -122,6 +132,7 @@ final readonly class AiRequestDTO
             parentTraceId: $this->parentTraceId,
             parentSpanId: $this->parentSpanId,
             maxCostCredits: $this->maxCostCredits,
+            writableRoots: $this->writableRoots,
         );
     }
 
@@ -167,6 +178,7 @@ final readonly class AiRequestDTO
             parentTraceId: $this->parentTraceId,
             parentSpanId: $this->parentSpanId,
             maxCostCredits: $this->maxCostCredits,
+            writableRoots: $this->writableRoots,
         );
     }
 

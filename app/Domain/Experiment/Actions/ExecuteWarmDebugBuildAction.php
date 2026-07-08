@@ -3,16 +3,23 @@
 namespace App\Domain\Experiment\Actions;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Experiment\DTOs\WarmBuildCandidate;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
+use App\Domain\Experiment\Services\WarmBuildCandidatePolicy;
+use App\Domain\Experiment\Services\WarmBuildCandidateScorer;
+use App\Domain\GitRepository\DTOs\WarmBuildChangeset;
+use App\Domain\GitRepository\DTOs\WritableRootsGrant;
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\GitRepository\Services\ChangesetPolicyValidator;
 use App\Domain\GitRepository\Services\GitCloneUrlResolver;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\GitRepository\Services\WarmRepoManager;
+use App\Domain\GitRepository\Services\WritableRootsPolicy;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
@@ -24,6 +31,14 @@ use Illuminate\Support\Facades\Process;
  * agent, this checks the target repo out into a warm worktree on the VPS, runs
  * claude-code-vps agentically inside it to apply the fix, then commits, pushes a
  * branch, opens a DRAFT pull request, and completes the building stage.
+ *
+ * Best-of-N (Shepherd borrow #1): when experiments.warm_build.candidates > 1 the
+ * agent is run N times from the same base ref, each in its own worktree; the
+ * candidate changesets are scored deterministically (WarmBuildCandidateScorer)
+ * and only the winner is pushed into the single draft PR. N=1 (default) is
+ * behaviourally identical to the legacy single-run path. Every candidate's
+ * changeset is validated against the writable-roots grant (#3); a scope-violating
+ * change loses to a compliant one and, if it still wins, is flagged in the PR.
  *
  * Dispatched from RunBuildingStage only when experiments.warm_build.enabled is on
  * AND a repository can be resolved; otherwise the legacy bridge-wait path stands.
@@ -37,6 +52,10 @@ class ExecuteWarmDebugBuildAction
         private readonly GitOperationRouter $gitRouter,
         private readonly CompleteBuildingAction $completeBuilding,
         private readonly TransitionExperimentAction $transition,
+        private readonly WritableRootsPolicy $writableRoots,
+        private readonly ChangesetPolicyValidator $changesetValidator,
+        private readonly WarmBuildCandidatePolicy $candidatePolicy,
+        private readonly WarmBuildCandidateScorer $scorer,
     ) {}
 
     public function execute(Experiment $experiment): void
@@ -54,57 +73,61 @@ class ExecuteWarmDebugBuildAction
 
         $ref = 'origin/'.($repo->default_branch ?: 'main');
         $cloneUrl = $this->cloneUrls->authenticatedUrl($repo);
-        $worktree = null;
+        $grant = $this->writableRoots->resolve($repo, $experiment);
+        $n = $this->candidatePolicy->count($repo);
+
+        /** @var list<WarmBuildCandidate> $candidates */
+        $candidates = [];
+        /** @var list<string> $worktrees */
+        $worktrees = [];
         $prUrls = [];
+        $winner = null;
 
         // Build phase: any failure here flips the experiment to BuildingFailed.
         // Completion (the AwaitingApproval transition) is deliberately AFTER this
         // block so a throwing downstream transition listener can't be mistaken
         // for a build failure and re-transition an already-completed experiment.
         try {
-            $worktree = $this->warmRepo->checkout($repo, $ref, $experiment->id, $cloneUrl);
-
-            $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
-
-            // Resolve by class (not constructor DI): the cloud edition binds
-            // LocalAgentGateway::class to DisabledLocalAgentGateway (implements
-            // AiGatewayInterface, not a subclass — DI-hinting the concrete class
-            // would TypeError). Disabled delegates vps_only providers to a real
-            // gateway, so calling complete() directly preserves workingDirectory.
-            app(LocalAgentGateway::class)->complete($this->buildRequest($experiment, $worktree));
-
-            // The agent edits files with the CLI's own tools; capture whatever it
-            // changed as a single commit (a no-op when it already committed).
-            if (trim($this->git($worktree, ['status', '--porcelain'])) !== '') {
-                $this->git($worktree, ['add', '-A']);
-                $this->git($worktree, [
-                    '-c', 'user.email=agent@fleetq.ai',
-                    '-c', 'user.name=FleetQ Agent',
-                    'commit', '-m', 'Fix: '.$experiment->title,
-                ]);
+            for ($i = 1; $i <= $n; $i++) {
+                try {
+                    $candidates[] = $this->runCandidate($experiment, $repo, $ref, $cloneUrl, $grant, $i, $worktrees);
+                } catch (VpsLocalAgentException $e) {
+                    // Transient capacity (VPS concurrency cap): the slot is acquired
+                    // before any agent work, so nothing was spent. If we already have
+                    // a usable candidate, stop and select among what we have; if none
+                    // yet, surface it so the job re-dispatches after a backoff.
+                    if ($e->retryable) {
+                        if ($this->hasViable($candidates)) {
+                            break;
+                        }
+                        throw $e;
+                    }
+                    $candidates[] = $this->failedCandidate($i, $experiment, $e, $cloneUrl);
+                } catch (\Throwable $e) {
+                    // One bad candidate must not sink the whole build — record it and
+                    // let the remaining candidates (or none) decide the outcome.
+                    $candidates[] = $this->failedCandidate($i, $experiment, $e, $cloneUrl);
+                }
             }
 
-            if ($this->git($worktree, ['rev-parse', 'HEAD']) === $baseSha) {
-                $this->fail($experiment, 'Agent produced no changes — nothing to open a PR for.');
+            $winner = $this->scorer->pick($candidates);
+            if ($winner === null || $winner->worktree === null) {
+                $this->fail($experiment, $this->noUsableChangeReason($candidates));
 
                 return;
             }
 
-            $branch = 'fleetq/fix-'.substr($experiment->id, 0, 8);
-            $this->git($worktree, ['push', 'origin', 'HEAD:refs/heads/'.$branch, '--force']);
+            $this->git($winner->worktree, ['push', 'origin', 'HEAD:refs/heads/'.$winner->branch(), '--force']);
 
             $pr = $this->gitRouter->resolve($repo)->createPullRequest(
                 title: '[FleetQ] Fix: '.$experiment->title,
-                body: $this->prBody($experiment),
-                head: $branch,
+                body: $this->prBody($experiment, $winner, count($candidates)),
+                head: $winner->branch(),
                 base: (string) ($repo->default_branch ?: 'main'),
                 draft: true,
             );
             $prUrls = array_filter([$pr['pr_url']]);
         } catch (\Throwable $e) {
-            // Transient capacity (VPS concurrency cap): the slot is acquired before
-            // any agent work, so nothing was spent — surface it so the job can
-            // re-dispatch after a backoff rather than failing the run.
             if ($e instanceof VpsLocalAgentException && $e->retryable) {
                 throw $e;
             }
@@ -114,16 +137,16 @@ class ExecuteWarmDebugBuildAction
 
             return;
         } finally {
-            if ($worktree !== null) {
-                $this->warmRepo->release($repo, $worktree);
-                $this->warmRepo->prune($repo);
+            foreach ($worktrees as $wt) {
+                $this->warmRepo->release($repo, $wt);
             }
+            $this->warmRepo->prune($repo);
         }
 
         $this->completeBuilding->execute(
             experiment: $experiment,
             prUrls: $prUrls,
-            summary: 'Warm-build agent opened a draft PR on '.$repo->name.'.',
+            summary: $this->summary($repo, count($candidates)),
             completedBy: 'agent_warm_build',
         );
 
@@ -131,7 +154,94 @@ class ExecuteWarmDebugBuildAction
             'experiment_id' => $experiment->id,
             'repo_id' => $repo->id,
             'pr_urls' => $prUrls,
+            'candidates' => count($candidates),
+            'winner_index' => $winner->index,
+            'winner_within_roots' => $winner->withinRoots,
         ]);
+    }
+
+    /**
+     * Run a single best-of-N candidate: check out its own worktree, run the agent
+     * in it, capture + score the changeset. The worktree is tracked in $worktrees
+     * (by reference) so the caller releases every candidate's tree in finally{}.
+     *
+     * @param  list<string>  $worktrees
+     */
+    private function runCandidate(
+        Experiment $experiment,
+        GitRepository $repo,
+        string $ref,
+        ?string $cloneUrl,
+        WritableRootsGrant $grant,
+        int $index,
+        array &$worktrees,
+    ): WarmBuildCandidate {
+        // Distinct per-candidate run id → distinct worktree slot + branch, so
+        // concurrent candidates never collide on the shared .git/worktrees/ state.
+        $runId = $experiment->id.'-c'.$index;
+        $worktree = $this->warmRepo->checkout($repo, $ref, $runId, $cloneUrl);
+        $worktrees[] = $worktree;
+
+        $baseSha = $this->git($worktree, ['rev-parse', 'HEAD']);
+
+        // Resolve by class (not constructor DI): the cloud edition binds
+        // LocalAgentGateway::class to DisabledLocalAgentGateway (implements
+        // AiGatewayInterface, not a subclass — DI-hinting the concrete class
+        // would TypeError). Disabled delegates vps_only providers to a real
+        // gateway, so calling complete() directly preserves workingDirectory.
+        app(LocalAgentGateway::class)->complete($this->buildRequest($experiment, $worktree, $grant));
+
+        // The agent edits files with the CLI's own tools; capture whatever it
+        // changed as a single commit (a no-op when it already committed).
+        if (trim($this->git($worktree, ['status', '--porcelain'])) !== '') {
+            $this->git($worktree, ['add', '-A']);
+            $this->git($worktree, [
+                '-c', 'user.email=agent@fleetq.ai',
+                '-c', 'user.name=FleetQ Agent',
+                'commit', '-m', 'Fix: '.$experiment->title,
+            ]);
+        }
+
+        $changeset = WarmBuildChangeset::capture($worktree, $baseSha);
+
+        return new WarmBuildCandidate(
+            index: $index,
+            runId: $runId,
+            worktree: $worktree,
+            changeset: $changeset,
+            withinRoots: $this->changesetValidator->isWithinRoots($changeset, $grant),
+            verify: $this->verify($worktree, $repo, $changeset),
+        );
+    }
+
+    /**
+     * Optional per-repo verification (tests/lint) for the changeset. Runs the
+     * team-configured command in the candidate's worktree; pass/fail feeds the
+     * scorer. Absent command → UNKNOWN (neutral). Never throws — a broken verify
+     * command must not fail the build, only rank the candidate.
+     */
+    private function verify(string $worktree, GitRepository $repo, WarmBuildChangeset $changeset): int
+    {
+        if (! $changeset->hasChanges()) {
+            return WarmBuildCandidate::VERIFY_UNKNOWN;
+        }
+
+        $command = $repo->config['warm_build_verify_command'] ?? null;
+        if (! is_string($command) || trim($command) === '') {
+            return WarmBuildCandidate::VERIFY_UNKNOWN;
+        }
+
+        try {
+            $result = Process::path($worktree)
+                ->timeout((int) config('experiments.warm_build.verify_timeout_seconds', 300))
+                ->run($command);
+
+            return $result->successful() ? WarmBuildCandidate::VERIFY_PASS : WarmBuildCandidate::VERIFY_FAIL;
+        } catch (\Throwable $e) {
+            Log::info('ExecuteWarmDebugBuildAction: verify command errored', ['error' => $e->getMessage()]);
+
+            return WarmBuildCandidate::VERIFY_FAIL;
+        }
     }
 
     /**
@@ -141,6 +251,54 @@ class ExecuteWarmDebugBuildAction
     public function failCapacityExhausted(Experiment $experiment): void
     {
         $this->fail($experiment, 'Warm build deferred: VPS capacity unavailable after repeated retries.');
+    }
+
+    /**
+     * @param  list<WarmBuildCandidate>  $candidates
+     */
+    private function hasViable(array $candidates): bool
+    {
+        foreach ($candidates as $candidate) {
+            if ($candidate->hasChanges()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function failedCandidate(int $index, Experiment $experiment, \Throwable $e, ?string $cloneUrl): WarmBuildCandidate
+    {
+        $reason = $this->scrub($e->getMessage(), $cloneUrl);
+        Log::warning('ExecuteWarmDebugBuildAction: candidate failed', [
+            'experiment_id' => $experiment->id,
+            'candidate' => $index,
+            'reason' => $reason,
+        ]);
+
+        return new WarmBuildCandidate(
+            index: $index,
+            runId: $experiment->id.'-c'.$index,
+            worktree: null,
+            changeset: null,
+            withinRoots: false,
+            failed: true,
+            reason: $reason,
+        );
+    }
+
+    /**
+     * @param  list<WarmBuildCandidate>  $candidates
+     */
+    private function noUsableChangeReason(array $candidates): string
+    {
+        foreach ($candidates as $candidate) {
+            if ($candidate->failed && $candidate->reason !== null) {
+                return 'Warm build failed: '.$candidate->reason;
+            }
+        }
+
+        return 'Agent produced no changes — nothing to open a PR for.';
     }
 
     private function resolveRepository(Experiment $experiment): ?GitRepository
@@ -170,7 +328,7 @@ class ExecuteWarmDebugBuildAction
             ?? ($repos->count() === 1 ? $repos->first() : null);
     }
 
-    private function buildRequest(Experiment $experiment, string $worktree): AiRequestDTO
+    private function buildRequest(Experiment $experiment, string $worktree, WritableRootsGrant $grant): AiRequestDTO
     {
         $system = 'You are a senior software engineer fixing a reported bug in the checked-out '
             .'repository (your current working directory). Make the smallest correct change that '
@@ -188,14 +346,35 @@ class ExecuteWarmDebugBuildAction
             experimentId: $experiment->id,
             purpose: 'experiment.debug_build',
             workingDirectory: $worktree,
+            writableRoots: $this->writableRoots->absoluteWritablePaths($grant, $worktree),
         );
     }
 
-    private function prBody(Experiment $experiment): string
+    private function prBody(Experiment $experiment, WarmBuildCandidate $winner, int $n): string
     {
-        return "Automated fix opened by FleetQ for experiment `{$experiment->id}`.\n\n"
-            ."**Issue:** {$experiment->title}\n\n"
-            .'⚠️ Draft PR — requires human review before merge.';
+        $body = "Automated fix opened by FleetQ for experiment `{$experiment->id}`.\n\n"
+            ."**Issue:** {$experiment->title}\n\n";
+
+        if ($n > 1) {
+            $files = count($winner->changeset->files ?? []);
+            $lines = ($winner->changeset->added ?? 0) + ($winner->changeset->removed ?? 0);
+            $roots = $winner->withinRoots ? 'within writable-roots' : '⚠️ writable-roots violation';
+            $body .= "Selected candidate {$winner->index} of {$n} (best-of-N): {$roots}, "
+                ."{$files} file(s) / {$lines} line(s) changed.\n\n";
+        }
+
+        if (! $winner->withinRoots) {
+            $body .= "⚠️ This change touches paths outside the configured writable-roots — review carefully.\n\n";
+        }
+
+        return $body.'⚠️ Draft PR — requires human review before merge.';
+    }
+
+    private function summary(GitRepository $repo, int $n): string
+    {
+        return $n > 1
+            ? "Warm-build agent opened a draft PR on {$repo->name} (best of {$n})."
+            : 'Warm-build agent opened a draft PR on '.$repo->name.'.';
     }
 
     private function fail(Experiment $experiment, string $reason): void

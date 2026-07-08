@@ -194,6 +194,48 @@ return [
         // Age-based worktree GC threshold. Must exceed the max build time so an
         // in-flight worktree is never pruned by a sibling run. Default 2h.
         'worktree_ttl_seconds' => (int) env('EXPERIMENTS_WARM_BUILD_WORKTREE_TTL', 7200),
+
+        // Best-of-N (Shepherd borrow #1): run N candidate agent attempts from the
+        // same base ref, score each changeset deterministically, and push only the
+        // winner into the single draft PR. Default 1 = exactly the legacy single-run
+        // behaviour (dark-ship). Sequential — N never self-contends the claude-code-vps
+        // concurrency cap. `candidates_max` is a hard ceiling so a mis-set value (or a
+        // per-repo override) can't fan out unbounded on the capped credit.
+        'candidates' => (int) env('EXPERIMENTS_WARM_BUILD_CANDIDATES', 1),
+        'candidates_max' => (int) env('EXPERIMENTS_WARM_BUILD_CANDIDATES_MAX', 3),
+        // Timeout (seconds) for an optional per-repo verification command
+        // (GitRepository.config['warm_build_verify_command']) run in each candidate
+        // worktree; pass/fail feeds the best-of-N scorer.
+        'verify_timeout_seconds' => (int) env('EXPERIMENTS_WARM_BUILD_VERIFY_TIMEOUT', 300),
+
+        // Writable-roots grant (Shepherd borrow #3): the changeset a warm-build agent
+        // produces is validated against this allow/deny policy. `allowed_roots` empty =
+        // the whole repo is writable EXCEPT `denied_globs`; a non-empty list restricts
+        // writes to those subtrees only. Migrations are denied by default so an
+        // autonomous fix can never silently rewrite a migration. Per-repo override:
+        // GitRepository.config['warm_build_writable_roots'] = ['allowed_roots'=>[], 'denied_globs'=>[]].
+        'writable_roots' => [
+            'denied_globs' => [
+                'database/migrations/**',
+                '**/migrations/**',
+                '.github/workflows/**',
+                '**/.env',
+                '**/.env.*',
+            ],
+            'allowed_roots' => [],
+        ],
+
+        // Write-jail (Shepherd borrow #2): wrap the claude-code-vps process in a native
+        // Linux Landlock ruleset restricting writes to the worktree writable-roots +
+        // ephemeral HOME + tmp. Kernel-level defense-in-depth for the parked
+        // hostile-isolation surface. INERT by default: with `enabled` off or `launcher`
+        // unset the agent runs exactly as today. Real enforcement needs the reference
+        // helper (base/docker/writejail) built into the image and verified on the VPS.
+        'write_jail' => [
+            'enabled' => (bool) env('EXPERIMENTS_WARM_BUILD_WRITEJAIL', false),
+            'launcher' => env('EXPERIMENTS_WARM_BUILD_WRITEJAIL_LAUNCHER'),
+            'extra_writable' => ['/tmp'],
+        ],
     ],
 
     /*

@@ -147,13 +147,45 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         $this->app->instance(LocalAgentGateway::class, $gw);
     }
 
+    /**
+     * Fake the VPS agent per best-of-N call: invocation i writes the files in
+     * $filesPerCall[i] (['relative/path' => content]) into that candidate's own
+     * worktree. A null entry means "throw" (candidate failure); pass throwOn to
+     * throw on a specific call index instead.
+     *
+     * @param  list<array<string,string>>  $filesPerCall
+     */
+    private function fakeAgentPerCall(array $filesPerCall, ?int $throwOn = null): void
+    {
+        $i = 0;
+        $gw = Mockery::mock(LocalAgentGateway::class);
+        $gw->shouldReceive('complete')->andReturnUsing(function ($request) use (&$i, $filesPerCall, $throwOn) {
+            $call = $i;
+            $i++;
+            if ($throwOn !== null && $call === $throwOn) {
+                throw new \RuntimeException('agent crashed on candidate '.$call);
+            }
+            foreach ($filesPerCall[$call] ?? [] as $rel => $content) {
+                $path = $request->workingDirectory.'/'.$rel;
+                File::ensureDirectoryExists(dirname($path));
+                File::put($path, $content);
+            }
+
+            return new AiResponseDTO(
+                content: 'done', parsedOutput: null, usage: new AiUsageDTO(0, 0, 0),
+                provider: 'claude-code-vps', model: '', latencyMs: 1,
+            );
+        });
+        $this->app->instance(LocalAgentGateway::class, $gw);
+    }
+
     /** Fake the git client so createPullRequest returns a PR and records the draft flag. */
     private function fakePrClient(array &$captured): void
     {
         $client = Mockery::mock(GitClientInterface::class);
         $client->shouldReceive('createPullRequest')
             ->andReturnUsing(function ($title, $body, $head, $base, $draft = false) use (&$captured) {
-                $captured = compact('title', 'head', 'base', 'draft');
+                $captured = compact('title', 'body', 'head', 'base', 'draft');
 
                 return ['pr_number' => '7', 'pr_url' => 'https://example.test/pr/7', 'title' => $title, 'status' => 'open'];
             });
@@ -250,6 +282,117 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
 
         $exp->refresh();
         $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+    }
+
+    public function test_best_of_two_selects_smaller_within_roots_candidate(): void
+    {
+        config(['experiments.warm_build.candidates' => 2]);
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+        // candidate 1: two files; candidate 2: one file (smaller) — both within roots.
+        $this->fakeAgentPerCall([
+            ['app/a.php' => 'x', 'app/b.php' => 'y'],
+            ['app/a.php' => 'z'],
+        ]);
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertTrue($captured['draft']);
+        $this->assertStringContainsString('Selected candidate 2 of 2', $captured['body']);
+        $this->assertStringContainsString('within writable-roots', $captured['body']);
+
+        $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
+        $this->assertStringContainsString('best of 2', (string) $stage->output_snapshot['summary']);
+    }
+
+    public function test_best_of_two_discards_migration_violating_candidate(): void
+    {
+        config(['experiments.warm_build.candidates' => 2]);
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+        // candidate 1 rewrites a migration (out of roots); candidate 2 edits app/.
+        $this->fakeAgentPerCall([
+            ['database/migrations/2026_07_08_000000_x.php' => 'evil'],
+            ['app/fix.php' => 'good'],
+        ]);
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertStringContainsString('Selected candidate 2 of 2', $captured['body']);
+        // The winning branch must contain the app fix, not the migration edit.
+        $show = Process::run(['git', '-C', $this->bare, 'show', '--stat', 'fleetq/fix-'.substr($exp->id, 0, 8)])->output();
+        $this->assertStringContainsString('app/fix.php', $show);
+        $this->assertStringNotContainsString('database/migrations', $show);
+    }
+
+    public function test_one_candidate_crash_does_not_sink_the_build(): void
+    {
+        config(['experiments.warm_build.candidates' => 2]);
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+        // candidate 1 crashes; candidate 2 succeeds.
+        $this->fakeAgentPerCall([[], ['app/fix.php' => 'good']], throwOn: 0);
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertTrue($captured['draft']);
+    }
+
+    public function test_all_candidates_violate_roots_still_opens_flagged_pr(): void
+    {
+        config(['experiments.warm_build.candidates' => 2]);
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+        // Both candidates only touch migrations: pick returns the best-scoring one
+        // but flags the violation for the human reviewer (design: don't hard-fail).
+        $this->fakeAgentPerCall([
+            ['database/migrations/a.php' => 'x'],
+            ['database/migrations/b.php' => 'y'],
+        ]);
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::AwaitingApproval, $exp->status);
+        $this->assertStringContainsString('writable-roots violation', $captured['body']);
+    }
+
+    public function test_default_candidates_is_one_run(): void
+    {
+        // No candidates config → exactly one agent invocation (parity with legacy).
+        $repo = $this->repo();
+        $exp = $this->experiment(['git_repository_id' => $repo->id]);
+        $calls = 0;
+        $gw = Mockery::mock(LocalAgentGateway::class);
+        $gw->shouldReceive('complete')->andReturnUsing(function ($request) use (&$calls) {
+            $calls++;
+            File::put($request->workingDirectory.'/fix.txt', 'patched');
+
+            return new AiResponseDTO(content: 'done', parsedOutput: null, usage: new AiUsageDTO(0, 0, 0), provider: 'claude-code-vps', model: '', latencyMs: 1);
+        });
+        $this->app->instance(LocalAgentGateway::class, $gw);
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $this->assertSame(1, $calls, 'default config must run exactly one candidate');
+        // N=1 PR body must NOT contain best-of-N framing.
+        $this->assertStringNotContainsString('Selected candidate', $captured['body']);
     }
 
     public function test_transient_capacity_rethrows_and_leaves_run_building(): void
