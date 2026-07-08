@@ -8,6 +8,7 @@ use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Budget\Enums\LedgerType;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Experiment\Enums\ExperimentStatus;
+use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Pipeline\ExecutePlaybookStepJob;
 use App\Domain\Shared\Models\Team;
@@ -52,10 +53,15 @@ class ClarificationInterruptTest extends TestCase
             'description' => 'Test balance',
         ]);
 
+        // Pin a non-Debug track: DispatchNextStageJob short-circuits Debug-track
+        // experiments from executing → completed (fix delivered as PR, nothing to
+        // execute). The factory randomises track across all cases, so without this
+        // the clarification-resume assertion (→ Executing) flakes ~1/7 runs.
         $this->experiment = Experiment::factory()->create([
             'team_id' => $this->team->id,
             'user_id' => $this->user->id,
             'status' => ExperimentStatus::AwaitingApproval,
+            'track' => ExperimentTrack::Growth,
         ]);
     }
 
