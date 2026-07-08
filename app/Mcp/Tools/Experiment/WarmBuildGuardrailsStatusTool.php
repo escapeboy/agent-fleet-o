@@ -39,7 +39,9 @@ class WarmBuildGuardrailsStatusTool extends Tool
 
         $grant = app(WritableRootsPolicy::class)->resolve($repo);
         $jail = app(WriteJail::class);
-        $teamAllowed = (bool) Team::withoutGlobalScopes()->whereKey($repo->team_id)->value('warm_build_allowed');
+        // Team is the tenant root (no TeamScope), so a plain primary-key lookup is
+        // already tenant-safe; $repo->team_id was team-verified by the query above.
+        $teamAllowed = (bool) Team::whereKey($repo->team_id)->value('warm_build_allowed');
 
         return Response::text((string) json_encode([
             'git_repository_id' => $repo->id,
