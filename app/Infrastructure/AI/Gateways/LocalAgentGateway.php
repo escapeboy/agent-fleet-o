@@ -18,6 +18,7 @@ use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\RunSecretVault;
 use App\Infrastructure\AI\Services\SecretProxyInjector;
 use App\Infrastructure\AI\Services\TranscriptIngestor;
+use App\Infrastructure\Sandbox\WriteJail;
 use App\Models\User;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
@@ -376,6 +377,16 @@ class LocalAgentGateway implements AiGatewayInterface
             'timeout' => $timeout,
             'streaming' => $useStreaming,
         ]);
+
+        // Write-jail (Shepherd borrow #2): for an in-repo build, restrict the agent
+        // process to writing only under the run's writable-roots (+ ephemeral HOME).
+        // Inert no-op unless the Landlock launcher is enabled and available.
+        if ($isRepoBuild) {
+            $args = app(WriteJail::class)->wrap(
+                $args,
+                array_values(array_filter(array_merge($request->writableRoots ?? [], [$workdir]))),
+            );
+        }
 
         $startTime = hrtime(true);
         $exitCode = null;

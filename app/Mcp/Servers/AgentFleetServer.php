@@ -286,6 +286,7 @@ use App\Mcp\Tools\Experiment\ReasoningBankListTool;
 use App\Mcp\Tools\Experiment\ReasoningBankSearchTool;
 use App\Mcp\Tools\Experiment\UncertaintyEmitTool;
 use App\Mcp\Tools\Experiment\UncertaintyResolveTool;
+use App\Mcp\Tools\Experiment\WarmBuildGuardrailsStatusTool;
 use App\Mcp\Tools\Experiment\WorkflowSnapshotListTool;
 use App\Mcp\Tools\Experiment\WorklogAppendTool;
 use App\Mcp\Tools\Experiment\WorklogReadTool;
@@ -946,6 +947,7 @@ class AgentFleetServer extends Server
         ExperimentShareTool::class,
         ExperimentSearchHistoryTool::class,
         ExperimentContextHealthTool::class,
+        WarmBuildGuardrailsStatusTool::class,
         ExperimentSkipStageTool::class,
         ExperimentDoneJudgeRunTool::class,
         ExperimentUpdateTool::class,
