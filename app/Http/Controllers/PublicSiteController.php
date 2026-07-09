@@ -91,6 +91,9 @@ class PublicSiteController extends Controller
             'exported_html' => $html,
         ])->withHeaders([
             'X-Content-Type-Options' => 'nosniff',
+            // noindex: also covers the custom-domain proxy path (ResolveWebsiteByDomain),
+            // which invokes this method directly and bypasses route middleware.
+            'X-Robots-Tag' => 'noindex, nofollow',
         ]);
     }
 
