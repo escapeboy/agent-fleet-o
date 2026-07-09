@@ -7,6 +7,7 @@ use App\Domain\Website\Actions\CreateWebsiteAction;
 use App\Domain\Website\Actions\CreateWebsitePageAction;
 use App\Domain\Website\Actions\EnhanceWebsiteNavigationAction;
 use App\Domain\Website\Actions\UpdateWebsiteAction;
+use App\Domain\Website\Enums\WebsitePageStatus;
 use App\Domain\Website\Enums\WebsiteStatus;
 use App\Domain\Website\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -69,6 +70,32 @@ class PublicSiteControllerTest extends TestCase
         $response = $this->getJson('/api/public/sites/test-site');
 
         $response->assertStatus(200)->assertJsonFragment(['slug' => 'test-site']);
+    }
+
+    public function test_public_site_responses_carry_noindex_header(): void
+    {
+        $page = app(CreateWebsitePageAction::class)->execute($this->website, [
+            'slug' => 'home',
+            'title' => 'Home',
+            'page_type' => 'page',
+        ]);
+        $page->update([
+            'status' => WebsitePageStatus::Published,
+            'exported_html' => '<div>Home</div>',
+        ]);
+
+        $this->publishWebsite();
+
+        // Site metadata endpoint (route middleware).
+        $this->getJson('/api/public/sites/test-site')
+            ->assertStatus(200)
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+
+        // Page content endpoint (serves exported_html; header set in controller
+        // so the custom-domain proxy path is covered too).
+        $this->getJson('/api/public/sites/test-site/pages/home')
+            ->assertStatus(200)
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function test_submit_form_returns_404_for_fabricated_form_id(): void
