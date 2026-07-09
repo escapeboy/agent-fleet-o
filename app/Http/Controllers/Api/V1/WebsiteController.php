@@ -89,8 +89,12 @@ class WebsiteController extends Controller
         return response()->json(null, 204);
     }
 
-    public function publish(Website $website, PublishWebsitePageAction $publishPage): WebsiteResource
+    public function publish(Request $request, Website $website, PublishWebsitePageAction $publishPage): WebsiteResource
     {
+        $data = $request->validate([
+            'allow_public' => ['sometimes', 'boolean'],
+        ]);
+
         $publishedCount = 0;
         $skippedCount = 0;
 
@@ -109,7 +113,18 @@ class WebsiteController extends Controller
             }
         }
 
-        $website->update(['status' => WebsiteStatus::Published]);
+        $attributes = ['status' => WebsiteStatus::Published];
+
+        // Publish gate: exposing a builder site publicly on the apex domain
+        // requires an explicit opt-in. Publishing alone never flips it on, so
+        // agent/user-generated storefronts are not auto-crawlable on fleetq.net.
+        if (array_key_exists('allow_public', $data)) {
+            $settings = $website->settings ?? [];
+            $settings['allow_public'] = $data['allow_public'];
+            $attributes['settings'] = $settings;
+        }
+
+        $website->update($attributes);
 
         return new WebsiteResource($website->fresh()->load(['pages' => fn ($q) => $q->orderBy('sort_order')]));
     }

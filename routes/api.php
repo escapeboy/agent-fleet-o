@@ -30,6 +30,7 @@ use App\Http\Controllers\Widget\BugReportCommentsListController;
 use App\Http\Controllers\Widget\BugReportConfirmController;
 use App\Http\Controllers\Widget\BugReportListController;
 use App\Http\Controllers\Widget\BugReportMediaController;
+use App\Http\Middleware\SetNoIndexHeader;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
@@ -71,7 +72,8 @@ Route::post('/public/widget/bug-report/{signal}/confirm', BugReportConfirmContro
     ->name('widget.bug-report.confirm');
 
 // Public site API (no auth, rate limited)
-Route::prefix('public/sites')->group(function () {
+// noindex: builder pages are user/agent-generated and must never be crawled.
+Route::middleware(SetNoIndexHeader::class)->prefix('public/sites')->group(function () {
     // Read endpoints — 60 req/min per IP
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/{slug}', [PublicSiteController::class, 'show']);
@@ -196,7 +198,7 @@ Route::middleware('throttle:60,1')->group(function () {
 
 // Public site API — serves published website pages + handles form submissions as Signals
 // No auth required; throttled per IP to prevent abuse.
-Route::middleware('throttle:120,1')->prefix('public/sites')->group(function () {
+Route::middleware(['throttle:120,1', SetNoIndexHeader::class])->prefix('public/sites')->group(function () {
     Route::get('/{siteSlug}/pages', [PublicSiteController::class, 'pages'])->name('public.sites.pages');
     Route::post('/{siteSlug}/forms/{formId}', [PublicSiteController::class, 'submitForm'])->middleware('throttle:10,1')->name('public.sites.form');
     Route::get('/{siteSlug}/{pageSlug?}', [PublicSiteController::class, 'page'])->name('public.sites.page');
