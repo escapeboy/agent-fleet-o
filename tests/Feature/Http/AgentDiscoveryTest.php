@@ -126,6 +126,23 @@ class AgentDiscoveryTest extends TestCase
         $this->get('/.well-known/agent-skills/not-a-real-skill/SKILL.md')->assertNotFound();
     }
 
+    public function test_authorization_server_metadata_carries_agent_auth(): void
+    {
+        // The scanner looks for agent_auth in the AS metadata document, not in
+        // auth.md itself — a fenced JSON block in the markdown does not count.
+        $response = $this->get('/.well-known/oauth-authorization-server');
+
+        $response->assertOk();
+
+        $agentAuth = $response->json('agent_auth');
+
+        $this->assertNotEmpty($agentAuth);
+        $this->assertNotEmpty($agentAuth['skill']);
+        $this->assertNotEmpty($agentAuth['register_uri']);
+        $this->assertNotEmpty($agentAuth['methods'][0]['type']);
+        $this->assertNotEmpty($agentAuth['methods'][0]['register_uri']);
+    }
+
     public function test_agent_card_declares_supported_interfaces(): void
     {
         $response = $this->get('/.well-known/agent-card.json');
