@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
+use App\Http\Middleware\AgentDiscoveryLinks;
 use App\Http\Middleware\ApplyTenantTracer;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
@@ -61,6 +62,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['auth/apple/callback']);
         $middleware->append(SecurityHeaders::class);
         $middleware->prepend(ResolveWebsiteByDomain::class);
+        $middleware->appendToGroup('web', AgentDiscoveryLinks::class);
         $middleware->appendToGroup('web', BypassAuth::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
         $middleware->appendToGroup('web', EnsureTermsAccepted::class);
