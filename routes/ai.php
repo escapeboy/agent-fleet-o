@@ -43,6 +43,27 @@ Route::get('/.well-known/oauth-authorization-server/{path?}', fn (?string $path 
     'token_endpoint_auth_methods_supported' => ['none', 'client_secret_post'],
     'scopes_supported' => ['mcp:use'],
     'client_id_metadata_document_supported' => true,
+    // Auth.md agent registration discovery — advertises that an agent can
+    // self-provision a client here rather than waiting on a human.
+    'agent_auth' => [
+        'skill' => url('/.well-known/agent-skills/fleetq-connect/SKILL.md'),
+        'register_uri' => url('oauth/register'),
+        'revocation_uri' => url('oauth/revoke'),
+        'methods' => [
+            [
+                'type' => 'oauth_dynamic_client_registration',
+                'spec' => 'https://www.rfc-editor.org/rfc/rfc7591',
+                'register_uri' => url('oauth/register'),
+                'authorization_endpoint' => route('passport.authorizations.authorize'),
+                'token_endpoint' => route('passport.token'),
+                'grant_types_supported' => ['authorization_code', 'refresh_token'],
+                'code_challenge_methods_supported' => ['S256'],
+                'token_endpoint_auth_methods_supported' => ['none', 'client_secret_post'],
+                'scopes_supported' => ['mcp:use'],
+                'credential_types_supported' => ['oauth_access_token', 'oauth_refresh_token'],
+            ],
+        ],
+    ],
 ]))->where('path', '.*')->name('mcp.oauth.authorization-server');
 
 // RFC 7591 — Dynamic Client Registration

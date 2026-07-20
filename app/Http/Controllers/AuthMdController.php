@@ -33,10 +33,13 @@ class AuthMdController extends Controller
 
         | Document | URL |
         |---|---|
-        | Protected Resource Metadata (RFC 9728) | `{$baseUrl}/.well-known/oauth-protected-resource` |
-        | Authorization Server Metadata (RFC 8414) | `{$baseUrl}/.well-known/oauth-authorization-server` |
-        | API catalog (RFC 9727) | `{$baseUrl}/.well-known/api-catalog` |
-        | MCP discovery document | `{$baseUrl}/.well-known/fleetq` |
+        | Protected Resource Metadata (RFC 9728) | {$baseUrl}/.well-known/oauth-protected-resource |
+        | Authorization Server Metadata (RFC 8414) | {$baseUrl}/.well-known/oauth-authorization-server |
+        | API catalog (RFC 9727) | {$baseUrl}/.well-known/api-catalog |
+        | MCP discovery document | {$baseUrl}/.well-known/fleetq |
+
+        The `agent_auth` block below is also served inside the Authorization
+        Server metadata document, which is where automated clients look for it.
 
         The protected resource advertises `scopes_supported: ["mcp:use"]` and
         `bearer_methods_supported: ["header"]`. Its `authorization_servers`
