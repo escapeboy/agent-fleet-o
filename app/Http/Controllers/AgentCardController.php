@@ -16,8 +16,18 @@ class AgentCardController extends Controller
         return response()->json([
             'name' => 'FleetQ',
             'description' => 'AI Agent Mission Control — manage experiments, workflows, crews, approvals, and full agent lifecycle.',
+            // `url` is the pre-0.3 single-endpoint field. Kept alongside
+            // `supportedInterfaces` so older A2A clients still resolve us.
             'url' => config('app.url').'/mcp',
+            'supportedInterfaces' => [
+                [
+                    'url' => config('app.url').'/mcp',
+                    'protocolBinding' => 'JSONRPC',
+                    'protocolVersion' => '1.0',
+                ],
+            ],
             'version' => config('app.version', '1.0.0'),
+            'documentationUrl' => config('app.url').'/docs/mcp-server',
             'authentication' => [
                 'schemes' => ['Bearer'],
             ],

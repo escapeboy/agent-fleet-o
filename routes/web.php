@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\AgentCardController;
+use App\Http\Controllers\AgentSkillsController;
 use App\Http\Controllers\Api\V1\AgentManifestController;
+use App\Http\Controllers\ApiCatalogController;
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\AuthMdController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
@@ -12,6 +15,7 @@ use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
 use App\Http\Controllers\ReleaseKeysController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SkillExportController;
 use App\Http\Controllers\SkillQualityLeaderboardController;
 use App\Http\Controllers\SocialAuthController;
@@ -196,6 +200,39 @@ Route::get('/.well-known/agent.json', AgentCardController::class)
     ->middleware('throttle:60,1');
 Route::get('/.well-known/agent-card.json', AgentCardController::class)
     ->name('a2a.agent-card.spec')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// RFC 9727 API catalog — machine-readable index of the REST API and MCP surfaces.
+Route::get('/.well-known/api-catalog', ApiCatalogController::class)
+    ->name('well-known.api-catalog')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// Agent Skills discovery (Cloudflare agent-skills-discovery RFC v0.2.0) — index
+// plus the SKILL.md artifacts it references.
+Route::get('/.well-known/agent-skills/index.json', [AgentSkillsController::class, 'index'])
+    ->name('agent-skills.index')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+Route::get('/.well-known/agent-skills/{name}/SKILL.md', [AgentSkillsController::class, 'show'])
+    ->where('name', '[a-z0-9\-]+')
+    ->name('agent-skills.show')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// auth.md — how agents obtain credentials. Complements the RFC 9728/8414
+// metadata registered in routes/ai.php.
+Route::get('/auth.md', AuthMdController::class)
+    ->name('auth.md')
+    ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
+    ->middleware('throttle:60,1');
+
+// sitemaps.org protocol — derived from the router, so cloud-only pages are
+// included automatically.
+Route::get('/sitemap.xml', SitemapController::class)
+    ->name('sitemap')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 

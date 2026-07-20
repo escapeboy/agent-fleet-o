@@ -6,7 +6,8 @@ use Illuminate\Http\Response;
 
 class DocsController extends Controller
 {
-    private array $pages = [
+    /** Public documentation slugs — also the source of truth for the sitemap. */
+    public const PAGES = [
         'introduction',
         'getting-started',
         'experiments',
@@ -53,7 +54,7 @@ class DocsController extends Controller
 
     public function show(string $page = 'introduction'): Response
     {
-        abort_unless(in_array($page, $this->pages, true), 404);
+        abort_unless(in_array($page, self::PAGES, true), 404);
 
         $view = 'docs.'.$page;
 
