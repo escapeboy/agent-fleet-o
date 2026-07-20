@@ -46,7 +46,9 @@ Route::get('/.well-known/oauth-authorization-server/{path?}', fn (?string $path 
     // Auth.md agent registration discovery — advertises that an agent can
     // self-provision a client here rather than waiting on a human.
     'agent_auth' => [
-        'skill' => url('/.well-known/agent-skills/fleetq-connect/SKILL.md'),
+        // Points at the auth.md document itself — that is what the Auth.md
+        // standard means by "skill", not an Agent Skills artifact.
+        'skill' => url('/auth.md'),
         'register_uri' => url('oauth/register'),
         'revocation_uri' => url('oauth/revoke'),
         'methods' => [

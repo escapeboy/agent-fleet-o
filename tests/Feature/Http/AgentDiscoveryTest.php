@@ -137,7 +137,8 @@ class AgentDiscoveryTest extends TestCase
         $agentAuth = $response->json('agent_auth');
 
         $this->assertNotEmpty($agentAuth);
-        $this->assertNotEmpty($agentAuth['skill']);
+        // The scanner requires skill to resolve to the auth.md document itself.
+        $this->assertStringEndsWith('/auth.md', $agentAuth['skill']);
         $this->assertNotEmpty($agentAuth['register_uri']);
         $this->assertNotEmpty($agentAuth['methods'][0]['type']);
         $this->assertNotEmpty($agentAuth['methods'][0]['register_uri']);

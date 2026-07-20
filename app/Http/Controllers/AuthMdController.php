@@ -54,7 +54,7 @@ class AuthMdController extends Controller
         ```json
         {
           "agent_auth": {
-            "skill": "{$baseUrl}/.well-known/agent-skills/fleetq-connect/SKILL.md",
+            "skill": "{$baseUrl}/auth.md",
             "register_uri": "{$baseUrl}/oauth/register",
             "methods": [
               {
