@@ -4,10 +4,16 @@ namespace App\Domain\Shared\Notifications;
 
 use App\Domain\Shared\Models\Team;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class WelcomeNotification extends Notification
+/**
+ * Queued deliberately: a synchronous send blocks registration on the SMTP
+ * round-trip, and during the 2026-07-06 mail incident that turned stale
+ * credentials into a request-time retry storm against the mail host.
+ */
+class WelcomeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
