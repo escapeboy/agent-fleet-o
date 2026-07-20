@@ -104,5 +104,7 @@
             aria-label="Back to top">
         <i class="fa-solid fa-chevron-up text-lg" aria-hidden="true"></i>
     </button>
+
+    <x-webmcp-tools />
 </body>
 </html>
