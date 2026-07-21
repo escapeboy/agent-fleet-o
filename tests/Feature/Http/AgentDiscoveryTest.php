@@ -177,4 +177,37 @@ class AgentDiscoveryTest extends TestCase
         $response->assertOk();
         $this->assertEmpty($response->headers->all('Link'));
     }
+
+    public function test_homepage_negotiates_markdown_for_agents(): void
+    {
+        $response = $this->get('/', ['Accept' => 'text/markdown']);
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/markdown; charset=utf-8');
+        $response->assertHeader('Vary', 'Accept');
+        $this->assertStringEndsWith('/llms.txt', $response->headers->get('Content-Location'));
+        $this->assertStringContainsString('# FleetQ', $response->getContent());
+    }
+
+    public function test_homepage_serves_html_to_browsers(): void
+    {
+        $response = $this->get('/', ['Accept' => 'text/html,application/xhtml+xml']);
+
+        // Browsers never receive markdown — status may be 200 (cloud landing) or
+        // a redirect (base), but it must never be the markdown representation.
+        $this->assertStringNotContainsString(
+            'text/markdown',
+            (string) $response->headers->get('Content-Type'),
+        );
+    }
+
+    public function test_markdown_negotiation_only_applies_where_a_representation_exists(): void
+    {
+        // A docs page has no curated markdown source, so it falls through to HTML
+        // rather than emitting a fabricated markdown body.
+        $response = $this->get('/docs/introduction', ['Accept' => 'text/markdown']);
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/html', (string) $response->headers->get('Content-Type'));
+    }
 }
