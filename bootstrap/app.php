@@ -5,6 +5,7 @@ use App\Http\Middleware\AgentDiscoveryLinks;
 use App\Http\Middleware\ApplyTenantTracer;
 use App\Http\Middleware\BypassAuth;
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\NegotiateMarkdown;
 use App\Http\Middleware\ResolveWebsiteByDomain;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SentryContextWebMiddleware;
@@ -62,6 +63,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['auth/apple/callback']);
         $middleware->append(SecurityHeaders::class);
         $middleware->prepend(ResolveWebsiteByDomain::class);
+        $middleware->prependToGroup('web', NegotiateMarkdown::class);
         $middleware->appendToGroup('web', AgentDiscoveryLinks::class);
         $middleware->appendToGroup('web', BypassAuth::class);
         $middleware->appendToGroup('web', SetCurrentTeam::class);
