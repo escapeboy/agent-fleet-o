@@ -55,7 +55,15 @@ $app = Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        // NOT '*': Laravel reads that as "trust only the calling IP", so the rightmost
+        // proxy in X-Forwarded-For is reported as the client and every visitor collapses
+        // onto one address. Trust the private ranges the request actually traverses.
+        $middleware->trustProxies(at: [
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+            '127.0.0.1/32',
+        ]);
         // Apple Sign In uses response_mode=form_post → a cross-site POST with no
         // CSRF token. Exempt it via the framework's public API (not a route-level
         // withoutMiddleware on a hardcoded CSRF class name, which silently broke
