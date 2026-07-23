@@ -293,15 +293,21 @@ class ExecutePlaybookStepJob implements HasSentryContext, ShouldQueue
                     experimentId: $experiment->id,
                 );
             } else {
+                $agent = $step->agent;
+
+                if (! $agent) {
+                    throw new \RuntimeException("Agent {$step->agent_id} not found for step {$this->stepId}.");
+                }
+
                 Log::info('ExecutePlaybookStepJob: calling executeAgent', [
                     'step_id' => $this->stepId,
-                    'agent' => $step->agent?->name,
+                    'agent' => $agent->name,
                     'input_keys' => array_keys($input),
                     'attempt' => $this->attempts(),
                 ]);
 
                 $result = $executeAgent->execute(
-                    agent: $step->agent,
+                    agent: $agent,
                     input: $input,
                     teamId: $experiment->team_id,
                     userId: $experiment->user_id,
