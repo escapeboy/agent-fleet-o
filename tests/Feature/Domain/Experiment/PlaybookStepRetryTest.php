@@ -160,4 +160,30 @@ class PlaybookStepRetryTest extends TestCase
         $this->assertEquals('failed', $this->step->status, 'Step should be failed after all retries exhausted');
         $this->assertStringContainsString('Permanent API error', $this->step->error_message);
     }
+
+    public function test_step_with_missing_agent_throws_clear_error_not_type_error(): void
+    {
+        // Soft-delete the agent so PlaybookStep::agent resolves to null while
+        // agent_id stays set — the job must raise a clear domain error, not a
+        // cryptic TypeError from the non-nullable ExecuteAgentAction::execute().
+        Agent::withoutGlobalScopes()->findOrFail($this->step->agent_id)->delete();
+
+        $job = new ExecutePlaybookStepJob(
+            stepId: $this->step->id,
+            experimentId: $this->experiment->id,
+            teamId: $this->team->id,
+        );
+
+        try {
+            $job->handle(
+                app(ExecuteAgentAction::class),
+                app(ExecuteSkillAction::class),
+            );
+            $this->fail('Expected a RuntimeException for the missing agent.');
+        } catch (\TypeError $e) {
+            $this->fail('Got a TypeError instead of a clear RuntimeException: '.$e->getMessage());
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('not found for step', $e->getMessage());
+        }
+    }
 }
