@@ -212,6 +212,46 @@ class WarmRepoManagerTest extends TestCase
         $this->assertDirectoryExists($fresh, 'a fresh (in-flight) worktree must never be pruned');
     }
 
+    public function test_rotated_credential_repoints_origin_on_existing_base(): void
+    {
+        // The authenticated clone url embeds the credential token, and the base
+        // is cloned once. Renaming the remote stands in for a rotated PAT: the
+        // url baked into origin at clone time is now dead, and only a fetch
+        // through the NEW url can succeed.
+        $repo = $this->repo();
+        $this->mgr->checkout($repo, 'origin/main', 'run-1', $this->bare);
+
+        $rotated = $this->tmp.'/remote-rotated.git';
+        File::moveDirectory($this->bare, $rotated);
+        $this->git(['-C', $this->seed, 'remote', 'set-url', 'origin', $rotated]);
+        $this->pushSeedCommit('after-rotation.txt', 'v2');
+
+        $wt = $this->mgr->checkout($repo, 'origin/main', 'run-2', $rotated);
+
+        $this->assertSame(
+            $rotated,
+            trim(Process::run(['git', '-C', $this->basePath($repo), 'remote', 'get-url', 'origin'])->output()),
+            'origin still points at the pre-rotation url — the new credential is being ignored',
+        );
+        $this->assertFileExists($wt.'/after-rotation.txt', 'fetch did not run through the rotated url');
+    }
+
+    public function test_git_failure_never_leaks_the_credential_token(): void
+    {
+        $repo = $this->repo();
+        $token = 'github_pat_11ABCDEF0123456789_supersecretvalue';
+
+        try {
+            // Port 1 is unbound: the clone fails fast, and the failing command
+            // line is the one carrying the token.
+            $this->mgr->checkout($repo, 'origin/main', 'run-leak', 'https://x-access-token:'.$token.'@127.0.0.1:1/x.git');
+            $this->fail('expected the clone to fail');
+        } catch (\RuntimeException $e) {
+            $this->assertStringNotContainsString($token, $e->getMessage());
+            $this->assertStringContainsString('://***@', $e->getMessage());
+        }
+    }
+
     public function test_enabled_reflects_config(): void
     {
         config(['experiments.warm_build.enabled' => true]);
