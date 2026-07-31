@@ -80,14 +80,22 @@ class WarmRepoManager
             mkdir(dirname($base), 0700, true);
         }
 
-        $this->withLock($base, function () use ($base, $repo, $cloneUrl): void {
+        $url = $cloneUrl ?: (string) $repo->url;
+
+        $this->withLock($base, function () use ($base, $repo, $url): void {
             if (is_dir($base.'/.git')) {
+                // The authenticated clone url carries the credential's token in
+                // its userinfo, and the base is cloned ONCE. Without re-pointing
+                // origin every time, a rotated credential is silently ignored:
+                // the warm clone keeps fetching with the dead token forever.
+                if ($url !== '') {
+                    $this->git(['-C', $base, 'remote', 'set-url', 'origin', $url]);
+                }
                 $this->git(['-C', $base, 'fetch', '--prune', 'origin']);
 
                 return;
             }
 
-            $url = $cloneUrl ?: (string) $repo->url;
             if ($url === '') {
                 throw new RuntimeException("GitRepository {$repo->id} has no clone url.");
             }
@@ -198,7 +206,14 @@ class WarmRepoManager
     {
         $result = Process::run(array_merge(['git'], $args));
         if (! $result->successful()) {
-            throw new RuntimeException('git '.implode(' ', $args).' failed: '.trim($result->errorOutput()));
+            // clone/remote args embed the credential token in the url userinfo,
+            // and git echoes the remote back on failure — strip it from both so
+            // a failed fetch can't spill the PAT into an exception or log line.
+            $redact = static fn (string $s): string => (string) preg_replace('#://[^/@\s]*@#', '://***@', $s);
+
+            throw new RuntimeException(
+                'git '.$redact(implode(' ', $args)).' failed: '.$redact(trim($result->errorOutput())),
+            );
         }
     }
 
