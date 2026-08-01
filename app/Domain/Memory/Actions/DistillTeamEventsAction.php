@@ -5,6 +5,7 @@ namespace App\Domain\Memory\Actions;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Enums\MemoryVisibility;
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -65,10 +66,20 @@ PROMPT;
         // no BYOK and the platform has no key for the distillation provider.
         // Without this guard the hourly cron fires hundreds of Sentry errors
         // per night on free-tier teams. Sentry issue FLEETQ-81.
+        //
+        // DistillTeamEventsJob's pre-flight gate (TeamAiAccessChecker::canUseAi)
+        // is provider-AGNOSTIC — it passes any team holding *a* credential —
+        // while distil() below demands one specific provider. A BYOK team whose
+        // only key is for a different provider therefore clears the gate and
+        // then throws AiAccessUnavailableException here. That is expected
+        // backpressure, not a defect, so it must be skipped like the
+        // fallback-chain case instead of churning failed_jobs and Sentry
+        // forever. (#824/#847/#1035/#1064)
         try {
             $summary = $this->distil($events, $teamId);
         } catch (RuntimeException $e) {
-            if (! str_contains($e->getMessage(), 'No available providers in fallback chain')) {
+            if (! $e instanceof AiAccessUnavailableException
+                && ! str_contains($e->getMessage(), 'No available providers in fallback chain')) {
                 throw $e;
             }
             Log::info('DistillTeamEventsAction: skipping team (no provider credentials)', [
