@@ -5,8 +5,10 @@ namespace Tests\Feature\Domain\Memory;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Memory\Actions\DistillTeamEventsAction;
 use App\Domain\Memory\Actions\StoreMemoryAction;
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
@@ -141,6 +143,36 @@ class DistillTeamEventsActionTest extends TestCase
         $gateway->shouldReceive('complete')
             ->once()
             ->andThrow(new \RuntimeException('No available providers in fallback chain'));
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldNotReceive('execute');
+
+        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id);
+
+        $this->assertSame(1, $result['events']);
+        $this->assertSame(0, $result['stored']);
+        $this->assertNotNull($this->team->fresh()->settings['memory']['last_event_distill_at'] ?? null);
+    }
+
+    public function test_skips_when_teams_only_credential_is_for_a_different_provider(): void
+    {
+        // DistillTeamEventsJob's pre-flight gate (TeamAiAccessChecker::canUseAi)
+        // is provider-agnostic, so a BYOK team holding a key for some *other*
+        // provider clears it and reaches this action. PrismAiGateway then throws
+        // AiAccessUnavailableException (resolveCredential: no credential for the
+        // distillation provider, and the plan carries no platform_llm_fallback).
+        // That is expected backpressure — the team must be skipped and its
+        // watermark advanced, not pushed into failed_jobs on every hourly run.
+        // (#824/#847/#1035/#1064)
+        config(['memory.distillation.model' => 'groq/llama-3.3-70b-versatile']);
+
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->once()
+            ->with(Mockery::on(fn (AiRequestDTO $request) => $request->provider === 'groq'))
+            ->andThrow(AiAccessUnavailableException::forTeam());
 
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldNotReceive('execute');
