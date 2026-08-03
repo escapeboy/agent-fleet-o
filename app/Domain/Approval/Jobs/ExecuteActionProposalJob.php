@@ -49,6 +49,23 @@ class ExecuteActionProposalJob implements ShouldQueue
             return;
         }
 
+        // Approval is granted against a deadline; the queue can drain after it.
+        // Re-check at the execution seam so a proposal approved just before
+        // expiry can never produce a side effect once the window has closed.
+        if ($proposal->expires_at !== null && $proposal->expires_at->isPast()) {
+            $proposal->update([
+                'status' => ActionProposalStatus::Expired,
+                'execution_error' => 'Approval window closed before the queued execution ran.',
+            ]);
+
+            Log::info('ExecuteActionProposalJob: refusing to execute past expiry', [
+                'proposal_id' => $proposal->id,
+                'expires_at' => $proposal->getAttribute('expires_at'),
+            ]);
+
+            return;
+        }
+
         $actor = $this->resolveActor($proposal);
         if (! $actor) {
             $this->markFailed($proposal, 'Actor user could not be resolved (no actor_user_id and no team owner).');

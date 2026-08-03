@@ -188,6 +188,10 @@ class ToolCallGovernorTest extends TestCase
         $this->assertNotNull($proposal);
         $this->assertSame($this->agent->id, $proposal->actor_agent_id);
         $this->assertSame('charge', $proposal->payload['tool_name']);
+        // Agent-raised proposals carry the same 24h approval window as the
+        // assistant / integration / git gates — without it they never expire.
+        $this->assertNotNull($proposal->expires_at);
+        $this->assertTrue($proposal->expires_at->between(now()->addHours(23), now()->addHours(25)));
     }
 
     public function test_arg_predicate_is_noop_when_subflag_disabled(): void
