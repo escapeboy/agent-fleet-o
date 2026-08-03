@@ -100,8 +100,12 @@ class GenerateWorkflowFromPromptAction
 
             return ['workflow' => $workflow, 'errors' => $errors];
         } catch (\Throwable $e) {
+            // `exception` (the Throwable, not its message) is what makes
+            // sentry-laravel capture this as an exception with a stacktrace
+            // rather than a bare message — see #1035.
             Log::error('GenerateWorkflowFromPromptAction: LLM call failed', [
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return ['workflow' => null, 'errors' => [$e->getMessage()]];
