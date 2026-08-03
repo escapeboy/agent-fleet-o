@@ -312,6 +312,65 @@ class ActionProposalAutoExecuteTest extends TestCase
         app(ActionProposalExecutor::class)->execute($proposal->fresh(), $this->user);
     }
 
+    public function test_job_refuses_to_execute_after_the_approval_window_closed(): void
+    {
+        Queue::fake();
+
+        $proposal = $this->makeProposal();
+        $proposal->update(['expires_at' => now()->addMinutes(5)]);
+
+        // Approved inside the window; the queue then drains after it.
+        app(ApproveActionProposalAction::class)->execute($proposal->fresh(), $this->user);
+
+        $this->travel(10)->minutes();
+
+        $executor = $this->mock(ActionProposalExecutor::class, function ($mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        (new ExecuteActionProposalJob($proposal->id))->handle($executor);
+
+        $proposal->refresh();
+        $this->assertSame(ActionProposalStatus::Expired, $proposal->status);
+        $this->assertNull($proposal->executed_at);
+        $this->assertNull($proposal->execution_result);
+        $this->assertStringContainsString('Approval window closed', (string) $proposal->execution_error);
+    }
+
+    public function test_job_executes_when_the_approval_window_is_still_open(): void
+    {
+        $proposal = $this->makeProposal();
+        $proposal->update([
+            'status' => ActionProposalStatus::Approved,
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $executor = $this->mock(ActionProposalExecutor::class, function ($mock) {
+            $mock->shouldReceive('execute')->once()->andReturn(['ok' => true]);
+        });
+
+        (new ExecuteActionProposalJob($proposal->id))->handle($executor);
+
+        $this->assertSame(ActionProposalStatus::Executed, $proposal->fresh()->status);
+    }
+
+    public function test_job_executes_when_the_proposal_has_no_expiry(): void
+    {
+        $proposal = $this->makeProposal();
+        $proposal->update([
+            'status' => ActionProposalStatus::Approved,
+            'expires_at' => null,
+        ]);
+
+        $executor = $this->mock(ActionProposalExecutor::class, function ($mock) {
+            $mock->shouldReceive('execute')->once()->andReturn(['ok' => true]);
+        });
+
+        (new ExecuteActionProposalJob($proposal->id))->handle($executor);
+
+        $this->assertSame(ActionProposalStatus::Executed, $proposal->fresh()->status);
+    }
+
     private function makeProposal(): ActionProposal
     {
         return app(CreateActionProposalAction::class)->execute(

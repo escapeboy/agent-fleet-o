@@ -165,6 +165,7 @@ class ToolCallGovernor
                 ],
                 agentId: $agent->id,
                 riskLevel: 'high',
+                expiresAt: now()->addHours(24),
             );
         } catch (\Throwable $e) {
             Log::warning('ToolCallGovernor: failed to raise approval proposal', [
