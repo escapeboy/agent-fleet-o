@@ -6,6 +6,7 @@ use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use ErrorException;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\MaxAttemptsExceededException;
+use Predis\Connection\Resource\Exception\StreamInitException;
 use Sentry\Event;
 use Sentry\EventHint;
 use Symfony\Component\Console\Exception\RuntimeException as SymfonyConsoleRuntimeException;
@@ -49,6 +50,29 @@ final class BeforeSendFilter
 
         // SQLSTATE[08006] — postgres connection_failure on container restart race.
         if ($e instanceof QueryException && str_contains($msg, 'SQLSTATE[08006]')) {
+            return null;
+        }
+
+        // Redis unreachable at CONNECT time — the same container-restart race as
+        // 08006 above, for the other datastore (deploy --force-recreate, redis
+        // recreate, DNS not yet resolving). Bursty, not chronic: the 100 most
+        // recent events of #957 fell into three windows (2026-07-21, -07-22,
+        // -08-03) with days of silence between, and 808 events since 2026-07-01
+        // buried the rest of the fleetq project.
+        //
+        // Scoped to StreamInitException on purpose — Predis throws it only from
+        // StreamFactory during stream init, so a read/write error on an already
+        // established connection (a different defect class) still reports.
+        // A SUSTAINED outage stays visible: HealthController pings Redis and
+        // flips /api/v1/health to 503 `degraded`.
+        if ($e instanceof StreamInitException) {
+            return null;
+        }
+
+        // Same restart race reaching the /metrics scrape — the prometheus client
+        // wraps the Redis connect failure in its own storage exception, so the
+        // class check above can't catch it. (#1082)
+        if (str_contains($msg, "Can't connect to Redis server")) {
             return null;
         }
 
