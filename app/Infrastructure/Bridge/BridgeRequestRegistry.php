@@ -2,7 +2,9 @@
 
 namespace App\Infrastructure\Bridge;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Predis\Connection\ConnectionException;
 
 /**
  * Manages in-flight bridge relay requests in Redis.
@@ -72,7 +74,7 @@ class BridgeRequestRegistry
      */
     public function popChunk(string $requestId, int $timeoutSeconds = 90): ?array
     {
-        $result = Redis::connection('bridge')->blpop(["bridge:stream:{$requestId}"], $timeoutSeconds);
+        $result = $this->blpopWithRetry(["bridge:stream:{$requestId}"], $timeoutSeconds);
 
         if (! $result) {
             return null;
@@ -159,6 +161,41 @@ class BridgeRequestRegistry
     public function isExpired(string $requestId): bool
     {
         return Redis::connection('bridge')->ttl("bridge:pending:{$requestId}") <= 0;
+    }
+
+    /**
+     * BLPOP against the `bridge` connection, transparently reconnecting once if the
+     * underlying socket was dropped mid-wait (e.g. an idle-connection kill by network
+     * infra during a long-lived block). A dropped connection surfaces as an uncaught
+     * RedisException/ConnectionException rather than a clean timeout, which would
+     * otherwise crash the whole in-flight bridge request.
+     *
+     * @param  list<string>  $keys
+     * @return array{0: string, 1: string}|null
+     */
+    private function blpopWithRetry(array $keys, int $timeoutSeconds): ?array
+    {
+        try {
+            return Redis::connection('bridge')->blpop($keys, $timeoutSeconds);
+        } catch (\RedisException|ConnectionException $e) {
+            Log::warning('Bridge Redis connection dropped during blpop, reconnecting and retrying', [
+                'keys' => $keys,
+                'error' => $e->getMessage(),
+            ]);
+
+            Redis::purge('bridge');
+
+            try {
+                return Redis::connection('bridge')->blpop($keys, $timeoutSeconds);
+            } catch (\RedisException|ConnectionException $e) {
+                Log::error('Bridge Redis connection retry failed after reconnect', [
+                    'keys' => $keys,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return null;
+            }
+        }
     }
 
     /**
