@@ -162,6 +162,7 @@ class DynamicForkFanOutAction
             Log::error('DynamicForkFanOutAction: failed to spawn fan-out', [
                 'step_id' => $step->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $step->update([

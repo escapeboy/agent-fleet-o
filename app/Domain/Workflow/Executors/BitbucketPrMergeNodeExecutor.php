@@ -96,6 +96,7 @@ class BitbucketPrMergeNodeExecutor implements NodeExecutorInterface
             Log::error('BitbucketPrMergeNodeExecutor: unexpected error', [
                 'pr_url' => $prUrl,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return [

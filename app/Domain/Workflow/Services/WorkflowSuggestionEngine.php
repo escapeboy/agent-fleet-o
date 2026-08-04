@@ -76,6 +76,7 @@ class WorkflowSuggestionEngine
             Log::error('WorkflowSuggestionEngine: LLM call failed', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             // Fallback: rule-based suggestions without LLM

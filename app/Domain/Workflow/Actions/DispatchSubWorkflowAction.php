@@ -106,6 +106,7 @@ class DispatchSubWorkflowAction
             Log::error('DispatchSubWorkflowAction: failed to spawn sub-workflow', [
                 'step_id' => $step->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $step->update([

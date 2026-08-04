@@ -47,6 +47,7 @@ class AutoApproveOnLoopApprovalsCommand extends Command
                 Log::error('AutoApproveOnLoop: failed to auto-approve', [
                     'approval_request_id' => $request->id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }

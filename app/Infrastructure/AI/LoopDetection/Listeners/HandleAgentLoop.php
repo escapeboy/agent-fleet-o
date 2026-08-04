@@ -70,6 +70,7 @@ class HandleAgentLoop
             Log::error('LoopDetection: failed to '.$action.' experiment', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

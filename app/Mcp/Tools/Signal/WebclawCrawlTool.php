@@ -112,6 +112,7 @@ class WebclawCrawlTool extends Tool
             Log::error('WebclawCrawlTool: Error crawling URL', [
                 'url' => $url,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return $this->internalError('Crawl failed: '.$e->getMessage());

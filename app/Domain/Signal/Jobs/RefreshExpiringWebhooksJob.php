@@ -94,6 +94,7 @@ class RefreshExpiringWebhooksJob implements ShouldQueue
                 'subscription_id' => $subscription->id,
                 'driver' => $subscription->driver,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

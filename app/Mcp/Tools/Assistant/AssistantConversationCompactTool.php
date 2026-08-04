@@ -64,6 +64,7 @@ class AssistantConversationCompactTool extends Tool
             Log::error('AssistantConversationCompactTool: compaction failed', [
                 'conversation_id' => $request->get('conversation_id'),
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return $this->errorResponse(AppMcpErrorCode::Internal, 'Compaction failed. Please try again.');

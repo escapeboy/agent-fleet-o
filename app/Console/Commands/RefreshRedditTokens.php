@@ -43,6 +43,7 @@ class RefreshRedditTokens extends Command
                 Log::error('RefreshRedditTokens: failed', [
                     'credential_id' => $credential->getKey(),
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
                 $this->error("{$credential->getAttribute('name')}: {$e->getMessage()}");
             }

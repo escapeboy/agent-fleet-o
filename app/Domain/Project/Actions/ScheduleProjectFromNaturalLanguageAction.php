@@ -71,6 +71,7 @@ class ScheduleProjectFromNaturalLanguageAction
             Log::error('ScheduleProjectFromNaturalLanguageAction: failed', [
                 'error' => $e->getMessage(),
                 'title' => $title,
+                'exception' => $e,
             ]);
 
             return json_encode(['error' => $e->getMessage()]);

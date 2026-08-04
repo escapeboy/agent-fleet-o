@@ -81,6 +81,7 @@ class ValidateCrewTaskJob implements ShouldQueue
                 'task_id' => $this->taskExecutionId,
                 'execution_id' => $this->crewExecutionId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             // QA agent failure is serious — fail the task
@@ -99,6 +100,7 @@ class ValidateCrewTaskJob implements ShouldQueue
             'task_id' => $this->taskExecutionId,
             'execution_id' => $this->crewExecutionId,
             'error' => $exception->getMessage(),
+            'exception' => $exception,
         ]);
     }
 }

@@ -33,6 +33,7 @@ final class SendAlertEmail
             Log::error('SendAlertEmail: failed to dispatch PlatformAlert mail', [
                 'rule' => $event->rule->metricName,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

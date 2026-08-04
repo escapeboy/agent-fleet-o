@@ -46,6 +46,7 @@ class RefreshExpiringIntegrationTokens extends Command
                     'integration_id' => $integration->getKey(),
                     'driver' => $driver,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
                 $this->error("{$integration->getAttribute('name')}: {$e->getMessage()}");
             }

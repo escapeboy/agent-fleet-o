@@ -37,6 +37,7 @@ class ExperimentTasksPanel extends Component
                 'experiment_id' => $this->experiment->id,
                 'step_id' => $stepId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

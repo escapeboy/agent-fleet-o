@@ -39,6 +39,7 @@ class CollectWorkflowArtifactsOnCompletion
             Log::error('CollectWorkflowArtifactsOnCompletion: Failed to collect artifacts', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
 

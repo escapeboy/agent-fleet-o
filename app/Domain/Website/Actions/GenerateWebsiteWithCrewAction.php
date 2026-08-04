@@ -70,6 +70,7 @@ class GenerateWebsiteWithCrewAction
             Log::error('GenerateWebsiteWithCrewAction: crew setup failed', [
                 'website_id' => $website->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             // Fall back to draft so the user can retry

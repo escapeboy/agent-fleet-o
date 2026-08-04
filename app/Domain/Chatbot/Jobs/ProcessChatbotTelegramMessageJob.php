@@ -95,6 +95,7 @@ class ProcessChatbotTelegramMessageJob implements ShouldQueue
             Log::error('ProcessChatbotTelegramMessageJob: response error', [
                 'chatbot_id' => $this->chatbotId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $sendReply->execute($botToken, $this->chatId, 'I encountered an error processing your message. Please try again.');
 

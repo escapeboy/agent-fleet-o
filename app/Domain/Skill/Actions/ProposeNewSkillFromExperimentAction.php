@@ -176,6 +176,7 @@ class ProposeNewSkillFromExperimentAction
             Log::error('ProposeNewSkillFromExperimentAction: LLM synthesis failed', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return null;

@@ -62,6 +62,7 @@ class PauseOnBudgetExceeded
             Log::error('PauseOnBudgetExceeded: Failed to auto-pause', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

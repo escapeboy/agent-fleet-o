@@ -207,6 +207,7 @@ class PlaybookExecutor
                 'experiment_id' => $experimentId,
                 'group_index' => $completedGroupIndex,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             self::onGroupFailed($experimentId);
@@ -232,6 +233,7 @@ class PlaybookExecutor
             Log::error('PlaybookExecutor: onGroupFailed failed', [
                 'experiment_id' => $experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }
@@ -255,6 +257,7 @@ class PlaybookExecutor
             Log::error('PlaybookExecutor: Failed to transition after playbook completion', [
                 'experiment_id' => $experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

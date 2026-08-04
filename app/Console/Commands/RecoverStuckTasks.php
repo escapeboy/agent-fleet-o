@@ -534,6 +534,7 @@ class RecoverStuckTasks extends Command
             Log::error('RecoverStuckTasks: Failed to auto-pause experiment', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }
@@ -660,6 +661,7 @@ class RecoverStuckTasks extends Command
                 'experiment_id' => $experimentId,
                 'to_state' => $toState->value,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

@@ -92,6 +92,7 @@ class ProcessChatbotSlackMessageJob implements ShouldQueue
             Log::error('ProcessChatbotSlackMessageJob: response error', [
                 'chatbot_id' => $this->chatbotId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $this->postToSlack($botToken, $this->slackChannelId, 'I encountered an error. Please try again.');
 

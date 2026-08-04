@@ -93,6 +93,7 @@ class WorkflowProgressPanel extends Component
                 'experiment_id' => $this->experimentId,
                 'step_id' => $stepId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

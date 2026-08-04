@@ -199,6 +199,7 @@ class CompleteHumanTaskAction
                 'step_id' => $step->id,
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

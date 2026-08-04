@@ -45,6 +45,7 @@ class ExecuteFlowEvaluationJob implements ShouldQueue
             Log::error('ExecuteFlowEvaluationJob failed', [
                 'run_id' => $this->runId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $run->update([

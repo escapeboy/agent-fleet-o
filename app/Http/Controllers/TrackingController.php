@@ -75,6 +75,7 @@ class TrackingController extends Controller
                 Log::error('TrackingController: Failed to record click', [
                     'error' => $e->getMessage(),
                     'experiment_id' => $experimentId,
+                    'exception' => $e,
                 ]);
             }
         }
@@ -128,6 +129,7 @@ class TrackingController extends Controller
                 Log::error('TrackingController: Failed to record open', [
                     'error' => $e->getMessage(),
                     'experiment_id' => $experimentId,
+                    'exception' => $e,
                 ]);
             }
         }

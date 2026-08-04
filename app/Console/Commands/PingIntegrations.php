@@ -57,6 +57,7 @@ class PingIntegrations extends Command
                 Log::error('PingIntegrations: unexpected error', [
                     'integration_id' => $integration->getKey(),
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
                 $this->error("✗ {$integration->getAttribute('name')} — {$e->getMessage()}");
             }

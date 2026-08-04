@@ -89,6 +89,7 @@ class CrewOrchestrator
             Log::error('Crew orchestration failed', [
                 'execution_id' => $execution->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             if (isset($scope)) {

@@ -77,6 +77,7 @@ class EvaluateTriggerRulesJob implements ShouldQueue
                     'rule_id' => $rule->id,
                     'signal_id' => $signal->id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }

@@ -76,6 +76,7 @@ class IntegrationSignalBridge
                 'subscription_id' => $subscription->id,
                 'driver' => $subscription->driver,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return 0;

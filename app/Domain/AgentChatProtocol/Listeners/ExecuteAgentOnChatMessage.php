@@ -71,6 +71,7 @@ class ExecuteAgentOnChatMessage implements ShouldQueue
             Log::error('Agent chat protocol execution failed', [
                 'message_id' => $message->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $message->forceFill([
                 'status' => MessageStatus::Failed,

@@ -72,6 +72,7 @@ class MaterializeWebsiteFromCrewAction
                 'execution_id' => $execution->id,
                 'website_id' => $website->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $website->update(['status' => WebsiteStatus::Draft, 'name' => 'Generated Website']);

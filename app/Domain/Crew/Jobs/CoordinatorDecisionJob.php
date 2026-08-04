@@ -179,6 +179,7 @@ class CoordinatorDecisionJob implements ShouldQueue
             Log::error('Coordinator decision failed', [
                 'execution_id' => $this->crewExecutionId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $execution->update([

@@ -83,6 +83,7 @@ class ResumeParentOnSubWorkflowComplete
                 Log::error('ResumeParentOnSubWorkflowComplete: failed to continue parent', [
                     'parent_id' => $parentExperiment->id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }
@@ -166,6 +167,7 @@ class ResumeParentOnSubWorkflowComplete
             Log::error('ResumeParentOnSubWorkflowComplete: failed to continue parent after fork', [
                 'parent_id' => $parentExperiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

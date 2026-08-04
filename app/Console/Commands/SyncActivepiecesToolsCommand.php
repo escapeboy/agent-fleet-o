@@ -66,6 +66,7 @@ class SyncActivepiecesToolsCommand extends Command
                 Log::error('SyncActivepiecesToolsCommand: sync failed', [
                     'integration_id' => $integration->getKey(),
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }
