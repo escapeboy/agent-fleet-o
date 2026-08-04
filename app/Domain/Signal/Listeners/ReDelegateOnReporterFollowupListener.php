@@ -92,6 +92,7 @@ class ReDelegateOnReporterFollowupListener
                 'signal_id' => $signal->id,
                 'comment_id' => $comment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return;

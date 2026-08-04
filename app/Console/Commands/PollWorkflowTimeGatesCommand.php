@@ -54,6 +54,7 @@ class PollWorkflowTimeGatesCommand extends Command
                     'step_id' => $step->id,
                     'experiment_id' => $step->experiment_id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }

@@ -198,6 +198,7 @@ class ExecuteCrewTaskJob implements ShouldQueue
             'task_id' => $this->taskExecutionId,
             'execution_id' => $this->crewExecutionId,
             'error' => $exception->getMessage(),
+            'exception' => $exception,
         ]);
     }
 }

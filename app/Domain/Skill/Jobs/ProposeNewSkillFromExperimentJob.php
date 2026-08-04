@@ -54,6 +54,7 @@ class ProposeNewSkillFromExperimentJob implements ShouldQueue
             Log::error('ProposeNewSkillFromExperimentJob: Failed', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

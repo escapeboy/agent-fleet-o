@@ -81,6 +81,7 @@ class ExecuteCompensationJob implements ShouldQueue
                 'compensation_node_id' => $this->compensationNodeId,
                 'original_step_id' => $this->originalStepId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

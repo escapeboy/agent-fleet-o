@@ -82,6 +82,7 @@ class IndexGitRepositoryJob implements ShouldQueue
             Log::error('IndexGitRepositoryJob failed', [
                 'source_id' => $source->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $source->update([
                 'status' => KnowledgeSourceStatus::Failed,

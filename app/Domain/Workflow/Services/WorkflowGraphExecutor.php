@@ -186,6 +186,7 @@ class WorkflowGraphExecutor
                     Log::error('WorkflowGraphExecutor: Transition failed', [
                         'experiment_id' => $experiment->id,
                         'error' => $e->getMessage(),
+                        'exception' => $e,
                     ]);
                 }
             }
@@ -349,6 +350,7 @@ class WorkflowGraphExecutor
                 'node_id' => $nodeId,
                 'ref_workflow_id' => $refWorkflowId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $step = $ctx->steps[$nodeId] ?? null;
             if ($step) {
@@ -672,6 +674,7 @@ class WorkflowGraphExecutor
             Log::error('WorkflowGraphExecutor: continueAfterBatch failed', [
                 'experiment_id' => $experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             self::handleBatchFailureStatic($experimentId);
@@ -710,6 +713,7 @@ class WorkflowGraphExecutor
             Log::error('WorkflowGraphExecutor: handleBatchFailure failed', [
                 'experiment_id' => $experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

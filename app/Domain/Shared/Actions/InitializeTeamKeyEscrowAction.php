@@ -48,6 +48,7 @@ class InitializeTeamKeyEscrowAction
             Log::error('Failed to initialize team key escrow', [
                 'team_id' => $team->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return null;

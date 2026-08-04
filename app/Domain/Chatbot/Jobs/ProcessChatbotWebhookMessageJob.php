@@ -76,6 +76,7 @@ class ProcessChatbotWebhookMessageJob implements ShouldQueue
             Log::error('ProcessChatbotWebhookMessageJob: response service failed', [
                 'chatbot_id' => $this->chatbotId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

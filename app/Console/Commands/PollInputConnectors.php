@@ -123,6 +123,7 @@ class PollInputConnectors extends Command
                         'connector_id' => $connector->id,
                         'driver' => $connector->driver,
                         'error' => $e->getMessage(),
+                        'exception' => $e,
                     ]);
 
                     $this->error("  → Error: {$e->getMessage()}");

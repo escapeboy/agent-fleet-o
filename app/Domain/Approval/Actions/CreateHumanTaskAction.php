@@ -192,6 +192,7 @@ class CreateHumanTaskAction
             Log::error('CreateHumanTaskAction: failed to continue workflow after auto-approval', [
                 'experiment_id' => $experiment->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

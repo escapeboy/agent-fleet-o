@@ -99,6 +99,7 @@ class DeliverWorkflowResultsJob implements ShouldQueue
                 'run_id' => $run->id,
                 'channel' => $channel,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

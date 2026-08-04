@@ -76,6 +76,7 @@ class ExecuteChatbotWorkflowJob implements ShouldQueue
                 'chatbot_id' => $this->chatbotId,
                 'message_id' => $this->messageId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

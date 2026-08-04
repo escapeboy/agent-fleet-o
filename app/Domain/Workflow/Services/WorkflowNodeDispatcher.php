@@ -132,6 +132,7 @@ class WorkflowNodeDispatcher
                 'step_id' => $step->id,
                 'node_type' => $nodeType,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $step->update([
                 'status' => 'failed',
@@ -171,6 +172,7 @@ class WorkflowNodeDispatcher
             Log::error('WorkflowGraphExecutor: Failed to create human task', [
                 'step_id' => $step->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $step->update([
                 'status' => 'failed',
@@ -188,6 +190,7 @@ class WorkflowNodeDispatcher
             Log::error('WorkflowGraphExecutor: Failed to activate time gate', [
                 'step_id' => $step->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $step->update([
                 'status' => 'failed',
@@ -205,6 +208,7 @@ class WorkflowNodeDispatcher
             Log::error('WorkflowGraphExecutor: Failed to dispatch sub-workflow', [
                 'step_id' => $step->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             $step->update([
                 'status' => 'failed',

@@ -265,6 +265,7 @@ class RunBuildingStage extends BaseStageJob
                                 Log::error('RunBuildingStage: Failed to transition to BuildingFailed', [
                                     'experiment_id' => $experimentId,
                                     'error' => $e->getMessage(),
+                                    'exception' => $e,
                                 ]);
                             }
                         }

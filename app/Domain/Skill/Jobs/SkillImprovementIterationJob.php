@@ -81,6 +81,7 @@ class SkillImprovementIterationJob implements ShouldQueue
             Log::error('SkillImprovementIterationJob: unrecoverable error', [
                 'benchmark_id' => $this->benchmarkId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             // The RunSkillIterationAction already catches per-iteration errors and logs them.
@@ -112,6 +113,7 @@ class SkillImprovementIterationJob implements ShouldQueue
         Log::error('SkillImprovementIterationJob failed', [
             'benchmark_id' => $this->benchmarkId,
             'error' => $exception->getMessage(),
+            'exception' => $exception,
         ]);
     }
 }

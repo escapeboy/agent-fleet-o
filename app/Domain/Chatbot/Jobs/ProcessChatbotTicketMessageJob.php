@@ -80,6 +80,7 @@ class ProcessChatbotTicketMessageJob implements ShouldQueue
                 'chatbot_id' => $this->chatbotId,
                 'ticket_id' => $this->ticketId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

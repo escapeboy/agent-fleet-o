@@ -74,6 +74,7 @@ class CrewExternalMemberDispatcher
                 'task_id' => $task->id,
                 'external_agent_id' => $externalAgent->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $task->update([

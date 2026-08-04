@@ -66,6 +66,7 @@ class HandleStuckPattern
             Log::error('StuckPatternDetected: failed to pause experiment', [
                 'experiment_id' => $event->experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }
@@ -88,6 +89,7 @@ class HandleStuckPattern
             Log::error('StuckPatternDetected: failed to kill experiment', [
                 'experiment_id' => $event->experimentId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
         }
     }

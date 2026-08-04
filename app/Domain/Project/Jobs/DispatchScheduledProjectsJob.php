@@ -60,7 +60,10 @@ class DispatchScheduledProjectsJob implements ShouldQueue
                     Log::info("Heartbeat triggered run for project {$project->id}");
                 }
             } catch (\Throwable $e) {
-                Log::error("Heartbeat failed for project {$project->id}: {$e->getMessage()}");
+                Log::error("Heartbeat failed for project {$project->id}: {$e->getMessage()}", [
+                    'project_id' => $project->id,
+                    'exception' => $e,
+                ]);
             }
         }
     }

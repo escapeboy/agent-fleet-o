@@ -431,6 +431,7 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
                 Log::error('BaseStageJob: Failed to transition to failed state', [
                     'experiment_id' => $this->experimentId,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }

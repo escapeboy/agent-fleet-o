@@ -204,6 +204,7 @@ class AutoSkillCreationService
                 'team_id' => $teamId,
                 'cluster_size' => count($cluster),
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return null;

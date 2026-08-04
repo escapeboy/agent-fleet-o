@@ -55,6 +55,7 @@ class VerifyBorunaBundlesBatchJob implements ShouldQueue
                 Log::error('Boruna bundle verification threw exception', [
                     'decision_id' => $decision->id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
                 ]);
             }
         }

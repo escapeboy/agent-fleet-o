@@ -418,6 +418,7 @@ class BridgeController extends Controller
             Log::error('BridgeController: MCP call exception', [
                 'request_id' => $requestId,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return response()->json([
@@ -475,6 +476,7 @@ class BridgeController extends Controller
                 'bridge_id' => $bridge->id,
                 'endpoint_url' => $bridge->endpoint_url,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return response()->json([
@@ -566,6 +568,7 @@ class BridgeController extends Controller
                 'bridge_id' => $bridge->id,
                 'endpoint_url' => $bridge->endpoint_url,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return response()->json([

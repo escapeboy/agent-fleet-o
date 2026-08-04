@@ -49,6 +49,7 @@ class CheckKmsAvailable
                 'provider' => $e->provider ?? 'unknown',
                 'reason' => $e->getMessage(),
                 'job' => class_basename($job),
+                'exception' => $e,
             ]);
 
             $this->notifyTeamAdmins($teamId, $e->getMessage());
