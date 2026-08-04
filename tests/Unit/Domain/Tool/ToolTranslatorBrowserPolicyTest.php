@@ -163,4 +163,51 @@ class ToolTranslatorBrowserPolicyTest extends TestCase
                 && $body['allowedDomains'] === ['corp.example.com'];
         });
     }
+
+    public function test_max_steps_schema_accepts_integer_or_string(): void
+    {
+        // Providers validate the model's tool call against the ADVERTISED schema
+        // server-side and reject the whole call on a type mismatch — Groq returned
+        // `/max_steps: expected number, but got string` when the model emitted "10"
+        // (Sentry #1084). We never receive such a call, so the schema must tolerate
+        // both types. Guards all three browser_task declarations.
+        config(['agent.browser_sandbox_mode' => 'sidecar']);
+
+        foreach ([['kind' => 'browser'], ['kind' => 'browser_use_cloud']] as $transport) {
+            $tool = Tool::factory()->create([
+                'type' => ToolType::BuiltIn,
+                'transport_config' => $transport,
+                'credentials' => ['api_key' => 'bu-test-key'],
+            ]);
+
+            $parameters = app(ToolTranslator::class)->toPrismTools($tool)[0]->parameters();
+
+            $this->assertArrayHasKey('max_steps', $parameters);
+            $this->assertSame(
+                ['integer', 'string'],
+                $parameters['max_steps']->toArray()['type'],
+                "browser_task max_steps must accept both types for {$transport['kind']}",
+            );
+        }
+    }
+
+    public function test_max_steps_given_as_a_string_is_coerced_before_dispatch(): void
+    {
+        config(['agent.browser_sandbox_mode' => 'sidecar']);
+        Http::fake([
+            'http://browser_sidecar:8090/run' => Http::response([
+                'status' => 'success', 'output' => 'done', 'steps_taken' => 1,
+                'duration_ms' => 100, 'screenshots' => [], 'urls_visited' => [],
+            ], 200),
+        ]);
+
+        $tool = Tool::factory()->create([
+            'type' => ToolType::BuiltIn,
+            'transport_config' => ['kind' => 'browser'],
+        ]);
+
+        app(ToolTranslator::class)->toPrismTools($tool)[0]->handle(task: 'search for dogs', max_steps: '7');
+
+        Http::assertSent(fn ($request) => ($request->data()['max_steps'] ?? null) === 7);
+    }
 }

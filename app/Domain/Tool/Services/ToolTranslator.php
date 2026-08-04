@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Prism\Prism\Facades\Tool as PrismTool;
+use Prism\Prism\Schema\RawSchema;
 use Prism\Prism\Tool as PrismToolObject;
 
 class ToolTranslator
@@ -624,7 +625,7 @@ class ToolTranslator
                     ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data)')
                     ->withStringParameter('task', 'Natural language description of the browsing task to perform')
                     ->withStringParameter('start_url', 'Optional starting URL', required: false)
-                    ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10)', required: false)
+                    ->withParameter(new RawSchema('max_steps', ['type' => ['integer', 'string'], 'description' => 'Maximum number of browser steps (default: 10)']), required: false)
                     ->using(fn () => 'Error: Browser automation requires a paid plan. Please upgrade to Starter or above.'),
             ];
         }
@@ -636,14 +637,14 @@ class ToolTranslator
                 ->for('Autonomously browse the web to complete a task (navigate, click, fill forms, extract data). Returns the extracted result as text. Set headless=false for sites with anti-bot protection (Reddit, Cloudflare-protected sites) — runs in a virtual display.')
                 ->withStringParameter('task', 'Natural language description of the browsing task to perform')
                 ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
-                ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10, plan-capped)', required: false)
+                ->withParameter(new RawSchema('max_steps', ['type' => ['integer', 'string'], 'description' => 'Maximum number of browser steps (default: 10, plan-capped)']), required: false)
                 ->withStringParameter('headless', 'Run browser in headless mode. Pass "true" (default) or "false". Use "false" for sites with anti-bot detection (Reddit, Cloudflare challenges) — uses a real visible Chrome in a virtual display.', required: false)
-                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null, ?string $headless = null) use ($mode, $toolModel): string {
+                ->using(function (string $task, ?string $start_url = null, int|string|null $max_steps = null, ?string $headless = null) use ($mode, $toolModel): string {
                     if ($denial = $this->browserPlanDenial($toolModel)) {
                         return $denial;
                     }
 
-                    $options = $this->browserTaskOptions($toolModel, $mode, $start_url, $max_steps, $headless);
+                    $options = $this->browserTaskOptions($toolModel, $mode, $start_url, self::normaliseMaxSteps($max_steps), $headless);
 
                     return $this->executeBrowserTask($toolModel, $mode, $task, $options);
                 }),
@@ -672,6 +673,19 @@ class ToolTranslator
      *
      * @return array<string, mixed>
      */
+    /**
+     * The advertised schema for `max_steps` accepts integer OR string because
+     * providers validate the model's tool call against it server-side and reject
+     * the whole call on a type mismatch — Groq returned
+     * `invalid_request_error … /max_steps: expected number, but got string`
+     * (Sentry #1084) when the model emitted "10" instead of 10. We cannot coerce
+     * a call we never receive, so the schema tolerates both and we normalise here.
+     */
+    private static function normaliseMaxSteps(int|string|null $maxSteps): ?int
+    {
+        return $maxSteps === null || $maxSteps === '' ? null : (int) $maxSteps;
+    }
+
     private function browserTaskOptions(Tool $toolModel, string $mode, ?string $startUrl, ?int $maxSteps, ?string $headless): array
     {
         // Cap max_steps to the plan limit.
@@ -843,8 +857,8 @@ class ToolTranslator
                 ->for('Autonomously browse the web to complete a task via browser-use Cloud (cloud.browser-use.com). Natural language task description, returns the extracted result as text. Good for: form filling, data extraction, multi-step navigation, sites that need a real browser.')
                 ->withStringParameter('task', 'Natural language description of the browsing task to perform')
                 ->withStringParameter('start_url', 'Optional starting URL to begin from', required: false)
-                ->withNumberParameter('max_steps', 'Maximum number of browser steps (default: 10)', required: false)
-                ->using(function (string $task, ?string $start_url = null, ?int $max_steps = null) use ($toolModel): string {
+                ->withParameter(new RawSchema('max_steps', ['type' => ['integer', 'string'], 'description' => 'Maximum number of browser steps (default: 10)']), required: false)
+                ->using(function (string $task, ?string $start_url = null, int|string|null $max_steps = null) use ($toolModel): string {
                     // Execution-time plan gate — cloud registers 'browser.plan_gate' as a callable.
                     if ($toolModel->team_id && app()->bound('browser.plan_gate')) {
                         $gate = app('browser.plan_gate');
@@ -853,7 +867,7 @@ class ToolTranslator
                         }
                     }
 
-                    $effectiveMaxSteps = $max_steps ?? 10;
+                    $effectiveMaxSteps = self::normaliseMaxSteps($max_steps) ?? 10;
                     if ($toolModel->team_id && app()->bound('browser.max_steps_gate')) {
                         $planMaxSteps = app('browser.max_steps_gate')($toolModel->team_id);
                         if ($planMaxSteps > 0) {
