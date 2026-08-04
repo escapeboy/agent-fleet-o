@@ -113,6 +113,11 @@ Schedule::command('marketplace:aggregate-quality')->everySixHours();
 // Prune growing tables: llm_request_logs (30d), semantic_cache_entries (expired+90d), assistant_messages (90d)
 Schedule::command('model:prune')->dailyAt('04:00');
 
+// failed_jobs was never pruned and had grown to 1916 rows on production (oldest
+// 2026-04) — every row a resolved incident, drowning the recent ones that still
+// matter. 30 days is long enough to investigate a failure after the fact.
+Schedule::command('queue:prune-failed --hours=720')->dailyAt('04:15');
+
 // Version update check
 Schedule::command('system:check-updates')->hourly()->runInBackground();
 
