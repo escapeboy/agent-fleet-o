@@ -35,6 +35,28 @@ class StoreMemoryActionTest extends TestCase
         $this->assertStringContainsString('A', $chunks[0]);
     }
 
+    public function test_team_level_memory_accepts_a_null_agent_id(): void
+    {
+        // execute() advertises `?string $agentId`, but storeChunk() and the
+        // write-gate helpers below it declared a non-nullable `string`. Every
+        // team-scoped write — DistillTeamEventsAction passes `agentId: null`
+        // explicitly — therefore threw a TypeError that execute()'s catch
+        // swallowed into a Log::warning, so nothing was ever stored and no
+        // error surfaced. Production had 0 rows in `memories`.
+        $action = new StoreMemoryAction;
+
+        foreach (['storeChunk', 'evaluateWriteGate', 'handleUpdate', 'handleAdd', 'mergeContent'] as $name) {
+            $param = collect((new \ReflectionMethod($action, $name))->getParameters())
+                ->firstWhere(fn (\ReflectionParameter $p) => $p->getName() === 'agentId');
+
+            $this->assertNotNull($param, "{$name}() should take an \$agentId");
+            $this->assertTrue(
+                $param->getType()?->allowsNull(),
+                "{$name}() must accept a null \$agentId — team-scoped memories have no agent",
+            );
+        }
+    }
+
     public function test_execute_returns_empty_array_when_content_is_empty(): void
     {
         $action = new StoreMemoryAction;
