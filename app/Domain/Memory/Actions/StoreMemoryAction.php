@@ -163,7 +163,7 @@ PROMPT;
      */
     private function storeChunk(
         string $teamId,
-        string $agentId,
+        ?string $agentId,
         string $chunk,
         string $sourceType,
         ?string $projectId,
@@ -225,7 +225,7 @@ PROMPT;
      */
     private function evaluateWriteGate(
         string $teamId,
-        string $agentId,
+        ?string $agentId,
         string $contentHash,
         string $embedding,
     ): WriteGateResult {
@@ -304,7 +304,7 @@ PROMPT;
         string $newContent,
         string $newEmbedding,
         string $teamId,
-        string $agentId,
+        ?string $agentId,
         float $newConfidence,
         float $newImportance,
         array $newTags,
@@ -347,7 +347,7 @@ PROMPT;
 
     private function handleAdd(
         string $teamId,
-        string $agentId,
+        ?string $agentId,
         string $chunk,
         string $embedding,
         string $contentHash,
@@ -409,7 +409,7 @@ PROMPT;
     /**
      * LLM-assisted merge of two related facts.
      */
-    private function mergeContent(string $existing, string $new, string $teamId, string $agentId): ?string
+    private function mergeContent(string $existing, string $new, string $teamId, ?string $agentId): ?string
     {
         if (! $this->gateway) {
             return null;
