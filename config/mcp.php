@@ -49,4 +49,24 @@ return [
             '127.0.0.1',
         ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | tools/list Cache Hints (MCP Spec 2026-07-28 — SEP-2549)
+    |--------------------------------------------------------------------------
+    |
+    | Advertised to clients speaking 2026-07-28 or newer so they stop
+    | re-fetching a catalogue of 140+ (compact) / 500+ (full) tool schemas on
+    | every connection.
+    |
+    | Scope must NOT be "global": CompactTool::shouldRegister() filters the
+    | catalogue by the team's `settings.mcp_tools` profile, so the response is
+    | per-credential, not per-server.
+    |
+    */
+
+    'tools_cache' => [
+        'ttl_ms' => (int) env('MCP_TOOLS_CACHE_TTL_MS', 300000),
+        'scope' => env('MCP_TOOLS_CACHE_SCOPE', 'session'),
+    ],
+
 ];

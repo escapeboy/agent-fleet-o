@@ -4,6 +4,7 @@ namespace App\Mcp\Servers;
 
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Concerns\SupportsDualProtocolFormat;
 use App\Mcp\Resources\AgentMonitorResource;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Resources\CrewExecutionResource;
@@ -675,6 +676,7 @@ use Laravel\Mcp\Server;
 class AgentFleetServer extends Server
 {
     use BootstrapsMcpAuth;
+    use SupportsDualProtocolFormat;
 
     protected string $name = 'FleetQ';
 
@@ -742,6 +744,7 @@ class AgentFleetServer extends Server
 
     protected function boot(): void
     {
+        $this->bootDualProtocolFormat();
         $this->bootstrapMcpAuth();
 
         // Auto-discover Tool classes from `app/Mcp/Tools/**`. Catches files added

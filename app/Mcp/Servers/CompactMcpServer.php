@@ -3,6 +3,7 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Concerns\BootstrapsMcpAuth;
+use App\Mcp\Concerns\SupportsDualProtocolFormat;
 use App\Mcp\Resources\ApprovalsResource;
 use App\Mcp\Tools\Compact\AdminManageTool;
 use App\Mcp\Tools\Compact\AgentAdvancedTool;
@@ -52,6 +53,7 @@ use Laravel\Mcp\Server;
 class CompactMcpServer extends Server
 {
     use BootstrapsMcpAuth;
+    use SupportsDualProtocolFormat;
 
     protected string $name = 'FleetQ';
 
@@ -85,6 +87,7 @@ TXT;
 
     protected function boot(): void
     {
+        $this->bootDualProtocolFormat();
         $this->bootstrapMcpAuth();
     }
 
