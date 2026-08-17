@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\OAuthRevokeController;
 use App\Http\Middleware\McpTeamBinding;
+use App\Http\Middleware\NegotiateMcpProtocol;
 use App\Http\Middleware\SentryMcpToolTagMiddleware;
 use App\Mcp\Servers\AgentFleetServer;
 use App\Mcp\Servers\CompactMcpServer;
@@ -87,12 +88,15 @@ Route::post('oauth/revoke', OAuthRevokeController::class)
 // OAuth flows. The `scope:mcp:use` guard only fires for Passport tokens — Sanctum
 // tokens are validated by their team-scoping ability inside the server's
 // BootstrapsMcpAuth trait.
+//
+// NegotiateMcpProtocol runs first so both the stateless 2026-07-28 format and
+// the legacy initialize/session format are served from the same endpoint.
 Mcp::web('/mcp', CompactMcpServer::class)
-    ->middleware(['auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
+    ->middleware([NegotiateMcpProtocol::class, 'auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
 
 // Full MCP endpoint (HTTP/SSE) — all 259 tools for power users and clients without tool limits
 Mcp::web('/mcp/full', AgentFleetServer::class)
-    ->middleware(['auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
+    ->middleware([NegotiateMcpProtocol::class, 'auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
 
 // Local MCP server (stdio) — for CLI agents like Codex, Claude Code (no tool limit)
 Mcp::local('agent-fleet', AgentFleetServer::class);
