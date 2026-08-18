@@ -18,6 +18,8 @@ class EvaluationRunResult extends Model
         'case_id',
         'actual_output',
         'score',
+        'criterion_scores',
+        'cost_credits',
         'judge_reasoning',
         'execution_time_ms',
         'error',
@@ -28,6 +30,8 @@ class EvaluationRunResult extends Model
     {
         return [
             'score' => 'float',
+            'criterion_scores' => 'array',
+            'cost_credits' => 'integer',
             'execution_time_ms' => 'integer',
             'created_at' => 'datetime',
         ];
