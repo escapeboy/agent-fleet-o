@@ -580,6 +580,18 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
             return $tierResolved;
         }
 
+        // 3.5 Team BYOK fallback — a team that configured its own provider key in
+        // Team Settings but never set a workspace default (step 2) must still run on
+        // THAT key, not fall through to the platform default provider it holds no key
+        // for. Without this, BYOK teams fail the pipeline with
+        // AiAccessUnavailableException ("your plan does not include platform AI keys")
+        // despite having added a valid key (prod diagnosis 2026-08-18: google/groq
+        // BYOK teams failing planning).
+        $byokResolved = $this->resolveTeamByokLlm($team);
+        if ($byokResolved) {
+            return $byokResolved;
+        }
+
         // 4. Platform default (GlobalSetting → config fallback)
         $platformProvider = GlobalSetting::get('default_llm_provider') ?? config('llm_pricing.default_provider', 'anthropic');
         $platformModel = GlobalSetting::get('default_llm_model') ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
@@ -598,6 +610,51 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
      *
      * @return array{provider: string, model: string}|null
      */
+    /**
+     * Resolve the LLM from the team's own active BYOK credentials, preferring the
+     * oldest configured cloud provider that exposes a static model catalog. Returns
+     * null when the team has no usable BYOK provider, leaving the platform default.
+     *
+     * Only cloud providers are eligible: local CLI agents, HTTP-local endpoints and
+     * bridge providers gate on runtime detection / reachable endpoints (and
+     * custom_endpoint needs a base_url), so a stored key alone does not make them
+     * usable — those keep their own resolution paths.
+     *
+     * @return array{provider: string, model: string}|null
+     */
+    private function resolveTeamByokLlm(?Team $team): ?array
+    {
+        if (! $team) {
+            return null;
+        }
+
+        $providers = TeamProviderCredential::where('team_id', $team->id)
+            ->where('is_active', true)
+            ->orderBy('created_at')
+            ->pluck('provider')
+            ->unique();
+
+        foreach ($providers as $provider) {
+            $providerConfig = config("llm_providers.{$provider}");
+            if (! is_array($providerConfig)) {
+                continue;
+            }
+
+            if (! empty($providerConfig['local'])
+                || ! empty($providerConfig['http_local'])
+                || ! empty($providerConfig['bridge'])) {
+                continue;
+            }
+
+            $model = array_key_first($providerConfig['models'] ?? []);
+            if ($model !== null) {
+                return ['provider' => $provider, 'model' => (string) $model];
+            }
+        }
+
+        return null;
+    }
+
     protected function resolveStageModelTier(?Team $team): ?array
     {
         $stageKey = $this->stageType()->value;

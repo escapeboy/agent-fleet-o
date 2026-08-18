@@ -7,6 +7,7 @@ use App\Domain\Experiment\Enums\ExperimentTrack;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Pipeline\RunScoringStage;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Models\GlobalSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -109,5 +110,90 @@ class PipelineLlmResolutionTest extends TestCase
 
         $this->assertEquals('google', $result['provider']);
         $this->assertEquals('gemini-2.5-flash', $result['model']);
+    }
+
+    public function test_stage_uses_team_byok_provider_when_no_workspace_default(): void
+    {
+        // Team added its own Google key in Team Settings but never set a workspace
+        // default provider (step 2). Without the BYOK fallback this resolves to the
+        // platform default (anthropic) — which the team has no key for — and fails
+        // planning with AiAccessUnavailableException. Prod diagnosis 2026-08-18.
+        TeamProviderCredential::create([
+            'team_id' => $this->team->id,
+            'provider' => 'google',
+            'name' => 'My Gemini key',
+            'credentials' => ['api_key' => 'test-key'],
+            'is_active' => true,
+        ]);
+
+        $experiment = $this->createExperiment();
+
+        config(['services.platform_api_keys' => []]);
+        config(['experiments.stage_model_tiers.scoring' => null]);
+        GlobalSetting::set('default_llm_provider', 'anthropic');
+        GlobalSetting::set('default_llm_model', 'claude-sonnet-4-5');
+
+        $job = new RunScoringStage($experiment->id);
+        $method = new \ReflectionMethod($job, 'resolvePipelineLlm');
+
+        $result = $method->invoke($job, $experiment);
+
+        $this->assertEquals('google', $result['provider']);
+        $this->assertEquals('gemini-2.5-flash', $result['model']);
+    }
+
+    public function test_byok_fallback_ignores_inactive_credentials(): void
+    {
+        TeamProviderCredential::create([
+            'team_id' => $this->team->id,
+            'provider' => 'google',
+            'name' => 'Disabled key',
+            'credentials' => ['api_key' => 'test-key'],
+            'is_active' => false,
+        ]);
+
+        $experiment = $this->createExperiment();
+
+        config(['services.platform_api_keys' => []]);
+        config(['experiments.stage_model_tiers.scoring' => null]);
+        GlobalSetting::set('default_llm_provider', 'anthropic');
+        GlobalSetting::set('default_llm_model', 'claude-sonnet-4-5');
+
+        $job = new RunScoringStage($experiment->id);
+        $method = new \ReflectionMethod($job, 'resolvePipelineLlm');
+
+        $result = $method->invoke($job, $experiment);
+
+        // Inactive BYOK credential is skipped → platform default.
+        $this->assertEquals('anthropic', $result['provider']);
+        $this->assertEquals('claude-sonnet-4-5', $result['model']);
+    }
+
+    public function test_byok_fallback_skips_custom_endpoint_provider(): void
+    {
+        // custom_endpoint has no static catalog and needs a base_url — a stored key
+        // alone must NOT route the pipeline there; it keeps its own resolution path.
+        TeamProviderCredential::create([
+            'team_id' => $this->team->id,
+            'provider' => 'custom_endpoint',
+            'name' => 'Custom',
+            'credentials' => ['api_key' => 'test-key'],
+            'is_active' => true,
+        ]);
+
+        $experiment = $this->createExperiment();
+
+        config(['services.platform_api_keys' => []]);
+        config(['experiments.stage_model_tiers.scoring' => null]);
+        GlobalSetting::set('default_llm_provider', 'anthropic');
+        GlobalSetting::set('default_llm_model', 'claude-sonnet-4-5');
+
+        $job = new RunScoringStage($experiment->id);
+        $method = new \ReflectionMethod($job, 'resolvePipelineLlm');
+
+        $result = $method->invoke($job, $experiment);
+
+        $this->assertEquals('anthropic', $result['provider']);
+        $this->assertEquals('claude-sonnet-4-5', $result['model']);
     }
 }
