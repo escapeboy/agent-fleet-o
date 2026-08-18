@@ -33,6 +33,7 @@ class EvaluationReplayDatasetTool extends Tool
             'judge_model' => $schema->string()->description('Judge model override (default: anthropic/claude-sonnet-4-5)'),
             'max_cases' => $schema->integer()->description('Max cases to replay (default 100, hard cap 500)'),
             'sync' => $schema->boolean()->description('Run inline (blocks) instead of queueing. Use only for <=10 cases. Default false.')->default(false),
+            'parallel' => $schema->boolean()->description('When queued, fan each case out as a batch on the ai-calls queue (much faster on large datasets, identical results). Ignored when sync=true. Default true.')->default(true),
         ];
     }
 
@@ -68,6 +69,9 @@ class EvaluationReplayDatasetTool extends Tool
         $judgeModel = $request->get('judge_model');
         $maxCases = max(1, min(500, (int) $request->get('max_cases', 100)));
         $sync = (bool) $request->get('sync', false);
+        $parallel = (bool) $request->get('parallel', true);
+        $normalizedPrompt = is_string($systemPrompt) && $systemPrompt !== '' ? $systemPrompt : null;
+        $normalizedJudge = is_string($judgeModel) && $judgeModel !== '' ? $judgeModel : null;
 
         if ($sync) {
             try {
@@ -76,9 +80,9 @@ class EvaluationReplayDatasetTool extends Tool
                     datasetId: $datasetId,
                     targetProvider: $provider,
                     targetModel: $model,
-                    systemPrompt: is_string($systemPrompt) && $systemPrompt !== '' ? $systemPrompt : null,
+                    systemPrompt: $normalizedPrompt,
                     criteria: $criteria,
-                    judgeModel: is_string($judgeModel) && $judgeModel !== '' ? $judgeModel : null,
+                    judgeModel: $normalizedJudge,
                     maxCases: $maxCases,
                 );
             } catch (\Throwable $e) {
@@ -94,19 +98,49 @@ class EvaluationReplayDatasetTool extends Tool
             ]));
         }
 
+        if ($parallel) {
+            try {
+                $run = $action->dispatchParallel(
+                    teamId: $user->current_team_id,
+                    datasetId: $datasetId,
+                    targetProvider: $provider,
+                    targetModel: $model,
+                    systemPrompt: $normalizedPrompt,
+                    criteria: $criteria,
+                    judgeModel: $normalizedJudge,
+                    maxCases: $maxCases,
+                );
+            } catch (\Throwable $e) {
+                return Response::error('Replay dispatch failed: '.$e->getMessage());
+            }
+
+            return Response::text(json_encode([
+                'status' => 'queued',
+                'mode' => 'parallel',
+                'run_id' => $run->id,
+                'dataset_id' => $datasetId,
+                'target_provider' => $provider,
+                'target_model' => $model,
+                'criteria' => $criteria,
+                'max_cases' => $maxCases,
+                'message' => 'Parallel replay dispatched (one job per case on ai-calls). Poll evaluation_run with action=get&run_id='.$run->id.' until status=completed.',
+            ]));
+        }
+
         ReplayEvaluationDatasetJob::dispatch(
             teamId: $user->current_team_id,
             datasetId: $datasetId,
             targetProvider: $provider,
             targetModel: $model,
-            systemPrompt: is_string($systemPrompt) && $systemPrompt !== '' ? $systemPrompt : null,
+            systemPrompt: $normalizedPrompt,
             criteria: $criteria,
-            judgeModel: is_string($judgeModel) && $judgeModel !== '' ? $judgeModel : null,
+            judgeModel: $normalizedJudge,
             maxCases: $maxCases,
         );
 
         return Response::text(json_encode([
             'status' => 'queued',
+            'mode' => 'sequential',
             'dataset_id' => $datasetId,
             'target_provider' => $provider,
             'target_model' => $model,
