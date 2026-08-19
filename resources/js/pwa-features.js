@@ -206,11 +206,15 @@ window.FleetQArtifactDownload = {
 // The server endpoints are provided by asbiin/laravel-webauthn.
 // Feature-detected: hidden on browsers without PublicKeyCredential support.
 
-function arrayBufferToBase64Url(buffer) {
+// laravel-webauthn expects STANDARD base64 (not base64url) for credential
+// response fields: its Base64::decode() of clientDataJSON / authenticatorData
+// rejects the base64url alphabet (- and _) and throws. Mirrors the package's
+// own webauthn.js encoder.
+function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
     let str = '';
     for (const byte of bytes) str += String.fromCharCode(byte);
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return btoa(str);
 }
 
 function base64UrlToArrayBuffer(base64url) {
@@ -249,24 +253,24 @@ function encodeCredential(credential) {
     const response = credential.response;
     const encoded = {
         id: credential.id,
-        rawId: arrayBufferToBase64Url(credential.rawId),
+        rawId: arrayBufferToBase64(credential.rawId),
         type: credential.type,
         response: {},
     };
     if (response.attestationObject) {
-        encoded.response.attestationObject = arrayBufferToBase64Url(response.attestationObject);
+        encoded.response.attestationObject = arrayBufferToBase64(response.attestationObject);
     }
     if (response.clientDataJSON) {
-        encoded.response.clientDataJSON = arrayBufferToBase64Url(response.clientDataJSON);
+        encoded.response.clientDataJSON = arrayBufferToBase64(response.clientDataJSON).replace(/=/g, '');
     }
     if (response.authenticatorData) {
-        encoded.response.authenticatorData = arrayBufferToBase64Url(response.authenticatorData);
+        encoded.response.authenticatorData = arrayBufferToBase64(response.authenticatorData).replace(/=/g, '');
     }
     if (response.signature) {
-        encoded.response.signature = arrayBufferToBase64Url(response.signature);
+        encoded.response.signature = arrayBufferToBase64(response.signature);
     }
     if (response.userHandle) {
-        encoded.response.userHandle = arrayBufferToBase64Url(response.userHandle);
+        encoded.response.userHandle = arrayBufferToBase64(response.userHandle);
     }
     return encoded;
 }
