@@ -26,12 +26,10 @@ return [
     'groq' => [
         'name' => 'Groq',
         'models' => [
-            'llama-3.3-70b-versatile' => ['label' => 'Llama 3.3 70B', 'input_cost' => 0.59, 'output_cost' => 0.79],
-            'llama-3.1-8b-instant' => ['label' => 'Llama 3.1 8B', 'input_cost' => 0.05, 'output_cost' => 0.08],
-            'llama-4-scout-17b-16e' => ['label' => 'Llama 4 Scout', 'input_cost' => 0.11, 'output_cost' => 0.34],
-            'gemma2-9b-it' => ['label' => 'Gemma 2 9B', 'input_cost' => 0.20, 'output_cost' => 0.20],
-            'qwen-qwq-32b' => ['label' => 'Qwen QwQ 32B', 'input_cost' => 0.29, 'output_cost' => 0.39],
-            'mixtral-8x7b-32768' => ['label' => 'Mixtral 8x7B', 'input_cost' => 0.24, 'output_cost' => 0.24],
+            // Groq shut down the Llama 3.x IDs on 2026-08-16; only the GPT OSS
+            // pair remains a production (non-preview) text model on GroqCloud.
+            'openai/gpt-oss-120b' => ['label' => 'GPT OSS 120B', 'input_cost' => 0.15, 'output_cost' => 0.60],
+            'openai/gpt-oss-20b' => ['label' => 'GPT OSS 20B', 'input_cost' => 0.075, 'output_cost' => 0.30],
         ],
     ],
     'openrouter' => [
