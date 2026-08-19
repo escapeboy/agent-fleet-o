@@ -223,12 +223,8 @@ return [
         ],
 
         'groq' => [
-            'llama-3.3-70b-versatile' => ['tier' => 'default', 'input_usd_per_mtok' => 0.59, 'output_usd_per_mtok' => 0.79, 'context_window' => 128_000, 'last_verified_at' => '2026-05-04'],
-            'llama-3.1-8b-instant' => ['tier' => 'nano', 'input_usd_per_mtok' => 0.05, 'output_usd_per_mtok' => 0.08, 'context_window' => 128_000, 'last_verified_at' => '2026-05-04'],
-            'llama-4-scout-17b-16e' => ['tier' => 'default', 'input_usd_per_mtok' => 0.11, 'output_usd_per_mtok' => 0.34, 'context_window' => 128_000, 'last_verified_at' => '2026-05-04'],
-            'gemma2-9b-it' => ['tier' => 'nano', 'input_usd_per_mtok' => 0.20, 'output_usd_per_mtok' => 0.20, 'context_window' => 8_192, 'last_verified_at' => '2026-05-04'],
-            'qwen-qwq-32b' => ['tier' => 'heavy', 'input_usd_per_mtok' => 0.29, 'output_usd_per_mtok' => 0.39, 'context_window' => 128_000, 'last_verified_at' => '2026-05-04'],
-            'mixtral-8x7b-32768' => ['tier' => 'default', 'input_usd_per_mtok' => 0.24, 'output_usd_per_mtok' => 0.24, 'context_window' => 32_768, 'last_verified_at' => '2026-05-04'],
+            'openai/gpt-oss-120b' => ['tier' => 'default', 'input_usd_per_mtok' => 0.15, 'output_usd_per_mtok' => 0.60, 'context_window' => 131_072, 'last_verified_at' => '2026-08-19'],
+            'openai/gpt-oss-20b' => ['tier' => 'nano', 'input_usd_per_mtok' => 0.075, 'output_usd_per_mtok' => 0.30, 'context_window' => 131_072, 'last_verified_at' => '2026-08-19'],
         ],
 
         'mistral' => [
@@ -329,8 +325,8 @@ return [
         'gpt-5-nano' => 128_000,
         'gemini-2.5-flash' => 1_048_576,
         'gemini-2.5-pro' => 1_048_576,
-        'llama-3.3-70b-versatile' => 128_000,
-        'llama-3.1-8b-instant' => 128_000,
+        'openai/gpt-oss-120b' => 131_072,
+        'openai/gpt-oss-20b' => 131_072,
         'mistral-large-latest' => 128_000,
         'mistral-small-latest' => 32_000,
     ],

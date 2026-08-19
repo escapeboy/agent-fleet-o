@@ -208,13 +208,14 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
-                // Auth errors (401 / missing or revoked key) are config errors disguised
-                // as provider failures — let the chain advance without breaking the
-                // circuit. Mirrors the \RuntimeException branch above.
-                if ($this->isAuthError($e)) {
+                // Auth errors (401 / missing or revoked key) and retired model IDs
+                // are config errors disguised as provider failures — let the chain
+                // advance without breaking the circuit. Mirrors the \RuntimeException
+                // branch above.
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
-                    Log::warning("AI Gateway fallback: {$providerName}/{$modelName} auth error (not recording CB failure)", [
+                    Log::warning("AI Gateway fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
                         'error' => $e->getMessage(),
                     ]);
 
@@ -399,10 +400,10 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
-                if ($this->isAuthError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
-                    Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} auth error (not recording CB failure)", [
+                    Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
                         'error' => $e->getMessage(),
                     ]);
 
@@ -574,6 +575,22 @@ class FallbackAiGateway implements AiGatewayInterface
             || str_contains($msg, 'API key not valid')
             || (str_contains($msg, '[401]') && str_contains($msg, 'Anthropic'))
             || (str_contains($msg, 'status code 401'));
+    }
+
+    /**
+     * A retired or mistyped model ID (Groq 404, OpenAI/OpenRouter "not a valid model")
+     * never recovers on retry, and the breaker is keyed per PROVIDER — so letting one
+     * stale model config open it takes the provider down for every other team and
+     * fires a CRITICAL platform alert. Treat it as config error, like auth.
+     */
+    private function isModelUnavailableError(Throwable $e): bool
+    {
+        $msg = $e->getMessage();
+
+        return str_contains($msg, 'does not exist or you do not have access to it')
+            || str_contains($msg, 'is not a valid model ID')
+            || str_contains($msg, 'model_not_found')
+            || str_contains($msg, 'The model `');
     }
 
     /**
