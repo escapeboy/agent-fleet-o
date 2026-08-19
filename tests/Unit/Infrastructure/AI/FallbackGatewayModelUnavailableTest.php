@@ -43,7 +43,7 @@ class FallbackGatewayModelUnavailableTest extends TestCase
         $this->circuitBreaker->expects($this->never())->method('recordFailure');
 
         $this->gateway->method('complete')->willThrowException(new Exception(
-            'Groq Error [404]: invalid_request_error - The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.'
+            'Groq Error [404]: invalid_request_error - The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.',
         ));
 
         $this->expectException(Exception::class);
