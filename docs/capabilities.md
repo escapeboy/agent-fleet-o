@@ -366,6 +366,16 @@ Context-aware chat embedded in the platform. 28 role-gated tools for querying an
 | `browser` | `browserless` | Headless Chrome for browser skills | `BROWSERLESS_TOKEN` |
 | `sandbox` | `bash_sidecar` | Sandboxed code execution | `BASH_SIDECAR_SECRET` |
 
+### Sandbox execution drivers
+
+`AgentSandbox` (used by `Skill\Actions\ExecuteCodeExecutionSkillAction` and
+warm-build) resolves a driver from `config('sandbox.driver')`:
+
+| Driver | Isolation | Trust model |
+|--------|-----------|-------------|
+| `docker` *(default)* | Host Docker socket, `--network none`, `--cap-drop ALL`, read-only rootfs | Executed code shares the horizon container's kernel and can see `.env` if the caller mounts the workspace incorrectly. Fine for local dev. |
+| `modal` | Fresh Modal Sandbox per call, gVisor, no bind mount, network blocked, EU region | Executed code has no path to the horizon host — files are copied over HTTPS into a Sandbox that is terminated on return. Requires `modal deploy modal/app.py`. See `docs/sandbox-modal.md`. |
+
 ---
 
 ## Key Artisan Commands

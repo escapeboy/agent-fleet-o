@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use App\Domain\Agent\Contracts\SandboxDriverInterface;
 use App\Domain\Agent\Events\AgentExecuted;
 use App\Domain\Agent\Listeners\ProvisionPersonalAgentListener;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentExecution;
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Agent\Observers\AiRunObserver;
+use App\Domain\Agent\Services\Sandbox\DockerSandboxDriver;
+use App\Domain\Agent\Services\Sandbox\ModalSandboxDriver;
 use App\Domain\AgentChatProtocol\Events\ChatMessageDispatched;
 use App\Domain\AgentChatProtocol\Events\ChatMessageReceived;
 use App\Domain\AgentChatProtocol\Listeners\ExecuteAgentOnChatMessage;
@@ -180,6 +183,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -250,6 +254,32 @@ class AppServiceProvider extends ServiceProvider
                 'searxng' => $app->make(SearxngWebSearchProvider::class),
                 'serper' => $app->make(SerperWebSearchProvider::class),
                 default => throw new \InvalidArgumentException("Unknown web_search driver [{$driver}]. Use 'searxng' or 'serper'."),
+            };
+        });
+
+        // Sandbox driver seam — selects the execution backend for AgentSandbox
+        // based on config('sandbox.driver'). 'docker' preserves the historical
+        // behaviour (host Docker socket, --network none). 'modal' delegates
+        // execution to a Modal.com Sandbox (gVisor isolation, no host access)
+        // via the HTTPS endpoint defined in modal/app.py; Modal is opt-in per
+        // environment via SANDBOX_DRIVER=modal.
+        $this->app->singleton(SandboxDriverInterface::class, function ($app) {
+            $driver = config('sandbox.driver', 'docker');
+
+            return match ($driver) {
+                'docker' => $app->make(DockerSandboxDriver::class),
+                'modal' => new ModalSandboxDriver(
+                    http: $app->make(Factory::class),
+                    endpointUrl: (string) config('sandbox.drivers.modal.endpoint_url', ''),
+                    endpointToken: (string) config('sandbox.drivers.modal.endpoint_token', ''),
+                    defaultImage: (string) config('sandbox.drivers.modal.default_image', 'python:3.12-slim'),
+                    defaultRegion: (string) config('sandbox.drivers.modal.region', 'eu'),
+                    connectTimeoutSeconds: (int) config('sandbox.drivers.modal.connect_timeout_seconds', 15),
+                    requestOverheadSeconds: (int) config('sandbox.drivers.modal.request_overhead_seconds', 30),
+                ),
+                default => throw new \InvalidArgumentException(
+                    "Unknown sandbox driver [{$driver}]. Use 'docker' or 'modal'.",
+                ),
             };
         });
 
