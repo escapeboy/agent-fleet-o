@@ -6,6 +6,10 @@ use App\Mcp\Tools\Skill\BrowserSkillTool;
 use App\Mcp\Tools\Skill\CodeExecutionTool;
 use App\Mcp\Tools\Skill\GuardrailTool;
 use App\Mcp\Tools\Skill\MultiModelConsensusTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkCancelTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkListTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkStartTool;
+use App\Mcp\Tools\Skill\SkillBenchmarkStatusTool;
 use App\Mcp\Tools\Skill\SkillCreateTool;
 use App\Mcp\Tools\Skill\SkillDeleteTool;
 use App\Mcp\Tools\Skill\SkillGetTool;
@@ -37,6 +41,10 @@ Direct execution (each costs credits):
 - code_exec (write — sandboxed) — code, language. Runs in DockerSandboxExecutor.
 - browser (write — costs browser credits) — url, actions[]. Headless browser automation.
 - supabase_edge_function (write) — function_name, payload. Invokes a deployed Supabase edge function.
+- benchmark_start (write) — skill_id + dataset. Queues a benchmark run.
+- benchmark_list (read) — skill_id. Past benchmark runs.
+- benchmark_status (read) — benchmark_id. Progress and partial scores.
+- benchmark_cancel (DESTRUCTIVE) — benchmark_id. Stops a running benchmark.
 TXT;
 
     protected function toolMap(): array
@@ -53,6 +61,10 @@ TXT;
             'code_exec' => CodeExecutionTool::class,
             'browser' => BrowserSkillTool::class,
             'supabase_edge_function' => SupabaseEdgeFunctionSkillTool::class,
+            'benchmark_start' => SkillBenchmarkStartTool::class,
+            'benchmark_list' => SkillBenchmarkListTool::class,
+            'benchmark_status' => SkillBenchmarkStatusTool::class,
+            'benchmark_cancel' => SkillBenchmarkCancelTool::class,
         ];
     }
 }

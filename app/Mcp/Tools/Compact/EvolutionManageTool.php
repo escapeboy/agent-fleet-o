@@ -5,6 +5,8 @@ namespace App\Mcp\Tools\Compact;
 use App\Mcp\Tools\Evolution\EvolutionAnalyzeTool;
 use App\Mcp\Tools\Evolution\EvolutionApplyTool;
 use App\Mcp\Tools\Evolution\EvolutionApproveTool;
+use App\Mcp\Tools\Evolution\EvolutionDeleteTool;
+use App\Mcp\Tools\Evolution\EvolutionGetTool;
 use App\Mcp\Tools\Evolution\EvolutionProposalListTool;
 use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
@@ -23,6 +25,8 @@ Actions:
 - approve (write) — proposal_id. Marks as approved without applying (queue for batch apply).
 - apply (DESTRUCTIVE) — proposal_id. Mutates the target entity in place; rollback only via config_history snapshot.
 - reject (write) — proposal_id, reason. Closes the proposal.
+- get (read) — proposal_id. Full proposal with diff and rationale.
+- delete (DESTRUCTIVE) — proposal_id. Discards the proposal.
 TXT;
 
     protected function toolMap(): array
@@ -33,6 +37,8 @@ TXT;
             'approve' => EvolutionApproveTool::class,
             'apply' => EvolutionApplyTool::class,
             'reject' => EvolutionRejectTool::class,
+            'get' => EvolutionGetTool::class,
+            'delete' => EvolutionDeleteTool::class,
         ];
     }
 }

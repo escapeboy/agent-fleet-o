@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Compact;
 
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowDeactivateTool;
 use App\Mcp\Tools\Workflow\WorkflowDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
@@ -42,6 +43,7 @@ AI / cost:
 Advanced:
 - time_gate (write) — workflow_id, config (delay/window). Adds time-based gating around step execution.
 - execution_chain (write) — workflow_id, chain config. Configures sequential workflow chaining.
+- deactivate (DESTRUCTIVE) — workflow_id. Returns an active workflow to draft; schedules stop firing.
 TXT;
 
     protected function toolMap(): array
@@ -60,6 +62,7 @@ TXT;
             'suggestion' => WorkflowSuggestionTool::class,
             'time_gate' => WorkflowTimeGateTool::class,
             'execution_chain' => WorkflowExecutionChainTool::class,
+            'deactivate' => WorkflowDeactivateTool::class,
         ];
     }
 }

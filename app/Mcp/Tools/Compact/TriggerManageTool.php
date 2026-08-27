@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Compact;
 
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
+use App\Mcp\Tools\Trigger\TriggerRuleGetTool;
 use App\Mcp\Tools\Trigger\TriggerRuleListTool;
 use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
 use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
@@ -23,12 +24,14 @@ Actions:
 - update (write) — trigger_id + any creatable field.
 - delete (DESTRUCTIVE) — trigger_id. Future events stop matching this rule.
 - test (read — costs no credits) — trigger_id, sample payload. Returns matched (bool), action_preview (what would have run).
+- get (read) — trigger_id. Full match conditions and input mapping.
 TXT;
 
     protected function toolMap(): array
     {
         return [
             'list' => TriggerRuleListTool::class,
+            'get' => TriggerRuleGetTool::class,
             'create' => TriggerRuleCreateTool::class,
             'update' => TriggerRuleUpdateTool::class,
             'delete' => TriggerRuleDeleteTool::class,
