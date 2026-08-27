@@ -96,12 +96,20 @@ Three independent mechanisms, and they do not agree:
    silently dropped for those; additions to a meta-tool cloud does *not*
    override flow through untouched.
 
-Net effect of this change on production `/mcp`: the crew, workflow,
-agent_advanced, evolution, signal, approval/inbox and trigger additions reach
-it. The `toolset_*`, `federation_*`, `benchmark_*` and `webhook get` additions
-do **not** — they live behind a replaced `toolMap()`. The six registered tools
-do not either, having no compact action.
+Both layers were brought into line on 2026-08-27: the 13 tools were added to
+`CloudAgentFleetServer` (262 -> 275), and `toolset_*` / `federation_*` /
+`benchmark_*` / `webhook get` were added to the three cloud compact tools that
+replace `toolMap()`. Additions to meta-tools cloud does *not* override flowed
+through untouched.
 
-Closing that remainder means expanding the production MCP surface, which is a
-product decision rather than a bug fix — `tool_federation_enable` in particular
-is cross-team in a multi-tenant SaaS. It was deliberately left open.
+Cloud's remaining narrowness is deliberate and documented in the tool itself:
+`discover_mcp` and `import_mcp` are withheld because they auto-register every
+tool from a remote server and "require explicit per-tool review under cloud's
+security policy". Nothing else is excluded by policy.
+
+**A note on `federation_*`, because the name misleads.** It was initially held
+back as a suspected cross-tenant risk. That was wrong: every query in the
+family is `withoutGlobalScopes()->where('team_id', $teamId)`, including the
+group lookup inside `ToolFederationEnableTool`. Federation here means pooling a
+team's *own* tools for one of its agents. Judge these by the query, not the
+noun.
