@@ -75,6 +75,17 @@ class ActionProposalApproveTool extends Tool
             );
         }
 
+        // Agent-raised proposals carry actor_agent_id and NO actor_user_id —
+        // ToolCallGovernor is the one gate that does not pass a user — so the
+        // identity check above can never match them, leaving the exact case
+        // this guard exists for wide open. Such a proposal needs a human
+        // decision, and over MCP the caller IS the agent.
+        if ($proposal->actor_agent_id !== null) {
+            return $this->permissionDeniedError(
+                'This proposal was raised by an agent and must be approved by a human from the web UI, not over MCP.',
+            );
+        }
+
         app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null);
 
         return Response::text(json_encode([

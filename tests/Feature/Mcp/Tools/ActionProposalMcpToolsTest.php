@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Mcp\Tools;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Models\ActionProposal;
@@ -118,6 +119,41 @@ class ActionProposalMcpToolsTest extends TestCase
             ActionProposalStatus::Pending->value,
             $proposal->fresh()->status->value,
             'A self-approved proposal must stay pending.',
+        );
+    }
+
+    public function test_approve_is_refused_for_an_agent_raised_proposal(): void
+    {
+        Queue::fake();
+
+        // ToolCallGovernor raises proposals with actor_agent_id and NO
+        // actor_user_id, so the identity check cannot catch them — yet this is
+        // precisely the machine-approving-machine case the gate exists for.
+        $agent = Agent::factory()->create(['team_id' => $this->team->id]);
+        $proposal = app(CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id,
+            targetType: 'tool_call',
+            targetId: null,
+            summary: 'Agent-raised action',
+            payload: [],
+            agentId: $agent->id,
+        );
+
+        $this->assertNull($proposal->actor_user_id, 'Precondition: no user on an agent-raised proposal.');
+
+        // Approve as a DIFFERENT user, so only the agent-origin rule can refuse it.
+        $this->actingAs($this->secondTeamMember());
+
+        $payload = $this->callTool(ActionProposalApproveTool::class, [
+            'proposal_id' => $proposal->id,
+            'reason' => 'rubber stamp',
+        ]);
+
+        $this->assertArrayNotHasKey('success', $payload);
+        $this->assertSame(
+            ActionProposalStatus::Pending->value,
+            $proposal->fresh()->status->value,
+            'An agent-raised proposal must not be approvable over MCP.',
         );
     }
 
