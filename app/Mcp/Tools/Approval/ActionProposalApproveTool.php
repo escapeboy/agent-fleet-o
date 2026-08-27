@@ -56,6 +56,25 @@ class ActionProposalApproveTool extends Tool
             return $this->permissionDeniedError('Authenticated user required to approve.');
         }
 
+        // Self-approval guard — MCP surface only.
+        //
+        // ActionProposal is the gate in front of an agent's own side effects
+        // (git push, integration actions, governed tool calls). Over MCP the
+        // caller and the proposer are frequently the SAME identity: stdio runs
+        // as the team owner, so an agent can create a proposal and then approve
+        // it in the next tool call, which defeats the gate entirely.
+        //
+        // Deliberately NOT placed in ApproveActionProposalAction: through the
+        // web UI a person approving a proposal they themselves triggered is the
+        // normal human-in-the-loop flow, and guarding the shared action would
+        // break it. The UI stays the escape hatch for this case.
+        if ($proposal->actor_user_id !== null && $proposal->actor_user_id === $user->id) {
+            return $this->permissionDeniedError(
+                'A proposal cannot be approved over MCP by the same identity that raised it. '
+                .'Approve it from the web UI, or have another team member approve it.',
+            );
+        }
+
         app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null);
 
         return Response::text(json_encode([

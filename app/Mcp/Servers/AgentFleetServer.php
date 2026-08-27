@@ -256,6 +256,7 @@ use App\Mcp\Tools\Evolution\EvolutionRejectTool;
 use App\Mcp\Tools\Evolution\SkillEvolveTool;
 use App\Mcp\Tools\Evolution\SkillMutationApplyTool;
 use App\Mcp\Tools\Evolution\SkillMutationListTool;
+use App\Mcp\Tools\Experiment\ExperimentActivityTimelineTool;
 use App\Mcp\Tools\Experiment\ExperimentCheckpointsTool;
 use App\Mcp\Tools\Experiment\ExperimentCompleteBuildingTool;
 use App\Mcp\Tools\Experiment\ExperimentContextHealthTool;
@@ -272,6 +273,7 @@ use App\Mcp\Tools\Experiment\ExperimentResumeFromCheckpointTool;
 use App\Mcp\Tools\Experiment\ExperimentResumeTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryFromStepTool;
 use App\Mcp\Tools\Experiment\ExperimentRetryTool;
+use App\Mcp\Tools\Experiment\ExperimentSandboxFilesTool;
 use App\Mcp\Tools\Experiment\ExperimentSearchHistoryTool;
 use App\Mcp\Tools\Experiment\ExperimentShareTool;
 use App\Mcp\Tools\Experiment\ExperimentSkipStageTool;
@@ -321,6 +323,11 @@ use App\Mcp\Tools\GitRepository\GitRepositoryListTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryTestTool;
 use App\Mcp\Tools\GitRepository\GitRepositoryUpdateTool;
 use App\Mcp\Tools\GitRepository\RepoTestRatchetCheckTool;
+use App\Mcp\Tools\Inbox\InboxListTool;
+use App\Mcp\Tools\Inbox\InboxQueueCreateTool;
+use App\Mcp\Tools\Inbox\InboxQueueDeleteTool;
+use App\Mcp\Tools\Inbox\InboxQueueListTool;
+use App\Mcp\Tools\Inbox\InboxRefineTriageTool;
 use App\Mcp\Tools\Integration\ActivepiecesListPiecesTool;
 use App\Mcp\Tools\Integration\ActivepiecesSyncTool;
 use App\Mcp\Tools\Integration\IntegrationCapabilitiesTool;
@@ -414,6 +421,9 @@ use App\Mcp\Tools\Project\ProjectRunGetTool;
 use App\Mcp\Tools\Project\ProjectRunListTool;
 use App\Mcp\Tools\Project\ProjectScheduleManageTool;
 use App\Mcp\Tools\Project\ProjectScheduleNlpTool;
+use App\Mcp\Tools\Project\ProjectSnapshotCreateTool;
+use App\Mcp\Tools\Project\ProjectSnapshotListTool;
+use App\Mcp\Tools\Project\ProjectSnapshotRestoreTool;
 use App\Mcp\Tools\Project\ProjectTriggerRunTool;
 use App\Mcp\Tools\Project\ProjectUpdateTool;
 use App\Mcp\Tools\RAGFlow\RagflowDatasetCreateTool;
@@ -564,6 +574,7 @@ use App\Mcp\Tools\System\MetricsModelComparisonTool;
 use App\Mcp\Tools\System\SecretProxyStatusTool;
 use App\Mcp\Tools\System\SecretScanFindingsTool;
 use App\Mcp\Tools\System\SecurityPolicyManageTool;
+use App\Mcp\Tools\System\ShadowTrafficSummaryTool;
 use App\Mcp\Tools\System\SystemDiscoveryGetTool;
 use App\Mcp\Tools\System\SystemHealthTool;
 use App\Mcp\Tools\System\SystemRecentErrorsTool;
@@ -606,6 +617,7 @@ use App\Mcp\Tools\Tool\ToolTemplateManageTool;
 use App\Mcp\Tools\Tool\ToolUpdateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleCreateTool;
 use App\Mcp\Tools\Trigger\TriggerRuleDeleteTool;
+use App\Mcp\Tools\Trigger\TriggerRuleGetTool;
 use App\Mcp\Tools\Trigger\TriggerRuleListTool;
 use App\Mcp\Tools\Trigger\TriggerRuleTestTool;
 use App\Mcp\Tools\Trigger\TriggerRuleUpdateTool;
@@ -615,6 +627,7 @@ use App\Mcp\Tools\VoiceSession\VoiceSessionListTool;
 use App\Mcp\Tools\VoiceSession\VoiceSessionTranscriptTool;
 use App\Mcp\Tools\Webhook\WebhookCreateTool;
 use App\Mcp\Tools\Webhook\WebhookDeleteTool;
+use App\Mcp\Tools\Webhook\WebhookGetTool;
 use App\Mcp\Tools\Webhook\WebhookListTool;
 use App\Mcp\Tools\Webhook\WebhookUpdateTool;
 use App\Mcp\Tools\Website\WebsiteAnalyticsTool;
@@ -933,6 +946,8 @@ class AgentFleetServer extends Server
         ExperimentGetTool::class,
         ExperimentCreateTool::class,
         ExperimentDiagnoseTool::class,
+        ExperimentActivityTimelineTool::class,
+        ExperimentSandboxFilesTool::class,
         ExperimentStartTool::class,
         ExperimentPauseTool::class,
         ExperimentResumeTool::class,
@@ -1104,6 +1119,9 @@ class AgentFleetServer extends Server
         ProjectArchiveTool::class,
         ProjectScheduleManageTool::class,
         ProjectScheduleNlpTool::class,
+        ProjectSnapshotCreateTool::class,
+        ProjectSnapshotListTool::class,
+        ProjectSnapshotRestoreTool::class,
         ProjectHeartbeatConfigureTool::class,
         ProjectRunListTool::class,
         ProjectRunGetTool::class,
@@ -1112,6 +1130,11 @@ class AgentFleetServer extends Server
 
         // Approval (5)
         ApprovalListTool::class,
+        InboxListTool::class,
+        InboxQueueListTool::class,
+        InboxQueueCreateTool::class,
+        InboxQueueDeleteTool::class,
+        InboxRefineTriageTool::class,
         ApprovalApproveTool::class,
         ApprovalRejectTool::class,
         ActionProposalListTool::class,
@@ -1322,6 +1345,7 @@ class AgentFleetServer extends Server
 
         // Webhook (4)
         WebhookListTool::class,
+        WebhookGetTool::class,
         WebhookCreateTool::class,
         WebhookUpdateTool::class,
         WebhookDeleteTool::class,
@@ -1361,6 +1385,7 @@ class AgentFleetServer extends Server
 
         // Trigger (5)
         TriggerRuleListTool::class,
+        TriggerRuleGetTool::class,
         TriggerRuleCreateTool::class,
         TriggerRuleUpdateTool::class,
         TriggerRuleDeleteTool::class,
@@ -1428,6 +1453,7 @@ class AgentFleetServer extends Server
         LoopDetectionStatusTool::class,
         SystemRecentErrorsTool::class,
         SystemVersionCheckTool::class,
+        ShadowTrafficSummaryTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,
         AuditChainVerifyTool::class,

@@ -2,6 +2,14 @@
 
 namespace App\Mcp\Tools\Compact;
 
+use App\Mcp\Tools\Signal\BugReportAddCommentTool;
+use App\Mcp\Tools\Signal\BugReportConfirmResolutionTool;
+use App\Mcp\Tools\Signal\BugReportDeleteTool;
+use App\Mcp\Tools\Signal\BugReportDetailTool;
+use App\Mcp\Tools\Signal\BugReportListTool;
+use App\Mcp\Tools\Signal\BugReportProjectConfigTool;
+use App\Mcp\Tools\Signal\BugReportResolveStackTool;
+use App\Mcp\Tools\Signal\BugReportUpdateStatusTool;
 use App\Mcp\Tools\Signal\ConnectorBindingDeleteTool;
 use App\Mcp\Tools\Signal\ConnectorBindingTool;
 use App\Mcp\Tools\Signal\ContactManageTool;
@@ -31,6 +39,14 @@ Actions:
 - contact (write) — sub-actions on Contact (action, contact data).
 - imap (write) — mailbox config object. Sets/updates IMAP poller settings.
 - email_reply (write — sends email) — signal_id, body. Replies to the originating email signal via the team's outbound email connector.
+- bug_report_list (read) — Structured bug reports ingested from signals.
+- bug_report_detail (read) — bug_report_id. Breadcrumbs, stack, comments.
+- bug_report_add_comment (write) — bug_report_id, body.
+- bug_report_update_status (write) — bug_report_id, status.
+- bug_report_resolve_stack (write) — bug_report_id. Symbolicates the stack trace.
+- bug_report_confirm_resolution (write) — bug_report_id. Marks a proposed fix as confirmed.
+- bug_report_project_config (write) — Per-project bug-report intake configuration.
+- bug_report_delete (DESTRUCTIVE) — bug_report_id. Removes the report permanently.
 TXT;
 
     protected function toolMap(): array
@@ -45,6 +61,14 @@ TXT;
             'contact' => ContactManageTool::class,
             'imap' => ImapMailboxTool::class,
             'email_reply' => EmailReplyTool::class,
+            'bug_report_list' => BugReportListTool::class,
+            'bug_report_detail' => BugReportDetailTool::class,
+            'bug_report_add_comment' => BugReportAddCommentTool::class,
+            'bug_report_update_status' => BugReportUpdateStatusTool::class,
+            'bug_report_resolve_stack' => BugReportResolveStackTool::class,
+            'bug_report_confirm_resolution' => BugReportConfirmResolutionTool::class,
+            'bug_report_project_config' => BugReportProjectConfigTool::class,
+            'bug_report_delete' => BugReportDeleteTool::class,
         ];
     }
 }

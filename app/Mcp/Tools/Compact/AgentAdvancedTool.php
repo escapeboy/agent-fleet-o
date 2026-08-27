@@ -6,6 +6,10 @@ use App\Mcp\Tools\Agent\AgentConfigHistoryTool;
 use App\Mcp\Tools\Agent\AgentFeedbackListTool;
 use App\Mcp\Tools\Agent\AgentFeedbackStatsTool;
 use App\Mcp\Tools\Agent\AgentFeedbackSubmitTool;
+use App\Mcp\Tools\Agent\AgentHookCreateTool;
+use App\Mcp\Tools\Agent\AgentHookDeleteTool;
+use App\Mcp\Tools\Agent\AgentHookListTool;
+use App\Mcp\Tools\Agent\AgentHookToggleTool;
 use App\Mcp\Tools\Agent\AgentRollbackConfigTool;
 use App\Mcp\Tools\Agent\AgentRuntimeStateTool;
 use App\Mcp\Tools\Agent\AgentSkillSyncTool;
@@ -29,6 +33,10 @@ Actions:
 - feedback_submit (write) — agent_id, rating (1-5), comment.
 - feedback_list (read) — agent_id. Recent feedback entries.
 - feedback_stats (read) — agent_id. Aggregate score + sentiment.
+- hook_list (read) — agent_id. Lifecycle hooks bound to the agent.
+- hook_create (write) — agent_id + hook definition.
+- hook_toggle (write) — agent_id, hook_id. Enable/disable without deleting.
+- hook_delete (DESTRUCTIVE) — agent_id, hook_id. Removes the hook permanently.
 TXT;
 
     protected function toolMap(): array
@@ -42,6 +50,10 @@ TXT;
             'feedback_submit' => AgentFeedbackSubmitTool::class,
             'feedback_list' => AgentFeedbackListTool::class,
             'feedback_stats' => AgentFeedbackStatsTool::class,
+            'hook_list' => AgentHookListTool::class,
+            'hook_create' => AgentHookCreateTool::class,
+            'hook_toggle' => AgentHookToggleTool::class,
+            'hook_delete' => AgentHookDeleteTool::class,
         ];
     }
 }

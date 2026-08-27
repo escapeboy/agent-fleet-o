@@ -6,8 +6,11 @@ use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
 use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
+use App\Mcp\Tools\Crew\CrewExecutionPauseTool;
+use App\Mcp\Tools\Crew\CrewExecutionResumeTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
+use App\Mcp\Tools\Crew\CrewExecutionTrustModeTool;
 use App\Mcp\Tools\Crew\CrewGetTool;
 use App\Mcp\Tools\Crew\CrewListTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
@@ -30,6 +33,9 @@ Actions:
 - execute (write — long-running) — crew_id, goal. Reserves budget, returns execution_id.
 - execution_status (read) — crew_id, execution_id. Status, current task, partial results.
 - executions_list (read) — crew_id; optional limit.
+- execution_pause (DESTRUCTIVE) — crew_id, execution_id. Halts a running crew execution between tasks.
+- execution_resume (write) — crew_id, execution_id. Continues a paused execution.
+- execution_trust_mode (read) — crew_id, execution_id. Current trust/autonomy mode for the run.
 TXT;
 
     protected function toolMap(): array
@@ -44,6 +50,9 @@ TXT;
             'execute' => CrewExecuteTool::class,
             'execution_status' => CrewExecutionStatusTool::class,
             'executions_list' => CrewExecutionsListTool::class,
+            'execution_pause' => CrewExecutionPauseTool::class,
+            'execution_resume' => CrewExecutionResumeTool::class,
+            'execution_trust_mode' => CrewExecutionTrustModeTool::class,
         ];
     }
 }
