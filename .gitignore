@@ -63,3 +63,10 @@ CLAUDE.local.md
 /AGENTS.md
 /GEMINI.md
 /boost.json
+
+# Local code-intelligence / editor tooling (per-machine, not shared)
+/.codegraph
+/.cursor
+
+# Stray local SQLite test database
+/fleetq_test
