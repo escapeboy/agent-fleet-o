@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Compact;
 
 use App\Mcp\Tools\Workflow\WorkflowActivateTool;
 use App\Mcp\Tools\Workflow\WorkflowCreateTool;
+use App\Mcp\Tools\Workflow\WorkflowDeleteTool;
 use App\Mcp\Tools\Workflow\WorkflowDuplicateTool;
 use App\Mcp\Tools\Workflow\WorkflowEstimateCostTool;
 use App\Mcp\Tools\Workflow\WorkflowExecutionChainTool;
@@ -50,6 +51,7 @@ TXT;
             'get' => WorkflowGetTool::class,
             'create' => WorkflowCreateTool::class,
             'update' => WorkflowUpdateTool::class,
+            'delete' => WorkflowDeleteTool::class,
             'validate' => WorkflowValidateTool::class,
             'activate' => WorkflowActivateTool::class,
             'duplicate' => WorkflowDuplicateTool::class,

@@ -18,7 +18,6 @@ Outbound webhook endpoints — URLs the platform POSTs to when subscribed events
 
 Actions:
 - list (read) — all webhooks for the team.
-- get (read) — webhook_id. Includes recent delivery stats.
 - create (write) — url, events[] (array of event names), secret (used for HMAC signing; show once).
 - update (write) — webhook_id + any creatable field. Updating `secret` invalidates the old one immediately.
 - delete (DESTRUCTIVE) — webhook_id. In-flight deliveries are cancelled.

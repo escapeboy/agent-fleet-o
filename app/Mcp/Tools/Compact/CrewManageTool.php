@@ -2,7 +2,9 @@
 
 namespace App\Mcp\Tools\Compact;
 
+use App\Mcp\Tools\Crew\CrewActivateTool;
 use App\Mcp\Tools\Crew\CrewCreateTool;
+use App\Mcp\Tools\Crew\CrewDeleteTool;
 use App\Mcp\Tools\Crew\CrewExecuteTool;
 use App\Mcp\Tools\Crew\CrewExecutionsListTool;
 use App\Mcp\Tools\Crew\CrewExecutionStatusTool;
@@ -23,6 +25,7 @@ Actions:
 - list / get (read) — list all or fetch one (crew_id).
 - create (write) — name, process_type (sequential|parallel|hierarchical), agents[] (array of {agent_id, role}).
 - update (write) — crew_id + any creatable field.
+- activate (write) — crew_id. Moves a draft crew to active so it can be executed.
 - delete (DESTRUCTIVE) — crew_id. Soft-deletes the crew.
 - execute (write — long-running) — crew_id, goal. Reserves budget, returns execution_id.
 - execution_status (read) — crew_id, execution_id. Status, current task, partial results.
@@ -36,6 +39,8 @@ TXT;
             'get' => CrewGetTool::class,
             'create' => CrewCreateTool::class,
             'update' => CrewUpdateTool::class,
+            'activate' => CrewActivateTool::class,
+            'delete' => CrewDeleteTool::class,
             'execute' => CrewExecuteTool::class,
             'execution_status' => CrewExecutionStatusTool::class,
             'executions_list' => CrewExecutionsListTool::class,

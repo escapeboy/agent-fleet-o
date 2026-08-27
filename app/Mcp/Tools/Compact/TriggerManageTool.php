@@ -19,7 +19,6 @@ Event-driven trigger rules — when-this-then-that automations that fire on sign
 
 Actions:
 - list (read) — optional: event filter, status filter.
-- get (read) — trigger_id.
 - create (write) — name, event (e.g. "signal.ingested"), conditions (array of expressions), actions (array of action specs).
 - update (write) — trigger_id + any creatable field.
 - delete (DESTRUCTIVE) — trigger_id. Future events stop matching this rule.
