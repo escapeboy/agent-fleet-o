@@ -97,6 +97,20 @@ query and larastan keeps the concrete type.
   that is the intended correction, and it is the behaviour the tool description has
   claimed all along.
 
+## No bypass route
+
+`ActionProposalExecutor::executeGitPush` calls `$client->mergePullRequest()`
+directly, outside this tool, so an approved ActionProposal merges without the
+`require_approval` check. That is not a hole: such a proposal only exists because
+a human approved it, and it can only be minted by `GitOperationGate`, which is
+only reached through `GatedGitClient`. Placing the new check **before** the
+client is resolved means a refused merge never reaches the gate and therefore
+never mints a proposal an agent could then get approved as a way around it.
+
+The other merge surfaces were enumerated: `GitRepositoryController` (REST) only
+lists PRs, and the Bitbucket driver path is a separate integration with its own
+gate. `git_pr_merge` is the only user-facing merge on this model.
+
 ## Cloud layer
 
 `GitPullRequestMergeTool` / `GitPullRequestCreateTool` have no `cloud/` override
