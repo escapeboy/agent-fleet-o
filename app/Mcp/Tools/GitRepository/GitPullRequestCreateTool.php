@@ -78,9 +78,11 @@ class GitPullRequestCreateTool extends Tool
             ]);
 
             $approvalRequestId = null;
+            $approvalError = null;
+            $requiresApproval = (bool) ($repo->config['pr']['require_approval'] ?? false);
 
             // Create approval request if require_approval is enabled
-            if ($repo->config['pr']['require_approval'] ?? false) {
+            if ($requiresApproval) {
                 try {
                     $approvalRequest = app(CreateApprovalRequestAction::class)->execute(
                         teamId: $repo->team_id,
@@ -96,19 +98,31 @@ class GitPullRequestCreateTool extends Tool
 
                     $gitPr->update(['approval_request_id' => $approvalRequest->id]);
                     $approvalRequestId = $approvalRequest->id;
-                } catch (\Throwable) {
-                    // Approval creation failure should not block the PR
+                } catch (\Throwable $e) {
+                    // The PR already exists upstream, so we cannot unwind it — but the
+                    // caller must not be told approval is unnecessary. Report the
+                    // failure (this is the only place it is observable) and keep
+                    // requires_approval true: git_pr_merge fails closed on the missing
+                    // approval record, so the repo degrades to "unmergeable", not "ungated".
+                    report($e);
+                    $approvalError = 'Approval request could not be created: '.$e->getMessage().'. The PR cannot be merged until an approval exists.';
                 }
             }
 
-            return Response::text(json_encode([
+            $payload = [
                 'success' => true,
                 'pr_number' => $prData['pr_number'],
                 'pr_url' => $prData['pr_url'],
                 'platform_pr_id' => $gitPr->id,
                 'approval_request_id' => $approvalRequestId,
-                'requires_approval' => $approvalRequestId !== null,
-            ]));
+                'requires_approval' => $requiresApproval,
+            ];
+
+            if ($approvalError !== null) {
+                $payload['approval_error'] = $approvalError;
+            }
+
+            return Response::text(json_encode($payload));
         } catch (\Throwable $e) {
             throw $e;
         }
