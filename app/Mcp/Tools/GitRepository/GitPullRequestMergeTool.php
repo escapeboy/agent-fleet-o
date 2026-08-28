@@ -2,6 +2,8 @@
 
 namespace App\Mcp\Tools\GitRepository;
 
+use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
@@ -19,7 +21,7 @@ class GitPullRequestMergeTool extends Tool
 
     protected string $name = 'git_pr_merge';
 
-    protected string $description = 'Merge a pull request in a git repository. Supports squash, merge, and rebase strategies. By default validates CI status before merging.';
+    protected string $description = 'Merge a pull request in a git repository. Supports squash, merge, and rebase strategies. By default validates CI status before merging. If the repository has pr.require_approval enabled, the merge is refused unless the linked ApprovalRequest is approved and unexpired — force does not bypass this.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -38,7 +40,7 @@ class GitPullRequestMergeTool extends Tool
             'commit_message' => $schema->string()
                 ->description('Optional commit message body for the merge commit'),
             'force' => $schema->boolean()
-                ->description('Skip CI and review validation checks (default: false)'),
+                ->description('Skip CI and mergeability validation checks (default: false). Does NOT bypass pr.require_approval.'),
         ];
     }
 
@@ -54,9 +56,19 @@ class GitPullRequestMergeTool extends Tool
             return $this->notFoundError('repository');
         }
 
+        $prNumber = (int) $request->get('pr_number');
+
+        // Governance gate. Runs before the client is resolved so a refused merge
+        // performs no side effect at all, and outside the `force` escape hatch —
+        // force skips CI/mergeability checks, never a human approval.
+        if ($repo->config['pr']['require_approval'] ?? false) {
+            if ($refusal = $this->approvalRefusal($repo, $prNumber)) {
+                return $this->failedPreconditionError($refusal);
+            }
+        }
+
         try {
             $client = app(GitOperationRouter::class)->resolve($repo);
-            $prNumber = (int) $request->get('pr_number');
             $force = (bool) $request->get('force', false);
 
             // Validate PR is mergeable unless force is set
@@ -94,5 +106,47 @@ class GitPullRequestMergeTool extends Tool
         } catch (\Throwable $e) {
             throw $e;
         }
+    }
+
+    /**
+     * Reason the merge must be refused under pr.require_approval, or null when
+     * an approved, unexpired ApprovalRequest authorises it.
+     *
+     * Fails closed: a missing platform record or a missing approval link is a
+     * refusal, not a pass. Expiry is re-derived from `expires_at` rather than
+     * trusted from `status`, because ExpireStaleApprovals only sweeps pending
+     * rows — an approved row can sit past its deadline with status Approved.
+     */
+    private function approvalRefusal(GitRepository $repo, int $prNumber): ?string
+    {
+        $pr = GitPullRequest::where('git_repository_id', $repo->id)
+            ->where('pr_number', (string) $prNumber)
+            ->first();
+
+        if (! $pr) {
+            return "PR #{$prNumber} has no platform record, and this repository requires approval before merge. Create the PR through git_pr_create so an approval request is issued.";
+        }
+
+        // Scope the approval to the repository's team: an approval row from
+        // another tenant must never authorise this merge.
+        $approval = $pr->approval_request_id === null
+            ? null
+            : ApprovalRequest::withoutGlobalScopes()
+                ->where('team_id', $repo->team_id)
+                ->find($pr->approval_request_id);
+
+        if (! $approval) {
+            return "PR #{$prNumber} has no approval request linked, and this repository requires approval before merge.";
+        }
+
+        if ($approval->status !== ApprovalStatus::Approved) {
+            return "PR #{$prNumber} is awaiting approval (request {$approval->id} is {$approval->status->value}). Approve it before merging.";
+        }
+
+        if ($approval->expires_at !== null && $approval->expires_at->isPast()) {
+            return "Approval request {$approval->id} for PR #{$prNumber} expired at {$approval->expires_at->toIso8601String()}. Request a fresh approval before merging.";
+        }
+
+        return null;
     }
 }
