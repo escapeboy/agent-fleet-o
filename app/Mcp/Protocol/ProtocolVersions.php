@@ -48,6 +48,9 @@ final class ProtocolVersions
     /** First revision where tools/list may carry cache hints (SEP-2549). */
     public const CACHE_HINTS_SINCE = self::V2026_07_28;
 
+    /** First revision where a result may be `input_required` with requestState (SEP-2322). */
+    public const MULTI_ROUND_TRIP_SINCE = self::V2026_07_28;
+
     // SEP-2575 — `params._meta` keys carried on every request.
     public const META_PROTOCOL_VERSION = 'io.modelcontextprotocol/protocolVersion';
 
@@ -86,5 +89,10 @@ final class ProtocolVersions
     public static function supportsCacheHints(string $version): bool
     {
         return self::isAtLeast($version, self::CACHE_HINTS_SINCE);
+    }
+
+    public static function supportsMultiRoundTrip(string $version): bool
+    {
+        return self::isAtLeast($version, self::MULTI_ROUND_TRIP_SINCE);
     }
 }

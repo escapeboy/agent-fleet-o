@@ -53,4 +53,14 @@ final class ProtocolContext
     {
         return ProtocolVersions::supportsCacheHints($this->version);
     }
+
+    /**
+     * Whether this caller can be handed an `input_required` result plus a
+     * `requestState` to retry with (SEP-2322). Older clients get the terminal
+     * response the gated tool carries as its fallback.
+     */
+    public function supportsMultiRoundTrip(): bool
+    {
+        return ProtocolVersions::supportsMultiRoundTrip($this->version);
+    }
 }

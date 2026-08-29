@@ -16027,8 +16027,26 @@ parameters:
 			path: app/Providers/FleetPluginServiceProvider.php
 
 		-
-			message: '#^Method App\\Mcp\\Tools\\GitRepository\\GitPullRequestMergeTool\:\:approvalRefusal\(\) never returns null so it can be removed from the return type\.$#'
+			message: '#^Dead catch \- App\\Mcp\\Exceptions\\InputRequiredException is never thrown in the try block\.$#'
+			identifier: catch.neverThrown
+			count: 1
+			path: app/Mcp/Methods/MultiRoundTripCallTool.php
+
+		-
+			message: '#^Method App\\Mcp\\Methods\\MultiRoundTripCallTool\:\:inputRequiredResponse\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Mcp/Methods/MultiRoundTripCallTool.php
+
+		-
+			message: '#^Method App\\Mcp\\Tools\\GitRepository\\GitPullRequestMergeTool\:\:approvalGate\(\) never returns null so it can be removed from the return type\.$#'
 			identifier: return.unusedType
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
 

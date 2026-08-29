@@ -10,6 +10,7 @@ use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Shared\Models\Team;
+use App\Mcp\Exceptions\InputRequiredException;
 use App\Mcp\Tools\GitRepository\GitPullRequestCreateTool;
 use App\Mcp\Tools\GitRepository\GitPullRequestMergeTool;
 use App\Models\User;
@@ -169,12 +170,20 @@ class GitPullRequestApprovalGateTest extends TestCase
         $this->assertRefused($this->merge());
     }
 
-    public function test_refuses_while_approval_is_pending(): void
+    /**
+     * Pending is the one resumable state, so since SEP-2322 the tool signals it
+     * by throwing rather than returning; MultiRoundTripCallTool turns that into
+     * `input_required` (or the terminal fallback for pre-MRTR clients — see
+     * McpMultiRoundTripTest). What must hold either way is that nothing merged.
+     */
+    public function test_signals_input_required_while_approval_is_pending(): void
     {
         $this->makePr($this->makeApproval(ApprovalStatus::Pending));
         $this->expectNoGitCalls();
 
-        $this->assertRefused($this->merge());
+        $this->expectException(InputRequiredException::class);
+
+        $this->merge();
     }
 
     public function test_refuses_when_approval_was_rejected(): void
@@ -229,7 +238,9 @@ class GitPullRequestApprovalGateTest extends TestCase
         $this->makePr($this->makeApproval(ApprovalStatus::Pending));
         $this->expectNoGitCalls();
 
-        $this->assertRefused($this->merge(['force' => true]));
+        $this->expectException(InputRequiredException::class);
+
+        $this->merge(['force' => true]);
     }
 
     public function test_refuses_approval_belonging_to_another_team(): void
