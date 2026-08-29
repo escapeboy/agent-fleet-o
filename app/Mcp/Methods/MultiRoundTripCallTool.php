@@ -52,17 +52,17 @@ class MultiRoundTripCallTool extends CallTool
         try {
             return parent::handle($request, $context);
         } catch (InputRequiredException $e) {
-            return $this->inputRequiredResponse($request, $e);
+            return $this->inputRequiredResponse($request, $context, $e);
         } finally {
             $container->forgetInstance(self::BINDING_INPUT_RESPONSES);
             $container->forgetInstance(self::BINDING_REQUEST_STATE);
         }
     }
 
-    private function inputRequiredResponse(JsonRpcRequest $request, InputRequiredException $e): JsonRpcResponse
+    private function inputRequiredResponse(JsonRpcRequest $request, ServerContext $context, InputRequiredException $e): JsonRpcResponse
     {
         if (! ProtocolContext::current()->supportsMultiRoundTrip()) {
-            return $this->terminalFallback($request, $e);
+            return $this->terminalFallback($request, $context, $e);
         }
 
         $result = ['resultType' => self::RESULT_TYPE_INPUT_REQUIRED];
@@ -80,14 +80,29 @@ class MultiRoundTripCallTool extends CallTool
 
     /**
      * Render the tool's own terminal response for a client that cannot resume.
-     * Mirrors CallTool's success shape so these callers see exactly what they
-     * saw before MRTR existed.
+     *
+     * Delegates to CallTool's own serializer rather than hand-building the
+     * envelope, so a pre-MRTR caller gets byte-identical output to what it got
+     * before this class existed — including structured content and _meta, which
+     * a hand-rolled `content`/`isError` pair would silently drop the moment a
+     * gated tool returned anything richer than plain text.
      */
-    private function terminalFallback(JsonRpcRequest $request, InputRequiredException $e): JsonRpcResponse
+    private function terminalFallback(JsonRpcRequest $request, ServerContext $context, InputRequiredException $e): JsonRpcResponse
     {
-        return JsonRpcResponse::result($request->id, [
-            'content' => [['type' => 'text', 'text' => (string) $e->fallback->content()]],
-            'isError' => $e->fallback->isError(),
-        ]);
+        $tool = $context->tools()->first(
+            fn ($tool): bool => $tool->name() === ($request->params['name'] ?? null),
+        );
+
+        if ($tool === null) {
+            // Unreachable in practice: parent::handle() already resolved the
+            // tool to reach the throw. Kept so a lookup change upstream
+            // degrades to a valid response rather than a TypeError.
+            return JsonRpcResponse::result($request->id, [
+                'content' => [['type' => 'text', 'text' => (string) $e->fallback->content()]],
+                'isError' => $e->fallback->isError(),
+            ]);
+        }
+
+        return $this->toJsonRpcResponse($request, $e->fallback, $this->serializable($tool));
     }
 }
