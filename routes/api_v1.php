@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\A2aServerController;
 use App\Http\Controllers\Api\V1\AgentChatController;
 use App\Http\Controllers\Api\V1\AgentChatSessionController;
 use App\Http\Controllers\Api\V1\AgentController;
@@ -97,6 +98,8 @@ Route::prefix('agents')
             ->name('agent-chat.inbound.structured');
         Route::post('/{agent}/ack', [AgentChatController::class, 'ack'])
             ->name('agent-chat.inbound.ack');
+        Route::post('/{agent}/a2a', A2aServerController::class)
+            ->name('agent-chat.inbound.a2a');
     });
 
 // Authenticated routes

@@ -96,7 +96,7 @@ class AgentA2ACardTest extends TestCase
             ->assertJsonFragment(['schemaVersion' => '0.3']);
     }
 
-    public function test_a2a_endpoint_returns_capabilities_with_streaming_true(): void
+    public function test_a2a_endpoint_declares_streaming_false_because_no_stream_method_is_served(): void
     {
         Sanctum::actingAs($this->user, ['*']);
 
@@ -105,7 +105,10 @@ class AgentA2ACardTest extends TestCase
         $response = $this->getJson('/api/v1/agents/'.$agent->id.'/a2a');
 
         $response->assertOk();
-        $this->assertTrue($response->json('capabilities.streaming'));
+        // capabilities.streaming advertises support for A2A `message/stream`.
+        // We only serve message/send and tasks/get, so claiming true would send
+        // conforming peers to a method that does not exist.
+        $this->assertFalse($response->json('capabilities.streaming'));
     }
 
     public function test_a2a_endpoint_returns_skills_array(): void

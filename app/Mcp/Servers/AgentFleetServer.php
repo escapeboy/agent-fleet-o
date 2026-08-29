@@ -74,6 +74,7 @@ use App\Mcp\Tools\Agent\AgentWorkspaceContractGetTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceExportTool;
 use App\Mcp\Tools\Agent\AgentWorkspaceImportTool;
 use App\Mcp\Tools\AgentChatProtocol\A2aDiscoverTool;
+use App\Mcp\Tools\AgentChatProtocol\A2aServerStatusTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestPublishTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatManifestRevokeTool;
 use App\Mcp\Tools\AgentChatProtocol\AgentChatSendTool;
@@ -835,6 +836,7 @@ class AgentFleetServer extends Server
         ExternalAgentDeleteTool::class,
         ExternalAgentRefreshManifestTool::class,
         A2aDiscoverTool::class,
+        A2aServerStatusTool::class,
         ExternalAgentPingTool::class,
         AgentChatSendTool::class,
         AgentChatStructuredTool::class,

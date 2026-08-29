@@ -18,8 +18,9 @@ use Illuminate\Support\Str;
  * well-known URI and registering it as a callable-once-supported ExternalAgent
  * (adapter_kind = a2a).
  *
- * Read/discovery only — message dispatch to A2A agents is a deferred slice and
- * is guarded in ProtocolDispatcher. Flag-gated by `agent_chat.a2a.discovery_enabled`.
+ * Discovery only: this action registers the peer, it does not talk to it.
+ * Dispatch is implemented separately in ProtocolDispatcher::dispatchA2a and is
+ * gated by its own flag. Flag-gated by `agent_chat.a2a.discovery_enabled`.
  */
 class DiscoverA2aAgentAction
 {
@@ -117,10 +118,35 @@ class DiscoverA2aAgentAction
         return ExternalAgent::create([
             'id' => Str::uuid7()->toString(),
             'team_id' => $teamId,
-            'slug' => Str::slug($card->name).'-'.substr(Str::uuid7()->toString(), 0, 6),
+            'slug' => $this->uniqueSlug($teamId, $card->name),
             'endpoint_url' => $card->endpointUrl,
             'credential_id' => $credentialId,
             ...$attributes,
         ]);
+    }
+
+    /**
+     * Build a slug that is unique per team.
+     *
+     * The previous suffix was `substr(Str::uuid7(), 0, 6)`. UUIDv7 leads with a
+     * millisecond timestamp, so those six hex characters only change about every
+     * 4.6 hours — every peer discovered in the same window shared them, and two
+     * cards with the same `name` collided on the (team_id, slug) unique index
+     * and surfaced as a 500 instead of a second registered agent.
+     */
+    private function uniqueSlug(string $teamId, string $name): string
+    {
+        $base = Str::slug($name) ?: 'a2a-agent';
+
+        do {
+            $slug = $base.'-'.Str::lower(Str::random(6));
+        } while (
+            ExternalAgent::withoutGlobalScopes()
+                ->where('team_id', $teamId)
+                ->where('slug', $slug)
+                ->exists()
+        );
+
+        return $slug;
     }
 }
