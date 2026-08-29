@@ -249,6 +249,8 @@ Route::get('/.well-known/agents', [AgentManifestController::class, 'index'])
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])
     ->middleware('throttle:60,1');
 
+Route::get('/.well-known/agents/{slug}/agent-card.json', [AgentManifestController::class, 'publicA2a'])
+    ->name('a2a.agent-card.agent');
 Route::get('/.well-known/agents/{slug}', [AgentManifestController::class, 'show'])
     ->name('agent-chat.manifest.show')
     ->withoutMiddleware([SetCurrentTeam::class, BypassAuth::class, EnsureTermsAccepted::class, SetPostgresRlsContext::class])

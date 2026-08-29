@@ -42,6 +42,12 @@ return [
         // agents stay discoverable but not callable (ProtocolDispatcher throws).
         'dispatch_enabled' => env('A2A_DISPATCH_ENABLED', false),
 
+        // Server-side A2A: lets an external A2A peer talk to one of OUR agents
+        // over JSON-RPC (message/send + tasks/get). Independent of the two
+        // consumer flags above — this one opens an inbound surface, so it stays
+        // off until a deployment actually wants to be callable.
+        'server_enabled' => env('A2A_SERVER_ENABLED', false),
+
         // Max times to poll tasks/get for a long-running A2A Task before giving
         // up, and the delay between polls (ms). Bounds total wait alongside the
         // outbound timeout.

@@ -9,10 +9,10 @@ use RuntimeException;
 /**
  * Thrown when something tries to *dispatch a message* to an A2A external agent.
  *
- * A2A discovery (reading the AgentCard) is implemented; A2A message dispatch
- * (JSON-RPC `message/send` + task lifecycle) is a deliberately deferred slice.
- * This exception is the boundary marker — it prevents A2A agents from silently
- * falling through to the generic HTTP `POST {endpoint}/chat` path, which is not
- * the A2A wire protocol.
+ * Dispatch IS implemented (A2aClient speaks JSON-RPC message/send + tasks/get);
+ * this marks the case where it is switched off via `agent_chat.a2a.dispatch_enabled`.
+ * It exists so a disabled A2A agent fails loudly instead of silently falling
+ * through to the generic HTTP `POST {endpoint}/chat` path, which is not the A2A
+ * wire protocol and would reach the peer as a malformed request.
  */
 class A2aDispatchNotSupportedException extends RuntimeException {}

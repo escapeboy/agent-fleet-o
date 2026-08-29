@@ -166,8 +166,41 @@ class A2aDiscoveryTest extends TestCase
         $this->assertSame(1, ExternalAgent::withoutGlobalScopes()->where('team_id', $this->team->id)->count());
     }
 
+    public function test_two_peers_sharing_a_card_name_do_not_collide_on_slug(): void
+    {
+        config(['agent_chat.a2a.discovery_enabled' => true]);
+
+        // The suffix used to come from the head of a UUIDv7, which is a
+        // millisecond timestamp — identical for anything registered within the
+        // same ~4.6 hours. Two same-named cards then hit the (team_id, slug)
+        // unique index and 500'd instead of both registering.
+        $cardOne = $this->sampleCard();
+        $cardOne['supportedInterfaces'] = [['url' => 'https://one.example.com/a2a/v1', 'protocolBinding' => 'JSONRPC']];
+        $cardTwo = $this->sampleCard();
+        $cardTwo['supportedInterfaces'] = [['url' => 'https://two.example.com/a2a/v1', 'protocolBinding' => 'JSONRPC']];
+
+        Http::fake([
+            'https://one.example.com/.well-known/agent-card.json' => Http::response($cardOne, 200),
+            'https://two.example.com/.well-known/agent-card.json' => Http::response($cardTwo, 200),
+        ]);
+
+        $action = app(DiscoverA2aAgentAction::class);
+        $first = $action->execute($this->team->id, 'https://one.example.com');
+        $second = $action->execute($this->team->id, 'https://two.example.com');
+
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertNotSame($first->slug, $second->slug);
+        $this->assertSame(2, ExternalAgent::withoutGlobalScopes()->where('team_id', $this->team->id)->count());
+    }
+
     public function test_dispatching_to_a2a_agent_is_guarded(): void
     {
+        // Stated rather than inherited: this asserts the guard, so it must not
+        // depend on the ambient default (a developer with A2A_DISPATCH_ENABLED
+        // in their .env otherwise sees a real outbound call and a confusing
+        // ConnectionException here).
+        config(['agent_chat.a2a.dispatch_enabled' => false]);
+
         $agent = ExternalAgent::create([
             'id' => Str::uuid7()->toString(),
             'team_id' => $this->team->id,

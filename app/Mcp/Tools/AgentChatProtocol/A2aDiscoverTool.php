@@ -24,7 +24,7 @@ class A2aDiscoverTool extends Tool
 
     protected string $name = 'external_agent_discover_a2a';
 
-    protected string $description = 'Discover an external A2A (Agent-to-Agent) agent by fetching its AgentCard from the well-known URI (/.well-known/agent-card.json) and registering it as an ExternalAgent. Pass the agent domain/base URL or a full card URL. Discovery only — calling A2A agents is not yet supported. Requires A2A_DISCOVERY_ENABLED=true.';
+    protected string $description = 'Discover an external A2A (Agent-to-Agent) agent by fetching its AgentCard from the well-known URI (/.well-known/agent-card.json) and registering it as an ExternalAgent. Pass the agent domain/base URL or a full card URL. Registers the peer so it can then be called with agent-chat-send. Requires A2A_DISCOVERY_ENABLED=true (and A2A_DISPATCH_ENABLED=true to call it).';
 
     public function schema(JsonSchema $schema): array
     {
