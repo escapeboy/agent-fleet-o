@@ -3,6 +3,7 @@
 namespace App\Mcp\Concerns;
 
 use App\Mcp\Methods\CacheableListTools;
+use App\Mcp\Methods\MultiRoundTripCallTool;
 use App\Mcp\Methods\ServerDiscover;
 use App\Mcp\Protocol\ProtocolVersions;
 
@@ -26,5 +27,6 @@ trait SupportsDualProtocolFormat
 
         $this->addMethod('server/discover', ServerDiscover::class);
         $this->addMethod('tools/list', CacheableListTools::class);
+        $this->addMethod('tools/call', MultiRoundTripCallTool::class);
     }
 }

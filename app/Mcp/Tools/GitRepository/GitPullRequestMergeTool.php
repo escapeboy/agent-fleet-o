@@ -8,6 +8,9 @@ use App\Domain\GitRepository\Models\GitPullRequest;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Mcp\Concerns\HasStructuredErrors;
+use App\Mcp\Exceptions\InputRequiredException;
+use App\Mcp\Methods\MultiRoundTripCallTool;
+use App\Mcp\Protocol\RequestState;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -58,12 +61,22 @@ class GitPullRequestMergeTool extends Tool
 
         $prNumber = (int) $request->get('pr_number');
 
+        // SEP-2322: "servers MUST always validate that state, as the client is
+        // an untrusted intermediary." A state that does not decode, or that was
+        // minted for another tenant/user/call, is refused outright rather than
+        // silently ignored — it cannot grant anything either way (the gate
+        // re-reads the approval row regardless), but a caller echoing a bogus
+        // state has a bug worth surfacing.
+        if ($stateError = $this->validateEchoedRequestState($teamId, $request->all())) {
+            return $stateError;
+        }
+
         // Governance gate. Runs before the client is resolved so a refused merge
         // performs no side effect at all, and outside the `force` escape hatch —
         // force skips CI/mergeability checks, never a human approval.
         if ($repo->config['pr']['require_approval'] ?? false) {
-            if ($refusal = $this->approvalRefusal($repo, $prNumber)) {
-                return $this->failedPreconditionError($refusal);
+            if ($refusal = $this->approvalGate($repo, $prNumber, $teamId, $request->all())) {
+                return $refusal;
             }
         }
 
@@ -109,22 +122,69 @@ class GitPullRequestMergeTool extends Tool
     }
 
     /**
-     * Reason the merge must be refused under pr.require_approval, or null when
-     * an approved, unexpired ApprovalRequest authorises it.
+     * Validate a `requestState` the client echoed back, if any.
+     *
+     * Returns an error Response when the caller sent one that this server did
+     * not mint for this exact call, or null when there is nothing to validate
+     * or the state checks out. Note the state is never *trusted* to authorise
+     * anything — it only proves the caller is resuming the call it was given.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    private function validateEchoedRequestState(string $teamId, array $arguments): ?Response
+    {
+        $blob = app()->bound(MultiRoundTripCallTool::BINDING_REQUEST_STATE)
+            ? app(MultiRoundTripCallTool::BINDING_REQUEST_STATE)
+            : null;
+
+        if (! is_string($blob) || $blob === '') {
+            return null;
+        }
+
+        $state = RequestState::decode($blob);
+
+        if ($state === null) {
+            return $this->invalidArgumentError('The supplied requestState is not valid or has expired. Retry the call without it to start a new request.');
+        }
+
+        $userId = auth()->id() === null ? null : (string) auth()->id();
+
+        if (! $state->matches($this->name(), $arguments, $teamId, $userId)) {
+            return $this->invalidArgumentError('The supplied requestState was issued for a different call. Retry without it to start a new request.');
+        }
+
+        return null;
+    }
+
+    /**
+     * The `pr.require_approval` gate. Returns the response that must be sent
+     * instead of merging, or null when an approved, unexpired ApprovalRequest
+     * authorises it.
      *
      * Fails closed: a missing platform record or a missing approval link is a
      * refusal, not a pass. Expiry is re-derived from `expires_at` rather than
      * trusted from `status`, because ExpireStaleApprovals only sweeps pending
      * rows — an approved row can sit past its deadline with status Approved.
+     *
+     * A *pending* approval is the one resumable state, so it throws
+     * InputRequiredException (SEP-2322) rather than returning: the caller gets
+     * a non-terminal `input_required` with a requestState to retry with, or —
+     * if it cannot speak MRTR — the same terminal error it got before.
+     * Every other state is a decided outcome and stays terminal; looping a
+     * rejected merge forever would be worse than refusing it.
+     *
+     * @param  array<string, mixed>  $arguments
+     *
+     * @throws InputRequiredException
      */
-    private function approvalRefusal(GitRepository $repo, int $prNumber): ?string
+    private function approvalGate(GitRepository $repo, int $prNumber, string $teamId, array $arguments): ?Response
     {
         $pr = GitPullRequest::where('git_repository_id', $repo->id)
             ->where('pr_number', (string) $prNumber)
             ->first();
 
         if (! $pr) {
-            return "PR #{$prNumber} has no platform record, and this repository requires approval before merge. Create the PR through git_pr_create so an approval request is issued.";
+            return $this->failedPreconditionError("PR #{$prNumber} has no platform record, and this repository requires approval before merge. Create the PR through git_pr_create so an approval request is issued.");
         }
 
         // Scope the approval to the repository's team: an approval row from
@@ -136,15 +196,30 @@ class GitPullRequestMergeTool extends Tool
                 ->find($pr->approval_request_id);
 
         if (! $approval) {
-            return "PR #{$prNumber} has no approval request linked, and this repository requires approval before merge.";
+            return $this->failedPreconditionError("PR #{$prNumber} has no approval request linked, and this repository requires approval before merge.");
+        }
+
+        if ($approval->status === ApprovalStatus::Pending) {
+            throw InputRequiredException::forApproval(
+                key: 'pr_merge_approval',
+                message: "Merging PR #{$prNumber} in {$repo->name} needs approval. Approval request {$approval->id} is still pending — action it in FleetQ, then retry this call with the requestState.",
+                state: RequestState::issue(
+                    approvalRequestId: $approval->id,
+                    teamId: $teamId,
+                    userId: auth()->id() === null ? null : (string) auth()->id(),
+                    tool: $this->name(),
+                    arguments: $arguments,
+                ),
+                fallback: $this->failedPreconditionError("PR #{$prNumber} is awaiting approval (request {$approval->id} is pending). Approve it before merging."),
+            );
         }
 
         if ($approval->status !== ApprovalStatus::Approved) {
-            return "PR #{$prNumber} is awaiting approval (request {$approval->id} is {$approval->status->value}). Approve it before merging.";
+            return $this->failedPreconditionError("PR #{$prNumber} cannot be merged: approval request {$approval->id} is {$approval->status->value}.");
         }
 
         if ($approval->expires_at !== null && $approval->expires_at->isPast()) {
-            return "Approval request {$approval->id} for PR #{$prNumber} expired at {$approval->expires_at->toIso8601String()}. Request a fresh approval before merging.";
+            return $this->failedPreconditionError("Approval request {$approval->id} for PR #{$prNumber} expired at {$approval->expires_at->toIso8601String()}. Request a fresh approval before merging.");
         }
 
         return null;

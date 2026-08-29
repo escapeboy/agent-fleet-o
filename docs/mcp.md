@@ -239,6 +239,49 @@ When a Bridge is connected with MCP servers configured (`~/.fleetq/mcp.json`), t
 
 ---
 
+## Protocol revisions & multi round-trip calls
+
+FleetQ speaks `2026-07-28` and every revision back to `2024-11-05`. Clients that cannot yet
+negotiate the newest revision keep the old behaviour — nothing below changes for them.
+
+### `input_required` (SEP-2322)
+
+A tool that needs a human decision before it can finish no longer returns a terminal result
+that merely *says* it is blocked. On `2026-07-28` it returns a non-terminal result:
+
+```json
+{"jsonrpc":"2.0","id":2,"result":{
+  "resultType":"input_required",
+  "inputRequests":{"pr_merge_approval":{"method":"elicitation/create","params":{…}}},
+  "requestState":"<opaque>"}}
+```
+
+Retry the **same call** once the request is satisfied, echoing `requestState` verbatim:
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{
+  "name":"git_pr_merge",
+  "arguments":{"repository_id":"…","pr_number":7},
+  "inputResponses":{"pr_merge_approval":{"action":"accept","content":{"acknowledged":true}}},
+  "requestState":"<echoed verbatim>"}}
+```
+
+Client rules:
+
+- **`requestState` is opaque.** Do not parse, modify, or reuse it across calls — it is bound to
+  the exact tool, arguments, team and user it was issued for, and a mismatch is refused.
+- **Completed results carry no `resultType`.** Per the SEP, an absent field means `"complete"`,
+  so existing success handling needs no change.
+- **Answering an elicitation is not authorisation.** FleetQ re-reads the underlying approval
+  record on every retry. A client that reports success against a still-pending approval gets
+  `input_required` back, not the action.
+- **Not every block is resumable.** A rejected or expired approval is a terminal error, not
+  another round trip — retrying will not change it.
+
+Currently emitted by `git_pr_merge` on repositories with `pr.require_approval` enabled.
+
+---
+
 ## Security
 
 - **Authentication**: Every HTTP request requires a valid Sanctum bearer token (or OAuth2 token in cloud). Requests without a token receive `401 Unauthorized`.
