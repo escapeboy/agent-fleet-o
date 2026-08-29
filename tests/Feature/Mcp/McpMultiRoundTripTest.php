@@ -16,6 +16,7 @@ use App\Mcp\Protocol\RequestState;
 use App\Mcp\Tools\GitRepository\GitPullRequestMergeTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Mcp\Server\ServerContext;
 use Laravel\Mcp\Server\Transport\JsonRpcRequest;
 use Mockery;
@@ -327,7 +328,7 @@ class McpMultiRoundTripTest extends TestCase
         $this->expectNoGitCalls();
 
         $foreign = RequestState::issue(
-            approvalRequestId: (string) \Illuminate\Support\Str::uuid(),
+            approvalRequestId: (string) Str::uuid(),
             teamId: $this->team->id,
             userId: (string) $this->user->id,
             tool: 'git_pr_merge',
@@ -347,8 +348,8 @@ class McpMultiRoundTripTest extends TestCase
         $this->expectNoGitCalls();
 
         $foreign = RequestState::issue(
-            approvalRequestId: (string) \Illuminate\Support\Str::uuid(),
-            teamId: (string) \Illuminate\Support\Str::uuid(),
+            approvalRequestId: (string) Str::uuid(),
+            teamId: (string) Str::uuid(),
             userId: (string) $this->user->id,
             tool: 'git_pr_merge',
             arguments: $this->mergeArgs(),
@@ -366,7 +367,7 @@ class McpMultiRoundTripTest extends TestCase
         $this->expectNoGitCalls();
 
         $foreign = RequestState::issue(
-            approvalRequestId: (string) \Illuminate\Support\Str::uuid(),
+            approvalRequestId: (string) Str::uuid(),
             teamId: $this->team->id,
             userId: (string) User::factory()->create()->id,
             tool: 'git_pr_merge',
