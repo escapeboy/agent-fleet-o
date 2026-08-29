@@ -24,6 +24,14 @@ use Illuminate\Support\Facades\Crypt;
  *
  * `tool` + `argsHash` pin an envelope to the exact call it was minted for: a
  * state issued for `git_pr_merge` on PR #7 cannot resume PR #9.
+ *
+ * INVARIANT — do not "optimise" this away. `approvalRequestId` is carried for
+ * correlation and audit only; it is never used as a lookup key. Consumers
+ * re-derive the approval from their own tenant-scoped query and use the
+ * envelope purely as a consistency check. That way a valid envelope can only
+ * ever cause a call to be *refused*, never to be redirected at a row the client
+ * named — which is a strictly stronger position than the SEP requires, and the
+ * reason a forged-but-well-formed state is harmless rather than merely unlikely.
  */
 final class RequestState
 {
