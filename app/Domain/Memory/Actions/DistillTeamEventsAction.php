@@ -9,6 +9,8 @@ use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -36,6 +38,7 @@ PROMPT;
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly StoreMemoryAction $storeMemory,
+        private readonly ProviderResolver $providerResolver,
     ) {}
 
     /**
@@ -75,10 +78,18 @@ PROMPT;
         // backpressure, not a defect, so it must be skipped like the
         // fallback-chain case instead of churning failed_jobs and Sentry
         // forever. (#824/#847/#1035/#1064)
+        //
+        // VpsLocalAgentException попада в същата категория: екип, чийто default
+        // сочи `claude-code-vps`, но не е в whitelist-а (или е ударил
+        // concurrency cap-а), не е дефект — това е същият backpressure. Хвърля
+        // се СЪЗНАТЕЛНО нагоре при интерактивна работа (там потребителят ТРЯБВА
+        // да види съобщението), затова НЕ се филтрира в BeforeSendFilter, а се
+        // поглъща само тук, във фоновата нощна задача. (FLEETQ-BJ)
         try {
-            $summary = $this->distil($events, $teamId);
+            $summary = $this->distil($events, $team, $teamId);
         } catch (RuntimeException $e) {
             if (! $e instanceof AiAccessUnavailableException
+                && ! $e instanceof VpsLocalAgentException
                 && ! str_contains($e->getMessage(), 'No available providers in fallback chain')) {
                 throw $e;
             }
@@ -137,7 +148,7 @@ PROMPT;
     /**
      * @param  Collection<int, AuditEntry>  $events
      */
-    private function distil(Collection $events, string $teamId): string
+    private function distil(Collection $events, ?Team $team, string $teamId): string
     {
         $log = $events
             ->sortBy('created_at')
@@ -149,18 +160,11 @@ PROMPT;
             ))
             ->implode("\n");
 
-        // The model carries its own provider prefix ("anthropic/claude-haiku-4-5")
-        // so the model name is never paired with a foreign provider (which 400s on
-        // gateways that don't expose Anthropic models). An un-prefixed override
-        // falls back to the separate distillation.provider config key.
-        $configured = (string) config('memory.distillation.model', 'anthropic/claude-haiku-4-5');
-        [$provider, $model] = str_contains($configured, '/')
-            ? explode('/', $configured, 2)
-            : [(string) config('memory.distillation.provider', 'anthropic'), $configured];
+        $resolved = $this->resolveDistillationModel($team);
 
         $response = $this->gateway->complete(new AiRequestDTO(
-            provider: $provider,
-            model: $model,
+            provider: $resolved['provider'],
+            model: $resolved['model'],
             systemPrompt: self::SYSTEM_PROMPT,
             userPrompt: "Recent activity log:\n\n".$log,
             maxTokens: 512,
@@ -170,6 +174,49 @@ PROMPT;
         ));
 
         return trim($response->content);
+    }
+
+    /**
+     * Изборът на ЕКИПА е водещ; евтиният дестилационен модел е само fallback.
+     *
+     * Дефект FLEETQ-BJ: този метод четеше `memory.distillation.model` първо и
+     * така заобикаляше цялата каскада skill → agent → team → GlobalSetting →
+     * платформа. На production стойността е `groq/openai/gpt-oss-120b`, чийто
+     * префикс носи и доставчика — така всеки екип, независимо от собствения си
+     * BYOK доставчик, беше пращан към Groq и всяка нощ в 01:31 гърмеше с
+     * „Groq Error [401]: Invalid API Key".
+     *
+     * Затова: първо `resolveWithSource(team:)`, и само когато екипът НЕ е
+     * изразил предпочитание налагаме дестилационния модел. „Няма предпочитание"
+     * покрива и двата платформени източника — `platform` (GlobalSetting) и
+     * `config` (конфигурационният fallback). На production GlobalSetting е NULL,
+     * тоест source е именно `config`; ако гледахме само `platform`, клонът
+     * никога нямаше да се задейства в prod и дестилацията щеше да върви на
+     * скъпия платформен модел вместо на евтиния haiku.
+     *
+     * @return array{provider: string, model: string}
+     */
+    private function resolveDistillationModel(?Team $team): array
+    {
+        $resolved = $this->providerResolver->resolveWithSource(team: $team);
+
+        if (! in_array($resolved['source'], ['platform', 'config'], true)) {
+            return [
+                'provider' => (string) $resolved['provider'],
+                'model' => (string) $resolved['model'],
+            ];
+        }
+
+        // Моделът носи собствен префикс за доставчик ("anthropic/claude-haiku-4-5"),
+        // за да не бъде сдвоен с чужд доставчик (което дава 400 на gateway-и без
+        // Anthropic модели). Стойност без префикс пада към отделния
+        // `distillation.provider` ключ.
+        $configured = (string) config('memory.distillation.model', 'anthropic/claude-haiku-4-5');
+        [$provider, $model] = str_contains($configured, '/')
+            ? explode('/', $configured, 2)
+            : [(string) config('memory.distillation.provider', 'anthropic'), $configured];
+
+        return ['provider' => $provider, 'model' => $model];
     }
 
     private function watermark(?Team $team): ?CarbonInterface

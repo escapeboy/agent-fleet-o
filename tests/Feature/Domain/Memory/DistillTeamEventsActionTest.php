@@ -11,6 +11,8 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,6 +51,11 @@ class DistillTeamEventsActionTest extends TestCase
         ]);
     }
 
+    private function makeAction(AiGatewayInterface $gateway, StoreMemoryAction $store): DistillTeamEventsAction
+    {
+        return new DistillTeamEventsAction($gateway, $store, app(ProviderResolver::class));
+    }
+
     private function fakeGateway(string $content): AiGatewayInterface
     {
         $gateway = Mockery::mock(AiGatewayInterface::class);
@@ -73,7 +80,7 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldReceive('execute')->once()->andReturn(['memory-1']);
 
-        $action = new DistillTeamEventsAction($this->fakeGateway('- Budget exceeded twice this window.'), $store);
+        $action = $this->makeAction($this->fakeGateway('- Budget exceeded twice this window.'), $store);
         $result = $action->execute($this->team->id);
 
         $this->assertSame(3, $result['events']);
@@ -92,7 +99,7 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldNotReceive('execute');
 
-        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id, null, true);
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id, null, true);
 
         $this->assertSame(2, $result['events']);
         $this->assertSame(0, $result['stored']);
@@ -110,7 +117,7 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldNotReceive('execute');
 
-        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id);
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
 
         $this->assertSame(0, $result['events']);
         $this->assertSame(0, $result['stored']);
@@ -125,7 +132,7 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldReceive('execute')->once()->andReturn(['memory-1']);
 
-        $action = new DistillTeamEventsAction($this->fakeGateway('- One recent event.'), $store);
+        $action = $this->makeAction($this->fakeGateway('- One recent event.'), $store);
         $result = $action->execute($this->team->id, now()->subHours(3));
 
         $this->assertSame(1, $result['events']);
@@ -147,7 +154,7 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldNotReceive('execute');
 
-        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id);
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
 
         $this->assertSame(1, $result['events']);
         $this->assertSame(0, $result['stored']);
@@ -177,7 +184,123 @@ class DistillTeamEventsActionTest extends TestCase
         $store = Mockery::mock(StoreMemoryAction::class);
         $store->shouldNotReceive('execute');
 
-        $result = (new DistillTeamEventsAction($gateway, $store))->execute($this->team->id);
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
+
+        $this->assertSame(1, $result['events']);
+        $this->assertSame(0, $result['stored']);
+        $this->assertNotNull($this->team->fresh()->settings['memory']['last_event_distill_at'] ?? null);
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     */
+    private function setTeamDefault(string $provider, string $model, array $extra = []): void
+    {
+        $this->team->update([
+            'settings' => array_merge([
+                'default_llm_provider' => $provider,
+                'default_llm_model' => $model,
+            ], $extra),
+        ]);
+    }
+
+    private function gatewayExpecting(callable $assert, string $content = '- Едно нещо.'): AiGatewayInterface
+    {
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->once()
+            ->with(Mockery::on(fn (AiRequestDTO $request) => $assert($request) === true))
+            ->andReturn(new AiResponseDTO(
+                content: $content,
+                parsedOutput: null,
+                usage: new AiUsageDTO(10, 20, 1),
+                provider: 'x',
+                model: 'y',
+                latencyMs: 100,
+            ));
+
+        return $gateway;
+    }
+
+    public function test_team_default_provider_wins_over_the_distillation_model(): void
+    {
+        // Екипът е изразил предпочитание — то е водещо, дестилационният модел
+        // не бива да го пренаписва.
+        config(['memory.distillation.model' => 'anthropic/claude-haiku-4-5']);
+        $this->setTeamDefault('openai', 'gpt-4o');
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldReceive('execute')->once()->andReturn(['memory-1']);
+
+        $gateway = $this->gatewayExpecting(
+            fn (AiRequestDTO $r) => $r->provider === 'openai' && $r->model === 'gpt-4o',
+        );
+
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
+
+        $this->assertSame(1, $result['stored']);
+    }
+
+    public function test_team_without_preference_falls_back_to_the_cheap_distillation_model(): void
+    {
+        // Без предпочитание на екипа (settings празни, GlobalSetting NULL) —
+        // тогава и само тогава важи евтиният дестилационен модел.
+        config(['memory.distillation.model' => 'anthropic/claude-haiku-4-5']);
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldReceive('execute')->once()->andReturn(['memory-1']);
+
+        $gateway = $this->gatewayExpecting(
+            fn (AiRequestDTO $r) => $r->provider === 'anthropic' && $r->model === 'claude-haiku-4-5',
+        );
+
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
+
+        $this->assertSame(1, $result['stored']);
+    }
+
+    public function test_groq_is_not_called_for_a_team_with_its_own_default(): void
+    {
+        // Дефект-гард за FLEETQ-BJ: production държи
+        // MEMORY_DISTILLATION_MODEL=groq/openai/gpt-oss-120b, а префиксът носи
+        // доставчика. Преди поправката всеки екип — включително тези на
+        // claude-code-vps — беше пращан към Groq и получаваше 401 всяка нощ.
+        config(['memory.distillation.model' => 'groq/openai/gpt-oss-120b']);
+        $this->setTeamDefault('claude-code-vps', 'claude-sonnet-4-5');
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldReceive('execute')->once()->andReturn(['memory-1']);
+
+        $gateway = $this->gatewayExpecting(
+            fn (AiRequestDTO $r) => $r->provider !== 'groq' && $r->provider === 'claude-code-vps',
+        );
+
+        $this->makeAction($gateway, $store)->execute($this->team->id);
+    }
+
+    public function test_skips_when_the_vps_local_agent_is_not_allowed_for_the_team(): void
+    {
+        // Екип, чийто default сочи claude-code-vps, но не е whitelist-нат
+        // (на production: „Test кантора 1"), получава VpsLocalAgentException.
+        // Във фоновата нощна задача това е backpressure — пропуска се като
+        // останалите случаи, watermark-ът се придвижва и нищо не стига до
+        // Sentry. Съзнателно НЕ се филтрира в BeforeSendFilter: интерактивно
+        // потребителят трябва да види съобщението.
+        $this->setTeamDefault('claude-code-vps', 'claude-sonnet-4-5');
+        $this->auditEntry('experiment.transitioned', now()->subHour());
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->once()
+            ->andThrow(VpsLocalAgentException::notAllowed());
+
+        $store = Mockery::mock(StoreMemoryAction::class);
+        $store->shouldNotReceive('execute');
+
+        $result = $this->makeAction($gateway, $store)->execute($this->team->id);
 
         $this->assertSame(1, $result['events']);
         $this->assertSame(0, $result['stored']);
