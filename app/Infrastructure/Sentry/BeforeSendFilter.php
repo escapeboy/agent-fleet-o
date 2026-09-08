@@ -7,6 +7,7 @@ use ErrorException;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\MaxAttemptsExceededException;
 use Predis\Connection\Resource\Exception\StreamInitException;
+use Predis\Response\ServerException;
 use Sentry\Event;
 use Sentry\EventHint;
 use Symfony\Component\Console\Exception\RuntimeException as SymfonyConsoleRuntimeException;
@@ -73,6 +74,19 @@ final class BeforeSendFilter
         // wraps the Redis connect failure in its own storage exception, so the
         // class check above can't catch it. (#1082)
         if (str_contains($msg, "Can't connect to Redis server")) {
+            return null;
+        }
+
+        // -LOADING Redis is loading the dataset in memory — the socket connects
+        // fine but Redis rejects the command while it replays its RDB/AOF on
+        // startup or after a failover. Same container-restart race as
+        // StreamInitException above, just surfacing one step later (after
+        // connect, on the first command). Predis wraps every server-side RESP
+        // error reply in the same ServerException class, so this is scoped to
+        // the LOADING error type specifically. A SUSTAINED outage stays
+        // visible: HealthController pings Redis and flips /api/v1/health to
+        // 503 `degraded`.
+        if ($e instanceof ServerException && $e->getErrorType() === 'LOADING') {
             return null;
         }
 
