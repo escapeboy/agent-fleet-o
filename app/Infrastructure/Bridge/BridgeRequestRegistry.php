@@ -22,11 +22,11 @@ class BridgeRequestRegistry
 
     public function register(string $requestId, string $teamId): void
     {
-        Redis::connection('bridge')->setex(
+        $this->withRetry(fn () => Redis::connection('bridge')->setex(
             "bridge:pending:{$requestId}",
             self::PENDING_TTL,
             $teamId,
-        );
+        ), 'register');
     }
 
     /**
@@ -36,9 +36,11 @@ class BridgeRequestRegistry
     {
         $payload = json_encode(['chunk' => $chunk, 'done' => $done, 'usage' => $usage]);
 
-        $conn = Redis::connection('bridge');
-        $conn->rpush("bridge:stream:{$requestId}", $payload);
-        $conn->expire("bridge:stream:{$requestId}", self::STREAM_TTL);
+        $this->withRetry(function () use ($requestId, $payload) {
+            $conn = Redis::connection('bridge');
+            $conn->rpush("bridge:stream:{$requestId}", $payload);
+            $conn->expire("bridge:stream:{$requestId}", self::STREAM_TTL);
+        }, 'pushChunk');
     }
 
     /**
@@ -46,11 +48,11 @@ class BridgeRequestRegistry
      */
     public function storeUsage(string $requestId, array $usage): void
     {
-        Redis::connection('bridge')->setex(
+        $this->withRetry(fn () => Redis::connection('bridge')->setex(
             "bridge:usage:{$requestId}",
             self::STREAM_TTL,
             json_encode($usage),
-        );
+        ), 'storeUsage');
     }
 
     /**
@@ -153,14 +155,27 @@ class BridgeRequestRegistry
      */
     public function getUsage(string $requestId): ?array
     {
-        $raw = Redis::connection('bridge')->get("bridge:usage:{$requestId}");
+        $raw = $this->withRetry(
+            fn () => Redis::connection('bridge')->get("bridge:usage:{$requestId}"),
+            'getUsage',
+        );
 
         return $raw ? json_decode($raw, true) : null;
     }
 
+    /**
+     * Whether the pending marker for this request has expired (or is unreadable).
+     * A Redis outage is treated as "expired" — callers use this to stop waiting on
+     * a request rather than block indefinitely on an unreachable store.
+     */
     public function isExpired(string $requestId): bool
     {
-        return Redis::connection('bridge')->ttl("bridge:pending:{$requestId}") <= 0;
+        $ttl = $this->withRetry(
+            fn () => Redis::connection('bridge')->ttl("bridge:pending:{$requestId}"),
+            'isExpired',
+        );
+
+        return $ttl === null || $ttl <= 0;
     }
 
     /**
@@ -175,21 +190,34 @@ class BridgeRequestRegistry
      */
     private function blpopWithRetry(array $keys, int $timeoutSeconds): ?array
     {
+        return $this->withRetry(
+            fn () => Redis::connection('bridge')->blpop($keys, $timeoutSeconds),
+            'blpop',
+        );
+    }
+
+    /**
+     * Run a bridge Redis operation, transparently reconnecting once if it fails with a
+     * RedisException/ConnectionException (e.g. a dropped socket, or the server rejecting
+     * commands with "LOADING Redis is loading the dataset in memory" after a restart).
+     * Returns null (swallowing the error) if the retry also fails, so a transient Redis
+     * outage degrades a single bridge operation instead of crashing the caller.
+     */
+    private function withRetry(callable $operation, string $label): mixed
+    {
         try {
-            return Redis::connection('bridge')->blpop($keys, $timeoutSeconds);
+            return $operation();
         } catch (\RedisException|ConnectionException $e) {
-            Log::warning('Bridge Redis connection dropped during blpop, reconnecting and retrying', [
-                'keys' => $keys,
+            Log::warning("Bridge Redis error during {$label}, reconnecting and retrying", [
                 'error' => $e->getMessage(),
             ]);
 
             Redis::purge('bridge');
 
             try {
-                return Redis::connection('bridge')->blpop($keys, $timeoutSeconds);
+                return $operation();
             } catch (\RedisException|ConnectionException $e) {
-                Log::error('Bridge Redis connection retry failed after reconnect', [
-                    'keys' => $keys,
+                Log::error("Bridge Redis retry failed after reconnect during {$label}", [
                     'error' => $e->getMessage(),
                 ]);
 
