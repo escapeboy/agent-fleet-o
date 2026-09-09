@@ -21,14 +21,15 @@ fi
 # gates the initial `docker compose up`, but it is NOT re-evaluated when a
 # single container is restarted independently (e.g. `docker restart app`,
 # or Redis being recreated while this container keeps running) — that gap
-# is what surfaces as "RedisException: Connection refused". REDIS_HOST/PORT
-# live only in the .env file (no `env_file:` directive wires them into the
-# container's real environment), so read them from there directly. Uses
-# fsockopen via PHP (always present in this image) instead of `nc`, which
-# alpine's busybox does not guarantee.
+# is what surfaces as "RedisException: Connection refused". Prefer the
+# container's real REDIS_HOST env (set explicitly in docker-compose.yml),
+# falling back to the .env file (whose default is host-machine-oriented,
+# 127.0.0.1, for the non-Docker `composer dev` workflow) and then 127.0.0.1.
+# Uses fsockopen via PHP (always present in this image) instead of `nc`,
+# which alpine's busybox does not guarantee.
 env_file=/var/www/.env
-redis_host=$( [ -f "$env_file" ] && grep -m1 '^REDIS_HOST=' "$env_file" | cut -d '=' -f2- )
-redis_port=$( [ -f "$env_file" ] && grep -m1 '^REDIS_PORT=' "$env_file" | cut -d '=' -f2- )
+redis_host="${REDIS_HOST:-$( [ -f "$env_file" ] && grep -m1 '^REDIS_HOST=' "$env_file" | cut -d '=' -f2- )}"
+redis_port="${REDIS_PORT:-$( [ -f "$env_file" ] && grep -m1 '^REDIS_PORT=' "$env_file" | cut -d '=' -f2- )}"
 redis_host="${redis_host:-127.0.0.1}"
 redis_port="${redis_port:-6379}"
 

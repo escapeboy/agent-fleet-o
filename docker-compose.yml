@@ -20,6 +20,7 @@ services:
       - APP_ENV=local
       - COMPOSER_CACHE_DIR=/root/.composer
       - RUNNING_IN_DOCKER=true
+      - REDIS_HOST=redis
     networks:
       - agent-fleet-open
       - agent-fleet-internal
@@ -93,6 +94,7 @@ services:
     environment:
       - APP_ENV=local
       - RUNNING_IN_DOCKER=true
+      - REDIS_HOST=redis
     networks:
       - agent-fleet-open
       - agent-fleet-internal
@@ -122,6 +124,7 @@ services:
     environment:
       - APP_ENV=local
       - RUNNING_IN_DOCKER=true
+      - REDIS_HOST=redis
     networks:
       - agent-fleet-open
       - agent-fleet-internal
@@ -161,6 +164,7 @@ services:
     environment:
       - APP_ENV=local
       - RUNNING_IN_DOCKER=true
+      - REDIS_HOST=redis
     networks:
       - agent-fleet-open
       - agent-fleet-internal
