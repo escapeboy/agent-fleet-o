@@ -172,6 +172,19 @@ AS \$\$
     ORDER BY embedding <=> query_embedding ASC
     LIMIT match_count;
 \$\$;
+
+-- Row Level Security is ON by default: Supabase exposes new public-schema tables to
+-- the public `anon` key over REST. FleetQ uses the service_role key, which bypasses RLS.
+ALTER TABLE fleetq_memories ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE fleetq_memories FROM anon, authenticated;
+
+REVOKE ALL ON FUNCTION fleetq_match_memories(extensions.vector({$dim}), FLOAT, INT)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fleetq_match_memories(extensions.vector({$dim}), FLOAT, INT)
+    TO service_role;
+
+DROP POLICY IF EXISTS "Service role full access" ON fleetq_memories;
 SQL;
     }
 

@@ -67,7 +67,34 @@ $$;
 COMMENT ON FUNCTION fleetq_match_memories IS
     'Cosine similarity search for FleetQ agent memories. Called via Supabase REST RPC by FleetQ agents.';
 
--- Optional: Row Level Security
--- Uncomment if you want to restrict access by user JWT:
--- ALTER TABLE fleetq_memories ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY "Service role full access" ON fleetq_memories FOR ALL USING (true);
+-- Step 6: Lock the table down — Row Level Security ON by default
+-- Supabase grants full table access on new public-schema tables to the `anon` and
+-- `authenticated` roles, and the anon key is public (it ships inside browser apps).
+-- Without RLS anyone holding that key can read every memory over the REST API.
+-- FleetQ connects with the service_role key, which bypasses RLS, so this costs
+-- you nothing and is not optional.
+ALTER TABLE fleetq_memories ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE fleetq_memories FROM anon, authenticated;
+
+REVOKE ALL ON FUNCTION fleetq_match_memories(extensions.vector({{EMBEDDING_DIMENSION}}), FLOAT, INT)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fleetq_match_memories(extensions.vector({{EMBEDDING_DIMENSION}}), FLOAT, INT)
+    TO service_role;
+
+-- Earlier versions of this file suggested a "Service role full access" policy with
+-- USING (true). That policy had no TO clause, so it applied to every role including
+-- `anon`. service_role bypasses RLS anyway and needs no policy. Drop it if present.
+DROP POLICY IF EXISTS "Service role full access" ON fleetq_memories;
+
+-- Optional: let signed-in users read their own memories straight from your client app.
+-- Skip this entirely if only FleetQ touches the table. Keep the TO authenticated clause —
+-- a policy without it also covers `anon`.
+-- ALTER TABLE fleetq_memories ADD COLUMN IF NOT EXISTS user_id UUID DEFAULT auth.uid();
+-- GRANT SELECT ON fleetq_memories TO authenticated;
+-- CREATE POLICY "Users read own memories" ON fleetq_memories
+--     FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- Verify the result:
+--   SELECT relrowsecurity FROM pg_class WHERE relname = 'fleetq_memories';   -- expect: t
+--   SELECT policyname, roles, qual FROM pg_policies WHERE tablename = 'fleetq_memories';
