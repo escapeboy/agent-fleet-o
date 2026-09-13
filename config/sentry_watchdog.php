@@ -106,6 +106,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Non-actionable patterns — infrastructure / connectivity failures
+    |--------------------------------------------------------------------------
+    |
+    | non_actionable_patterns — case-insensitive substrings matched against
+    |   the Sentry issue's exception type, exception value and title. A match
+    |   means the error is an infrastructure or connectivity failure (datastore
+    |   restart, DNS not resolving, OOM-thrash, connection refused) that no
+    |   change in the application repository can fix. Such signals are stamped
+    |   triaged and surfaced in the digest as investigate-only WITHOUT an LLM
+    |   call and WITHOUT delegation — the LLM otherwise "fixes" REDIS_HOST with
+    |   0.9 confidence every time. Added after the watchdog opened five
+    |   "fix RedisException" PRs (agent-fleet-o #151–#157) for signalio-backend's
+    |   Redis OOM-restart loop between 2026-09-08 and 2026-09-12.
+    |
+    */
+
+    'non_actionable_patterns' => [
+        'RedisException',
+        'Predis\\Connection\\',
+        'Connection refused',
+        'getaddrinfo',
+        'Name or service not known',
+        'Name does not resolve',
+        'LOADING Redis is loading',
+        'read error on connection',
+        'Stream is already at the end',
+        'SQLSTATE[08006]',
+        'SQLSTATE[08001]',
+        'Connection timed out',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Phase 1 safety guards
     |--------------------------------------------------------------------------
     |

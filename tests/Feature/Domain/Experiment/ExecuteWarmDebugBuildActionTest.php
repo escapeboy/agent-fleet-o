@@ -245,6 +245,32 @@ class ExecuteWarmDebugBuildActionTest extends TestCase
         $this->assertSame(ExperimentStatus::BuildingFailed, $exp->status);
     }
 
+    public function test_declared_target_without_registered_repo_fails_instead_of_default_fallback(): void
+    {
+        // Regression: delegation carried target_repository=KarlovoTech/signalio
+        // but no git_repository_id (no team repo matched). The default-repo
+        // fallback then built and opened the PR against the wrong repository.
+        GitRepository::create([
+            'team_id' => $this->team->id, 'name' => 'r',
+            'url' => $this->bare, 'default_branch' => 'main', 'is_default' => true,
+        ]);
+
+        $exp = $this->experiment(['target_repository' => 'KarlovoTech/signalio']);
+        $this->fakeAgentWriting('fix.txt');
+        $captured = [];
+        $this->fakePrClient($captured);
+
+        app(ExecuteWarmDebugBuildAction::class)->execute($exp);
+
+        $exp->refresh();
+        $this->assertSame(ExperimentStatus::BuildingFailed, $exp->status);
+        $this->assertSame([], $captured, 'no PR may be opened against the default repo');
+
+        $stage = ExperimentStage::where('experiment_id', $exp->id)->where('stage', StageType::Building)->first();
+        $this->assertSame(StageStatus::Failed, $stage->status);
+        $this->assertStringContainsString('KarlovoTech/signalio', $stage->output_snapshot['error']);
+    }
+
     public function test_falls_back_to_default_repo_when_no_constraint(): void
     {
         // Retry of an experiment delegated before a repo was configured: no

@@ -66,7 +66,10 @@ class ExecuteWarmDebugBuildAction
 
         $repo = $this->resolveRepository($experiment);
         if (! $repo) {
-            $this->fail($experiment, 'No git repository is configured for this experiment\'s agent.');
+            $target = $experiment->constraints['target_repository'] ?? null;
+            $this->fail($experiment, is_string($target) && $target !== ''
+                ? "Target repository {$target} is not registered as a GitRepository for this team — register it before autonomous fixes can open a PR."
+                : 'No git repository is configured for this experiment\'s agent.');
 
             return;
         }
@@ -314,6 +317,14 @@ class ExecuteWarmDebugBuildAction
             return GitRepository::withoutGlobalScopes()
                 ->where('team_id', $experiment->team_id)
                 ->find($repoId);
+        }
+
+        // A declared target that matched none of the team's repositories at
+        // delegation time must not be silently redirected to the team default —
+        // that redirect is how signalio-backend fixes became agent-fleet-o PRs.
+        $target = $experiment->constraints['target_repository'] ?? null;
+        if (is_string($target) && $target !== '') {
+            return null;
         }
 
         // No explicit repo — e.g. a retry of an experiment delegated before a repo

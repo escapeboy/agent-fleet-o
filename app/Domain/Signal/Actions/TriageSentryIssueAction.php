@@ -2,6 +2,7 @@
 
 namespace App\Domain\Signal\Actions;
 
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\DTOs\SentryTriageResult;
 use App\Domain\Signal\Enums\FixTier;
@@ -73,6 +74,23 @@ class TriageSentryIssueAction
         // driver item — the actual Sentry issue lives under payload['payload'].
         $raw = $signal->payload ?? [];
         $payload = (isset($raw['payload']) && is_array($raw['payload'])) ? $raw['payload'] : $raw;
+
+        // Infrastructure / connectivity failures (datastore restart, DNS, OOM
+        // thrash) are operational, not code defects: no repository change fixes
+        // them, and the LLM reliably blames REDIS_HOST with 0.9 confidence. Keep
+        // them visible in the digest, but never spend the LLM call or delegate.
+        $nonActionable = $this->matchNonActionablePattern($payload);
+        if ($nonActionable !== null) {
+            return $this->investigateOnlyResult($signal, FixTier::T4, [
+                'root_cause' => "Infrastructure/connectivity failure (matched '{$nonActionable}') — operational issue, not a code defect. Not delegated.",
+                'confidence' => 0.0,
+                'suspect_files' => [],
+                'estimated_diff_lines' => 0,
+                'is_critical' => $this->looksCritical($payload),
+                'summary' => $this->clean((string) ($payload['title'] ?? 'Sentry issue'), 200),
+            ]);
+        }
+
         $investigation = $this->investigate($payload, $signal, $team);
         $tier = $this->classifier->classify(
             $investigation['suspect_files'],
@@ -111,6 +129,21 @@ class TriageSentryIssueAction
             ]);
 
             return $this->investigateOnlyResult($signal, $tier, $mixedInvestigation);
+        }
+
+        // A configured target (integration config['target_repository']) must be
+        // one of the team's registered GitRepository rows. Without it the
+        // delegation has nowhere legitimate to open a PR — the old fallback to
+        // the team's default repo is how signalio-backend "fixes" shipped as
+        // PRs against agent-fleet-o (#151–#157).
+        if ($target !== null
+            && $target['kind'] === 'configured'
+            && ! $this->teamHasRepository($team, $target['full_name'])) {
+            return $this->investigateOnlyResult($signal, $tier, array_merge($investigation, [
+                'root_cause' => $investigation['root_cause']
+                    ." [Not delegated: target repository {$target['full_name']} is not registered as a"
+                    .' GitRepository for this team — register it to enable autonomous fixes.]',
+            ]));
         }
 
         $actionable = $target !== null
@@ -513,6 +546,51 @@ class TriageSentryIssueAction
         $kind = $base > 0 ? 'base' : 'parent';
 
         return ['kind' => $kind, 'full_name' => self::TARGET_REPOSITORIES[$kind]];
+    }
+
+    /**
+     * First configured `sentry_watchdog.non_actionable_patterns` entry found
+     * (case-insensitively) in the issue's exception type, value or title.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function matchNonActionablePattern(array $payload): ?string
+    {
+        $patterns = config('sentry_watchdog.non_actionable_patterns', []);
+        if (! is_array($patterns) || $patterns === []) {
+            return null;
+        }
+
+        $metadata = is_array($payload['metadata'] ?? null) ? $payload['metadata'] : [];
+        $haystack = implode("\n", array_filter([
+            $metadata['type'] ?? null,
+            $metadata['value'] ?? null,
+            $payload['title'] ?? null,
+        ], 'is_string'));
+
+        if ($haystack === '') {
+            return null;
+        }
+
+        foreach ($patterns as $pattern) {
+            if (is_string($pattern) && $pattern !== '' && mb_stripos($haystack, $pattern) !== false) {
+                return $pattern;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether one of the team's GitRepository rows resolves to `owner/repo`.
+     * Bypasses TeamScope: the watchdog runs from a queue job with no team context.
+     */
+    private function teamHasRepository(Team $team, string $fullName): bool
+    {
+        return GitRepository::withoutGlobalScopes()
+            ->where('team_id', $team->id)
+            ->get()
+            ->contains(fn (GitRepository $repo): bool => strcasecmp((string) $repo->repoSlug(), $fullName) === 0);
     }
 
     private function clampConfidence(mixed $value): float
