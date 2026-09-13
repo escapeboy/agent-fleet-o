@@ -333,6 +333,29 @@ class DelegateBugReportToAgentActionTest extends ApiTestCase
         $this->assertArrayNotHasKey('git_repository_id', $experiment->constraints ?? []);
     }
 
+    public function test_delegation_never_falls_back_to_default_repo_when_target_is_unmatched(): void
+    {
+        // Regression: signal routed to KarlovoTech/signalio, team owns only the
+        // agent-fleet repos (one default) → the old fallback picked the default
+        // and the warm-build opened Redis "fixes" against agent-fleet-o.
+        GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet-o',
+            'url' => 'https://github.com/escapeboy/agent-fleet-o.git',
+            'default_branch' => 'develop',
+            'is_default' => true,
+        ]);
+
+        $signal = $this->makeSignal(['target_repository' => 'KarlovoTech/signalio']);
+
+        /** @var DelegateBugReportToAgentAction $action */
+        $action = app(DelegateBugReportToAgentAction::class);
+        $experiment = $action->execute($signal, $this->user);
+
+        $this->assertArrayNotHasKey('git_repository_id', $experiment->constraints ?? []);
+        $this->assertSame('KarlovoTech/signalio', $experiment->constraints['target_repository'] ?? null);
+    }
+
     public function test_delegation_falls_back_to_team_default_repo_when_no_target(): void
     {
         GitRepository::create([

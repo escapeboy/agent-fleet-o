@@ -3,6 +3,7 @@
 namespace Tests\Feature\Domain\Signal;
 
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Actions\TriageSentryIssueAction;
 use App\Domain\Signal\Enums\SentryTriageOutcome;
@@ -94,6 +95,16 @@ class TriageSentryIssueActionTargetRepositoryTest extends TestCase
             'is_critical' => false,
             'summary' => 'Renderer crashes on missing field.',
         ], $investigation), JSON_THROW_ON_ERROR);
+    }
+
+    private function registerRepository(string $fullName): GitRepository
+    {
+        return GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => $fullName,
+            'url' => "https://github.com/{$fullName}.git",
+            'default_branch' => 'main',
+        ]);
     }
 
     private function makeSentrySignal(): Signal
@@ -196,7 +207,9 @@ class TriageSentryIssueActionTargetRepositoryTest extends TestCase
     {
         // A project whose code lives in a single repo outside the agent-fleet
         // monorepo (e.g. signalio-backend) declares config['target_repository'];
-        // every suspect file then routes there regardless of the base/ prefix.
+        // every suspect file then routes there regardless of the base/ prefix —
+        // provided the team has registered that repository.
+        $this->registerRepository('escapeboy/signalio-backend');
         $this->fakeGateway($this->triageJson([
             'suspect_files' => [
                 'app/Jobs/CrawlInstitutionJob.php',
@@ -218,12 +231,51 @@ class TriageSentryIssueActionTargetRepositoryTest extends TestCase
         $this->assertSame('escapeboy/signalio-backend', $signal->payload['target_repository']);
     }
 
+    public function test_configured_target_without_registered_repository_is_investigate_only(): void
+    {
+        // Regression: the signalio-backend integration declared
+        // target_repository=KarlovoTech/signalio, the team had no such
+        // GitRepository, and delegation fell back to the team default repo
+        // (agent-fleet-o) — five Redis "fixes" landed in the wrong repository.
+        // The team here owns two unrelated repositories, one of them default.
+        GitRepository::create([
+            'team_id' => $this->team->id,
+            'name' => 'escapeboy/agent-fleet-o',
+            'url' => 'https://github.com/escapeboy/agent-fleet-o.git',
+            'default_branch' => 'develop',
+            'is_default' => true,
+        ]);
+        $this->registerRepository('escapeboy/agent-fleet');
+
+        $this->fakeGateway($this->triageJson([
+            'suspect_files' => ['config/database.php', 'config/cache.php'],
+            'confidence' => 0.92,
+            'estimated_diff_lines' => 6,
+        ]));
+
+        $signal = $this->makeSentrySignal();
+
+        $result = app(TriageSentryIssueAction::class)
+            ->execute($signal, 'KarlovoTech/signalio');
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertNull($result->experimentId);
+        $this->assertSame(0, Experiment::query()->count());
+        $this->assertStringContainsString('KarlovoTech/signalio', (string) $result->rootCause);
+        $this->assertStringContainsString('not registered', (string) $result->rootCause);
+
+        $signal->refresh();
+        $this->assertNull($signal->experiment_id);
+        $this->assertNotNull($signal->payload['sentry_watchdog_triaged_at'] ?? null);
+    }
+
     public function test_sentry_project_object_does_not_break_delegation(): void
     {
         // Regression: prod Sentry signals carry payload['project'] as an object
         // and no project_key column. DelegateBugReportToAgentAction::sanitize()
         // used to receive that array and throw a TypeError, silently blocking
         // every PR (the watchdog reported 0 delegations across every run).
+        $this->registerRepository('escapeboy/signalio-backend');
         $this->fakeGateway($this->triageJson([
             'suspect_files' => ['app/Jobs/CrawlInstitutionJob.php'],
             'confidence' => 0.9,

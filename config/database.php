@@ -154,9 +154,13 @@ return [
         ],
 
         // Queues (DB 0)
-        // read_write_timeout=-1 prevents PHP's default 60s socket timeout from
-        // killing BLPOP calls that intentionally block for up to 90 seconds
-        // (used by LocalBridgeGateway to wait for relay responses).
+        // read_write_timeout=-1 (Predis) / read_timeout=-1 (phpredis) prevent PHP's
+        // default 60s socket timeout from killing BLPOP calls that intentionally
+        // block for up to 90 seconds (used by LocalBridgeGateway to wait for relay
+        // responses). Without read_timeout, phpredis falls back to the
+        // default_socket_timeout ini value and throws
+        // "RedisException: read error on connection to ..." once a blocking read
+        // runs past that limit.
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
@@ -165,6 +169,7 @@ return [
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
             'read_write_timeout' => -1,
+            'read_timeout' => -1,
         ],
 
         // Cache (DB 1)
@@ -179,6 +184,9 @@ return [
 
         // Bridge relay (DB 0, no prefix) — keys shared with the fleetq-relay Go binary
         // which reads/writes raw keys without any Laravel prefix.
+        // read_write_timeout/read_timeout=-1 disable the socket read timeout for
+        // both the Predis and phpredis clients — LocalBridgeGateway BLPOPs this
+        // connection for up to RELAY_TIMEOUT (1200s) while streaming a response.
         'bridge' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
@@ -187,6 +195,7 @@ return [
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
             'read_write_timeout' => -1,
+            'read_timeout' => -1,
             'options' => ['prefix' => ''],
         ],
 
