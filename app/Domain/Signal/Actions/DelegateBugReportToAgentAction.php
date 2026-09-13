@@ -137,6 +137,12 @@ class DelegateBugReportToAgentAction
         // through so the platform-side builder can check it out; otherwise leave it
         // unset and the legacy bridge path (agent gh-clones from the thesis) stands.
         $constraints = [];
+        $target = $signal->payload['target_repository'] ?? null;
+        if (is_string($target) && $target !== '') {
+            // Carried so the warm-build refuses the team-default fallback when the
+            // declared target matched none of the team's repositories.
+            $constraints['target_repository'] = $target;
+        }
         $repoId = $this->resolveGitRepositoryId($signal);
         if ($repoId !== null) {
             $constraints['git_repository_id'] = $repoId;
@@ -202,12 +208,17 @@ class DelegateBugReportToAgentAction
                     return $repo->id;
                 }
             }
+
+            // An explicit target that matches none of the team's repositories must
+            // NOT fall back to the default repo: that fallback opened signalio-backend
+            // Redis "fixes" as PRs against agent-fleet-o (#151–#157). A draft PR in
+            // the wrong repository is not a safety net — it is the defect.
+            return null;
         }
 
-        // No explicit target (the common Sentry case) or no match: fall back to
-        // the team's default repo so the build still has somewhere to open a PR
-        // instead of hard-failing with "no git repository configured". The draft
-        // PR + human review is the safety net if the default is the wrong repo.
+        // No explicit target: fall back to the team's default repo so the build
+        // still has somewhere to open a PR instead of hard-failing with "no git
+        // repository configured".
         $default = $repos->firstWhere('is_default', true);
         if ($default) {
             return $default->id;

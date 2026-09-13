@@ -126,6 +126,66 @@ class TriageSentryIssueActionTest extends TestCase
         ], $overrides));
     }
 
+    public function test_infrastructure_failures_are_investigate_only_without_an_llm_call(): void
+    {
+        // Regression: signalio-backend's Redis OOM-restart loop produced
+        // "RedisException: getaddrinfo for redis failed" issues; the LLM blamed
+        // REDIS_HOST with 0.9 confidence and the watchdog opened five PRs
+        // (agent-fleet-o #151–#157). Connectivity failures are operational —
+        // they must surface in the digest but never cost an LLM call or a PR.
+        config(['sentry_watchdog.mode' => 'phase1']);
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldNotReceive('complete');
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $resolver = Mockery::mock(ProviderResolver::class);
+        $resolver->shouldNotReceive('resolve');
+        $this->app->instance(ProviderResolver::class, $resolver);
+
+        $signal = $this->makeSentrySignal([
+            'title' => 'RedisException: php_network_getaddresses: getaddrinfo for redis failed: Name or service not known',
+            'culprit' => '/api/v1/alerts/public',
+            'count' => 79,
+            'metadata' => [
+                'type' => 'RedisException',
+                'value' => 'php_network_getaddresses: getaddrinfo for redis failed: Name or service not known',
+            ],
+        ]);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertNull($result->experimentId);
+        $this->assertSame(0, Experiment::query()->count());
+        $this->assertSame(0.0, $result->confidence);
+        $this->assertStringContainsString('Infrastructure/connectivity failure', (string) $result->rootCause);
+        $this->assertStringContainsString('RedisException', (string) $result->rootCause);
+
+        $signal->refresh();
+        $this->assertNotNull($signal->payload['sentry_watchdog_triaged_at'] ?? null, 'must be stamped so the next run skips it');
+        $this->assertSame(SignalStatus::Received, $signal->status);
+    }
+
+    public function test_non_actionable_pattern_matches_exception_value_case_insensitively(): void
+    {
+        config(['sentry_watchdog.mode' => 'phase1']);
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldNotReceive('complete');
+        $this->app->instance(AiGatewayInterface::class, $gateway);
+
+        $signal = $this->makeSentrySignal([
+            'title' => 'Some wrapper exception',
+            'metadata' => ['type' => 'RuntimeException', 'value' => 'loading redis IS LOADING the dataset in memory'],
+        ]);
+
+        $result = app(TriageSentryIssueAction::class)->execute($signal);
+
+        $this->assertSame(SentryTriageOutcome::InvestigateOnly, $result->outcome);
+        $this->assertStringContainsString('LOADING Redis is loading', (string) $result->rootCause);
+    }
+
     public function test_triage_uses_ai_classification_config_when_set(): void
     {
         config([
