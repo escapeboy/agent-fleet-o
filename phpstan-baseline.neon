@@ -853,12 +853,6 @@ parameters:
 			path: app/Domain/Assistant/Actions/AnnotateMessageAction.php
 
 		-
-			message: '#^Access to an undefined property Prism\\Prism\\ValueObjects\\ToolOutput\:\:\$output\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Domain/Assistant/Actions/LocalToolLoopExecutor.php
-
-		-
 			message: '#^Domain class must not import from the presentation or MCP layer\: App\\Mcp\\DeadlineContext\. Move shared logic to app/Domain/ or app/Infrastructure/ instead\.$#'
 			identifier: domain.importBoundary
 			count: 1

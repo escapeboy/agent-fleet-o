@@ -15,6 +15,7 @@ enum BuiltInToolKind: string
     case BrowserHarness = 'browser_harness';
     case ProgressAppend = 'progress_append';
     case Plan = 'plan';
+    case ProgrammaticToolCalling = 'programmatic_tool_calling';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum BuiltInToolKind: string
             self::BrowserHarness => 'Browser Harness (self-healing CDP)',
             self::ProgressAppend => 'Progress Log (workspace contract)',
             self::Plan => 'Plan / To-Do (self-managed task list)',
+            self::ProgrammaticToolCalling => 'Programmatic Tool Calling (batch tools + code post-processing)',
         };
     }
 }

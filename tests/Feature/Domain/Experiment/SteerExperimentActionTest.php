@@ -46,7 +46,7 @@ class SteerExperimentActionTest extends TestCase
         ], $overrides));
     }
 
-    public function test_stores_message_in_orchestration_config(): void
+    public function test_stores_message_in_steering_queue(): void
     {
         $experiment = $this->makeExperiment();
 
@@ -56,23 +56,51 @@ class SteerExperimentActionTest extends TestCase
             userId: $this->user->id,
         );
 
-        $this->assertSame('Use staging DB, not prod', $result->orchestration_config['steering_message']);
-        $this->assertSame($this->user->id, $result->orchestration_config['steering_queued_by']);
-        $this->assertArrayHasKey('steering_queued_at', $result->orchestration_config);
+        $queue = $result->orchestration_config['steering_queue'];
+        $this->assertCount(1, $queue);
+        $this->assertSame('Use staging DB, not prod', $queue[0]['message']);
+        $this->assertSame($this->user->id, $queue[0]['queued_by']);
+        $this->assertArrayHasKey('queued_at', $queue[0]);
+        $this->assertNotEmpty($queue[0]['id']);
     }
 
-    public function test_overwrites_previously_queued_message(): void
+    public function test_appends_to_queue_in_order(): void
+    {
+        $experiment = $this->makeExperiment();
+        $action = app(SteerExperimentAction::class);
+
+        $action->execute(experiment: $experiment, message: 'first');
+        $result = $action->execute(experiment: $experiment->fresh(), message: 'second');
+
+        $this->assertSame(['first', 'second'], array_column($result->orchestration_config['steering_queue'], 'message'));
+    }
+
+    public function test_legacy_single_message_counts_as_pending(): void
     {
         $experiment = $this->makeExperiment([
-            'orchestration_config' => ['steering_message' => 'old'],
+            'orchestration_config' => ['steering_message' => 'old style'],
         ]);
 
-        $result = app(SteerExperimentAction::class)->execute(
-            experiment: $experiment,
-            message: 'new instruction',
-        );
+        $result = app(SteerExperimentAction::class)->execute(experiment: $experiment, message: 'new style');
 
-        $this->assertSame('new instruction', $result->orchestration_config['steering_message']);
+        $pending = SteerExperimentAction::pendingQueue($result->orchestration_config);
+        $this->assertSame(['old style', 'new style'], array_column($pending, 'message'));
+        $this->assertSame('legacy', $pending[0]['id']);
+    }
+
+    public function test_rejects_when_queue_is_full(): void
+    {
+        $experiment = $this->makeExperiment();
+        $action = app(SteerExperimentAction::class);
+
+        for ($i = 0; $i < SteerExperimentAction::MAX_PENDING; $i++) {
+            $action->execute(experiment: $experiment->fresh(), message: "msg {$i}");
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Steering queue is full');
+
+        $action->execute(experiment: $experiment->fresh(), message: 'one too many');
     }
 
     public function test_rejects_empty_message(): void
@@ -97,7 +125,7 @@ class SteerExperimentActionTest extends TestCase
             message: $longMessage,
         );
 
-        $this->assertSame(2000, mb_strlen($result->orchestration_config['steering_message']));
+        $this->assertSame(2000, mb_strlen($result->orchestration_config['steering_queue'][0]['message']));
     }
 
     public function test_preserves_existing_orchestration_config_keys(): void
@@ -112,14 +140,14 @@ class SteerExperimentActionTest extends TestCase
         );
 
         $this->assertSame('keep_me', $result->orchestration_config['custom_setting']);
-        $this->assertSame('steer', $result->orchestration_config['steering_message']);
+        $this->assertSame('steer', $result->orchestration_config['steering_queue'][0]['message']);
     }
 
     public function test_writes_audit_entry_when_queued(): void
     {
         $experiment = $this->makeExperiment();
 
-        app(SteerExperimentAction::class)->execute(
+        $result = app(SteerExperimentAction::class)->execute(
             experiment: $experiment,
             message: 'audit-traced message',
             userId: $this->user->id,
@@ -132,5 +160,7 @@ class SteerExperimentActionTest extends TestCase
         $this->assertNotNull($entry);
         $this->assertSame($this->user->id, $entry->user_id);
         $this->assertSame(20, $entry->properties['message_length'] ?? null);
+        $this->assertSame(1, $entry->properties['queue_length'] ?? null);
+        $this->assertSame($result->orchestration_config['steering_queue'][0]['id'], $entry->properties['steering_id'] ?? null);
     }
 }

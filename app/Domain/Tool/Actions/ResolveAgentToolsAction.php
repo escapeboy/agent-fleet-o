@@ -21,7 +21,10 @@ use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
 use App\Domain\Tool\Services\SemanticToolSelector;
+use App\Domain\Tool\Services\ToolApprovalGate;
+use App\Domain\Tool\Services\ToolErrorGuard;
 use App\Domain\Tool\Services\ToolFederationResolver;
+use App\Domain\Tool\Services\ToolProgramContext;
 use App\Domain\Tool\Services\ToolRagSelector;
 use App\Domain\Tool\Services\ToolTranslator;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
@@ -63,14 +66,34 @@ class ResolveAgentToolsAction
         // Auto-attach tools declared by the agent's environment preset.
         $agentTools = $this->mergeEnvironmentTools($agent, $agentTools);
 
+        // Rows the operator denied on the pivot, remembered before filtering removes them.
+        $pivotDeniedIds = $agentTools
+            ->filter(fn (Tool $tool) => $this->pivotApprovalMode($tool) === ToolApprovalMode::Deny->value)
+            ->pluck('id')
+            ->all();
+
         // Narrow by pivot/deny-list/project/crew/tag permissions.
         $agentTools = $this->filterAgentTools($agentTools, $agent, $project, $allowedToolIds);
 
         // Broaden by federation/toolsets/search, then re-narrow by watcher mode + semantic RAG.
         $agentTools = $this->expandToolSources($agentTools, $agent, $project, $semanticQuery, $executionId);
 
+        // Federation, toolsets and tool search add rows without a pivot, so a tool the
+        // operator denied, or one outside the project/crew allowlist, could come back.
+        $agentTools = $this->reapplyRestrictions($agentTools, $agent, $project, $allowedToolIds, $pivotDeniedIds);
+
         // Translate the resolved Tool models into PrismPHP tools (with credential injection).
-        $prismTools = $this->translateToPrismTools($agentTools, $agent, $workspace);
+        // The program context is bound AFTER profile filtering so run_tool_program
+        // can only reach tools the agent actually ends up with.
+        $programContext = new ToolProgramContext;
+        // Stored with every approval request so an approved call replays in the same context.
+        $replayContext = [
+            'project_id' => $project?->id,
+            'allowed_tool_ids' => $allowedToolIds,
+            'execution_id' => $executionId,
+            'sidecar_session_id' => $sidecarSessionId,
+        ];
+        $prismTools = $this->translateToPrismTools($agentTools, $agent, $workspace, $programContext, $replayContext);
 
         // Inject git tools for repositories configured on the agent
         $gitRepoIds = $agent->config['git_repository_ids'] ?? [];
@@ -90,7 +113,113 @@ class ResolveAgentToolsAction
         $prismTools = array_merge($prismTools, $this->buildWorkflowAsTools($agent, $agentToolDepth, $userId));
 
         // Restrict tools to the groups defined in the agent's profile.
-        return $this->applyToolProfile($prismTools, $agent);
+        // Every tool without its own error handler gets a capped one, before the
+        // program context binds, so batched siblings are covered too.
+        $resolved = ToolErrorGuard::apply($this->applyToolProfile($prismTools, $agent));
+        $programContext->bind($resolved);
+
+        return $resolved;
+    }
+
+    /**
+     * Rebuild exactly one attached tool row to replay an approved call, in the
+     * context the call was made in: same project and crew allowlist (re-applied),
+     * same execution workspace, same tool profile. Only that row is translated, so
+     * another tool with the same name can never stand in for it. A row that was
+     * detached, deactivated or denied since yields no tools.
+     *
+     * @param  array<string, mixed>  $context  project_id, allowed_tool_ids, execution_id, sidecar_session_id
+     * @return array<\Prism\Prism\Tool>
+     */
+    public function resolveToolForReplay(Agent $agent, string $toolId, array $context): array
+    {
+        $project = null;
+        $projectId = $context['project_id'] ?? null;
+        if (is_string($projectId) && $projectId !== '') {
+            $project = Project::withoutGlobalScopes()->where('team_id', $agent->team_id)->find($projectId);
+            if (! $project) {
+                throw new \RuntimeException("The project {$projectId} of the original call no longer exists.");
+            }
+        }
+
+        $allowedToolIds = is_array($context['allowed_tool_ids'] ?? null)
+            ? array_values(array_map('strval', $context['allowed_tool_ids']))
+            : null;
+
+        $executionId = $context['execution_id'] ?? null;
+        $workspace = (is_string($executionId) && $executionId !== '' && $agent->team_id)
+            ? new SandboxedWorkspace($executionId, $agent->id, $agent->team_id)
+            : null;
+        $sidecarSessionId = $context['sidecar_session_id'] ?? null;
+        if ($workspace && is_string($sidecarSessionId) && $sidecarSessionId !== '') {
+            $workspace->setSidecarSessionId($sidecarSessionId);
+        }
+
+        $tools = $agent->tools()
+            ->where('status', ToolStatus::Active->value)
+            ->where('tools.id', $toolId)
+            ->get();
+
+        $tools = $this->filterAgentTools($tools, $agent, $project, $allowedToolIds);
+        $tools = $this->applyWatcherFilter($tools, $project);
+
+        $prismTools = $this->translateToPrismTools($tools, $agent, $workspace, null, $context);
+
+        return ToolErrorGuard::apply($this->applyToolProfile($prismTools, $agent));
+    }
+
+    /**
+     * @param  Collection<int, Tool>  $agentTools
+     * @param  array<int, string>|null  $allowedToolIds
+     * @param  array<int, string>  $pivotDeniedIds
+     * @return Collection<int, Tool>
+     */
+    private function reapplyRestrictions(Collection $agentTools, Agent $agent, ?Project $project, ?array $allowedToolIds, array $pivotDeniedIds): Collection
+    {
+        /** @var array<int, string>|null $denyListRaw */
+        $denyListRaw = $agent->getAttribute('tool_deny_list');
+        $denied = array_merge($pivotDeniedIds, is_array($denyListRaw) ? $denyListRaw : []);
+
+        if ($denied !== []) {
+            $agentTools = $agentTools->reject(fn (Tool $tool) => in_array($tool->id, $denied, true));
+        }
+
+        /** @var array<int, string>|null $projectAllowedRaw */
+        $projectAllowedRaw = $project?->getAttribute('allowed_tool_ids');
+        $projectAllowed = is_array($projectAllowedRaw) ? $projectAllowedRaw : [];
+        if ($projectAllowed !== []) {
+            $agentTools = $agentTools->filter(fn (Tool $tool) => in_array($tool->id, $projectAllowed));
+        }
+
+        if ($allowedToolIds !== null) {
+            $agentTools = $agentTools->filter(fn (Tool $tool) => in_array($tool->id, $allowedToolIds));
+        }
+
+        return $agentTools->values();
+    }
+
+    private function pivotApprovalMode(Tool $tool): ?string
+    {
+        $mode = $tool->pivot->approval_mode ?? null;
+
+        return $mode instanceof ToolApprovalMode ? $mode->value : $mode;
+    }
+
+    /**
+     * @param  Collection<int, Tool>  $agentTools
+     * @return Collection<int, Tool>
+     */
+    private function applyWatcherFilter(Collection $agentTools, ?Project $project): Collection
+    {
+        if ($project && $project->execution_mode === ProjectExecutionMode::Watcher) {
+            return $agentTools->filter(
+                fn (Tool $tool) => $tool->risk_level === null
+                    || $tool->risk_level === ToolRiskLevel::Safe
+                    || $tool->risk_level === ToolRiskLevel::Read,
+            );
+        }
+
+        return $agentTools;
     }
 
     /**
@@ -197,13 +326,7 @@ class ResolveAgentToolsAction
         $agentTools = $this->mergeSearchedTools($agent, $agentTools, $semanticQuery, $executionId);
 
         // Filter by execution mode: watcher projects only get safe/read tools
-        if ($project && $project->execution_mode === ProjectExecutionMode::Watcher) {
-            $agentTools = $agentTools->filter(
-                fn (Tool $tool) => $tool->risk_level === null
-                    || $tool->risk_level === ToolRiskLevel::Safe
-                    || $tool->risk_level === ToolRiskLevel::Read,
-            );
-        }
+        $agentTools = $this->applyWatcherFilter($agentTools, $project);
 
         // RAG-style pre-filter: keyword → fuzzy → semantic pgvector, only when a
         // semantic query is provided and the tool count exceeds the threshold.
@@ -228,7 +351,10 @@ class ResolveAgentToolsAction
      * @param  Collection<int, Tool>  $agentTools
      * @return array<\Prism\Prism\Tool>
      */
-    private function translateToPrismTools(Collection $agentTools, Agent $agent, ?SandboxedWorkspace $workspace): array
+    /**
+     * @param  array<string, mixed>  $replayContext
+     */
+    private function translateToPrismTools(Collection $agentTools, Agent $agent, ?SandboxedWorkspace $workspace, ?ToolProgramContext $programContext = null, array $replayContext = []): array
     {
         // Read org-level command security policy from GlobalSettings
         $orgPolicy = GlobalSetting::get('org_security_policy', []) ?: null;
@@ -252,7 +378,25 @@ class ResolveAgentToolsAction
                 continue; // platform tool deactivated for this team
             }
 
-            $prismTools = array_merge($prismTools, $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace, $agent));
+            $translated = $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace, $agent, $programContext);
+
+            // approval_mode=ask: every call becomes an approval request and runs only
+            // after a person approves it (ToolApprovalGate). Such tools are also never
+            // reachable through run_tool_program's batch path.
+            if ($this->pivotApprovalMode($tool) === ToolApprovalMode::Ask->value) {
+                $translated = app(ToolApprovalGate::class)->wrap(
+                    $translated,
+                    $agent,
+                    $tool,
+                    $tool->pivot->approval_timeout_minutes ?? null,
+                    $tool->pivot->approval_timeout_action ?? null,
+                    $replayContext,
+                );
+
+                $programContext?->exclude(array_map(fn ($t) => $t->name(), $translated));
+            }
+
+            $prismTools = array_merge($prismTools, $translated);
         }
 
         return $prismTools;

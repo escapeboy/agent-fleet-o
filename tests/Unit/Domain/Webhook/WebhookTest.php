@@ -12,13 +12,17 @@ class WebhookTest extends TestCase
     {
         $cases = WebhookEvent::cases();
 
-        $this->assertCount(6, $cases);
+        $this->assertCount(10, $cases);
         $this->assertEquals('experiment.completed', WebhookEvent::ExperimentCompleted->value);
         $this->assertEquals('experiment.failed', WebhookEvent::ExperimentFailed->value);
         $this->assertEquals('project.run.completed', WebhookEvent::ProjectRunCompleted->value);
         $this->assertEquals('project.run.failed', WebhookEvent::ProjectRunFailed->value);
         $this->assertEquals('approval.pending', WebhookEvent::ApprovalPending->value);
         $this->assertEquals('budget.warning', WebhookEvent::BudgetWarning->value);
+        $this->assertEquals('agent.session.completed', WebhookEvent::AgentSessionCompleted->value);
+        $this->assertEquals('agent.session.failed', WebhookEvent::AgentSessionFailed->value);
+        $this->assertEquals('agent.session.cancelled', WebhookEvent::AgentSessionCancelled->value);
+        $this->assertEquals('agent.session.needs_input', WebhookEvent::AgentSessionNeedsInput->value);
     }
 
     public function test_webhook_event_labels(): void

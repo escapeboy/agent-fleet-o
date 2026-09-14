@@ -38,9 +38,16 @@ class PolicyEvaluator
         $rules = $resolved->rules();
         $effectiveRisk = strtolower($ctx->riskLevel);
 
+        // Agent tool calls were stored as `tool_call` until they got their own
+        // `agent_tool_call` type. A deny entry for `tool_call` still covers them.
+        // The alias is deliberately NOT applied to the allow list: an allow entry
+        // written for assistant tool calls must not let approval-mode agent calls
+        // skip the human step. A policy can only narrow.
+        $deniedTypes = $ctx->targetType === 'agent_tool_call' ? ['agent_tool_call', 'tool_call'] : [$ctx->targetType];
+
         // 1. Hard deny list — e.g. migrations are never auto-runnable.
         $denied = (array) ($rules['denied_target_types'] ?? []);
-        if (in_array($ctx->targetType, $denied, true)) {
+        if (array_intersect($deniedTypes, $denied) !== []) {
             return PolicyVerdict::deny(
                 "Target type '{$ctx->targetType}' is on the policy deny list.",
                 $effectiveRisk,

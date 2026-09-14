@@ -144,6 +144,19 @@ class ExperimentDetailPage extends Component
         $this->experiment = $this->experiment->fresh();
     }
 
+    /**
+     * Pending steering messages (legacy single key + queue), oldest first.
+     *
+     * @return array<int, string>
+     */
+    public function pendingSteeringMessages(): array
+    {
+        return array_column(
+            SteerExperimentAction::pendingQueue($this->experiment->orchestration_config ?? []),
+            'message',
+        );
+    }
+
     public function openSteerModal(): void
     {
         $this->steeringMessage = '';
@@ -173,7 +186,7 @@ class ExperimentDetailPage extends Component
             $this->experiment = $this->experiment->fresh();
             $this->showSteerModal = false;
             $this->steeringMessage = '';
-            session()->flash('message', 'Steering message queued — it will be injected on the next LLM call.');
+            session()->flash('message', 'Steering message queued — all pending messages are applied in order on the next LLM call.');
         } catch (\InvalidArgumentException $e) {
             $this->addError('steeringMessage', $e->getMessage());
         }

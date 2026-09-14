@@ -9,6 +9,7 @@ use App\Domain\Agent\Models\AgentToolLockout;
 use App\Domain\Agent\Services\ToolCallGovernor;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Tool\Services\ToolApprovalGate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -184,14 +185,71 @@ class ToolCallGovernorTest extends TestCase
         $this->assertNotNull($reason);
         $this->assertStringContainsString('held for human approval', $reason);
 
-        $proposal = ActionProposal::where('team_id', $this->team->id)->where('target_type', 'tool_call')->first();
+        $proposal = ActionProposal::where('team_id', $this->team->id)->where('target_type', 'agent_tool_call')->first();
         $this->assertNotNull($proposal);
         $this->assertSame($this->agent->id, $proposal->actor_agent_id);
-        $this->assertSame('charge', $proposal->payload['tool_name']);
+        $this->assertSame('charge', $proposal->payload['tool']);
+        $this->assertSame(['amount' => 5000], $proposal->payload['arguments']);
+        $this->assertSame($this->agent->id, $proposal->payload['agent_id']);
         // Agent-raised proposals carry the same 24h approval window as the
         // assistant / integration / git gates — without it they never expire.
         $this->assertNotNull($proposal->expires_at);
         $this->assertTrue($proposal->expires_at->between(now()->addHours(23), now()->addHours(25)));
+    }
+
+    public function test_arg_predicate_approval_records_tool_row_and_execution_context(): void
+    {
+        config([
+            'agent.tool_governance.argument_predicates' => true,
+            'decision_rubric.enabled' => false,
+        ]);
+        $this->argPredicateHook([
+            ['arg' => 'amount', 'op' => 'gte', 'value' => 1000, 'action' => 'require_approval', 'reason' => 'High spend.'],
+        ]);
+
+        $this->governor()->assert($this->agent, 'charge', ['amount' => 5000], [
+            'tool_id' => 'tool-row-1',
+            'execution_id' => 'exec-1',
+            'sidecar_session_id' => null,
+            'unrelated' => 'must not be stored',
+        ]);
+
+        $payload = ActionProposal::sole()->payload;
+        $this->assertSame('tool-row-1', $payload['tool_id']);
+        $this->assertSame('exec-1', $payload['context']['execution_id']);
+        $this->assertArrayNotHasKey('unrelated', $payload['context']);
+    }
+
+    public function test_arg_predicate_approval_passes_the_approved_replay_once(): void
+    {
+        config([
+            'agent.tool_governance.argument_predicates' => true,
+            'decision_rubric.enabled' => false,
+        ]);
+        $this->argPredicateHook([
+            ['arg' => 'amount', 'op' => 'gte', 'value' => 1000, 'action' => 'require_approval', 'reason' => 'High spend.'],
+        ]);
+
+        $replayed = ToolApprovalGate::withBypass('charge', $this->agent->id, fn () => [
+            $this->governor()->assert($this->agent, 'charge', ['amount' => 5000]),
+            $this->governor()->assert($this->agent, 'charge', ['amount' => 5000]),
+        ]);
+
+        $this->assertNull($replayed[0], 'the approved replay passes');
+        $this->assertNotNull($replayed[1], 'the grant is one-shot');
+        $this->assertSame(1, ActionProposal::count());
+    }
+
+    public function test_arg_predicate_block_is_not_bypassed_by_an_approval_grant(): void
+    {
+        config(['agent.tool_governance.argument_predicates' => true]);
+        $this->argPredicateHook([
+            ['arg' => 'scan_gb', 'op' => 'gt', 'value' => 50, 'action' => 'block', 'reason' => 'Scan too large.'],
+        ]);
+
+        $reason = ToolApprovalGate::withBypass('run_sql', $this->agent->id, fn () => $this->governor()->assert($this->agent, 'run_sql', ['scan_gb' => 80]));
+
+        $this->assertSame('Scan too large.', $reason);
     }
 
     public function test_arg_predicate_is_noop_when_subflag_disabled(): void

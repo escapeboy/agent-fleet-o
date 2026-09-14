@@ -165,6 +165,24 @@ class AgentPolicyTest extends TestCase
         $this->assertSame(PolicyVerdict::REQUIRE_HUMAN, $v->decision);
     }
 
+    public function test_evaluator_deny_list_entry_tool_call_also_covers_agent_tool_call(): void
+    {
+        $v = $this->evaluate(['denied_target_types' => ['tool_call']], new ProposalContext('agent_tool_call', 'low'));
+        $this->assertSame(PolicyVerdict::DENY, $v->decision);
+    }
+
+    public function test_evaluator_allow_list_entry_tool_call_does_not_admit_agent_tool_call(): void
+    {
+        // An allow entry written for assistant tool calls must not let approval-mode
+        // agent calls skip the human step.
+        $v = $this->evaluate(
+            ['allowed_target_types' => ['tool_call'], 'risk_ceiling' => 'high', 'auto_execute' => ['enabled' => true, 'threshold' => 0]],
+            new ProposalContext('agent_tool_call', 'low', rubricTotal: 25),
+        );
+        $this->assertSame(PolicyVerdict::REQUIRE_HUMAN, $v->decision);
+        $this->assertStringContainsString('not in the policy allow list', $v->reason);
+    }
+
     public function test_evaluator_holds_sensitive_path_and_raises_risk(): void
     {
         $v = $this->evaluate(
