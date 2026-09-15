@@ -73,6 +73,21 @@ class ExecuteActionProposalJob implements ShouldQueue
             return;
         }
 
+        // Claim the proposal atomically. Two jobs can be queued for one proposal
+        // (a human approval racing a timeout "allow"); only one may run the action.
+        $claimed = ActionProposal::query()
+            ->withoutGlobalScopes()
+            ->whereKey($proposal->id)
+            ->where('status', ActionProposalStatus::Approved->value)
+            ->whereNull('executed_at')
+            ->update(['executed_at' => now()]);
+
+        if ($claimed !== 1) {
+            Log::info('ExecuteActionProposalJob: proposal already claimed by another job', ['proposal_id' => $proposal->id]);
+
+            return;
+        }
+
         try {
             $result = $executor->execute($proposal, $actor);
 
@@ -92,6 +107,30 @@ class ExecuteActionProposalJob implements ShouldQueue
             ]);
 
             ActionProposalExecuted::dispatch($proposal->refresh(), false);
+        }
+    }
+
+    /**
+     * Called by the queue when the job dies without finishing (timeout, worker
+     * killed, max attempts). The claim already set executed_at, so without this the
+     * row would stay "approved" with an execution time and look like it had run.
+     */
+    public function failed(?Throwable $e): void
+    {
+        $updated = ActionProposal::query()
+            ->withoutGlobalScopes()
+            ->whereKey($this->proposalId)
+            ->where('status', ActionProposalStatus::Approved->value)
+            ->update([
+                'status' => ActionProposalStatus::ExecutionFailed->value,
+                'execution_error' => mb_substr('Execution job did not finish: '.($e ? class_basename($e) : 'unknown failure'), 0, 1000),
+            ]);
+
+        if ($updated === 1) {
+            Log::warning('ExecuteActionProposalJob: job failed before the proposal was settled', [
+                'proposal_id' => $this->proposalId,
+                'exception' => $e ? $e::class : null,
+            ]);
         }
     }
 

@@ -20,7 +20,7 @@ class ExperimentSteerTool extends Tool
 
     protected string $name = 'experiment_steer';
 
-    protected string $description = 'Queue a one-shot steering message for a running experiment. The message is prepended to the system prompt of the next LLM call and then cleared. Useful for mid-run corrections like "use staging DB, not prod".';
+    protected string $description = 'Queue a steering message for a running experiment. Messages accumulate (up to 10 pending) and are all prepended, in order, to the system prompt of the next LLM call, then removed. Queued means durable, not yet applied — the audit log records both. Useful for mid-run corrections like "use staging DB, not prod".';
 
     public function schema(JsonSchema $schema): array
     {
@@ -29,7 +29,7 @@ class ExperimentSteerTool extends Tool
                 ->description('The experiment UUID')
                 ->required(),
             'message' => $schema->string()
-                ->description('The steering instruction to inject (max 2000 chars). Will replace any previously queued message.')
+                ->description('The steering instruction to inject (max 2000 chars). Appended after any previously queued messages.')
                 ->required(),
         ];
     }
@@ -61,10 +61,15 @@ class ExperimentSteerTool extends Tool
                 userId: auth()->id(),
             );
 
+            $queue = SteerExperimentAction::pendingQueue($result->orchestration_config ?? []);
+            $last = $queue[array_key_last($queue)] ?? null;
+
             return Response::text(json_encode([
                 'success' => true,
                 'experiment_id' => $result->id,
-                'queued_at' => $result->orchestration_config['steering_queued_at'] ?? null,
+                'steering_id' => $last['id'] ?? null,
+                'queued_at' => $last['queued_at'] ?? null,
+                'queue_length' => count($queue),
             ]));
         } catch (\Throwable $e) {
             throw $e;

@@ -22,7 +22,7 @@ class AgentToolApprovalConfigureTool extends McpTool
 
     protected string $name = 'agent_tool_approval_configure';
 
-    protected string $description = 'Configure tool-level execution approval settings on the agent-tool pivot. Controls whether a tool auto-executes, requires approval, or is denied.';
+    protected string $description = 'Configure tool-level execution approval settings on the agent-tool pivot. Controls whether a tool auto-executes, requires approval, or is denied. With ask, each call by the agent creates an approval request (action proposal) and the tool runs only after a person approves it; the timeout action decides what happens when nobody decides in time.';
 
     public function schema(JsonSchema $schema): array
     {

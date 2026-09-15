@@ -2,27 +2,37 @@
 
 namespace App\Infrastructure\AI\Middleware;
 
+use App\Domain\AgentSession\Actions\AppendSessionEventAction;
+use App\Domain\AgentSession\Enums\AgentSessionEventKind;
+use App\Domain\AgentSession\Models\AgentSession;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
+use App\Domain\Experiment\Actions\SteerExperimentAction;
 use App\Domain\Experiment\Models\Experiment;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use Closure;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Injects user-submitted "steering" messages into experiment LLM calls.
+ * Injects operator "steering" messages into experiment LLM calls.
  *
  * Flow:
- * 1. A user calls POST /api/v1/experiments/{id}/steer with a message.
- * 2. SteerExperimentAction stores it in orchestration_config.steering_message.
+ * 1. A user calls POST /api/v1/experiments/{id}/steer (or the MCP tool /
+ *    Livewire modal) any number of times while the experiment runs.
+ * 2. SteerExperimentAction appends each message to
+ *    orchestration_config.steering_queue (legacy single `steering_message`
+ *    is still honoured for experiments in flight at deploy time).
  * 3. On the next LLM call for that experiment, this middleware:
- *    - Reads the pending message
- *    - Prepends it to the system prompt as a STEERING block
- *    - Clears the message so it's only consumed once
+ *    - Reads every pending message, in queue order
+ *    - Prepends ONE STEERING block to the system prompt
+ *    - On success, removes exactly the consumed entries (anything queued
+ *      during the call survives), writes an audit entry, and mirrors the
+ *      application into the experiment's AgentSession event log.
  *
- * Only triggers for requests that carry an experimentId. No-op otherwise.
+ * Only triggers for requests that carry an experimentId.
  */
 class SteeringInjection implements AiMiddlewareInterface
 {
@@ -37,18 +47,18 @@ class SteeringInjection implements AiMiddlewareInterface
             return $next($request);
         }
 
-        $message = $experiment->orchestration_config['steering_message'] ?? null;
-        if (! is_string($message) || $message === '') {
+        $pending = SteerExperimentAction::pendingQueue($experiment->orchestration_config ?? []);
+        if ($pending === []) {
             return $next($request);
         }
 
-        $augmentedPrompt = $this->augmentSystemPrompt($request->systemPrompt, $message);
-
-        $queuedBy = $experiment->orchestration_config['steering_queued_by'] ?? null;
+        $messages = array_column($pending, 'message');
+        $augmentedPrompt = $this->augmentSystemPrompt($request->systemPrompt, $messages);
 
         Log::info('SteeringInjection: injecting steering into experiment LLM call', [
             'experiment_id' => $experiment->id,
-            'message_length' => mb_strlen($message),
+            'message_count' => count($messages),
+            'message_length' => array_sum(array_map('mb_strlen', $messages)),
         ]);
 
         $response = $next(new AiRequestDTO(
@@ -83,31 +93,85 @@ class SteeringInjection implements AiMiddlewareInterface
         ));
 
         // Only clear + audit on successful delivery. If $next() throws, the
-        // steering message stays queued for the next retry so the operator's
-        // instruction is not silently lost on network/budget/provider failures.
-        $this->clearSteeringMessage($experiment);
-        $this->logConsumed($experiment, $message, $queuedBy);
+        // queue stays intact for the next retry so the operator's instructions
+        // are not silently lost on network/budget/provider failures.
+        $consumedIds = array_column($pending, 'id');
+        $this->removeConsumed($experiment, $consumedIds);
+        $this->logConsumed($experiment, $pending);
+
+        // The session mirror is observability only. The LLM call already
+        // succeeded and the queue is already cleared, so a mirror failure must
+        // not discard the response; report it instead of rethrowing.
+        try {
+            $this->mirrorToSession($experiment, $pending);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return $response;
     }
 
-    private function augmentSystemPrompt(string $original, string $steeringMessage): string
+    /**
+     * @param  array<int, string>  $messages
+     */
+    private function augmentSystemPrompt(string $original, array $messages): string
     {
-        $block = "## STEERING (operator update, apply immediately)\n".$steeringMessage;
+        if (count($messages) === 1) {
+            $block = "## STEERING (operator update, apply immediately)\n".$messages[0];
+        } else {
+            $lines = [];
+            foreach (array_values($messages) as $i => $message) {
+                $lines[] = ($i + 1).'. '.$message;
+            }
+            $block = "## STEERING (operator updates, apply in order)\n".implode("\n", $lines);
+        }
 
         return $original === ''
             ? $block
             : $block."\n\n---\n\n".$original;
     }
 
-    private function clearSteeringMessage(Experiment $experiment): void
+    /**
+     * Re-read the experiment and drop only the entries this call consumed.
+     * A message queued while the LLM call was in flight keeps its place.
+     *
+     * @param  array<int, string>  $consumedIds
+     */
+    private function removeConsumed(Experiment $experiment, array $consumedIds): void
     {
-        $config = $experiment->orchestration_config ?? [];
-        unset($config['steering_message'], $config['steering_queued_at'], $config['steering_queued_by']);
-        $experiment->update(['orchestration_config' => $config]);
+        // Same row lock as SteerExperimentAction: a steer landing between the
+        // read and the write would otherwise be overwritten and lost.
+        DB::transaction(function () use ($experiment, $consumedIds): void {
+            $fresh = Experiment::withoutGlobalScopes()->lockForUpdate()->find($experiment->id);
+            if ($fresh === null) {
+                return;
+            }
+
+            $config = $fresh->orchestration_config ?? [];
+
+            if (in_array('legacy', $consumedIds, true)) {
+                unset($config['steering_message'], $config['steering_queued_at'], $config['steering_queued_by']);
+            }
+
+            $remaining = array_values(array_filter(
+                $config['steering_queue'] ?? [],
+                fn ($item) => ! is_array($item) || ! in_array(SteerExperimentAction::entryId($item), $consumedIds, true),
+            ));
+
+            if ($remaining === []) {
+                unset($config['steering_queue']);
+            } else {
+                $config['steering_queue'] = $remaining;
+            }
+
+            $fresh->update(['orchestration_config' => $config]);
+        });
     }
 
-    private function logConsumed(Experiment $experiment, string $message, ?string $queuedBy): void
+    /**
+     * @param  array<int, array{id: string, message: string, queued_at: ?string, queued_by: ?string}>  $pending
+     */
+    private function logConsumed(Experiment $experiment, array $pending): void
     {
         $ocsf = OcsfMapper::classify('experiment.steering_consumed');
 
@@ -115,7 +179,7 @@ class SteeringInjection implements AiMiddlewareInterface
         // properties so the JSONB query path still reads it for replay tooling.
         AuditEntry::create([
             'team_id' => $experiment->team_id,
-            'user_id' => $queuedBy,
+            'user_id' => $pending[array_key_last($pending)]['queued_by'] ?? null,
             'event' => 'experiment.steering_consumed',
             'ocsf_class_uid' => $ocsf['class_uid'],
             'ocsf_severity_id' => $ocsf['severity_id'],
@@ -123,9 +187,43 @@ class SteeringInjection implements AiMiddlewareInterface
             'subject_id' => $experiment->id,
             'properties' => [
                 'experiment_id' => $experiment->id,
-                'message_length' => mb_strlen($message),
+                'message_count' => count($pending),
+                'steering_ids' => array_column($pending, 'id'),
+                'message_length' => array_sum(array_map(fn (array $p) => mb_strlen($p['message']), $pending)),
             ],
             'created_at' => now(),
         ]);
+    }
+
+    /**
+     * Same team-pinned lookup as MirrorExperimentTransition: transitions and
+     * LLM calls run from Horizon where TeamScope short-circuits, so the query
+     * must name the team explicitly. Sessions are opt-in; none → skip.
+     *
+     * @param  array<int, array{id: string, message: string, queued_at: ?string, queued_by: ?string}>  $pending
+     */
+    private function mirrorToSession(Experiment $experiment, array $pending): void
+    {
+        $session = AgentSession::withoutGlobalScopes()
+            ->where('team_id', $experiment->team_id)
+            ->where('experiment_id', $experiment->id)
+            ->whereIn('status', ['pending', 'active', 'sleeping'])
+            ->latest('created_at')
+            ->first();
+
+        if (! $session) {
+            return;
+        }
+
+        app(AppendSessionEventAction::class)->execute(
+            session: $session,
+            kind: AgentSessionEventKind::Steering,
+            payload: [
+                'experiment_id' => $experiment->id,
+                'message_count' => count($pending),
+                'steering_ids' => array_column($pending, 'id'),
+                'applied_at' => now()->toIso8601String(),
+            ],
+        );
     }
 }

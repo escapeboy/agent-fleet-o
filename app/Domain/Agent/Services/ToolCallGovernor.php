@@ -8,6 +8,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentHook;
 use App\Domain\Agent\Models\AgentToolLockout;
 use App\Domain\Approval\Actions\CreateActionProposalAction;
+use App\Domain\Tool\Services\ToolApprovalGate;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -36,9 +37,10 @@ class ToolCallGovernor
 
     /**
      * @param  array<string, mixed>  $args  The named tool-call arguments.
+     * @param  array<string, mixed>  $replayContext  tool_id and execution context, stored on an approval request
      * @return string|null Deny reason when blocked, or null to allow.
      */
-    public function assert(Agent $agent, string $toolName, array $args): ?string
+    public function assert(Agent $agent, string $toolName, array $args, array $replayContext = []): ?string
     {
         if (! config('agent.tool_governance.enabled')) {
             return null;
@@ -56,7 +58,7 @@ class ToolCallGovernor
             return $this->deny($agent, $toolName, 'guardrail', $guardReason);
         }
 
-        $predicateReason = $this->argumentPredicateReason($agent, $toolName, $args);
+        $predicateReason = $this->argumentPredicateReason($agent, $toolName, $args, $replayContext);
         if ($predicateReason !== null) {
             return $predicateReason;
         }
@@ -74,7 +76,7 @@ class ToolCallGovernor
      *
      * @param  array<string, mixed>  $args
      */
-    private function argumentPredicateReason(Agent $agent, string $toolName, array $args): ?string
+    private function argumentPredicateReason(Agent $agent, string $toolName, array $args, array $replayContext = []): ?string
     {
         if (! config('agent.tool_governance.argument_predicates')) {
             return null;
@@ -91,7 +93,12 @@ class ToolCallGovernor
         }
 
         if ($match['action'] === 'require_approval') {
-            $this->raiseApprovalProposal($agent, $toolName, $args, $match);
+            // The approved replay of this exact call passes once.
+            if (ToolApprovalGate::consumeBypass($toolName, ToolApprovalGate::CONSUMER_PREDICATE, (string) $agent->id)) {
+                return null;
+            }
+
+            $this->raiseApprovalProposal($agent, $toolName, $args, $match, $replayContext);
 
             return $this->deny(
                 $agent,
@@ -150,17 +157,24 @@ class ToolCallGovernor
      * @param  array<string, mixed>  $args
      * @param  array{action: string, reason: string, arg: string, op: string}  $match
      */
-    private function raiseApprovalProposal(Agent $agent, string $toolName, array $args, array $match): void
+    private function raiseApprovalProposal(Agent $agent, string $toolName, array $args, array $match, array $replayContext = []): void
     {
         try {
             app(CreateActionProposalAction::class)->execute(
                 teamId: (string) $agent->team_id,
-                targetType: 'tool_call',
+                // Same shape as ToolApprovalGate so ActionProposalExecutor can replay
+                // it through the agent's own tools. The old `tool_call` type was
+                // replayed through the assistant registry and always failed.
+                targetType: ToolApprovalGate::TARGET_TYPE,
                 targetId: null,
                 summary: "Tool '{$toolName}' needs approval: {$match['reason']}",
                 payload: [
-                    'tool_name' => $toolName,
-                    'args' => $args,
+                    'tool' => $toolName,
+                    'arguments' => $args,
+                    'agent_id' => (string) $agent->id,
+                    'tool_id' => is_string($replayContext['tool_id'] ?? null) ? $replayContext['tool_id'] : null,
+                    'context' => ToolApprovalGate::replayContext($replayContext),
+                    'source' => ToolApprovalGate::CONSUMER_PREDICATE,
                     'predicate' => ['arg' => $match['arg'], 'op' => $match['op']],
                 ],
                 agentId: $agent->id,

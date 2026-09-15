@@ -18,6 +18,7 @@ use App\Domain\AgentChatProtocol\Listeners\LogProtocolTransaction;
 use App\Domain\AgentSession\Listeners\CloseAgentSessionOnTerminal;
 use App\Domain\AgentSession\Listeners\MirrorExperimentTransition;
 use App\Domain\AgentSession\Listeners\OpenAgentSessionOnExecution;
+use App\Domain\AgentSession\Models\AgentSession;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Events\ActionProposalExecuted;
 use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
@@ -131,6 +132,8 @@ use App\Domain\Skill\Listeners\DispatchEvolutionAnalysisListener;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
+use App\Domain\Webhook\Listeners\SendWebhookOnAgentSessionEnded;
+use App\Domain\Webhook\Listeners\SendWebhookOnAgentSessionNeedsInput;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Domain\Website\Drivers\VercelDeploymentDriver;
@@ -678,6 +681,13 @@ class AppServiceProvider extends ServiceProvider
         // Webhook notifications
         Event::listen(ExperimentTransitioned::class, SendWebhookOnExperimentTransition::class);
         Event::listen(ExperimentTransitioned::class, SendWebhookOnProjectRunComplete::class);
+        Event::listen(ExperimentTransitioned::class, SendWebhookOnAgentSessionNeedsInput::class);
+
+        // A session reaches a terminal status from an experiment transition, from
+        // MCP/admin cancel, or from any future path. The model event covers them all.
+        AgentSession::updated(function (AgentSession $session): void {
+            app(SendWebhookOnAgentSessionEnded::class)->handle($session);
+        });
 
         // Sub-experiment orchestration: check parent when child reaches terminal state
         Event::listen(ExperimentTransitioned::class, CheckParentExperimentCompletion::class);

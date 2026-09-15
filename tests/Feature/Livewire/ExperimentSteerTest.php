@@ -73,7 +73,7 @@ class ExperimentSteerTest extends TestCase
         $experiment->refresh();
         $this->assertSame(
             'Use staging DB, not production',
-            $experiment->orchestration_config['steering_message'] ?? null,
+            $experiment->orchestration_config['steering_queue'][0]['message'] ?? null,
         );
     }
 

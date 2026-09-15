@@ -25,12 +25,21 @@ class RejectActionProposalAction
             throw new RuntimeException('A reason is required to reject a proposal.');
         }
 
-        $proposal->update([
-            'status' => ActionProposalStatus::Rejected,
-            'decided_by_user_id' => $rejector->id,
-            'decided_at' => now(),
-            'decision_reason' => $reason,
-        ]);
+        $updated = ActionProposal::query()
+            ->withoutGlobalScopes()
+            ->whereKey($proposal->id)
+            ->where('team_id', $proposal->team_id)
+            ->where('status', ActionProposalStatus::Pending->value)
+            ->update([
+                'status' => ActionProposalStatus::Rejected->value,
+                'decided_by_user_id' => $rejector->id,
+                'decided_at' => now(),
+                'decision_reason' => $reason,
+            ]);
+
+        if ($updated !== 1) {
+            throw new RuntimeException("Proposal {$proposal->id} is no longer pending; cannot reject.");
+        }
 
         return $proposal->refresh();
     }

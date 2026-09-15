@@ -55,15 +55,18 @@
                 </button>
                 </form>
 
-                <form class="inline" onsubmit="return false" toolname="steer_experiment" tooldescription="Inject a mid-run steering message into the next LLM call">
+                @php
+                    $pendingSteering = $this->pendingSteeringMessages();
+                @endphp
+                <form class="inline" onsubmit="return false" toolname="steer_experiment" tooldescription="Queue a mid-run steering message for the next LLM call">
                 <button type="button" wire:click="openSteerModal"
-                    title="Inject a one-shot correction into the next LLM call"
+                    title="Queue a correction for the next LLM call"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
                     Steer
-                    @if(!empty($experiment->orchestration_config['steering_message'] ?? null))
+                    @if(count($pendingSteering) > 0)
                         <span class="inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white"
-                            title="A steering message is queued — will inject on the next LLM call">
-                            queued
+                            title="{{ count($pendingSteering) }} steering message(s) queued — applied in order on the next LLM call">
+                            {{ count($pendingSteering) }} queued
                         </span>
                     @endif
                 </button>
@@ -266,13 +269,20 @@
                 </div>
 
                 <p class="mb-3 text-sm text-gray-600">
-                    Inject a one-shot correction into the next LLM call for this experiment. The message is prepended to the system prompt and cleared after the first use.
+                    Queue a correction for this experiment. All pending messages are prepended, in order, to the system prompt of the next LLM call and then removed.
                 </p>
 
-                @if($queuedSteeringMessage = $experiment->orchestration_config['steering_message'] ?? null)
+                @php
+                    $pendingSteering = $this->pendingSteeringMessages();
+                @endphp
+                @if(count($pendingSteering) > 0)
                     <div class="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-                        <strong>Queued:</strong> a previous steering message is still in the queue. Submitting a new one will replace it.
-                        <div class="mt-1 italic">"{{ \Illuminate\Support\Str::limit($queuedSteeringMessage, 140) }}"</div>
+                        <strong>Queued ({{ count($pendingSteering) }}):</strong> applied in this order on the next LLM call. A new message goes to the end of the queue.
+                        <ol class="mt-1 list-decimal space-y-0.5 pl-4 italic">
+                            @foreach($pendingSteering as $queuedSteeringMessage)
+                                <li>"{{ \Illuminate\Support\Str::limit($queuedSteeringMessage, 140) }}"</li>
+                            @endforeach
+                        </ol>
                     </div>
                 @endif
 
@@ -280,7 +290,7 @@
                 <textarea id="steering-message" wire:model="steeringMessage" rows="4" maxlength="2000"
                     placeholder="e.g. Use the staging database, not production."
                     class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
-                <p class="mt-1 text-xs text-gray-500">Up to 2000 characters. Prepended to the system prompt once, then cleared.</p>
+                <p class="mt-1 text-xs text-gray-500">Up to 2000 characters, up to 10 pending. Prepended to the system prompt once, then removed.</p>
                 @error('steeringMessage')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror

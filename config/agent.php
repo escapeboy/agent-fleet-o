@@ -281,4 +281,27 @@ return [
     'planning_tool' => [
         'enabled' => (bool) env('AGENT_PLANNING_TOOL_ENABLED', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Programmatic tool calling (OpenAI Agents API borrow, 2026-09-14)
+    |--------------------------------------------------------------------------
+    | When enabled, the built-in `programmatic_tool_calling` kind exposes a
+    | `run_tool_program` tool: one call runs a batch of the agent's OTHER
+    | resolved tools on the host (in order, through the same governed
+    | closures) and, optionally, a Python post-processing script in the
+    | --network none sandbox that sees every result as tool_results.json and
+    | returns only what the model needs. One LLM turn instead of N, and raw
+    | tool output never enters the context window.
+    | Off by default: same gate shape as planning_tool.
+    */
+    'programmatic_tool_calling' => [
+        'enabled' => (bool) env('AGENT_PROGRAMMATIC_TOOL_CALLING_ENABLED', false),
+        'max_calls' => (int) env('AGENT_PROGRAMMATIC_TOOL_CALLING_MAX_CALLS', 25),
+        // Budget across ALL run_tool_program calls in one agent execution. The
+        // tool-loop circuit breaker counts a batch as one step, so this is what
+        // bounds the number of host tool runs.
+        'max_total_calls' => (int) env('AGENT_PROGRAMMATIC_TOOL_CALLING_MAX_TOTAL_CALLS', 50),
+        'max_output_chars' => (int) env('AGENT_PROGRAMMATIC_TOOL_CALLING_MAX_OUTPUT_CHARS', 8000),
+    ],
 ];

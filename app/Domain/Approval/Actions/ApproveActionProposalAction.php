@@ -22,12 +22,23 @@ class ApproveActionProposalAction
             );
         }
 
-        $proposal->update([
-            'status' => ActionProposalStatus::Approved,
-            'decided_by_user_id' => $approver->id,
-            'decided_at' => now(),
-            'decision_reason' => $reason,
-        ]);
+        // Conditional on the row still being pending, so two concurrent decisions
+        // (or a decision racing the timeout settlement) cannot both apply.
+        $updated = ActionProposal::query()
+            ->withoutGlobalScopes()
+            ->whereKey($proposal->id)
+            ->where('team_id', $proposal->team_id)
+            ->where('status', ActionProposalStatus::Pending->value)
+            ->update([
+                'status' => ActionProposalStatus::Approved->value,
+                'decided_by_user_id' => $approver->id,
+                'decided_at' => now(),
+                'decision_reason' => $reason,
+            ]);
+
+        if ($updated !== 1) {
+            throw new RuntimeException("Proposal {$proposal->id} is no longer pending; cannot approve.");
+        }
 
         $fresh = $proposal->refresh();
 

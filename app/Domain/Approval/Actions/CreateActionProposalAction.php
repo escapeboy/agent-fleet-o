@@ -157,7 +157,7 @@ class CreateActionProposalAction
         $payload = $proposal->payload;
 
         $paths = [];
-        $argPath = $payload['args']['path'] ?? null;
+        $argPath = $payload['args']['path'] ?? $payload['arguments']['path'] ?? null;
         if (is_string($argPath) && $argPath !== '') {
             $paths[] = $argPath;
         }

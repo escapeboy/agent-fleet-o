@@ -2,6 +2,8 @@
 
 namespace App\Domain\Approval\Services;
 
+use App\Domain\Agent\Enums\AgentStatus;
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\GitRepository\Contracts\GitClientInterface;
@@ -9,14 +11,19 @@ use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Models\Integration;
+use App\Domain\Tool\Actions\ResolveAgentToolsAction;
+use App\Domain\Tool\Services\ToolApprovalGate;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
+use Prism\Prism\ValueObjects\ToolError;
+use Prism\Prism\ValueObjects\ToolOutput;
 use ReflectionProperty;
 use RuntimeException;
 
 /**
  * Resolves an approved ActionProposal back to a concrete operation and
- * runs it. v1 supports `target_type='tool_call'` only; other types throw
+ * runs it. Supports tool_call (assistant), agent_tool_call, integration_action
+ * and git_push; other types throw
  * an unsupported error and the caller marks the proposal as
  * ExecutionFailed.
  */
@@ -33,6 +40,7 @@ class ActionProposalExecutor
     {
         return match ($proposal->target_type) {
             'tool_call' => $this->executeToolCall($proposal, $actor),
+            ToolApprovalGate::TARGET_TYPE => $this->executeAgentToolCall($proposal),
             'integration_action' => $this->executeIntegrationAction($proposal, $actor),
             'git_push' => $this->executeGitPush($proposal, $actor),
             default => throw new RuntimeException(
@@ -208,6 +216,87 @@ class ActionProposalExecutor
         }
 
         return ['raw' => is_scalar($result) ? (string) $result : null];
+    }
+
+    /** Stored replay output is capped; the full output is not needed to audit the call. */
+    private const AGENT_TOOL_RESULT_MAX_CHARS = 20_000;
+
+    /**
+     * Replays an approved agent tool call (approval_mode=ask, or an argument
+     * predicate that required approval). Only the recorded tool row is rebuilt,
+     * in the recorded execution context (ResolveAgentToolsAction::resolveToolForReplay),
+     * so a tool that was detached, denied or deactivated since fails instead of
+     * running, and a different tool with the same name cannot run in its place.
+     * ToolApprovalGate::withBypass lets exactly this call past the gate that held it.
+     *
+     * @return array<string, mixed>
+     */
+    private function executeAgentToolCall(ActionProposal $proposal): array
+    {
+        $payload = $proposal->payload;
+        $toolName = $payload['tool'] ?? null;
+        $arguments = $payload['arguments'] ?? null;
+        $agentId = $payload['agent_id'] ?? $proposal->actor_agent_id;
+
+        if (! is_string($toolName) || $toolName === '') {
+            throw new RuntimeException('ActionProposalExecutor: agent_tool_call payload.tool is missing or invalid.');
+        }
+        if (! is_array($arguments) || ($arguments !== [] && array_is_list($arguments))) {
+            throw new RuntimeException('ActionProposalExecutor: agent_tool_call payload.arguments must be an object.');
+        }
+        if (! is_string($agentId) || $agentId === '') {
+            throw new RuntimeException('ActionProposalExecutor: agent_tool_call payload.agent_id is missing.');
+        }
+
+        $toolId = $payload['tool_id'] ?? null;
+        if (! is_string($toolId) || $toolId === '') {
+            throw new RuntimeException(
+                'ActionProposalExecutor: agent_tool_call payload does not record which tool row was called; it cannot be replayed safely.',
+            );
+        }
+
+        $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $proposal->team_id)
+            ->find($agentId);
+
+        if (! $agent) {
+            throw new RuntimeException("ActionProposalExecutor: agent {$agentId} not found in team {$proposal->team_id}.");
+        }
+        if ($agent->status === AgentStatus::Disabled) {
+            throw new RuntimeException("ActionProposalExecutor: agent {$agentId} is disabled; the approved call was not run.");
+        }
+
+        $raw = ToolApprovalGate::withBypass($toolName, (string) $agent->id, function () use ($agent, $toolName, $toolId, $context, $arguments) {
+            $matches = collect(app(ResolveAgentToolsAction::class)->resolveToolForReplay($agent, $toolId, $context))
+                ->filter(fn (PrismToolObject $t) => $t->name() === $toolName)
+                ->values();
+
+            if ($matches->isEmpty()) {
+                throw new RuntimeException(
+                    "ActionProposalExecutor: tool '{$toolName}' (row {$toolId}) is no longer available to agent {$agent->id} in the original context (detached, denied, deactivated or outside the allowlist).",
+                );
+            }
+            if ($matches->count() > 1) {
+                throw new RuntimeException("ActionProposalExecutor: tool row {$toolId} yields more than one tool named '{$toolName}'; refusing an ambiguous replay.");
+            }
+
+            return $matches->first()->handle(...$arguments);
+        });
+
+        if ($raw instanceof ToolError) {
+            throw new RuntimeException($raw->message);
+        }
+
+        $output = $raw instanceof ToolOutput ? $raw->result : (string) $raw;
+        if (mb_strlen($output) > self::AGENT_TOOL_RESULT_MAX_CHARS) {
+            return ['raw' => mb_substr($output, 0, self::AGENT_TOOL_RESULT_MAX_CHARS), 'truncated' => true];
+        }
+
+        $decoded = json_decode($output, true);
+
+        return is_array($decoded) ? $decoded : ['raw' => $output];
     }
 
     /**

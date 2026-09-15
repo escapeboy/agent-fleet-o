@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Actions;
 
+use App\Domain\Tool\Services\ToolErrorGuard;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -10,6 +11,7 @@ use App\Mcp\DeadlineContext;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool as PrismToolObject;
+use Prism\Prism\ValueObjects\ToolError;
 use Prism\Prism\ValueObjects\ToolOutput;
 
 class LocalToolLoopExecutor
@@ -40,7 +42,7 @@ class LocalToolLoopExecutor
         ?callable $onChunk = null,
     ): AiResponseDTO {
         $toolMap = [];
-        foreach ($tools as $tool) {
+        foreach (ToolErrorGuard::apply($tools) as $tool) {
             $toolMap[$tool->name()] = $tool;
         }
 
@@ -117,7 +119,12 @@ class LocalToolLoopExecutor
 
                 try {
                     $result = $toolMap[$toolName]->handle(...$args);
-                    $resultStr = $result instanceof ToolOutput ? $result->output : (string) $result;
+                    $resultStr = match (true) {
+                        $result instanceof ToolOutput => $result->result,
+                        // ToolError has no __toString; its message is already capped by ToolErrorGuard.
+                        $result instanceof ToolError => json_encode(['error' => $result->message], JSON_INVALID_UTF8_SUBSTITUTE) ?: '{"error":"tool failed"}',
+                        default => (string) $result,
+                    };
                     $allToolResults[] = [
                         'toolName' => $toolName,
                         'args' => $args,
@@ -127,10 +134,13 @@ class LocalToolLoopExecutor
 
                     Log::debug("Assistant local tool executed: {$toolName}", ['args' => $args]);
                 } catch (\Throwable $e) {
-                    $errorResult = json_encode(['error' => $e->getMessage()]);
+                    $errorResult = json_encode(
+                        ['error' => 'Tool '.$toolName.' failed ('.class_basename($e).'): '.ToolErrorGuard::capMessage($e->getMessage())],
+                        JSON_INVALID_UTF8_SUBSTITUTE,
+                    ) ?: '{"error":"tool failed"}';
                     $resultsText .= "<tool_result name=\"{$toolName}\">\n{$errorResult}\n</tool_result>\n\n";
 
-                    Log::warning("Assistant local tool failed: {$toolName}", ['error' => $e->getMessage()]);
+                    Log::warning("Assistant local tool failed: {$toolName}", ['exception' => $e::class, 'error' => ToolErrorGuard::capMessage($e->getMessage(), 300)]);
                 }
             }
 

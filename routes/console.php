@@ -11,7 +11,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('approvals:expire-stale')->hourly();
+// Every 5 minutes: agent tool calls held for approval default to a 30-minute window.
+Schedule::command('approvals:expire-stale')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('memory:audit-proposals')->hourly()->withoutOverlapping(1);
 Schedule::command('approvals:auto-approve-on-loop')->everyMinute()->withoutOverlapping(1);
 // Temporarily disabled to avoid rate-limiting Google Gemini during experiment runs

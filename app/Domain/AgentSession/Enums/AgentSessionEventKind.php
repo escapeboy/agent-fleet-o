@@ -18,4 +18,5 @@ enum AgentSessionEventKind: string
     case HandoffOut = 'handoff_out';
     case HandoffIn = 'handoff_in';
     case Note = 'note';
+    case Steering = 'steering';
 }

@@ -18,15 +18,24 @@ use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Schema\RawSchema;
 use Prism\Prism\Tool as PrismToolObject;
+use Prism\Prism\ValueObjects\ToolError;
+use Prism\Prism\ValueObjects\ToolOutput;
 
 class ToolTranslator
 {
+    /** Invalid UTF-8 in a tool body must never turn json_encode() into false. */
+    private const TOOL_PROGRAM_JSON_FLAGS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE;
+
+    private const TOOL_PROGRAM_TRUNCATION_MARKER = '…[truncated]';
+
     public function __construct(
         private readonly ?SshExecutor $sshExecutor = null,
     ) {}
@@ -36,10 +45,10 @@ class ToolTranslator
      *
      * @return array<PrismToolObject>
      */
-    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
+    public function toPrismTools(Tool $tool, array $overrides = [], ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null, ?ToolProgramContext $programContext = null): array
     {
         if ($tool->isBuiltIn()) {
-            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy, $workspace, $agent);
+            return $this->translateBuiltInTool($tool, $overrides, $orgPolicy, $workspace, $agent, $programContext);
         }
 
         if ($tool->isMcp()) {
@@ -128,7 +137,7 @@ class ToolTranslator
                         throw $e;
                     }
 
-                    return "Error: {$e->getMessage()}";
+                    return 'Error: '.ToolErrorGuard::capMessage($e->getMessage());
                 });
             }
 
@@ -178,11 +187,12 @@ class ToolTranslator
     /**
      * Build PrismPHP Tools for built-in host capabilities.
      */
-    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
+    private function translateBuiltInTool(Tool $tool, array $overrides, ?array $orgPolicy = null, ?SandboxedWorkspace $workspace = null, ?Agent $agent = null, ?ToolProgramContext $programContext = null): array
     {
         $kind = BuiltInToolKind::tryFrom($tool->transport_config['kind'] ?? 'bash');
 
         return match ($kind) {
+            BuiltInToolKind::ProgrammaticToolCalling => $this->buildToolProgramTools($workspace, $programContext, $agent),
             BuiltInToolKind::Bash => $this->buildBashTools($tool, $overrides, $orgPolicy, $workspace, $agent),
             BuiltInToolKind::Filesystem => $this->buildFilesystemTools($tool, $overrides, $workspace, $agent),
             BuiltInToolKind::Browser => $this->buildBrowserTools($tool),
@@ -219,7 +229,7 @@ class ToolTranslator
                 ->withStringParameter('working_directory', 'Working directory relative to sandbox root (sandbox mode) or absolute path', required: false)
                 ->using(function (string $command, ?string $working_directory = null) use ($allowedCommands, $allowedPaths, $timeout, $maxOutputChars, $orgPolicy, $workspace, $tool, $credentialEnv, $agent): string {
                     // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
-                    if (($denied = $this->governanceDenial($agent, 'bash_execute', ['command' => $command, 'working_directory' => $working_directory])) !== null) {
+                    if (($denied = $this->governanceDenial($agent, 'bash_execute', ['command' => $command, 'working_directory' => $working_directory], $tool, $workspace)) !== null) {
                         return $denied;
                     }
 
@@ -442,9 +452,9 @@ class ToolTranslator
                 ->for("Write content to a file. Paths restricted to: {$pathDescription}")
                 ->withStringParameter('path', 'Path to the file (relative to sandbox root in sandbox mode, absolute otherwise)')
                 ->withStringParameter('content', 'The content to write')
-                ->using(function (string $path, string $content) use ($allowedPaths, $workspace, $agent): string {
+                ->using(function (string $path, string $content) use ($allowedPaths, $workspace, $agent, $tool): string {
                     // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
-                    if (($denied = $this->governanceDenial($agent, 'file_write', ['path' => $path, 'content' => $content])) !== null) {
+                    if (($denied = $this->governanceDenial($agent, 'file_write', ['path' => $path, 'content' => $content], $tool, $workspace)) !== null) {
                         return $denied;
                     }
 
@@ -1083,9 +1093,9 @@ class ToolTranslator
             PrismTool::as('ssh_execute')
                 ->for("Execute a command on {$username}@{$host}:{$port} via SSH. {$allowedDesc}")
                 ->withStringParameter('command', 'The command to execute on the remote server')
-                ->using(function (string $command) use ($teamId, $host, $port, $username, $credentialId, $allowedCommands, $timeout, $sshExecutor, $agent): string {
+                ->using(function (string $command) use ($teamId, $host, $port, $username, $credentialId, $allowedCommands, $timeout, $sshExecutor, $agent, $tool): string {
                     // Per-tool-call governance (reviewer-lockout + OnToolCall guardrails).
-                    if (($denied = $this->governanceDenial($agent, 'ssh_execute', ['command' => $command])) !== null) {
+                    if (($denied = $this->governanceDenial($agent, 'ssh_execute', ['command' => $command], $tool)) !== null) {
                         return $denied;
                     }
 
@@ -1141,13 +1151,21 @@ class ToolTranslator
      *
      * @param  array<string, mixed>  $args
      */
-    private function governanceDenial(?Agent $agent, string $toolName, array $args): ?string
+    private function governanceDenial(?Agent $agent, string $toolName, array $args, ?Tool $tool = null, ?SandboxedWorkspace $workspace = null): ?string
     {
         if ($agent === null) {
             return null;
         }
 
-        $reason = app(ToolCallGovernor::class)->assert($agent, $toolName, $args);
+        // Recorded on an approval request so the approved call replays through this
+        // tool row, in this execution's workspace.
+        $replayContext = [
+            'tool_id' => $tool?->id,
+            'execution_id' => $workspace?->executionId(),
+            'sidecar_session_id' => $workspace?->sidecarSessionId(),
+        ];
+
+        $reason = app(ToolCallGovernor::class)->assert($agent, $toolName, $args, $replayContext);
 
         return $reason === null ? null : "Error: blocked by governance — {$reason}";
     }
@@ -1253,6 +1271,386 @@ class ToolTranslator
         return $config['proxy_url'] ?? null;
     }
 
+    /**
+     * `run_tool_program` — OpenAI Agents API "programmatic tool calling" borrow.
+     *
+     * One call runs a batch of the agent's OTHER resolved tools on the host,
+     * in order, through their own governed closures, then optionally hands
+     * every result to a Python script in the --network none sandbox as
+     * tool_results.json. Only the script's stdout (or the truncated raw
+     * results) returns to the model, so large tool output never rides the
+     * context window. Sibling tools are late-bound via ToolProgramContext
+     * because the final tool list does not exist while this one is built.
+     *
+     * @return array<PrismToolObject>
+     */
+    private function buildToolProgramTools(?SandboxedWorkspace $workspace, ?ToolProgramContext $context, ?Agent $agent): array
+    {
+        if (! config('agent.programmatic_tool_calling.enabled', false)) {
+            return [];
+        }
+
+        $maxCalls = max(1, (int) config('agent.programmatic_tool_calling.max_calls', 25));
+        $maxTotalCalls = max($maxCalls, (int) config('agent.programmatic_tool_calling.max_total_calls', 50));
+        $defaultMaxOutput = max(500, (int) config('agent.programmatic_tool_calling.max_output_chars', 8000));
+
+        return [
+            PrismTool::as(ToolProgramContext::PROGRAM_TOOL_NAME)
+                ->for(
+                    'Run a batch of your other tools in ONE call and, optionally, post-process every result in Python before anything comes back to you. '
+                    .'Use it when you need several lookups whose raw output you would only filter, join, count, dedupe or rank anyway. '
+                    .'Do NOT use it for a single call, for actions that need approval, or when each result needs your judgement before the next call. '
+                    .'Calls run in order on the host (not in parallel) and go through the same permission checks as a direct call. '
+                    .'`post_process` runs python3 with no network and is only available when you also have the execute_code tool; read tool_results.json from the current directory '
+                    .'({"calls":[{"index","tool","arguments","ok","output"|"error"}]}) and print only what you need. '
+                    .'Without `post_process` you get the raw results, each truncated to fit `max_output_chars`. '
+                    .'There is a per-execution budget of '.$maxTotalCalls.' sub-calls across all run_tool_program calls.',
+                )
+                ->withStringParameter(
+                    'calls',
+                    'JSON array of {"tool": "<tool name>", "arguments": {<named arguments>}}. 1..'.$maxCalls.' items, run in order.',
+                )
+                ->withStringParameter(
+                    'post_process',
+                    'Optional Python 3 source. Read tool_results.json, print the answer to stdout.',
+                    required: false,
+                )
+                ->withNumberParameter(
+                    'max_output_chars',
+                    'Lower the cap on characters returned to you (default and maximum '.$defaultMaxOutput.').',
+                    required: false,
+                )
+                // Exceptions thrown BEFORE the body runs (e.g. a non-numeric
+                // max_output_chars fails the ?float type) reach Prism's error
+                // handler, whose default message echoes every received
+                // parameter uncapped. Own that message and cap it.
+                ->failed(function (\Throwable $e, array $params) use ($defaultMaxOutput): string {
+                    $cap = $this->resolveToolProgramCap($params['max_output_chars'] ?? null, $defaultMaxOutput);
+
+                    return $this->toolProgramFailure('run_tool_program rejected the call: '.class_basename($e).'. Check parameter types.', $cap);
+                })
+                ->using(function (string $calls, ?string $post_process = null, ?float $max_output_chars = null) use ($workspace, $context, $agent, $maxCalls, $maxTotalCalls, $defaultMaxOutput): string {
+                    // The model may only LOWER the configured cap, never raise it.
+                    $maxOutput = $this->resolveToolProgramCap($max_output_chars, $defaultMaxOutput);
+
+                    try {
+                        return $this->runToolProgram($calls, $post_process, $maxOutput, $workspace, $context, $agent, $maxCalls, $maxTotalCalls);
+                    } catch (\Throwable $e) {
+                        // e.g. the sandbox timing out: Laravel's timeout message
+                        // contains the full command, i.e. the model's own code,
+                        // which can carry data from tool results. Log records
+                        // become Sentry breadcrumbs, so log shape, not content.
+                        Log::warning('ToolTranslator: run_tool_program failed', [
+                            'agent_id' => $agent?->id,
+                            'exception' => $e::class,
+                            'message_length' => mb_strlen($e->getMessage()),
+                        ]);
+
+                        return $this->toolProgramFailure('run_tool_program failed: '.class_basename($e).'.', $maxOutput);
+                    }
+                }),
+        ];
+    }
+
+    /**
+     * Body of run_tool_program. Every return goes through the output ceiling.
+     */
+    private function runToolProgram(
+        string $calls,
+        ?string $post_process,
+        int $maxOutput,
+        ?SandboxedWorkspace $workspace,
+        ?ToolProgramContext $context,
+        ?Agent $agent,
+        int $maxCalls,
+        int $maxTotalCalls,
+    ): string {
+        $wantsPostProcess = $post_process !== null && trim($post_process) !== '';
+
+        if ($context === null || ! $context->isBound()) {
+            return $this->toolProgramFailure('run_tool_program has no bound tools in this execution.', $maxOutput);
+        }
+
+        // post_process is arbitrary Python. It must not grant code
+        // execution to an agent that was never given execute_code.
+        if ($wantsPostProcess && $context->find('execute_code') === null) {
+            return $this->toolProgramFailure('post_process requires the execute_code tool to be attached to this agent. Retry without post_process.', $maxOutput);
+        }
+
+        $parsed = $this->parseToolProgramCalls($calls, $maxCalls);
+        if (is_string($parsed)) {
+            return $this->toolProgramFailure($parsed, $maxOutput);
+        }
+
+        if (! $context->reserveCalls(count($parsed), $maxTotalCalls)) {
+            return $this->toolProgramFailure("Per-execution budget of {$maxTotalCalls} sub-calls reached ({$context->callsUsed()} used). Call tools directly instead.", $maxOutput);
+        }
+
+        $results = [];
+        foreach ($parsed as $index => $call) {
+            $results[] = $this->runToolProgramCall($context, $index, $call['tool'], $call['arguments']);
+        }
+
+        Log::info('ToolTranslator: run_tool_program batch executed', [
+            'agent_id' => $agent?->id,
+            'calls' => count($results),
+            'tools' => array_column($results, 'tool'),
+            'failed' => count(array_filter($results, fn (array $r) => ! $r['ok'])),
+            'post_process' => $wantsPostProcess,
+            'calls_used_in_execution' => $context->callsUsed(),
+        ]);
+
+        if (! $wantsPostProcess) {
+            return $this->renderToolProgramResults($results, $maxOutput);
+        }
+
+        return $this->postProcessToolProgram($results, (string) $post_process, $maxOutput, $workspace, $agent);
+    }
+
+    /**
+     * Effective cap: the model may only lower the configured value (floor 200).
+     * Anything non-numeric or non-finite (NAN, INF, "abc") means "use the default".
+     */
+    private function resolveToolProgramCap(mixed $requested, int $default): int
+    {
+        if (! is_int($requested) && ! is_float($requested) && ! (is_string($requested) && is_numeric($requested))) {
+            return $default;
+        }
+
+        $value = (float) $requested;
+        if (! is_finite($value) || $value >= $default) {
+            return $default;
+        }
+
+        return max(200, (int) $value);
+    }
+
+    private function toolProgramFailure(string $message, int $maxOutput): string
+    {
+        $json = json_encode(['ok' => false, 'error' => $message], self::TOOL_PROGRAM_JSON_FLAGS) ?: '{"ok":false}';
+
+        return $this->fitToolProgramOutput($json, $maxOutput);
+    }
+
+    /**
+     * @return array<int, array{tool: string, arguments: array<string, mixed>}>|string Error message on failure.
+     */
+    private function parseToolProgramCalls(string $calls, int $maxCalls): array|string
+    {
+        $raw = trim($calls);
+        // Local agents wrap JSON in markdown fences; strip a single outer fence.
+        $raw = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $raw) ?? $raw;
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded) || $decoded === [] || array_keys($decoded) !== range(0, count($decoded) - 1)) {
+            return 'calls must be a non-empty JSON array of {"tool","arguments"} objects.';
+        }
+        if (count($decoded) > $maxCalls) {
+            return 'calls has '.count($decoded)." items; the maximum is {$maxCalls}.";
+        }
+
+        $out = [];
+        foreach ($decoded as $i => $item) {
+            $tool = is_array($item) ? ($item['tool'] ?? null) : null;
+            if (! is_string($tool) || trim($tool) === '') {
+                return "calls[{$i}].tool must be a non-empty string.";
+            }
+            $arguments = $item['arguments'] ?? [];
+            // Must be a JSON object: the keys become named parameters of the
+            // sibling closure, and a list would spread as positional args.
+            $hasIntKey = is_array($arguments) && array_filter(array_keys($arguments), 'is_int') !== [];
+            if (! is_array($arguments) || $hasIntKey) {
+                return "calls[{$i}].arguments must be an object with named keys.";
+            }
+            $out[] = ['tool' => trim($tool), 'arguments' => $arguments];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @return array{index: int, tool: string, arguments: array<string, mixed>, ok: bool, output?: string, error?: string, available?: array<int, string>}
+     */
+    private function runToolProgramCall(ToolProgramContext $context, int $index, string $name, array $arguments): array
+    {
+        // The name is model-supplied and echoed back; a 10k-char name would eat
+        // the whole output budget. Lookup uses the full name, display does not.
+        $displayName = mb_strlen($name) > 100 ? mb_substr($name, 0, 100).'…' : $name;
+        $base = ['index' => $index, 'tool' => $displayName, 'arguments' => $arguments];
+
+        $sibling = $context->find($name);
+        if ($sibling === null) {
+            return $base + ['ok' => false, 'error' => "Unknown tool '{$displayName}'.", 'available' => array_slice($context->names(), 0, 50)];
+        }
+
+        try {
+            // Prism handle() takes named arguments; string keys spread as such.
+            $value = $sibling->handle(...$arguments);
+        } catch (\Throwable $e) {
+            return $base + ['ok' => false, 'error' => mb_substr($e->getMessage(), 0, 20_000)];
+        }
+
+        if ($value instanceof ToolError) {
+            return $base + ['ok' => false, 'error' => mb_substr($value->message, 0, 20_000)];
+        }
+
+        $output = $value instanceof ToolOutput ? $value->result : (string) $value;
+
+        return $base + ['ok' => true, 'output' => mb_substr($output, 0, 200_000)];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $results
+     */
+    private function renderToolProgramResults(array $results, int $maxOutput): string
+    {
+        $flags = self::TOOL_PROGRAM_JSON_FLAGS;
+        $marker = self::TOOL_PROGRAM_TRUNCATION_MARKER;
+        $available = null;
+
+        $rendered = [];
+        foreach ($results as $r) {
+            unset($r['arguments']);
+
+            // The tool list is the same for every unknown-tool call; send it once.
+            if (array_key_exists('available', $r)) {
+                $available ??= $r['available'];
+                unset($r['available']);
+            }
+
+            $rendered[] = $r;
+        }
+
+        // Error text is model-visible too (a failing MCP/HTTP tool can return a
+        // huge body), so `output` and `error` share one budget. The budget is
+        // what is left of the cap after the JSON envelope, so the final string
+        // fits instead of overshooting by the per-call key overhead.
+        $render = function (?int $perBody) use ($rendered, $available, $marker, $flags): string {
+            $calls = array_map(function (array $r) use ($perBody, $marker): array {
+                foreach (['output', 'error'] as $field) {
+                    if (! isset($r[$field])) {
+                        continue;
+                    }
+                    if ($perBody === 0) {
+                        $r[$field] = '';
+                    } elseif ($perBody !== null && mb_strlen($r[$field]) > $perBody) {
+                        $r[$field] = mb_substr($r[$field], 0, $perBody).$marker;
+                    }
+                }
+
+                return $r;
+            }, $rendered);
+
+            $payload = ['ok' => true, 'calls' => $calls];
+            if ($available !== null) {
+                $payload['available_tools'] = $available;
+            }
+
+            return json_encode($payload, $flags) ?: '{"ok":false,"error":"results could not be encoded"}';
+        };
+
+        $json = $render(null);
+        if (mb_strlen($json) <= $maxOutput) {
+            return $json;
+        }
+
+        $bodies = count(array_filter($rendered, fn (array $r) => isset($r['output']) || isset($r['error'])));
+        if ($bodies > 0) {
+            $overhead = mb_strlen($render(0)) + $bodies * mb_strlen($marker);
+            $perBody = intdiv(max(0, $maxOutput - $overhead), $bodies);
+
+            // JSON escaping can grow a body (quotes, control chars up to 6×), so
+            // step the budget down by a quarter and retry instead of halving,
+            // which would throw away most of the usable space.
+            for ($attempt = 0; $attempt < 16 && $perBody >= 20; $attempt++) {
+                $json = $render($perBody);
+                if (mb_strlen($json) <= $maxOutput) {
+                    return $json;
+                }
+                $perBody = intdiv($perBody * 3, 4);
+            }
+        }
+
+        // Even empty bodies do not fit: keep only status per call.
+        $compact = json_encode([
+            'ok' => true,
+            'note' => 'bodies omitted; use post_process',
+            'calls' => array_map(fn (array $r): array => ['index' => $r['index'], 'tool' => $r['tool'], 'ok' => $r['ok']], $rendered),
+        ], $flags) ?: '{"ok":false,"error":"results could not be encoded"}';
+
+        return $this->fitToolProgramOutput($compact, $maxOutput);
+    }
+
+    /**
+     * Hard ceiling for every model-visible run_tool_program string: the result
+     * is at most $maxOutput characters INCLUDING the truncation marker.
+     */
+    private function fitToolProgramOutput(string $text, int $maxOutput): string
+    {
+        if (mb_strlen($text) <= $maxOutput) {
+            return $text;
+        }
+
+        $marker = self::TOOL_PROGRAM_TRUNCATION_MARKER;
+
+        return mb_substr($text, 0, max(0, $maxOutput - mb_strlen($marker))).$marker;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $results
+     */
+    private function postProcessToolProgram(array $results, string $code, int $maxOutput, ?SandboxedWorkspace $workspace, ?Agent $agent): string
+    {
+        $owned = $workspace === null;
+        $ws = $workspace ?? new SandboxedWorkspace(
+            Str::uuid()->toString(),
+            $agent->id ?? 'tool_program',
+            $agent->team_id ?? 'platform',
+        );
+
+        try {
+            // resolve() guards traversal; the name is a literal.
+            file_put_contents(
+                $ws->resolve('tool_results.json'),
+                json_encode(['calls' => $results], self::TOOL_PROGRAM_JSON_FLAGS) ?: '{"calls":[]}',
+            );
+
+            $run = app(ExecuteCodeHandler::class)->execute($code, 60, $ws);
+        } finally {
+            if ($owned) {
+                $ws->teardown();
+            }
+        }
+
+        if (! $run['successful']) {
+            $stderr = (string) $run['stderr'];
+            $stdout = (string) $run['stdout'];
+
+            // Budget the ENCODED string: a Python traceback is full of quotes
+            // and newlines, so cutting before json_encode undercounts.
+            $build = fn (int $chars): string => json_encode([
+                'ok' => false,
+                'error' => 'post_process failed',
+                'exit_code' => $run['exit_code'],
+                'stderr' => mb_substr($stderr, 0, $chars),
+                'stdout' => mb_substr($stdout, 0, $chars),
+            ], self::TOOL_PROGRAM_JSON_FLAGS) ?: '{"ok":false,"error":"post_process failed"}';
+
+            for ($chars = min(2_000, $maxOutput); $chars > 0; $chars = $chars > 8 ? intdiv($chars * 3, 4) : 0) {
+                $json = $build($chars);
+                if (mb_strlen($json) <= $maxOutput) {
+                    return $json;
+                }
+            }
+
+            return $this->fitToolProgramOutput($build(0), $maxOutput);
+        }
+
+        // Scrub invalid UTF-8 so a short stdout is still a valid string for the provider.
+        return $this->fitToolProgramOutput(mb_scrub((string) $run['stdout'], 'UTF-8'), $maxOutput);
+    }
+
     private function buildExecuteCodeTools(Tool $tool, ?SandboxedWorkspace $workspace = null): array
     {
         $timeout = $tool->settings['timeout'] ?? 30;
@@ -1263,17 +1661,48 @@ class ToolTranslator
                 ->withStringParameter('code', 'Python code to execute', required: true)
                 ->withNumberParameter('timeout_seconds', 'Execution timeout in seconds (max 120, default 30)', required: false)
                 ->using(function (string $code, ?float $timeout_seconds = null) use ($workspace, $timeout): string {
-                    $effectiveTimeout = $timeout_seconds !== null ? (int) $timeout_seconds : $timeout;
+                    // A zero or negative timeout would disable the process timeout entirely.
+                    $effectiveTimeout = $timeout_seconds !== null && is_finite($timeout_seconds)
+                        ? (int) max(1, min(120, $timeout_seconds))
+                        : max(1, (int) $timeout);
 
-                    $handler = app(ExecuteCodeHandler::class);
-                    $result = $handler->execute($code, $effectiveTimeout, $workspace);
+                    try {
+                        $result = app(ExecuteCodeHandler::class)->execute($code, $effectiveTimeout, $workspace);
+                    } catch (ProcessTimedOutException $e) {
+                        // The exception message embeds the whole docker command line, which
+                        // contains the model's own code. Report only what happened.
+                        try {
+                            $partialStdout = mb_substr($e->result->output(), 0, 10_000);
+                        } catch (\Throwable) {
+                            $partialStdout = '';
+                        }
+
+                        $result = [
+                            'stdout' => $partialStdout,
+                            'stderr' => "Execution timed out after {$effectiveTimeout} seconds.",
+                            'exit_code' => null,
+                            'successful' => false,
+                        ];
+                    } catch (\Throwable $e) {
+                        Log::warning('ToolTranslator: execute_code failed', [
+                            'exception' => $e::class,
+                            'message_length' => mb_strlen($e->getMessage()),
+                        ]);
+
+                        $result = [
+                            'stdout' => '',
+                            'stderr' => 'execute_code failed: '.class_basename($e).'.',
+                            'exit_code' => null,
+                            'successful' => false,
+                        ];
+                    }
 
                     return json_encode([
                         'stdout' => $result['stdout'],
                         'stderr' => $result['stderr'],
                         'exit_code' => $result['exit_code'],
                         'successful' => $result['successful'],
-                    ]);
+                    ], JSON_INVALID_UTF8_SUBSTITUTE) ?: '{"stdout":"","stderr":"execute_code output could not be encoded.","exit_code":null,"successful":false}';
                 }),
         ];
     }
