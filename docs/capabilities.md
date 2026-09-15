@@ -5,7 +5,7 @@
 ## Platform at a glance (2026-06-09)
 
 - **45 bounded domains** under `app/Domain/`
-- **675+ MCP tool files across 62 tool groups** (`app/Mcp/Tools/`) — every feature is MCP-addressable
+- **670+ MCP tools across 60+ domains** (`app/Mcp/Tools/`) — every feature is MCP-addressable
 - **~175 REST endpoints across 61 API v1 controllers** (`app/Http/Controllers/Api/V1/`), OpenAPI 3.1 at `/docs/api`
 - **173 Livewire components** (`app/Livewire/`) · **424 migrations** · **88 config files**
 
@@ -405,4 +405,4 @@ php artisan mcp:start agent-fleet   # stdio (for Claude Code, Codex)
 # or POST /mcp with Sanctum bearer token (for Cursor, remote clients)
 ```
 
-345+ tools across 33+ domains.
+670+ tools across 60+ domains.

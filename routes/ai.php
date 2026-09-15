@@ -94,7 +94,7 @@ Route::post('oauth/revoke', OAuthRevokeController::class)
 Mcp::web('/mcp', CompactMcpServer::class)
     ->middleware([NegotiateMcpProtocol::class, 'auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
 
-// Full MCP endpoint (HTTP/SSE) — all 259 tools for power users and clients without tool limits
+// Full MCP endpoint (HTTP/SSE) — all 670+ tools for power users and clients without tool limits
 Mcp::web('/mcp/full', AgentFleetServer::class)
     ->middleware([NegotiateMcpProtocol::class, 'auth:sanctum,passport', McpTeamBinding::class, SentryMcpToolTagMiddleware::class]);
 
