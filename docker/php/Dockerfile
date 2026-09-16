@@ -83,7 +83,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ARG CLAUDE_CODE_VERSION="latest"
 RUN apk add --no-cache nodejs npm \
     && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
-    && ln -sf "$(npm prefix -g)/bin/claude" /usr/local/bin/claude \
+    && { [ -e /usr/local/bin/claude ] || ln -sf "$(npm prefix -g)/bin/claude" /usr/local/bin/claude; } \
     && claude --version
 
 # Install CodeGraph (npm package) — the polyglot code-index extractor used by
@@ -94,7 +94,7 @@ RUN apk add --no-cache nodejs npm \
 ARG CODEGRAPH_VERSION=""
 RUN if [ -n "$CODEGRAPH_VERSION" ]; then \
         npm install -g @colbymchenry/codegraph@${CODEGRAPH_VERSION} \
-        && ln -sf "$(npm prefix -g)/bin/codegraph" /usr/local/bin/codegraph \
+        && { [ -e /usr/local/bin/codegraph ] || ln -sf "$(npm prefix -g)/bin/codegraph" /usr/local/bin/codegraph; } \
         && codegraph --version; \
     fi
 
@@ -107,6 +107,7 @@ FROM base AS development
 # Vite can reuse the same binaries.
 
 COPY . .
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs  # .dockerignore excludes these dirs, but package:discover needs them
 
 RUN php -d disable_functions="" /usr/bin/composer install --no-interaction --optimize-autoloader
 
@@ -121,6 +122,7 @@ CMD ["php-fpm"]
 FROM base AS production
 
 COPY . .
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs  # .dockerignore excludes these dirs, but package:discover needs them
 
 RUN php -d disable_functions="" /usr/bin/composer install --no-dev --no-interaction --optimize-autoloader \
     && php -d disable_functions="" artisan config:cache \

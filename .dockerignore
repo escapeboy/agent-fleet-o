@@ -33,6 +33,7 @@ storage
 bootstrap/cache
 vendor
 packages
+!packages/fleetq-boruna-audit
 
 # Docs
 docs
