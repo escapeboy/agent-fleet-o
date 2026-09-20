@@ -39,6 +39,12 @@ class LlmStructuredDriver implements DecisionModel
         private readonly string $model,
         private readonly int $maxTokens = 2048,
         private readonly float $temperature = 0.0,
+        /**
+         * The gateway logs every call to llm_request_logs, which is tenant-scoped
+         * and rejects a null team. An eval has no tenant of its own, so the run
+         * borrows one — see the --team option on jev:eval.
+         */
+        private readonly ?string $teamId = null,
     ) {}
 
     public function model(): string
@@ -58,6 +64,7 @@ class LlmStructuredDriver implements DecisionModel
                 userPrompt: $this->userPrompt($state),
                 maxTokens: $this->maxTokens,
                 outputSchema: $this->schema($questions),
+                teamId: $this->teamId,
                 purpose: 'decision_eval',
                 temperature: $this->temperature,
             ));

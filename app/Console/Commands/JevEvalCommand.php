@@ -23,7 +23,9 @@ class JevEvalCommand extends Command
         {--driver=jev : Driver key from config/decision.php}
         {--split=test : Only evaluate cases in this split (dev, test, or all)}
         {--repeat=1 : Send each case N times, to measure determinism}
-        {--concurrency=8 : Cases in flight at once (batch-capable drivers only)}';
+        {--concurrency=8 : Cases in flight at once (batch-capable drivers only)}
+        {--limit=0 : Stop after N cases (0 = no limit); applied after the split filter}
+        {--team= : Team id the LLM drivers log their gateway calls under}';
 
     protected $description = 'Run a decision-model eval over a JSONL dataset and record every answer.';
 
@@ -36,15 +38,22 @@ class JevEvalCommand extends Command
         $split = (string) $this->option('split');
         $repeat = max(1, (int) $this->option('repeat'));
         $concurrency = max(1, (int) $this->option('concurrency'));
+        $limit = max(0, (int) $this->option('limit'));
 
-        $driver = $factory->make($driverName);
+        $team = $this->option('team');
+        $driver = $factory->make($driverName, is_string($team) && $team !== '' ? $team : null);
         $runId = (string) Str::uuid7();
         $dataset = basename($path);
         $stateLimit = (int) config('decision.limits.state_tokens', 32_000);
 
+        // A driver may publish a tighter ceiling than the dataset-wide one — the
+        // LLM drivers share the AI gateway's per-provider budget with the rest
+        // of the process, and Jev's own limits are far higher.
         $limiter = new DecisionRateLimiter(
-            requestsPerMinute: (int) config('decision.limits.requests_per_minute', 1_100),
-            tokensPerSecond: (int) config('decision.limits.tokens_per_second', 225_000),
+            requestsPerMinute: (int) (config("decision.drivers.{$driverName}.requests_per_minute")
+                ?? config('decision.limits.requests_per_minute', 1_100)),
+            tokensPerSecond: (int) (config("decision.drivers.{$driverName}.tokens_per_second")
+                ?? config('decision.limits.tokens_per_second', 225_000)),
         );
 
         $this->info("Run {$runId} — driver [{$driverName}] model [{$driver->model()}] dataset [{$dataset}]");
@@ -65,6 +74,12 @@ class JevEvalCommand extends Command
             }
 
             $cases[] = $case;
+
+            // Taken in file order, so the same --limit always picks the same
+            // cases and two drivers stay comparable.
+            if ($limit > 0 && count($cases) >= $limit) {
+                break;
+            }
         }
 
         if ($cases === []) {

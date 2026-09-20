@@ -51,7 +51,29 @@ class SystemOneDriver implements BatchDecisionModel, DecisionModel
             'questions' => $questions,
         ]);
 
-        return $this->toResult($response, (int) round((hrtime(true) - $startedAt) / 1_000_000));
+        return $this->toResult($response, $this->latencyMs($response, $startedAt));
+    }
+
+    /**
+     * The HTTP round trip, and nothing else.
+     *
+     * Guzzle's own transfer time is preferred because the wall clock around
+     * send() would also count any retry backoff this call slept through, and
+     * the eval reports latency as a property of the endpoint. The rate limiter
+     * is already outside this method — the command waits before calling it.
+     *
+     * Falls back to the wall clock when there are no transfer stats, which is
+     * the case under Http::fake().
+     */
+    private function latencyMs(Response $response, int $startedAt): int
+    {
+        $transferTime = $response->transferStats?->getTransferTime();
+
+        if (is_numeric($transferTime)) {
+            return (int) round(((float) $transferTime) * 1000);
+        }
+
+        return (int) round((hrtime(true) - $startedAt) / 1_000_000);
     }
 
     private function toResult(Response $response, int $latencyMs): DecisionResult
@@ -145,7 +167,7 @@ class SystemOneDriver implements BatchDecisionModel, DecisionModel
                     continue;
                 }
 
-                $results[$key] = $this->interpret($response, $latencyMs);
+                $results[$key] = $this->interpret($response, $this->latencyMs($response, $startedAt));
             }
 
             $pending = $retryable;

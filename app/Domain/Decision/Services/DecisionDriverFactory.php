@@ -16,7 +16,7 @@ final class DecisionDriverFactory
         private readonly AiGatewayInterface $gateway,
     ) {}
 
-    public function make(string $name): DecisionModel
+    public function make(string $name, ?string $teamId = null): DecisionModel
     {
         $config = config("decision.drivers.{$name}");
 
@@ -32,6 +32,7 @@ final class DecisionDriverFactory
                 model: (string) $config['model'],
                 maxTokens: (int) ($config['max_tokens'] ?? 2048),
                 temperature: (float) ($config['temperature'] ?? 0.0),
+                teamId: $teamId ?? (is_string(config('decision.team_id')) ? config('decision.team_id') : null),
             ),
             default => throw new InvalidArgumentException("Decision driver [{$name}] has no usable type."),
         };

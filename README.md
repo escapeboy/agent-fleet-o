@@ -610,6 +610,7 @@ value into `.env`, a compose file or a fixture.
 # 1. Build the datasets.
 python3 base/scripts/jev-eval/export_next_tool_dataset.py    # -> next-tool.jsonl
 python3 base/scripts/jev-eval/export_routing_v2_dataset.py   # -> routing-v2.jsonl + routing-v2-synth.jsonl
+python3 base/scripts/jev-eval/export_domain_prefilter_dataset.py  # -> domain-prefilter.jsonl
 #    both write into ~/jev-eval/datasets/fleetq/
 
 # 2. Make them reachable from the container (storage/ is bind-mounted).
@@ -638,9 +639,15 @@ Comparing Jev against a chat model on the same dataset — the LLM drivers use t
 platform AI gateway, so they need no TypeSafe key:
 
 ```bash
-docker compose exec app php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=haiku --split=test
-docker compose exec app php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=sonnet --split=test
+op run --env-file=.env.op -- docker compose run --rm -e ANTHROPIC_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=haiku --split=test --team=<team-id>
 ```
+
+`--team` is required: the gateway logs every call to the tenant-scoped
+`llm_request_logs`, and an eval has no tenant of its own. The gateway also caps
+Anthropic at 60 requests per minute across the whole process, so the LLM drivers
+publish their own `requests_per_minute` and the eval throttles itself to it —
+two of these running flat out in parallel will still starve each other.
 
 Without Docker, the same commands run directly:
 
@@ -651,12 +658,30 @@ op run --env-file=.env.op -- php artisan jev:report
 
 ### Options
 
+`jev:eval`:
+
 | Option | Default | Meaning |
 |---|---|---|
 | `--driver` | `jev` | A key from `config/decision.php`: `jev`, `jeff`, `haiku`, `sonnet` |
 | `--split` | `test` | `dev`, `test`, or `all`. 20/80, decided by a hash of the case id |
-| `--repeat` | `1` | Send each case N times; feeds the determinism column |
+| `--repeat` | `1` | Send each case N times; feeds the determinism columns |
 | `--concurrency` | `8` | Cases in flight at once, for drivers that support batching |
+| `--limit` | `0` | Stop after N cases, taken in file order so two drivers stay comparable |
+| `--team` | — | Team the LLM drivers log their gateway calls under (required for `haiku`/`sonnet`) |
+
+`jev:report`:
+
+| Option | Meaning |
+|---|---|
+| `run_id...` | One or more runs; several put different drivers in one table set |
+| `--group-by=meta.source` | Split every table by a dataset meta key |
+| `--where=meta.source=assistant_turn` | Keep only cases matching a meta key (comma-separated values allowed) |
+| `--questions=domain` | Report only these question ids |
+| `--multi-label` | Score each case as one label SET (Noul per label) instead of per question |
+| `--dataset-path=` | The dataset file; required by `--group-by`, `--where` and the variant analysis |
+
+Accuracy is printed with a 95% Wilson interval, which is what makes a
+per-source table readable when some sources have only a handful of cases.
 
 The run stays under Jev's published ceilings (1,200 requests/minute and 250,000
 tokens/second) on its own. A case whose state plus longest question is estimated
@@ -677,6 +702,7 @@ JSONL, one case per line:
 | `next-tool.jsonl` | next-tool prediction inside a coding loop | the tool the agent in fact called next |
 | `routing-v2.jsonl` | which FleetQ MCP domain handles a request | configuration, or a human's recorded choice |
 | `routing-v2-synth.jsonl` | the same question, on registry-phrased requests | the registry domain of the tool a description came from |
+| `domain-prefilter.jsonl` | which domains can be ruled out (multi-label) | every MCP domain the assistant drew a tool from in that turn |
 
 `next-tool.jsonl` is one case per tool call an agent actually made inside a
 session belonging to an experiment that reached `completed`. The state carries
@@ -698,6 +724,28 @@ source task contributes at most 15 cases.
 to cover the domains production data never exercises. Every case carries
 `meta.source = "synthetic"` and it lives in its own file **so it is never mixed
 into headline numbers** — score it separately or not at all.
+
+`domain-prefilter.jsonl` asks a different question from routing-v2: not "which
+one domain handles this" but "which domains can be ruled out" — the shape a
+prefilter in front of a 700-tool MCP server needs. One Noul per domain, all 67
+in a single request, gold true for every domain the turn drew a tool from.
+Multi-domain turns are kept here, because a turn spanning two domains is a
+correct multi-label answer rather than an ambiguous one. Score it with
+`jev:report --multi-label`, which sweeps the threshold and reports the tightest
+prefilter that still keeps essentially every true label.
+
+**On routing-v2 headline numbers:** only the `assistant_turn` source belongs in
+one. The `signal_workflow` and `experiment_agent` sources encode a
+configuration fact that the request text cannot support — a Sentry bug report
+reads like a `signal` whatever the tenant configured it to trigger — and
+`model_tier` has a single value across every case where prod data can derive it.
+Report those per source, never merged:
+
+```bash
+docker compose exec app php artisan jev:report <run-id> \
+  --dataset-path=storage/app/jev-eval/routing-v2.jsonl \
+  --where=meta.source=assistant_turn --questions=domain
+```
 
 The domain option list and its one-sentence descriptions are read out of the
 registry by `base/scripts/jev-eval/mcp_domain_registry.py`; add a tool group and
