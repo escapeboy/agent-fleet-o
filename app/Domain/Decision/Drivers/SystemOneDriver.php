@@ -11,6 +11,9 @@ use App\Domain\Decision\DTOs\NoulAnswer;
 use App\Domain\Decision\DTOs\ScoreAnswer;
 use App\Domain\Decision\Exceptions\DecisionRequestException;
 use App\Domain\Decision\Services\CredentialRedactor;
+use GuzzleHttp\Handler\CurlHandler;
+use GuzzleHttp\Handler\CurlMultiHandler;
+use GuzzleHttp\Handler\Proxy;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\RequestException;
@@ -35,6 +38,49 @@ class SystemOneDriver implements BatchDecisionModel, DecisionModel
         private readonly float $timeout = 5.0,
         private readonly int $retries = 3,
     ) {}
+
+    /**
+     * One curl handler for the whole run, so its handle cache — and with it the
+     * TCP connection and the TLS session — survives between cases.
+     *
+     * Measured against api.typesafe.ai from the eval container: TCP 204 ms +
+     * TLS 209 ms = 414 ms, against a 775 ms p50. Over half of every decision
+     * was spent re-opening a connection that the previous decision had just
+     * closed. Laravel builds a fresh Guzzle client per request, so without this
+     * every case paid it again.
+     *
+     * Passed through setHandler(), which sets the handler HandlerStack::create()
+     * wraps — Laravel still pushes its own middleware on top, so Http::fake()
+     * and the retry middleware are unaffected.
+     */
+    private mixed $sharedHandler = null;
+
+    private function sharedHandler(): callable
+    {
+        /** @var callable */
+        return $this->sharedHandler ??= Proxy::wrapSync(
+            new CurlMultiHandler,
+            new CurlHandler,
+        );
+    }
+
+    /**
+     * Negotiated, not forced: CURL_HTTP_VERSION_2TLS uses HTTP/2 when the
+     * server offers it over ALPN and stays on 1.1 when it does not, so this
+     * cannot break a host that speaks only 1.1.
+     *
+     * @return array<string, mixed>
+     */
+    private function connectionOptions(): array
+    {
+        $options = [];
+
+        if (defined('CURL_HTTP_VERSION_2TLS')) {
+            $options['curl'] = [CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2TLS];
+        }
+
+        return $options;
+    }
 
     public function model(): string
     {
@@ -125,9 +171,12 @@ class SystemOneDriver implements BatchDecisionModel, DecisionModel
                 foreach ($pending as $key => $request) {
                     $calls[] = $pool->as((string) $key)
                         ->timeout($this->timeout)
+                        ->setHandler($this->sharedHandler())
+                        ->withOptions($this->connectionOptions())
                         ->withHeaders([
                             'Authorization' => 'Bearer '.$this->apiKey,
                             'Content-Type' => 'application/json',
+                            'Connection' => 'keep-alive',
                         ])
                         ->post($this->baseUrl.'/v1/systemone', [
                             'model' => $this->model,
@@ -225,9 +274,12 @@ class SystemOneDriver implements BatchDecisionModel, DecisionModel
             return $this->http
                 ->baseUrl($this->baseUrl)
                 ->timeout($this->timeout)
+                ->setHandler($this->sharedHandler())
+                ->withOptions($this->connectionOptions())
                 ->withHeaders([
                     'Authorization' => 'Bearer '.$this->apiKey,
                     'Content-Type' => 'application/json',
+                    'Connection' => 'keep-alive',
                 ])
                 // $retries is the number of RETRIES, so total attempts is one more.
                 // Only 429 is retried: a 422 is a bad request that will never pass,
