@@ -15,6 +15,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Team the eval borrows
+    |--------------------------------------------------------------------------
+    |
+    | LLM drivers go through the AI gateway, which logs every call to the
+    | tenant-scoped llm_request_logs table. An eval has no tenant of its own, so
+    | it borrows one. Overridden per run by `jev:eval --team=`.
+    |
+    */
+
+    'team_id' => env('DECISION_TEAM_ID'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Drivers
     |--------------------------------------------------------------------------
     |
@@ -55,7 +68,11 @@ return [
         'haiku' => [
             'type' => 'llm',
             'provider' => 'anthropic',
-            'model' => env('DECISION_HAIKU_MODEL', 'claude-haiku-4-5-20251001'),
+            // The AI gateway's own RateLimiting middleware caps anthropic at 60
+            // requests per minute across the whole process, so an eval that runs
+            // flat out starves everything else and fails half its own cases.
+            'requests_per_minute' => (int) env('DECISION_ANTHROPIC_RPM', 25),
+            'model' => env('DECISION_HAIKU_MODEL', 'claude-haiku-4-5'),
             'max_tokens' => 2048,
             'temperature' => 0.0,
         ],
@@ -63,6 +80,10 @@ return [
         'sonnet' => [
             'type' => 'llm',
             'provider' => 'anthropic',
+            // The AI gateway's own RateLimiting middleware caps anthropic at 60
+            // requests per minute across the whole process, so an eval that runs
+            // flat out starves everything else and fails half its own cases.
+            'requests_per_minute' => (int) env('DECISION_ANTHROPIC_RPM', 25),
             'model' => env('DECISION_SONNET_MODEL', 'claude-sonnet-5'),
             'max_tokens' => 2048,
             'temperature' => 0.0,
@@ -102,7 +123,7 @@ return [
         'jev' => (float) env('TYPESAFE_PRICE_PER_MTOK', 0.042),
         'jeff' => (float) env('JEFF_PRICE_PER_MTOK', 0.0),
         'haiku' => (float) env('DECISION_HAIKU_PRICE_PER_MTOK', 1.0),
-        'sonnet' => (float) env('DECISION_SONNET_PRICE_PER_MTOK', 3.0),
+        'sonnet' => (float) env('DECISION_SONNET_PRICE_PER_MTOK', 2.0),
     ],
 
 ];

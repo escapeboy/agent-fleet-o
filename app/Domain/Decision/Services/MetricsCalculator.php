@@ -235,6 +235,152 @@ final class MetricsCalculator
     }
 
     /**
+     * 95% Wilson score interval for a proportion.
+     *
+     * Wilson rather than the normal approximation because several groups here
+     * have a handful of cases, or an accuracy at 0 or 1, where the textbook
+     * interval is either nonsense or zero-width.
+     *
+     * @return array{low: float, high: float}
+     */
+    public static function wilsonInterval(int $successes, int $total, float $z = 1.959964): array
+    {
+        if ($total <= 0) {
+            return ['low' => 0.0, 'high' => 0.0];
+        }
+
+        $p = $successes / $total;
+        $denominator = 1 + ($z ** 2) / $total;
+        $centre = $p + ($z ** 2) / (2 * $total);
+        $spread = $z * sqrt(($p * (1 - $p) / $total) + ($z ** 2) / (4 * $total ** 2));
+
+        return [
+            'low' => max(0.0, ($centre - $spread) / $denominator),
+            'high' => min(1.0, ($centre + $spread) / $denominator),
+        ];
+    }
+
+    /**
+     * Multi-label sweep for the prefilter question: at each threshold, how much
+     * of the true label set survives, how clean the kept set is, and how many
+     * labels are kept at all.
+     *
+     * A case whose gold set is empty is skipped — recall is undefined there, and
+     * counting it as 1.0 would quietly inflate the headline. A case that keeps
+     * nothing scores precision 0, because an empty prefilter drops the request.
+     *
+     * @param  list<array{scores: array<string, float>, gold: list<string>}>  $cases
+     * @param  list<float>  $thresholds
+     * @return list<array{threshold: float, cases: int, recall: float, precision: float, kept: float, perfect_recall: float}>
+     */
+    public static function multiLabelSweep(array $cases, array $thresholds): array
+    {
+        $scored = array_values(array_filter($cases, static fn (array $c): bool => $c['gold'] !== []));
+
+        if ($scored === []) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($thresholds as $threshold) {
+            $recalls = [];
+            $precisions = [];
+            $kept = [];
+            $perfect = 0;
+
+            foreach ($scored as $case) {
+                $predicted = array_keys(array_filter(
+                    $case['scores'],
+                    static fn (float $score): bool => $score >= $threshold,
+                ));
+
+                $hits = count(array_intersect($predicted, $case['gold']));
+                $recall = (float) ($hits / count($case['gold']));
+
+                $recalls[] = $recall;
+                $precisions[] = $predicted === [] ? 0.0 : (float) ($hits / count($predicted));
+                $kept[] = count($predicted);
+
+                if ($recall >= 1.0) {
+                    $perfect++;
+                }
+            }
+
+            $rows[] = [
+                'threshold' => $threshold,
+                'cases' => count($scored),
+                'recall' => (float) (array_sum($recalls) / count($recalls)),
+                'precision' => (float) (array_sum($precisions) / count($precisions)),
+                'kept' => (float) (array_sum($kept) / count($kept)),
+                'perfect_recall' => (float) ($perfect / count($scored)),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Spread of a probability distribution across repeats of the same request:
+     * the worst single option, the average option, and how often the winner
+     * changed. The flip rate is the one that decides whether a routing decision
+     * can be trusted to be stable.
+     *
+     * @param  array<string, list<array<string, float>>>  $byCase
+     * @return array{max_stddev: float, mean_stddev: float, argmax_flip_rate: float, repeated_cases: int}
+     */
+    public static function determinismStats(array $byCase): array
+    {
+        $repeated = array_filter($byCase, static fn (array $repeats): bool => count($repeats) > 1);
+
+        if ($repeated === []) {
+            return ['max_stddev' => 0.0, 'mean_stddev' => 0.0, 'argmax_flip_rate' => 0.0, 'repeated_cases' => 0];
+        }
+
+        $max = 0.0;
+        $all = [];
+        $flipped = 0;
+
+        foreach ($repeated as $repeats) {
+            $options = [];
+
+            foreach ($repeats as $map) {
+                foreach (array_keys($map) as $option) {
+                    $options[$option] = true;
+                }
+            }
+
+            foreach (array_keys($options) as $option) {
+                $series = array_map(static fn (array $map): float => (float) ($map[$option] ?? 0.0), $repeats);
+                $stddev = self::stddev($series);
+                $all[] = $stddev;
+                $max = max($max, $stddev);
+            }
+
+            $winners = [];
+
+            foreach ($repeats as $map) {
+                if ($map === []) {
+                    continue;
+                }
+
+                $winners[array_search(max($map), $map, true)] = true;
+            }
+
+            if (count($winners) > 1) {
+                $flipped++;
+            }
+        }
+
+        return [
+            'max_stddev' => $max,
+            'mean_stddev' => $all === [] ? 0.0 : array_sum($all) / count($all),
+            'argmax_flip_rate' => $flipped / count($repeated),
+            'repeated_cases' => count($repeated),
+        ];
+    }
+
+    /**
      * @param  list<float>  $values
      */
     public static function stddev(array $values): float

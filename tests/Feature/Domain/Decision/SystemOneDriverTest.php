@@ -7,6 +7,8 @@ use App\Domain\Decision\DTOs\ChoiceAnswer;
 use App\Domain\Decision\DTOs\NoulAnswer;
 use App\Domain\Decision\DTOs\ScoreAnswer;
 use App\Domain\Decision\Exceptions\DecisionRequestException;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\TransferStats;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -197,6 +199,50 @@ class SystemOneDriverTest extends TestCase
         $this->assertSame('billing', $results['case-a']->answer('department')?->value());
         $this->assertSame('billing', $results['case-b']->answer('department')?->value());
         Http::assertSentCount(3);
+    }
+
+    #[Test]
+    public function latency_is_the_http_round_trip_and_not_the_retry_backoff(): void
+    {
+        // Two 429s with a two-second Retry-After each, then a success. Under
+        // Sleep::fake() the backoff costs no wall clock, but this pins the
+        // intent: retry waiting must never be counted as endpoint latency.
+        Http::fake([
+            'api.typesafe.ai/*' => Http::sequence()
+                ->push(['error' => 'slow down'], 429, ['Retry-After' => '2'])
+                ->push(['error' => 'slow down'], 429, ['Retry-After' => '2'])
+                ->push($this->successBody(), 200),
+        ]);
+
+        $result = $this->driver()->decide('state', $this->questions());
+
+        Http::assertSentCount(3);
+        Sleep::assertSlept(fn ($duration): bool => (int) $duration->totalMilliseconds === 2000, 2);
+        $this->assertLessThan(4000, $result->latencyMs);
+    }
+
+    #[Test]
+    public function latency_prefers_the_transfer_time_the_http_client_measured(): void
+    {
+        $response = Http::response($this->successBody());
+        Http::fake(['api.typesafe.ai/*' => $response]);
+
+        $result = $this->driver()->decide('state', $this->questions());
+
+        // Http::fake() supplies no transfer stats, so the driver falls back to
+        // the wall clock and still returns a usable number.
+        $this->assertGreaterThanOrEqual(0, $result->latencyMs);
+
+        $reflected = new \ReflectionMethod($this->driver(), 'latencyMs');
+        $fake = new \Illuminate\Http\Client\Response(new Response(200, [], '{}'));
+        $fake->transferStats = new TransferStats(
+            new \GuzzleHttp\Psr7\Request('POST', 'https://api.typesafe.ai/v1/systemone'),
+            null,
+            0.4321,
+        );
+
+        // 0.4321s of transfer time is reported as 432ms, whatever the wall clock said.
+        $this->assertSame(432, $reflected->invoke($this->driver(), $fake, hrtime(true) - 9_000_000_000));
     }
 
     /**
