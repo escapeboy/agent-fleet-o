@@ -607,44 +607,45 @@ value into `.env`, a compose file or a fixture.
 ### Running an eval end to end
 
 ```bash
-# 1. Build the dataset (reads production Phoenix traces over ssh).
-python3 base/scripts/jev-eval/export_routing_dataset.py
-#    -> ~/jev-eval/datasets/fleetq/routing.jsonl
+# 1. Build the datasets.
+python3 base/scripts/jev-eval/export_next_tool_dataset.py    # -> next-tool.jsonl
+python3 base/scripts/jev-eval/export_routing_v2_dataset.py   # -> routing-v2.jsonl + routing-v2-synth.jsonl
+#    both write into ~/jev-eval/datasets/fleetq/
 
-# 2. Make it reachable from the container (storage/ is bind-mounted).
+# 2. Make them reachable from the container (storage/ is bind-mounted).
 mkdir -p storage/app/jev-eval
-cp ~/jev-eval/datasets/fleetq/routing.jsonl storage/app/jev-eval/routing.jsonl
+cp ~/jev-eval/datasets/fleetq/*.jsonl storage/app/jev-eval/
 
 # 3. Run the eval. The key is injected by op, by name, for this process only.
 export OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/sa-token)
 
 op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
-  php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=jev --split=test --concurrency=8
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=jev --split=test --concurrency=8
 
 # 4. Report on the run id the eval printed.
 docker compose exec app php artisan jev:report <run-id> \
-  --dataset-path=storage/app/jev-eval/routing.jsonl
+  --dataset-path=storage/app/jev-eval/routing-v2.jsonl
 ```
 
 Measuring determinism — the same requests sent N times:
 
 ```bash
 op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
-  php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=jev --split=dev --repeat=3
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=jev --split=dev --repeat=3
 ```
 
 Comparing Jev against a chat model on the same dataset — the LLM drivers use the
 platform AI gateway, so they need no TypeSafe key:
 
 ```bash
-docker compose exec app php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=haiku --split=test
-docker compose exec app php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=sonnet --split=test
+docker compose exec app php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=haiku --split=test
+docker compose exec app php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=sonnet --split=test
 ```
 
 Without Docker, the same commands run directly:
 
 ```bash
-op run --env-file=.env.op -- php artisan jev:eval ~/jev-eval/datasets/fleetq/routing.jsonl --driver=jev --split=test
+op run --env-file=.env.op -- php artisan jev:eval ~/jev-eval/datasets/fleetq/routing-v2.jsonl --driver=jev --split=test
 op run --env-file=.env.op -- php artisan jev:report
 ```
 
@@ -671,11 +672,36 @@ JSONL, one case per line:
 {"id":"routing-006cbe1f682e","state":{...},"questions":{"domain":{"type":"choice","instructions":"...","criteria":{...}}},"gold":{"domain":"filesystem"},"meta":{"lang":"en","source":"phoenix:local_agent.tool","split":"test"}}
 ```
 
-`routing.jsonl` is one case per tool call an agent actually made inside a session
-belonging to an experiment that reached `completed`. The state carries the task
-brief and the steps already taken; the gold answer is the tool that was in fact
-chosen next. The assistant's own narration is deliberately excluded — it
+| File | What it measures | Gold comes from |
+|---|---|---|
+| `next-tool.jsonl` | next-tool prediction inside a coding loop | the tool the agent in fact called next |
+| `routing-v2.jsonl` | which FleetQ MCP domain handles a request | configuration, or a human's recorded choice |
+| `routing-v2-synth.jsonl` | the same question, on registry-phrased requests | the registry domain of the tool a description came from |
+
+`next-tool.jsonl` is one case per tool call an agent actually made inside a
+session belonging to an experiment that reached `completed`. The state carries
+the task brief and the steps already taken; the gold answer is the tool that was
+in fact chosen next. The assistant's own narration is deliberately excluded — it
 routinely names the next tool, which would turn routing into string extraction.
+This is agent behaviour, not FleetQ routing.
+
+`routing-v2.jsonl` never scores against what an agent decided. Each gold answer
+is a configuration fact or an explicit human choice already in the database:
+a user asked the assistant for something and it called tools from exactly one
+MCP domain (turns spanning two domains are dropped, because the gold would be
+ambiguous); a signal was routed into an experiment whose workflow template was
+configured; a human created an experiment and assigned a specific agent to it.
+`meta.source` records which, so a subset can be scored on its own. A single
+source task contributes at most 15 cases.
+
+`routing-v2-synth.jsonl` is generated from the tool registry's own descriptions
+to cover the domains production data never exercises. Every case carries
+`meta.source = "synthetic"` and it lives in its own file **so it is never mixed
+into headline numbers** — score it separately or not at all.
+
+The domain option list and its one-sentence descriptions are read out of the
+registry by `base/scripts/jev-eval/mcp_domain_registry.py`; add a tool group and
+the option appears on its own.
 
 ## Upgrading
 

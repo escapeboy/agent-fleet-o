@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build the agent-routing eval dataset from Phoenix traces.
+"""Build the next-tool-prediction eval dataset from Phoenix traces.
 
 One case per tool call the agent actually made, inside a session that belongs to
-an experiment that reached `completed`. The state holds the task brief and the
+an experiment that reached `completed`. This measures next-tool prediction inside
+a coding loop — it is NOT FleetQ domain routing; that is routing-v2.jsonl. The state holds the task brief and the
 steps already taken; the gold answer is the tool that was in fact chosen next.
 
 The assistant's own narration is deliberately left out of the state. It is
@@ -18,7 +19,7 @@ Usage
   # rebuild from dumps already on disk (no ssh)
   python3 export_routing_dataset.py --cache-dir /tmp/jev-export --from-cache
 
-Output: ~/jev-eval/datasets/fleetq/routing.jsonl
+Output: ~/jev-eval/datasets/fleetq/next-tool.jsonl
 """
 
 from __future__ import annotations
@@ -391,7 +392,7 @@ def main() -> int:
     parser.add_argument("--from-cache", action="store_true", help="skip ssh and rebuild from the dumps on disk")
     parser.add_argument(
         "--out",
-        default=os.path.expanduser("~/jev-eval/datasets/fleetq/routing.jsonl"),
+        default=os.path.expanduser("~/jev-eval/datasets/fleetq/next-tool.jsonl"),
         help="dataset path to write",
     )
     parser.add_argument("--min-cases", type=int, default=500)
