@@ -582,6 +582,101 @@ docker compose exec app php artisan test          # Run tests
 docker compose exec app php artisan migrate       # Run migrations
 ```
 
+## Decision-Model Eval Harness
+
+`jev:eval` scores a decision model — TypeSafe's Jev, a second System One
+endpoint, or an ordinary chat LLM — against a JSONL dataset, and `jev:report`
+turns the recorded answers into accuracy, calibration, coverage, latency, cost
+and determinism numbers. Nothing in the request path calls it: it is a
+measurement tool, not a production dependency.
+
+### The API key never touches the repo
+
+`TYPESAFE_API_KEY` lives in 1Password and reaches the process only through
+`op run`. `.env.op` (committed) holds the *reference*, never the value:
+
+```
+TYPESAFE_API_KEY="op://AI Agent/Jev API Key/credential"
+```
+
+Every command that calls the API is run through `op run`, which resolves the
+reference into the child process and masks it in the output. Do not pass
+`--no-masking`, do not `op read` the item into a variable, and do not write the
+value into `.env`, a compose file or a fixture.
+
+### Running an eval end to end
+
+```bash
+# 1. Build the dataset (reads production Phoenix traces over ssh).
+python3 base/scripts/jev-eval/export_routing_dataset.py
+#    -> ~/jev-eval/datasets/fleetq/routing.jsonl
+
+# 2. Make it reachable from the container (storage/ is bind-mounted).
+mkdir -p storage/app/jev-eval
+cp ~/jev-eval/datasets/fleetq/routing.jsonl storage/app/jev-eval/routing.jsonl
+
+# 3. Run the eval. The key is injected by op, by name, for this process only.
+export OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/sa-token)
+
+op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=jev --split=test --concurrency=8
+
+# 4. Report on the run id the eval printed.
+docker compose exec app php artisan jev:report <run-id> \
+  --dataset-path=storage/app/jev-eval/routing.jsonl
+```
+
+Measuring determinism — the same requests sent N times:
+
+```bash
+op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=jev --split=dev --repeat=3
+```
+
+Comparing Jev against a chat model on the same dataset — the LLM drivers use the
+platform AI gateway, so they need no TypeSafe key:
+
+```bash
+docker compose exec app php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=haiku --split=test
+docker compose exec app php artisan jev:eval storage/app/jev-eval/routing.jsonl --driver=sonnet --split=test
+```
+
+Without Docker, the same commands run directly:
+
+```bash
+op run --env-file=.env.op -- php artisan jev:eval ~/jev-eval/datasets/fleetq/routing.jsonl --driver=jev --split=test
+op run --env-file=.env.op -- php artisan jev:report
+```
+
+### Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--driver` | `jev` | A key from `config/decision.php`: `jev`, `jeff`, `haiku`, `sonnet` |
+| `--split` | `test` | `dev`, `test`, or `all`. 20/80, decided by a hash of the case id |
+| `--repeat` | `1` | Send each case N times; feeds the determinism column |
+| `--concurrency` | `8` | Cases in flight at once, for drivers that support batching |
+
+The run stays under Jev's published ceilings (1,200 requests/minute and 250,000
+tokens/second) on its own. A case whose state plus longest question is estimated
+over 32k tokens is **rejected and logged by id, never truncated** — a shortened
+state is a different case, and scoring it would move the accuracy number without
+saying so.
+
+### Datasets
+
+JSONL, one case per line:
+
+```json
+{"id":"routing-006cbe1f682e","state":{...},"questions":{"domain":{"type":"choice","instructions":"...","criteria":{...}}},"gold":{"domain":"filesystem"},"meta":{"lang":"en","source":"phoenix:local_agent.tool","split":"test"}}
+```
+
+`routing.jsonl` is one case per tool call an agent actually made inside a session
+belonging to an experiment that reached `completed`. The state carries the task
+brief and the steps already taken; the gold answer is the tool that was in fact
+chosen next. The assistant's own narration is deliberately excluded — it
+routinely names the next tool, which would turn routing into string extraction.
+
 ## Upgrading
 
 ```bash
