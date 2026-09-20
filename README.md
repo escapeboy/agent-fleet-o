@@ -599,6 +599,11 @@ measurement tool, not a production dependency.
 TYPESAFE_API_KEY="op://AI Agent/Jev API Key/credential"
 ```
 
+The baseline drivers follow the same rule — `.env.op` also carries references
+for `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` and
+`OPENAI_API_KEY`, and each command passes only the names it needs through
+`docker compose run -e`.
+
 Every command that calls the API is run through `op run`, which resolves the
 reference into the child process and masks it in the output. Do not pass
 `--no-masking`, do not `op read` the item into a variable, and do not write the
@@ -649,6 +654,21 @@ Anthropic at 60 requests per minute across the whole process, so the LLM drivers
 publish their own `requests_per_minute` and the eval throttles itself to it —
 two of these running flat out in parallel will still starve each other.
 
+`gemini-flash` and `gpt-mini` exist for one reason: on a dataset whose gold
+labels were produced by Claude models, an Anthropic baseline is scoring its own
+homework. A model family that had no hand in the labels is the only baseline
+that means anything there.
+
+When the metered Anthropic key is unavailable, `claude_cli_haiku` and
+`claude_cli_sonnet` run the same prompts through the local Claude Code CLI on
+its subscription credentials. They need no key, no `--team` and no gateway:
+
+```bash
+docker compose run --rm -v "$HOME/.claude/.credentials.json:/root/.claude/.credentials.json:ro" \
+  -e CLAUDE_CLI_CONCURRENCY=5 app \
+  php artisan jev:eval storage/app/jev-eval/topics-bg.jsonl --driver=claude_cli_sonnet --split=test
+```
+
 Without Docker, the same commands run directly:
 
 ```bash
@@ -662,7 +682,7 @@ op run --env-file=.env.op -- php artisan jev:report
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--driver` | `jev` | A key from `config/decision.php`: `jev`, `jeff`, `haiku`, `sonnet` |
+| `--driver` | `jev` | A key from `config/decision.php`: `jev`, `jeff`, `haiku`, `sonnet`, `gemini-flash`, `gpt-mini`, `claude_cli_haiku`, `claude_cli_sonnet` |
 | `--split` | `test` | `dev`, `test`, or `all`. 20/80, decided by a hash of the case id |
 | `--repeat` | `1` | Send each case N times; feeds the determinism columns |
 | `--concurrency` | `8` | Cases in flight at once, for drivers that support batching |
@@ -682,6 +702,14 @@ op run --env-file=.env.op -- php artisan jev:report
 
 Accuracy is printed with a 95% Wilson interval, which is what makes a
 per-source table readable when some sources have only a handful of cases.
+
+Each question type also gets its own block under the headline table:
+
+| Type | Extra metrics |
+|---|---|
+| Choice | top-2 accuracy (gold within the two highest-probability options), per-class precision / recall / F1, confusion pairs sorted by count |
+| Noul | precision, recall and F1 of the positive class at t=0.5, PR-AUC (average precision), and the gold positive rate printed next to accuracy |
+| Score | MAE on the level index, and binary accuracy for level 0 vs level > 0 |
 
 The run stays under Jev's published ceilings (1,200 requests/minute and 250,000
 tokens/second) on its own. A case whose state plus longest question is estimated

@@ -157,4 +157,124 @@ class JevReportCommandTest extends TestCase
         $this->assertStringContainsString('100.00%', $output);
         $this->assertStringContainsString('-0.6000', $output);
     }
+
+    #[Test]
+    public function it_reports_top_2_accuracy_per_class_scores_and_confusion_pairs_for_choice(): void
+    {
+        // Gold filesystem, argmax shell, but filesystem is the runner-up: wrong
+        // at top-1, right at top-2.
+        $this->row([
+            'answer' => ['type' => 'choice', 'choice' => 'shell'],
+            'probabilities' => ['shell' => 0.6, 'filesystem' => 0.3, 'web' => 0.1],
+            'gold' => 'filesystem',
+            'correct' => false,
+        ]);
+        $this->row([
+            'answer' => ['type' => 'choice', 'choice' => 'shell'],
+            'probabilities' => ['shell' => 0.7, 'web' => 0.2, 'filesystem' => 0.1],
+            'gold' => 'web',
+            'correct' => false,
+        ]);
+        $this->row();
+
+        $output = $this->report(['run_id' => $this->runId]);
+
+        $this->assertStringContainsString('top-2 accuracy: 100.00%  (3/3', $output);
+        $this->assertStringContainsString('per-class precision / recall / F1', $output);
+        $this->assertStringContainsString('confusion pairs', $output);
+        $this->assertStringContainsString('filesystem → shell', $output);
+        $this->assertStringContainsString('web → shell', $output);
+    }
+
+    #[Test]
+    public function it_reports_top_2_as_unavailable_without_probabilities(): void
+    {
+        $this->row(['probabilities' => null, 'confidence' => null]);
+
+        $output = $this->report(['run_id' => $this->runId]);
+
+        $this->assertStringContainsString('top-2 accuracy: n/a (no probabilities)', $output);
+    }
+
+    #[Test]
+    public function it_reports_positive_class_metrics_and_positive_rate_for_noul(): void
+    {
+        $noul = static fn (float $p, bool $gold, bool $correct): array => [
+            'question_id' => 'has_contractor',
+            'answer' => ['type' => 'noul', 'noul' => $p],
+            'probabilities' => null,
+            'confidence' => null,
+            'gold' => $gold,
+            'correct' => $correct,
+        ];
+
+        $this->row($noul(0.9, true, true));
+        $this->row($noul(0.8, true, true));
+        $this->row($noul(0.7, false, false));
+        $this->row($noul(0.1, false, true));
+
+        $output = $this->report(['run_id' => $this->runId]);
+
+        // 3/4 correct, gold positive in 2 of 4.
+        $this->assertStringContainsString('positive rate 50.00%', $output);
+        $this->assertStringContainsString('positive class (statement is true)', $output);
+        $this->assertStringContainsString('precision @ t=0.5', $output);
+        $this->assertStringContainsString('66.67% (2/3)', $output);
+        $this->assertStringContainsString('100.00% (2/2)', $output);
+        $this->assertStringContainsString('PR-AUC (average precision)', $output);
+        $this->assertStringContainsString('1.0000', $output);
+    }
+
+    #[Test]
+    public function it_reports_mae_and_binary_accuracy_for_score(): void
+    {
+        $score = static fn (float $value, int $gold, bool $correct): array => [
+            'question_id' => 'financial_impact',
+            'answer' => ['type' => 'score', 'score' => $value],
+            'probabilities' => null,
+            'confidence' => null,
+            'gold' => $gold,
+            'correct' => $correct,
+        ];
+
+        $this->row($score(0, 0, true));
+        $this->row($score(1, 3, false));   // off by 2, both sides positive
+        $this->row($score(2, 0, false));   // off by 2, crosses the 0 boundary
+
+        $output = $this->report(['run_id' => $this->runId]);
+
+        $this->assertStringContainsString('MAE (level index)', $output);
+        $this->assertStringContainsString('1.3333', $output);
+        $this->assertStringContainsString('binary accuracy (level 0 vs > 0)', $output);
+        $this->assertStringContainsString('66.67%  (2/3', $output);
+    }
+
+    #[Test]
+    public function it_scores_class_metrics_on_the_label_a_score_or_noul_answer_asserts(): void
+    {
+        // A Score answer is a position on the scale, not a level index, and a
+        // Noul answer is a probability, not a verdict. Comparing either raw
+        // against the gold label matches nothing and reports macro-F1 0.
+        $this->row([
+            'question_id' => 'financial_impact',
+            'answer' => ['type' => 'score', 'score' => 0.18],
+            'probabilities' => null,
+            'confidence' => 0.82,
+            'gold' => 0,
+            'correct' => true,
+        ]);
+        $this->row([
+            'question_id' => 'financial_impact',
+            'answer' => ['type' => 'score', 'score' => 2.9],
+            'probabilities' => null,
+            'confidence' => 0.7,
+            'gold' => 3,
+            'correct' => true,
+        ]);
+
+        $output = $this->report(['run_id' => $this->runId, '--questions' => 'financial_impact']);
+
+        $this->assertMatchesRegularExpression('/macro-F1\s+\|\s+1\.0000/', $output);
+        $this->assertDoesNotMatchRegularExpression('/macro-F1\s+\|\s+0\.0000/', $output);
+    }
 }

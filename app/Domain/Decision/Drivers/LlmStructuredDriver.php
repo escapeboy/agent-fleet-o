@@ -3,13 +3,10 @@
 namespace App\Domain\Decision\Drivers;
 
 use App\Domain\Decision\Contracts\DecisionModel;
-use App\Domain\Decision\DTOs\Answer;
-use App\Domain\Decision\DTOs\ChoiceAnswer;
 use App\Domain\Decision\DTOs\DecisionResult;
-use App\Domain\Decision\DTOs\NoulAnswer;
-use App\Domain\Decision\DTOs\ScoreAnswer;
 use App\Domain\Decision\Exceptions\DecisionRequestException;
 use App\Domain\Decision\Services\CredentialRedactor;
+use App\Domain\Decision\Services\StructuredDecisionPrompt;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Prism\Prism\Schema\ArraySchema;
@@ -60,8 +57,8 @@ class LlmStructuredDriver implements DecisionModel
             $response = $this->gateway->complete(new AiRequestDTO(
                 provider: $this->provider,
                 model: $this->model,
-                systemPrompt: $this->systemPrompt($questions),
-                userPrompt: $this->userPrompt($state),
+                systemPrompt: StructuredDecisionPrompt::system($questions),
+                userPrompt: StructuredDecisionPrompt::user($state),
                 maxTokens: $this->maxTokens,
                 outputSchema: $this->schema($questions),
                 teamId: $this->teamId,
@@ -76,31 +73,14 @@ class LlmStructuredDriver implements DecisionModel
 
         $latencyMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
 
-        $parsed = $response->parsedOutput ?? json_decode((string) $response->content, true);
+        $parsed = $response->parsedOutput
+            ?? StructuredDecisionPrompt::extractFirstJsonObject((string) $response->content);
 
         if (! is_array($parsed) || ! is_array($parsed['answers'] ?? null)) {
             throw new DecisionRequestException('LLM returned no parsable answers object.');
         }
 
-        $byId = [];
-
-        foreach ($parsed['answers'] as $entry) {
-            if (is_array($entry) && isset($entry['id'])) {
-                $byId[(string) $entry['id']] = $entry;
-            }
-        }
-
-        $answers = [];
-
-        foreach ($questions as $questionId => $question) {
-            $entry = $byId[(string) $questionId] ?? null;
-
-            if ($entry === null) {
-                continue;
-            }
-
-            $answers[(string) $questionId] = $this->mapAnswer((string) ($question['type'] ?? 'choice'), $question, $entry);
-        }
+        $answers = StructuredDecisionPrompt::answers($parsed, $questions);
 
         return new DecisionResult(
             answers: $answers,
@@ -111,52 +91,10 @@ class LlmStructuredDriver implements DecisionModel
     }
 
     /**
-     * @param  array<string, array<string, mixed>>  $questions
-     */
-    private function systemPrompt(array $questions): string
-    {
-        $spec = [];
-
-        foreach ($questions as $id => $question) {
-            $spec[] = [
-                'id' => (string) $id,
-                'type' => $question['type'] ?? 'choice',
-                'instructions' => $question['instructions'] ?? '',
-                'criteria' => $question['criteria'] ?? null,
-            ];
-        }
-
-        $json = json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        return <<<PROMPT
-        You answer typed questions about a state. You do not explain, you do not add prose.
-
-        Answer every question independently. Judge each one only against the state the
-        user supplies — never against another question's answer.
-
-        Question types:
-        - choice: pick exactly one key from that question's criteria object.
-        - score: return the index of the matching level in that question's criteria array, 0-based.
-        - noul: return how likely the statement is to be true, from 0.0 to 1.0.
-
-        For choice and score, also return `probabilities`: one entry per available
-        option, using the option key (choice) or the level index as a string (score).
-        They must sum to 1.0 and reflect how likely each option is, not how much you
-        like it. If you are genuinely torn between two options, say so in the numbers.
-
-        Questions:
-        {$json}
-        PROMPT;
-    }
-
-    private function userPrompt(array|string $state): string
-    {
-        return is_string($state)
-            ? $state
-            : (string) json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    }
-
-    /**
+     * Prism-specific: the structured-output schema the gateway enforces. The
+     * `claude -p` driver has no equivalent — it asks for the same shape in
+     * words and parses what comes back.
+     *
      * @param  array<string, array<string, mixed>>  $questions
      */
     private function schema(array $questions): ObjectSchema
@@ -197,78 +135,5 @@ class LlmStructuredDriver implements DecisionModel
             ],
             requiredFields: ['answers'],
         );
-    }
-
-    /**
-     * @param  array<string, mixed>  $question
-     * @param  array<string, mixed>  $entry
-     */
-    private function mapAnswer(string $type, array $question, array $entry): Answer
-    {
-        $value = (string) ($entry['value'] ?? '');
-        $probabilities = $this->normalizeProbabilities($entry['probabilities'] ?? null);
-        $confidence = $probabilities === null ? null : max($probabilities);
-
-        return match ($type) {
-            'noul' => new NoulAnswer(noul: (float) $value),
-            'score' => new ScoreAnswer(
-                score: (float) $value,
-                probabilities: $probabilities,
-                confidence: $confidence,
-                legend: $this->legend($question),
-            ),
-            default => new ChoiceAnswer(
-                choice: $value,
-                probabilities: $probabilities,
-                confidence: $confidence,
-            ),
-        };
-    }
-
-    /**
-     * @return array<string, float>|null
-     */
-    private function normalizeProbabilities(mixed $raw): ?array
-    {
-        if (! is_array($raw) || $raw === []) {
-            return null;
-        }
-
-        $map = [];
-
-        foreach ($raw as $item) {
-            if (is_array($item) && isset($item['option'])) {
-                $map[(string) $item['option']] = (float) ($item['probability'] ?? 0);
-            }
-        }
-
-        $sum = array_sum($map);
-
-        if ($map === [] || $sum <= 0) {
-            return null;
-        }
-
-        return array_map(static fn (float $p): float => $p / $sum, $map);
-    }
-
-    /**
-     * @param  array<string, mixed>  $question
-     * @return array<string, string>|null
-     */
-    private function legend(array $question): ?array
-    {
-        $criteria = $question['criteria'] ?? null;
-
-        if (! is_array($criteria) || ! array_is_list($criteria)) {
-            return null;
-        }
-
-        $legend = [];
-
-        foreach ($criteria as $index => $level) {
-            $legend[(string) $index] = is_string($level) ? $level : (string) json_encode($level);
-        }
-
-        return $legend;
     }
 }

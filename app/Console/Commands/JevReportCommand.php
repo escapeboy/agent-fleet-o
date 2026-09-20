@@ -23,6 +23,8 @@ class JevReportCommand extends Command
     /** @var array<float> */
     private const PRECISION_TARGETS = [0.95, 0.97, 0.99];
 
+    private const MAX_CONFUSION_PAIRS = 12;
+
     /** case id => dataset meta, loaded lazily and only when an option needs it */
     private array $caseMeta = [];
 
@@ -209,7 +211,7 @@ class JevReportCommand extends Command
 
         $this->table(['metric', 'value'], [
             ['decisions', (string) $group->count()],
-            ['accuracy', $this->accuracyWithInterval($scoring)],
+            ['accuracy', $this->accuracyCell($group, $scoring)],
             ['macro-F1', number_format(MetricsCalculator::macroF1($scoring), 4)],
             ['ECE (10 bins)', $calibration['scored'] > 0 ? number_format($calibration['ece'], 4) : 'n/a (no probabilities)'],
             ['latency p50', $this->ms(MetricsCalculator::percentile($latencies, 50))],
@@ -220,6 +222,8 @@ class JevReportCommand extends Command
             ['determinism (mean σ of p)', $this->determinismLabel($group, 'mean_stddev')],
             ['argmax flip rate across repeats', $this->determinismLabel($group, 'argmax_flip_rate')],
         ]);
+
+        $this->typeDetail($group, $scoring);
 
         if ($calibration['scored'] > 0) {
             $this->line('  reliability:');
@@ -258,6 +262,319 @@ class JevReportCommand extends Command
     }
 
     /**
+     * Accuracy alone says nothing on a Noul question until you know how often
+     * the gold answer is true — 90% accuracy on a question whose gold is false
+     * 90% of the time is the constant "no".
+     *
+     * @param  Collection<int, DecisionEval>  $group
+     * @param  list<array<string, mixed>>  $scoring
+     */
+    private function accuracyCell(Collection $group, array $scoring): string
+    {
+        $cell = $this->accuracyWithInterval($scoring);
+
+        if ($this->answerType($group) !== 'noul') {
+            return $cell;
+        }
+
+        $positives = $group->filter(fn (DecisionEval $r): bool => $this->goldIsTrue($r))->count();
+
+        return $cell.'  · positive rate '.$this->pct($group->count() > 0 ? $positives / $group->count() : 0.0);
+    }
+
+    /**
+     * @param  Collection<int, DecisionEval>  $group
+     */
+    private function answerType(Collection $group): string
+    {
+        $answer = $group->first()->answer ?? [];
+
+        return (string) ($answer['type'] ?? '');
+    }
+
+    private function goldIsTrue(DecisionEval $row): bool
+    {
+        /** @var mixed $gold */
+        $gold = $row->gold;
+
+        if (is_bool($gold)) {
+            return $gold;
+        }
+
+        if (is_numeric($gold)) {
+            return (float) $gold >= 0.5;
+        }
+
+        return is_string($gold) && filter_var($gold, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Per-question-type detail. The headline table is deliberately uniform so
+     * drivers stay comparable; everything that only makes sense for one answer
+     * type lives here.
+     *
+     * @param  Collection<int, DecisionEval>  $group
+     * @param  list<array<string, mixed>>  $scoring
+     */
+    private function typeDetail(Collection $group, array $scoring): void
+    {
+        match ($this->answerType($group)) {
+            'choice' => $this->choiceDetail($group, $scoring),
+            'noul' => $this->noulDetail($group),
+            'score' => $this->scoreDetail($group),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  Collection<int, DecisionEval>  $group
+     * @param  list<array<string, mixed>>  $scoring
+     */
+    private function choiceDetail(Collection $group, array $scoring): void
+    {
+        $scored = 0;
+        $hits = 0;
+
+        foreach ($group as $row) {
+            $probabilities = $row->probabilities;
+
+            if (! is_array($probabilities) || $probabilities === []) {
+                continue;
+            }
+
+            $ranked = array_map('floatval', $probabilities);
+            arsort($ranked);
+            $scored++;
+
+            if (in_array($row->goldLabel(), array_slice(array_keys($ranked), 0, 2), true)) {
+                $hits++;
+            }
+        }
+
+        if ($scored === 0) {
+            $this->line('  top-2 accuracy: n/a (no probabilities)');
+        } else {
+            $interval = MetricsCalculator::wilsonInterval($hits, $scored);
+            $this->line(sprintf(
+                '  top-2 accuracy: %s  (%d/%d, 95%% CI %s–%s)',
+                $this->pct($hits / $scored),
+                $hits,
+                $scored,
+                $this->pct($interval['low']),
+                $this->pct($interval['high']),
+            ));
+        }
+
+        $this->perClassTable($scoring);
+        $this->confusionTable($scoring);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $scoring
+     */
+    private function perClassTable(array $scoring): void
+    {
+        $labels = [];
+
+        foreach ($scoring as $row) {
+            $labels[(string) $row['gold']] = true;
+            $labels[(string) $row['predicted']] = true;
+        }
+
+        $rows = [];
+
+        foreach (array_keys($labels) as $key) {
+            // array_keys() returns an int for a numeric-string key.
+            $label = (string) $key;
+            $tp = $fp = $fn = 0;
+
+            foreach ($scoring as $row) {
+                $gold = (string) $row['gold'];
+                $predicted = (string) $row['predicted'];
+
+                if ($predicted === $label && $gold === $label) {
+                    $tp++;
+                } elseif ($predicted === $label) {
+                    $fp++;
+                } elseif ($gold === $label) {
+                    $fn++;
+                }
+            }
+
+            $precision = ($tp + $fp) > 0 ? $tp / ($tp + $fp) : 0.0;
+            $recall = ($tp + $fn) > 0 ? $tp / ($tp + $fn) : 0.0;
+            $f1 = ($precision + $recall) > 0 ? 2 * $precision * $recall / ($precision + $recall) : 0.0;
+
+            $rows[] = [$label === '' ? '(empty)' : $label, (string) ($tp + $fn), (string) ($tp + $fp), $this->pct($precision), $this->pct($recall), number_format($f1, 3)];
+        }
+
+        usort($rows, static fn (array $a, array $b): int => (int) $b[1] <=> (int) $a[1]);
+
+        $this->line('  per-class precision / recall / F1:');
+        $this->table(['class', 'gold n', 'predicted n', 'precision', 'recall', 'F1'], $rows);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $scoring
+     */
+    private function confusionTable(array $scoring): void
+    {
+        $pairs = [];
+
+        foreach ($scoring as $row) {
+            $gold = (string) $row['gold'];
+            $predicted = (string) $row['predicted'];
+
+            if ($gold === $predicted) {
+                continue;
+            }
+
+            $key = $gold.' → '.($predicted === '' ? '(empty)' : $predicted);
+            $pairs[$key] = ($pairs[$key] ?? 0) + 1;
+        }
+
+        if ($pairs === []) {
+            return;
+        }
+
+        arsort($pairs);
+
+        $rows = [];
+
+        foreach (array_slice($pairs, 0, self::MAX_CONFUSION_PAIRS, true) as $pair => $count) {
+            $rows[] = [$pair, (string) $count];
+        }
+
+        $this->line('  confusion pairs (gold → predicted), most frequent first:');
+        $this->table(['pair', 'n'], $rows);
+    }
+
+    /**
+     * @param  Collection<int, DecisionEval>  $group
+     */
+    private function noulDetail(Collection $group): void
+    {
+        $points = [];
+
+        foreach ($group as $row) {
+            $answer = $row->answer ?? [];
+            $points[] = [
+                'p' => (float) ($answer['noul'] ?? 0.0),
+                'gold' => $this->goldIsTrue($row),
+            ];
+        }
+
+        $tp = $fp = $fn = 0;
+
+        foreach ($points as $point) {
+            $predicted = $point['p'] >= 0.5;
+
+            if ($predicted && $point['gold']) {
+                $tp++;
+            } elseif ($predicted) {
+                $fp++;
+            } elseif ($point['gold']) {
+                $fn++;
+            }
+        }
+
+        $precision = ($tp + $fp) > 0 ? $tp / ($tp + $fp) : 0.0;
+        $recall = ($tp + $fn) > 0 ? $tp / ($tp + $fn) : 0.0;
+        $f1 = ($precision + $recall) > 0 ? 2 * $precision * $recall / ($precision + $recall) : 0.0;
+
+        $this->line('  positive class (statement is true):');
+        $this->table(['metric', 'value'], [
+            ['positive rate (gold)', $this->pct(count($points) > 0 ? ($tp + $fn) / count($points) : 0.0)],
+            ['precision @ t=0.5', $this->pct($precision)." ({$tp}/".($tp + $fp).')'],
+            ['recall @ t=0.5', $this->pct($recall)." ({$tp}/".($tp + $fn).')'],
+            ['F1 @ t=0.5', number_format($f1, 4)],
+            ['PR-AUC (average precision)', number_format($this->averagePrecision($points), 4)],
+        ]);
+    }
+
+    /**
+     * Average precision — the area under the precision/recall curve, computed
+     * by walking the cases in descending predicted probability and summing
+     * precision at every point where recall actually increases. Threshold-free,
+     * so it survives a driver whose probabilities are well ordered but badly
+     * scaled.
+     *
+     * @param  list<array{p: float, gold: bool}>  $points
+     */
+    private function averagePrecision(array $points): float
+    {
+        $positives = count(array_filter($points, static fn (array $p): bool => $p['gold']));
+
+        if ($positives === 0) {
+            return 0.0;
+        }
+
+        usort($points, static fn (array $a, array $b): int => $b['p'] <=> $a['p']);
+
+        $tp = 0;
+        $seen = 0;
+        $sum = 0.0;
+
+        foreach ($points as $point) {
+            $seen++;
+
+            if ($point['gold']) {
+                $tp++;
+                $sum += $tp / $seen;
+            }
+        }
+
+        return $sum / $positives;
+    }
+
+    /**
+     * @param  Collection<int, DecisionEval>  $group
+     */
+    private function scoreDetail(Collection $group): void
+    {
+        $absoluteError = 0.0;
+        $scored = 0;
+        $binaryCorrect = 0;
+
+        foreach ($group as $row) {
+            $answer = $row->answer ?? [];
+            /** @var mixed $gold */
+            $gold = $row->gold;
+
+            if (! is_numeric($gold)) {
+                continue;
+            }
+
+            $predicted = round((float) ($answer['score'] ?? 0.0));
+            $scored++;
+            $absoluteError += abs($predicted - (float) $gold);
+
+            if (($predicted > 0) === ((float) $gold > 0)) {
+                $binaryCorrect++;
+            }
+        }
+
+        if ($scored === 0) {
+            return;
+        }
+
+        $interval = MetricsCalculator::wilsonInterval($binaryCorrect, $scored);
+
+        $this->line('  ordered-level detail:');
+        $this->table(['metric', 'value'], [
+            ['MAE (level index)', number_format($absoluteError / $scored, 4)],
+            ['binary accuracy (level 0 vs > 0)', sprintf(
+                '%s  (%d/%d, 95%% CI %s–%s)',
+                $this->pct($binaryCorrect / $scored),
+                $binaryCorrect,
+                $scored,
+                $this->pct($interval['low']),
+                $this->pct($interval['high']),
+            )],
+        ]);
+    }
+
+    /**
      * Cases answer several questions in one request, so the request's input
      * tokens belong to all of them together. Splitting the cost evenly across a
      * request's questions is what makes "cost per 1k decisions" comparable
@@ -287,7 +604,7 @@ class JevReportCommand extends Command
     private function toScoringRow(DecisionEval $row): array
     {
         $answer = $row->answer ?? [];
-        $predicted = (string) ($answer['choice'] ?? $answer['score'] ?? $answer['noul'] ?? '');
+        [$predicted, $gold] = $this->labels($row, $answer);
         $probabilities = $row->probabilities;
 
         $predictedProbability = is_array($probabilities) && array_key_exists($predicted, $probabilities)
@@ -298,10 +615,42 @@ class JevReportCommand extends Command
             'correct' => (bool) $row->correct,
             'confidence' => $row->confidence ?? $predictedProbability,
             'predicted' => $predicted,
-            'gold' => $row->goldLabel(),
+            'gold' => $gold,
             'predicted_probability' => $predictedProbability,
             'latency_ms' => (int) $row->latency_ms,
         ];
+    }
+
+    /**
+     * The label pair every class-based metric compares — macro-F1, the
+     * per-class table, the confusion pairs.
+     *
+     * A Score answer is a continuous position on the scale (0.18), not a level,
+     * and a Noul answer is a probability (0.03), not a verdict. Comparing those
+     * raw against a gold level index or boolean never matches, which silently
+     * reported macro-F1 0.0000 next to 96% accuracy. Both sides are reduced to
+     * the label the answer actually asserts, the same way `jev:eval` scores
+     * correctness.
+     *
+     * @param  array<string, mixed>  $answer
+     * @return array{0: string, 1: string}
+     */
+    private function labels(DecisionEval $row, array $answer): array
+    {
+        /** @var mixed $gold */
+        $gold = $row->gold;
+
+        return match ((string) ($answer['type'] ?? '')) {
+            'score' => [
+                (string) (int) round((float) ($answer['score'] ?? 0.0)),
+                is_numeric($gold) ? (string) (int) round((float) $gold) : $row->goldLabel(),
+            ],
+            'noul' => [
+                (float) ($answer['noul'] ?? 0.0) >= 0.5 ? 'true' : 'false',
+                $this->goldIsTrue($row) ? 'true' : 'false',
+            ],
+            default => [(string) ($answer['choice'] ?? ''), $row->goldLabel()],
+        };
     }
 
     /**

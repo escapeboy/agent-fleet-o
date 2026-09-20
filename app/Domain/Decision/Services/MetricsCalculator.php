@@ -52,7 +52,11 @@ final class MetricsCalculator
 
         $scores = [];
 
-        foreach (array_keys($classes) as $class) {
+        // array_keys() hands back an int for any numeric-string key, and a Score
+        // question's classes ARE numeric ("0".."3"), so the comparison below
+        // must cast both sides or it never matches and macro-F1 reads 0.
+        foreach (array_keys($classes) as $key) {
+            $class = (string) $key;
             $tp = $fp = $fn = 0;
 
             foreach ($rows as $row) {

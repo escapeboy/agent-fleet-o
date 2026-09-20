@@ -3,6 +3,7 @@
 namespace App\Domain\Decision\Services;
 
 use App\Domain\Decision\Contracts\DecisionModel;
+use App\Domain\Decision\Drivers\ClaudeCliDriver;
 use App\Domain\Decision\Drivers\LlmStructuredDriver;
 use App\Domain\Decision\Drivers\SystemOneDriver;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -33,6 +34,12 @@ final class DecisionDriverFactory
                 maxTokens: (int) ($config['max_tokens'] ?? 2048),
                 temperature: (float) ($config['temperature'] ?? 0.0),
                 teamId: $teamId ?? (is_string(config('decision.team_id')) ? config('decision.team_id') : null),
+            ),
+            'cli' => new ClaudeCliDriver(
+                binary: (string) ($config['binary'] ?? 'claude'),
+                model: (string) $config['model'],
+                timeoutSeconds: (int) ($config['timeout'] ?? 180),
+                concurrency: (int) ($config['concurrency'] ?? 4),
             ),
             default => throw new InvalidArgumentException("Decision driver [{$name}] has no usable type."),
         };
