@@ -54,7 +54,7 @@
             <textarea
                 wire:model="testInput"
                 rows="4"
-                placeholder="Type your test input here. Use {{variable}} syntax if your prompt template has placeholders."
+                placeholder="Type your test input here. Use @{{variable}} syntax if your prompt template has placeholders."
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-primary-500 focus:ring-primary-500"
             ></textarea>
             @error('testInput')
