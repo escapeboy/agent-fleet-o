@@ -10984,12 +10984,6 @@ parameters:
 			path: app/Livewire/Admin/AiControlCenterPage.php
 
 		-
-			message: '#^Access to an undefined property App\\Livewire\\AgentSessions\\AgentSessionDetailPage\:\:\$session\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Livewire/AgentSessions/AgentSessionDetailPage.php
-
-		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1

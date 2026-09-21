@@ -92,6 +92,7 @@ use App\Mcp\Tools\AgentChatProtocol\ExternalAgentRefreshManifestTool;
 use App\Mcp\Tools\AgentChatProtocol\ExternalAgentUpdateTool;
 use App\Mcp\Tools\AgentSession\AgentSessionCancelTool;
 use App\Mcp\Tools\AgentSession\AgentSessionEventsTool;
+use App\Mcp\Tools\AgentSession\AgentSessionForkTool;
 use App\Mcp\Tools\AgentSession\AgentSessionGetTool;
 use App\Mcp\Tools\AgentSession\AgentSessionHandoffTool;
 use App\Mcp\Tools\AgentSession\AgentSessionListTool;
@@ -1413,6 +1414,7 @@ class AgentFleetServer extends Server
         AgentSessionSleepTool::class,
         AgentSessionCancelTool::class,
         AgentSessionHandoffTool::class,
+        AgentSessionForkTool::class,
         AgentSessionReplayTool::class,
 
         // Compute (1)
