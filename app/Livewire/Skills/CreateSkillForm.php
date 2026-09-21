@@ -104,6 +104,13 @@ class CreateSkillForm extends Component
 
     public string $consensusAggregation = 'majority';
 
+    // Decision (Jev and any other DecisionModel driver)
+    public string $decisionDriver = 'jev';
+
+    public string $decisionQuestions = '';
+
+    public ?float $decisionMinConfidence = null;
+
     /**
      * Self-serve registration of the bundled Boruna mcp_stdio binary as a Tool
      * for the current team. Invoked from the boruna_script panel banner when
@@ -130,7 +137,7 @@ class CreateSkillForm extends Component
     public function nextStep(): void
     {
         if ($this->step === 1) {
-            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
+            $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function,decision';
             if (config('browser.enabled', false)) {
                 $allowedTypes .= ',browser';
             }
@@ -188,7 +195,7 @@ class CreateSkillForm extends Component
     {
         Gate::authorize('edit-content');
 
-        $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function';
+        $allowedTypes = 'llm,connector,rule,hybrid,guardrail,multi_model_consensus,code_execution,gpu_compute,runpod_endpoint,runpod_pod,boruna_script,supabase_edge_function,decision';
         if (config('browser.enabled', false)) {
             $allowedTypes .= ',browser';
         }
@@ -199,6 +206,20 @@ class CreateSkillForm extends Component
             'type' => "required|in:{$allowedTypes}",
             'riskLevel' => 'required|in:low,medium,high,critical',
         ]);
+
+        if ($this->type === 'decision') {
+            // Caught here rather than at run time: a decision skill whose
+            // questions did not parse is saved with an empty config and then
+            // fails on every execution with a message about config, far from
+            // the typo that caused it.
+            $parsed = json_decode($this->decisionQuestions, true);
+
+            if (! is_array($parsed) || $parsed === []) {
+                $this->addError('decisionQuestions', 'Questions must be a non-empty JSON object.');
+
+                return;
+            }
+        }
 
         $team = auth()->user()->currentTeam;
 
@@ -238,6 +259,13 @@ class CreateSkillForm extends Component
                 'project_url' => $this->supabaseProjectUrl ?: null,
                 'function_name' => $this->supabaseFunctionName ?: null,
                 'anon_key' => $this->supabaseAnonKey ?: null,
+            ], fn ($v) => $v !== null);
+        } elseif ($this->type === 'decision') {
+            $questions = json_decode($this->decisionQuestions, true);
+            $configuration = array_filter([
+                'driver' => $this->decisionDriver ?: null,
+                'questions' => is_array($questions) ? $questions : null,
+                'min_confidence' => $this->decisionMinConfidence,
             ], fn ($v) => $v !== null);
         } elseif ($this->type === 'multi_model_consensus') {
             $configuration = array_filter([

@@ -54,6 +54,16 @@ return [
             'model' => env('TYPESAFE_MODEL', 'jev-1.13.0'),
             'timeout' => (float) env('TYPESAFE_TIMEOUT', 5.0),
             'retries' => (int) env('TYPESAFE_RETRIES', 3),
+
+            // BYOK: the `provider` value a team stores on TeamProviderCredential
+            // to run this driver on its own key instead of the platform's.
+            'credential_provider' => 'typesafe',
+
+            // Charged only when the call runs on the PLATFORM key. Flat per
+            // call, not derived from tokens: the wire format reports input
+            // tokens and no output tokens, so there is no output price to
+            // derive. 1 credit = $0.001.
+            'credits_per_call' => (int) env('TYPESAFE_CREDITS_PER_CALL', 2),
         ],
 
         'jeff' => [
@@ -63,6 +73,8 @@ return [
             'model' => env('JEFF_MODEL', 'jeff-1'),
             'timeout' => (float) env('JEFF_TIMEOUT', 5.0),
             'retries' => (int) env('JEFF_RETRIES', 3),
+            'credential_provider' => 'jeff',
+            'credits_per_call' => (int) env('JEFF_CREDITS_PER_CALL', 2),
         ],
 
         'haiku' => [

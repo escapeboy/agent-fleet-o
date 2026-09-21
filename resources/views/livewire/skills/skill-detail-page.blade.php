@@ -160,9 +160,19 @@
         </div>
 
         {{-- Tabs --}}
+        @php
+            // Presentation only. The real guard is in SkillPlaygroundRunAction
+            // and StartSkillBenchmarkAction, which the MCP tool also calls.
+            $gatewayBacked = $skill->type->usesPromptTemplate();
+            $tabs = ['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions'];
+            if ($gatewayBacked) {
+                $tabs['playground'] = 'Playground';
+                $tabs['benchmark'] = 'Benchmark';
+            }
+        @endphp
         <div class="mb-4 border-b border-gray-200">
             <nav class="-mb-px flex space-x-8 overflow-x-auto scrollbar-none">
-                @foreach(['overview' => 'Overview', 'versions' => 'Versions', 'executions' => 'Executions', 'playground' => 'Playground', 'benchmark' => 'Benchmark'] as $tab => $label)
+                @foreach($tabs as $tab => $label)
                     <button wire:click="$set('activeTab', '{{ $tab }}')"
                         class="whitespace-nowrap border-b-2 py-3 text-sm font-medium {{ $activeTab === $tab ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                         {{ $label }}
@@ -322,7 +332,7 @@
                 </table>
                 </div>
             </div>
-        @elseif($activeTab === 'playground')
+        @elseif($activeTab === 'playground' && $gatewayBacked)
             @php
                 $latestVersion = $versions->first();
             @endphp
@@ -338,7 +348,7 @@
                 </div>
             @endif
 
-        @elseif($activeTab === 'benchmark')
+        @elseif($activeTab === 'benchmark' && $gatewayBacked)
             {{-- ====== BENCHMARK TAB ====== --}}
             <div class="space-y-6">
 

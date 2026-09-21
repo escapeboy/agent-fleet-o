@@ -43,7 +43,7 @@ class SkillController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:llm,connector,rule,hybrid'],
+            'type' => ['required', 'in:llm,connector,rule,hybrid,decision'],
             'description' => ['sometimes', 'string'],
             'execution_type' => ['sometimes', 'in:sync,async'],
             'risk_level' => ['sometimes', 'in:low,medium,high,critical'],

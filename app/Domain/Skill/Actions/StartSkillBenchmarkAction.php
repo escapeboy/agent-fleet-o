@@ -10,6 +10,7 @@ use App\Domain\Skill\Models\SkillBenchmark;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Skill\Models\SkillVersion;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class StartSkillBenchmarkAction
 {
@@ -35,6 +36,15 @@ class StartSkillBenchmarkAction
         float $improvementThreshold = 0.0,
         array $settings = [],
     ): SkillBenchmark {
+        // Same reason as SkillPlaygroundRunAction: a benchmark measures a prompt
+        // template against the gateway, and a type that short-circuits before
+        // executeByType() has no template to measure.
+        if (! $skill->type->usesPromptTemplate()) {
+            throw new InvalidArgumentException(
+                "A benchmark measures a prompt template against the LLM gateway; a {$skill->type->value} skill has none.",
+            );
+        }
+
         // Resolve current best version for baseline measurement
         $currentVersion = SkillVersion::where('skill_id', $skill->id)
             ->orderByDesc('version')

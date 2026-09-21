@@ -223,6 +223,24 @@
                     <x-form-input wire:model="supabaseAnonKey" label="Anon Key" type="password"
                         hint="Supabase anon/public key — stored encrypted" />
                 </div>
+            @elseif($type === 'decision')
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        Decision Model — one call answers every question with a typed value and a confidence.
+                        No prose, no token pricing. Uses the team's own key when one is configured, otherwise
+                        the platform key.
+                    </div>
+
+                    <x-form-input wire:model="decisionDriver" label="Driver" type="text" placeholder="jev"
+                        hint="A driver name from config/decision.php" />
+
+                    <x-form-textarea wire:model="decisionQuestions" label="Questions (JSON)" rows="8" mono
+                        placeholder='{"is_urgent":{"type":"choice","instructions":"Is this urgent?","criteria":["yes","no"]}}'
+                        hint="A map of question id to a typed question. The skill's input supplies the state." />
+
+                    <x-form-input wire:model="decisionMinConfidence" label="Minimum confidence" type="number"
+                        placeholder="0.7" hint="Answers below this are listed in low_confidence; leave empty to skip the check." />
+                </div>
             @elseif($type === 'multi_model_consensus')
                 <div class="space-y-4">
                     <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800">
@@ -423,6 +441,11 @@
                         <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
                             <dt class="text-sm font-medium text-gray-500">Function</dt>
                             <dd class="text-sm text-gray-900 sm:col-span-2">{{ $supabaseFunctionName ?: '—' }} @ {{ $supabaseProjectUrl ?: '—' }}</dd>
+                        </div>
+                    @elseif($type === 'decision')
+                        <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <dt class="text-sm font-medium text-gray-500">Decision</dt>
+                            <dd class="text-sm text-gray-900 sm:col-span-2">{{ $decisionDriver ?: '—' }}, {{ is_array(json_decode($decisionQuestions, true)) ? count(json_decode($decisionQuestions, true)) : 0 }} question(s)</dd>
                         </div>
                     @elseif($type === 'multi_model_consensus')
                         <div class="py-2 sm:grid sm:grid-cols-3 sm:gap-4">

@@ -64,6 +64,10 @@ class SkillBenchmarkController extends Controller
             );
         } catch (BenchmarkAlreadyRunningException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
+        } catch (\InvalidArgumentException $e) {
+            // Skill type has no prompt template to benchmark — a bad request,
+            // not a server fault.
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         return response()->json($benchmark, 201);

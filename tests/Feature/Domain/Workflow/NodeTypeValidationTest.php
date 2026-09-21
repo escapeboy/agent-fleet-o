@@ -5,6 +5,7 @@ namespace Tests\Feature\Domain\Workflow;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
+use App\Domain\Workflow\Jobs\ExecuteWorkflowNodeJob;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
@@ -16,6 +17,25 @@ use Tests\TestCase;
 class NodeTypeValidationTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * MaterializeWorkflowAction only creates a PlaybookStep for a node whose type
+     * says createsStep(). A type with an executor but without that flag is dropped
+     * during materialization and never runs — which is what happened to `decision`.
+     */
+    public function test_every_node_type_with_an_executor_also_creates_a_step(): void
+    {
+        foreach (WorkflowNodeType::cases() as $type) {
+            if (! ExecuteWorkflowNodeJob::handles($type)) {
+                continue;
+            }
+
+            $this->assertTrue(
+                $type->createsStep(),
+                "{$type->value} has an executor but createsStep() is false, so it is dropped during materialization.",
+            );
+        }
+    }
 
     public function test_port_schema_defined_for_all_node_types(): void
     {

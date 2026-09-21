@@ -127,7 +127,7 @@ class SkillOpsPage extends Component
                 complexityPenalty: $this->benchComplexityPenalty,
                 improvementThreshold: $this->benchImprovementThreshold,
             );
-        } catch (BenchmarkAlreadyRunningException $e) {
+        } catch (BenchmarkAlreadyRunningException|\InvalidArgumentException $e) {
             session()->flash('benchmark_error', $e->getMessage());
 
             return;

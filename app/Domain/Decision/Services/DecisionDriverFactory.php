@@ -17,13 +17,20 @@ final class DecisionDriverFactory
         private readonly AiGatewayInterface $gateway,
     ) {}
 
-    public function make(string $name, ?string $teamId = null): DecisionModel
+    /**
+     * @param  array<string, mixed>  $overrides  Config keys replaced for this build —
+     *                                           how DecisionDriverResolver swaps the
+     *                                           platform key for a team's own.
+     */
+    public function make(string $name, ?string $teamId = null, array $overrides = []): DecisionModel
     {
         $config = config("decision.drivers.{$name}");
 
         if (! is_array($config)) {
             throw new InvalidArgumentException("Unknown decision driver [{$name}].");
         }
+
+        $config = array_merge($config, $overrides);
 
         return match ($config['type'] ?? null) {
             'system_one' => $this->systemOne($name, $config),

@@ -77,8 +77,8 @@ class SkillPlaygroundTestTool extends Tool
                 'cache_ttl_seconds' => 300,
                 'cache_key_pattern' => "skill_playground:{$teamId}:{$runId}:{modelId}",
             ]));
-        } catch (\Throwable $e) {
-            throw $e;
+        } catch (\InvalidArgumentException $e) {
+            return $this->invalidArgumentError($e->getMessage());
         }
     }
 }
