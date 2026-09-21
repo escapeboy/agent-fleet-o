@@ -178,7 +178,7 @@ class PrismAiGateway implements AiGatewayInterface
             ->withSystemPrompt($request->systemPrompt)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
-            ->usingTemperature($request->temperature)
+            ->usingTemperature($this->temperatureFor($request))
             ->withClientOptions(['timeout' => 120])
             ->asStream();
 
@@ -262,7 +262,7 @@ class PrismAiGateway implements AiGatewayInterface
             ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
-            ->usingTemperature($request->temperature)
+            ->usingTemperature($this->temperatureFor($request))
             ->withClientOptions(['timeout' => 120])
             ->withClientRetry(2, 500)
             ->withTools($tools)
@@ -361,7 +361,7 @@ class PrismAiGateway implements AiGatewayInterface
                 ->withSystemPrompt($request->systemPrompt)
                 ->withPrompt($request->userPrompt)
                 ->withMaxTokens($request->maxTokens)
-                ->usingTemperature($request->temperature)
+                ->usingTemperature($this->temperatureFor($request))
                 ->withSchema($request->outputSchema)
                 ->withClientOptions(['timeout' => 120])
                 ->withClientRetry(2, 500)
@@ -390,7 +390,7 @@ class PrismAiGateway implements AiGatewayInterface
             ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
-            ->usingTemperature($request->temperature)
+            ->usingTemperature($this->temperatureFor($request))
             ->withClientOptions(['timeout' => 120])
             ->withClientRetry(2, 500);
 
@@ -938,5 +938,26 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         return false;
+    }
+
+    /**
+     * Sampling parameters were removed from the newer Anthropic models: sending
+     * `temperature` to Opus 4.7+, Sonnet 5, Fable 5 or Mythos 5 comes back as
+     * `400 invalid_request_error - temperature is deprecated for this model`.
+     * Older models still take it, so it is decided per model rather than
+     * dropped for everyone. Prism omits the parameter when it is null.
+     */
+    private function temperatureFor(AiRequestDTO $request): ?float
+    {
+        if ($request->provider !== 'anthropic') {
+            return $request->temperature;
+        }
+
+        $rejectsSampling = (bool) preg_match(
+            '/(opus-(4-7|4-8|5)|sonnet-5|fable-5|mythos-5)/i',
+            $request->model,
+        );
+
+        return $rejectsSampling ? null : $request->temperature;
     }
 }

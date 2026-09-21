@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $agent_id
  * @property string|null $experiment_id
  * @property string|null $crew_execution_id
+ * @property string|null $parent_session_id
+ * @property int|null $forked_at_seq
  * @property string|null $user_id
  * @property AgentSessionStatus $status
  * @property Carbon|null $started_at
@@ -44,6 +46,8 @@ class AgentSession extends Model
         'agent_id',
         'experiment_id',
         'crew_execution_id',
+        'parent_session_id',
+        'forked_at_seq',
         'user_id',
         'status',
         'started_at',
@@ -58,6 +62,7 @@ class AgentSession extends Model
     {
         return [
             'status' => AgentSessionStatus::class,
+            'forked_at_seq' => 'integer',
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
@@ -84,6 +89,24 @@ class AgentSession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Session this one was forked from. Null both for roots and for forks whose
+     * parent has since been pruned by CleanupAgentSessionEvents — check
+     * forked_at_seq to tell the two apart.
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_session_id');
+    }
+
+    /**
+     * @return HasMany<AgentSession, $this>
+     */
+    public function forks(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_session_id')->latest();
     }
 
     /**
