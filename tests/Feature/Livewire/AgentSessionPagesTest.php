@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Livewire;
 
+use App\Domain\AgentSession\Actions\AppendSessionEventAction;
+use App\Domain\AgentSession\Enums\AgentSessionEventKind;
 use App\Domain\AgentSession\Enums\AgentSessionStatus;
 use App\Domain\AgentSession\Models\AgentSession;
 use App\Domain\Shared\Models\Team;
@@ -81,5 +83,73 @@ class AgentSessionPagesTest extends TestCase
 
         $session->refresh();
         $this->assertSame(AgentSessionStatus::Sleeping, $session->status);
+    }
+
+    public function test_unauthorized_fork_aborts(): void
+    {
+        $session = $this->makeSession($this->team);
+        $this->appendNotes($session, 2);
+
+        Gate::define('edit-content', fn () => false);
+
+        Livewire::test(AgentSessionDetailPage::class, ['agentSession' => $session->id])
+            ->set('forkAtSeq', 1)
+            ->call('fork')
+            ->assertForbidden();
+
+        $this->assertSame(0, AgentSession::withoutGlobalScopes()
+            ->where('parent_session_id', $session->id)->count());
+    }
+
+    public function test_fork_creates_a_child_and_redirects_to_it(): void
+    {
+        $session = $this->makeSession($this->team);
+        $this->appendNotes($session, 3);
+
+        Livewire::test(AgentSessionDetailPage::class, ['agentSession' => $session->id])
+            ->call('openForkModal')
+            ->assertSet('forkAtSeq', 3)
+            ->set('forkAtSeq', 2)
+            ->call('fork')
+            ->assertHasNoErrors();
+
+        $child = AgentSession::withoutGlobalScopes()
+            ->where('parent_session_id', $session->id)->firstOrFail();
+
+        $this->assertSame(2, $child->forked_at_seq);
+        $this->assertSame(AgentSessionStatus::Pending, $child->status);
+        $this->assertSame($this->team->id, $child->team_id);
+
+        // The child's page renders the lineage block pointing back at the parent,
+        // and the parent's page lists the child.
+        Livewire::test(AgentSessionDetailPage::class, ['agentSession' => $child->id])
+            ->assertSee('Lineage')
+            ->assertSee($session->id);
+
+        Livewire::test(AgentSessionDetailPage::class, ['agentSession' => $session->id])
+            ->assertSee('Forks of this session')
+            ->assertSee($child->id);
+    }
+
+    public function test_fork_surfaces_an_out_of_range_seq_as_a_field_error(): void
+    {
+        $session = $this->makeSession($this->team);
+        $this->appendNotes($session, 2);
+
+        Livewire::test(AgentSessionDetailPage::class, ['agentSession' => $session->id])
+            ->set('forkAtSeq', 99)
+            ->call('fork')
+            ->assertHasErrors('forkAtSeq');
+
+        $this->assertSame(0, AgentSession::withoutGlobalScopes()
+            ->where('parent_session_id', $session->id)->count());
+    }
+
+    private function appendNotes(AgentSession $session, int $count): void
+    {
+        $append = app(AppendSessionEventAction::class);
+        for ($i = 1; $i <= $count; $i++) {
+            $append->execute($session, AgentSessionEventKind::Note, ['step' => $i]);
+        }
     }
 }

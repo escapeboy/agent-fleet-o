@@ -3,6 +3,7 @@
 namespace App\Livewire\AgentSessions;
 
 use App\Domain\AgentSession\Actions\CancelAgentSessionAction;
+use App\Domain\AgentSession\Actions\ForkAgentSessionAction;
 use App\Domain\AgentSession\Actions\ReplayAgentSessionAction;
 use App\Domain\AgentSession\Actions\WakeAgentSessionAction;
 use App\Domain\AgentSession\Models\AgentSession;
@@ -10,11 +11,18 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/**
+ * @property-read AgentSession $session Resolved by the #[Computed] session() method
+ */
 class AgentSessionDetailPage extends Component
 {
     public string $sessionId;
 
     public bool $showCancelConfirm = false;
+
+    public bool $showForkModal = false;
+
+    public ?int $forkAtSeq = null;
 
     public function mount(string $agentSession): void
     {
@@ -46,6 +54,35 @@ class AgentSessionDetailPage extends Component
         session()->flash('message', 'Session woken — recent context rehydrated.');
     }
 
+    public function openForkModal(): void
+    {
+        $this->forkAtSeq = $this->session->lastSeq() ?: null;
+        $this->showForkModal = true;
+    }
+
+    public function fork(): void
+    {
+        Gate::authorize('edit-content');
+
+        try {
+            $result = app(ForkAgentSessionAction::class)->execute(
+                source: $this->session,
+                atSeq: $this->forkAtSeq,
+                note: 'Forked from admin panel',
+            );
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            $this->addError('forkAtSeq', $e->getMessage());
+
+            return;
+        }
+
+        $this->showForkModal = false;
+        unset($this->session);
+        session()->flash('message', "Forked at seq {$result['forked_at_seq']} — {$result['copied_events']} events copied into the new session.");
+
+        $this->redirectRoute('agent-sessions.show', ['agentSession' => $result['child']->id], navigate: true);
+    }
+
     public function cancel(): void
     {
         Gate::authorize('edit-content');
@@ -72,6 +109,8 @@ class AgentSessionDetailPage extends Component
         return view('livewire.agent-sessions.agent-session-detail-page', [
             'replay' => $replay,
             'events' => $events,
+            'parentSession' => $this->session->parent,
+            'forks' => $this->session->forks()->get(['id', 'status', 'forked_at_seq', 'created_at']),
         ])->layout('layouts.app', ['header' => 'Agent Session']);
     }
 }
