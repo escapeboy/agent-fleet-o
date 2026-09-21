@@ -71,7 +71,7 @@ class WorkflowNodeDispatcher
 
             if ($nodeType === 'crew') {
                 $jobs[] = new ExecuteCrewWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
-            } elseif (in_array($nodeType, ['llm', 'http_request', 'parameter_extractor', 'variable_aggregator', 'template_transform', 'knowledge_retrieval'], true)) {
+            } elseif (ExecuteWorkflowNodeJob::handles($nodeType)) {
                 $jobs[] = new ExecuteWorkflowNodeJob($step->id, $experiment->id, $experiment->team_id);
             } else {
                 $jobs[] = new ExecutePlaybookStepJob($step->id, $experiment->id, $experiment->team_id);

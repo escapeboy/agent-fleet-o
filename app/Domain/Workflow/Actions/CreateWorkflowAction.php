@@ -49,6 +49,7 @@ class CreateWorkflowAction
             }
 
             $createdNodes = [];
+            $nodesByClientId = [];
 
             foreach ($nodes as $index => $nodeData) {
                 $createdNodes[$index] = WorkflowNode::create([
@@ -64,11 +65,15 @@ class CreateWorkflowAction
                     'config' => $nodeData['config'] ?? [],
                     'order' => $index,
                 ]);
+
+                if (isset($nodeData['id']) && is_string($nodeData['id'])) {
+                    $nodesByClientId[$nodeData['id']] = $createdNodes[$index];
+                }
             }
 
             foreach ($edges as $edgeData) {
-                $sourceNode = $createdNodes[$edgeData['source_node_index']] ?? null;
-                $targetNode = $createdNodes[$edgeData['target_node_index']] ?? null;
+                $sourceNode = $this->resolveEdgeNode($edgeData, 'source', $createdNodes, $nodesByClientId);
+                $targetNode = $this->resolveEdgeNode($edgeData, 'target', $createdNodes, $nodesByClientId);
 
                 if (! $sourceNode || ! $targetNode) {
                     continue;
@@ -97,5 +102,29 @@ class CreateWorkflowAction
         WorkflowSaved::dispatch($workflow);
 
         return $workflow;
+    }
+
+    /**
+     * Resolve one end of an edge to a created node.
+     *
+     * Two edge shapes are in circulation: the API and the generators send
+     * `source_node_index`, while the visual builder sends the client-side
+     * `source_node_id` it also puts on the nodes. Creating a workflow from the
+     * builder used to abort on the missing index key, so a new graph with any
+     * edge in it could not be saved.
+     *
+     * @param  array<string, mixed>  $edge
+     * @param  array<int|string, WorkflowNode>  $byIndex
+     * @param  array<string, WorkflowNode>  $byClientId
+     */
+    private function resolveEdgeNode(array $edge, string $side, array $byIndex, array $byClientId): ?WorkflowNode
+    {
+        if (isset($edge[$side.'_node_index'])) {
+            return $byIndex[$edge[$side.'_node_index']] ?? null;
+        }
+
+        $clientId = $edge[$side.'_node_id'] ?? null;
+
+        return is_string($clientId) ? ($byClientId[$clientId] ?? null) : null;
     }
 }

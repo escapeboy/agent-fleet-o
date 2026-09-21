@@ -8,6 +8,7 @@ use App\Domain\Workflow\Contracts\NodeExecutorInterface;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Executors\BitbucketPrMergeNodeExecutor;
 use App\Domain\Workflow\Executors\ClassifyPrTierNodeExecutor;
+use App\Domain\Workflow\Executors\DecisionNodeExecutor;
 use App\Domain\Workflow\Executors\HttpRequestNodeExecutor;
 use App\Domain\Workflow\Executors\KnowledgeRetrievalNodeExecutor;
 use App\Domain\Workflow\Executors\LlmNodeExecutor;
@@ -28,15 +29,37 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Lightweight job for executing non-agent workflow nodes:
- * llm, http_request, parameter_extractor, variable_aggregator,
- * template_transform, knowledge_retrieval.
+ * Lightweight job for executing non-agent workflow nodes. The authoritative
+ * list is self::EXECUTORS.
  *
  * Agent and crew nodes continue to use ExecutePlaybookStepJob.
  */
 class ExecuteWorkflowNodeJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * Node types this job executes, keyed by the enum's backing value.
+     *
+     * WorkflowNodeDispatcher reads this through handles() rather than keeping
+     * its own list. It used to keep one, and three executors (external_agent,
+     * classify_pr_tier, bitbucket_pr_merge) were added here without it — those
+     * nodes were routed to ExecutePlaybookStepJob, which expects an agent.
+     *
+     * @var array<string, class-string<NodeExecutorInterface>>
+     */
+    private const EXECUTORS = [
+        'llm' => LlmNodeExecutor::class,
+        'http_request' => HttpRequestNodeExecutor::class,
+        'parameter_extractor' => ParameterExtractorNodeExecutor::class,
+        'variable_aggregator' => VariableAggregatorNodeExecutor::class,
+        'template_transform' => TemplateTransformNodeExecutor::class,
+        'knowledge_retrieval' => KnowledgeRetrievalNodeExecutor::class,
+        'external_agent' => ExternalAgentNodeExecutor::class,
+        'decision' => DecisionNodeExecutor::class,
+        'classify_pr_tier' => ClassifyPrTierNodeExecutor::class,
+        'bitbucket_pr_merge' => BitbucketPrMergeNodeExecutor::class,
+    ];
 
     public int $tries = 2;
 
@@ -154,19 +177,19 @@ class ExecuteWorkflowNodeJob implements ShouldQueue
         }
     }
 
+    /**
+     * Whether this job can execute the given node type.
+     */
+    public static function handles(WorkflowNodeType|string $type): bool
+    {
+        return isset(self::EXECUTORS[$type instanceof WorkflowNodeType ? $type->value : $type]);
+    }
+
     private function resolveExecutor(WorkflowNodeType $type): NodeExecutorInterface
     {
-        return match ($type) {
-            WorkflowNodeType::Llm => app(LlmNodeExecutor::class),
-            WorkflowNodeType::HttpRequest => app(HttpRequestNodeExecutor::class),
-            WorkflowNodeType::ParameterExtractor => app(ParameterExtractorNodeExecutor::class),
-            WorkflowNodeType::VariableAggregator => app(VariableAggregatorNodeExecutor::class),
-            WorkflowNodeType::TemplateTransform => app(TemplateTransformNodeExecutor::class),
-            WorkflowNodeType::KnowledgeRetrieval => app(KnowledgeRetrievalNodeExecutor::class),
-            WorkflowNodeType::ExternalAgent => app(ExternalAgentNodeExecutor::class),
-            WorkflowNodeType::ClassifyPrTier => app(ClassifyPrTierNodeExecutor::class),
-            WorkflowNodeType::BitbucketPrMerge => app(BitbucketPrMergeNodeExecutor::class),
-            default => throw new \InvalidArgumentException("No executor for node type: {$type->value}"),
-        };
+        $class = self::EXECUTORS[$type->value]
+            ?? throw new \InvalidArgumentException("No executor for node type: {$type->value}");
+
+        return app($class);
     }
 }

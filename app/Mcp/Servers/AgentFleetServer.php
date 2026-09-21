@@ -224,6 +224,7 @@ use App\Mcp\Tools\Crew\CrewMemberUpdatePolicyTool;
 use App\Mcp\Tools\Crew\CrewProposeRestructuringTool;
 use App\Mcp\Tools\Crew\CrewSendMessageTool;
 use App\Mcp\Tools\Crew\CrewUpdateTool;
+use App\Mcp\Tools\Decision\DecisionAskTool;
 use App\Mcp\Tools\Email\EmailTemplateCreateTool;
 use App\Mcp\Tools\Email\EmailTemplateDeleteTool;
 use App\Mcp\Tools\Email\EmailTemplateGenerateTool;
@@ -1416,6 +1417,9 @@ class AgentFleetServer extends Server
         AgentSessionHandoffTool::class,
         AgentSessionForkTool::class,
         AgentSessionReplayTool::class,
+
+        // Decision models (1) — typed answers, not text
+        DecisionAskTool::class,
 
         // Compute (1)
         ComputeManageTool::class,

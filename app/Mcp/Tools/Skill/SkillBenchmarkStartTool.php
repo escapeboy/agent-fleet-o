@@ -93,6 +93,8 @@ class SkillBenchmarkStartTool extends Tool
             );
         } catch (BenchmarkAlreadyRunningException $e) {
             throw $e;
+        } catch (\InvalidArgumentException $e) {
+            return $this->invalidArgumentError($e->getMessage());
         }
 
         return Response::text(json_encode([

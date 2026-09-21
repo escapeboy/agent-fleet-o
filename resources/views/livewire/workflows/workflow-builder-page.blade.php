@@ -184,6 +184,12 @@
                     </span>
                     Knowledge Retrieval
                 </button>
+                <button @click="addNode('decision')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-amber-300 hover:bg-amber-50">
+                    <span class="flex h-6 w-6 items-center justify-center rounded bg-amber-100 text-amber-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v18m0-18L5 9m7-6l7 6M3 9l3 6a3 3 0 006 0l-3-6m9 0l3 6a3 3 0 01-6 0l3-6"/></svg>
+                    </span>
+                    Decision
+                </button>
                 <button @click="addNode('boruna_step')" class="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm hover:border-fuchsia-300 hover:bg-fuchsia-50">
                     <span class="flex h-6 w-6 items-center justify-center rounded bg-fuchsia-100 text-fuchsia-600">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -771,6 +777,88 @@
                             </div>
                         </template>
 
+                        <template x-if="selectedNode.type === 'decision'">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">State</label>
+                                    <textarea x-model="selectedNode.config.state" @input="syncToLivewire()" rows="3"
+                                              placeholder="What the model should judge. Use @{{input}} or @{{node-id.field}} from prior steps."
+                                              class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+                                </div>
+
+                                <div x-data="{
+                                    questionsError: '',
+                                    get questionsText() {
+                                        const q = selectedNode.config?.questions;
+                                        if (!q) return '';
+                                        try { return JSON.stringify(q, null, 2); } catch { return ''; }
+                                    },
+                                    onQuestionsInput(val) {
+                                        if (!val.trim()) {
+                                            this.questionsError = '';
+                                            if (selectedNode.config) delete selectedNode.config.questions;
+                                            syncToLivewire();
+                                            return;
+                                        }
+                                        try {
+                                            const parsed = JSON.parse(val);
+                                            this.questionsError = '';
+                                            if (!selectedNode.config) selectedNode.config = {};
+                                            selectedNode.config.questions = parsed;
+                                            syncToLivewire();
+                                        } catch (e) {
+                                            this.questionsError = e.message;
+                                        }
+                                    }
+                                }">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="text-xs font-medium text-gray-600">Questions (JSON)</label>
+                                        <button type="button"
+                                                @click="
+                                                    if (!selectedNode.config) selectedNode.config = {};
+                                                    selectedNode.config.questions = {is_urgent:{type:'choice',instructions:'Is this urgent?',criteria:['yes','no']}};
+                                                    questionsError = '';
+                                                    syncToLivewire();
+                                                    $nextTick(() => { $refs.questionsTa.value = JSON.stringify(selectedNode.config.questions, null, 2); });
+                                                "
+                                                class="text-[10px] text-primary-600 hover:text-primary-700">
+                                            Insert template
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        x-ref="questionsTa"
+                                        :value="questionsText"
+                                        @input.debounce.400ms="onQuestionsInput($event.target.value)"
+                                        rows="6"
+                                        placeholder='{"is_urgent":{"type":"choice","instructions":"...","criteria":["yes","no"]}}'
+                                        class="w-full rounded-lg border px-3 py-1.5 text-sm font-mono focus:ring-primary-500"
+                                        :class="questionsError ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-primary-500'"></textarea>
+                                    <p x-show="questionsError" x-text="questionsError" class="mt-1 text-[10px] text-red-600"></p>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Driver</label>
+                                        <input type="text" x-model="selectedNode.config.driver" @input="syncToLivewire()"
+                                               placeholder="jev"
+                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Min confidence</label>
+                                        <input type="number" step="0.05" min="0" max="1" x-model="selectedNode.config.min_confidence" @input="syncToLivewire()"
+                                               placeholder="0.7"
+                                               class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                                    </div>
+                                </div>
+
+                                <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
+                                    One call answers every question with a typed value and a confidence. Branch with
+                                    edge conditions on <code>answers.&lt;id&gt;.value</code>, and route anything listed in
+                                    <code>low_confidence</code> to a human task.
+                                </div>
+                            </div>
+                        </template>
+
                         <template x-if="selectedNode.type === 'template_transform'">
                             <div class="space-y-3">
                                 <div>
@@ -1053,7 +1141,7 @@ Alpine.data('workflowBuilder', (initialNodes, initialEdges, agents, skills, crew
         if (this.isExecutionMode) return;
         this.nodeCounter++;
         const id = 'node-' + Date.now() + '-' + this.nodeCounter;
-        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', time_gate: 'Time Gate', merge: 'Merge', sub_workflow: 'Sub-Workflow', end: 'End' };
+        const labels = { agent: 'Agent ' + this.nodeCounter, crew: 'Crew ' + this.nodeCounter, conditional: 'Condition', human_task: 'Human Task ' + this.nodeCounter, switch: 'Switch', do_while: 'Do While', dynamic_fork: 'Dynamic Fork', time_gate: 'Time Gate', merge: 'Merge', sub_workflow: 'Sub-Workflow', decision: 'Decision', end: 'End' };
 
         this.localNodes.push({
             id: id,

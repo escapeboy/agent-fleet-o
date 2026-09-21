@@ -27,6 +27,7 @@ enum WorkflowNodeType: string
     case Iteration = 'iteration';
     case WorkflowRef = 'workflow_ref';
     case SignalRoute = 'signal_route';
+    case Decision = 'decision';
     case ExternalAgent = 'external_agent';
     case ClassifyPrTier = 'classify_pr_tier';
     case BitbucketPrMerge = 'bitbucket_pr_merge';
@@ -57,6 +58,7 @@ enum WorkflowNodeType: string
             self::Iteration => 'Iteration',
             self::WorkflowRef => 'Workflow Reference',
             self::SignalRoute => 'Signal Route',
+            self::Decision => 'Decision',
             self::ExternalAgent => 'External Agent',
             self::ClassifyPrTier => 'Classify PR Tier',
             self::BitbucketPrMerge => 'Merge Bitbucket PR',
@@ -89,6 +91,7 @@ enum WorkflowNodeType: string
             self::Iteration => 'arrows-pointing-in',
             self::WorkflowRef => 'arrow-top-right-on-square',
             self::SignalRoute => 'signal',
+            self::Decision => 'scale',
             self::ExternalAgent => 'link',
             self::ClassifyPrTier => 'tag',
             self::BitbucketPrMerge => 'check-circle',
@@ -277,6 +280,7 @@ enum WorkflowNodeType: string
             self::ExternalAgent,
             self::ClassifyPrTier,
             self::BitbucketPrMerge,
+            self::Decision,
         ]);
     }
 }

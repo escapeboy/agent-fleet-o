@@ -42,6 +42,7 @@ class ExecuteSkillAction
         private readonly ExecuteGpuComputeSkillAction $executeGpuCompute,
         private readonly ExecuteBorunaScriptSkillAction $executeBorunaScript,
         private readonly ExecuteSupabaseEdgeFunctionSkillAction $executeSupabaseEdgeFunction,
+        private readonly ExecuteDecisionSkillAction $executeDecisionSkill,
     ) {}
 
     public function execute(
@@ -191,14 +192,18 @@ class ExecuteSkillAction
      */
     private function delegateSpecializedType(Skill $skill, array $input, string $teamId, string $userId, ?string $agentId, ?string $experimentId): ?array
     {
+        // Enum arms, not ->value: Skill casts `type` to SkillType, so matching
+        // against the backing strings never fired and every specialized type fell
+        // through to executeByType's LogicException arm, recorded as a failed run.
         $delegate = match ($skill->type) {
-            SkillType::CodeExecution->value => $this->executeCodeExecution,
-            SkillType::Browser->value => $this->executeBrowserSkill,
-            SkillType::RunpodEndpoint->value => $this->executeRunPod,
-            SkillType::RunpodPod->value => $this->executeRunPodPod,
-            SkillType::GpuCompute->value => $this->executeGpuCompute,
-            SkillType::BorunaScript->value => $this->executeBorunaScript,
-            SkillType::SupabaseEdgeFunction->value => $this->executeSupabaseEdgeFunction,
+            SkillType::CodeExecution => $this->executeCodeExecution,
+            SkillType::Browser => $this->executeBrowserSkill,
+            SkillType::RunpodEndpoint => $this->executeRunPod,
+            SkillType::RunpodPod => $this->executeRunPodPod,
+            SkillType::GpuCompute => $this->executeGpuCompute,
+            SkillType::BorunaScript => $this->executeBorunaScript,
+            SkillType::SupabaseEdgeFunction => $this->executeSupabaseEdgeFunction,
+            SkillType::Decision => $this->executeDecisionSkill,
             default => null,
         };
 
@@ -455,7 +460,7 @@ class ExecuteSkillAction
             SkillType::Rule => $this->executeRuleSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::Guardrail => $this->executeLlmSkill($skill, $input, $provider, $model, $teamId, $userId, $agentId, $experimentId),
             SkillType::MultiModelConsensus => $this->executeMultiModelConsensusSkill($skill, $input, $teamId, $userId, $agentId, $experimentId),
-            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute, SkillType::BorunaScript => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, GpuCompute, and BorunaScript skill types must be short-circuited before reaching executeByType.'),
+            SkillType::CodeExecution, SkillType::Browser, SkillType::RunpodEndpoint, SkillType::RunpodPod, SkillType::GpuCompute, SkillType::BorunaScript, SkillType::Decision => throw new \LogicException('CodeExecution, Browser, RunpodEndpoint, RunpodPod, GpuCompute, BorunaScript, and Decision skill types must be short-circuited before reaching executeByType.'),
         };
     }
 

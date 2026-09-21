@@ -53,8 +53,13 @@ trait InterpolatesTemplates
             ->get();
 
         foreach ($completedSteps as $completedStep) {
-            if ($completedStep->workflow_node_id && is_array($completedStep->output)) {
-                $context[$completedStep->workflow_node_id] = $completedStep->output;
+            // getAttribute(), not ->output: the column is text and PlaybookStep
+            // carries no @property for the 'array' cast, so static analysis reads
+            // the accessor as string|null and calls the is_array() check dead.
+            $output = $completedStep->getAttribute('output');
+
+            if ($completedStep->workflow_node_id && is_array($output)) {
+                $context[$completedStep->workflow_node_id] = $output;
             }
         }
 

@@ -10,6 +10,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
  * Executes a skill prompt against one or more models sequentially and writes
@@ -40,6 +41,15 @@ class SkillPlaygroundRunAction
         string $teamId,
         string $userId,
     ): string {
+        // The guard lives here, not in the Blade: the UI tab, the MCP tool
+        // skill_playground_test and any future caller all come through this
+        // method, and hiding a tab guards nothing.
+        if (! $skill->type->usesPromptTemplate()) {
+            throw new InvalidArgumentException(
+                "The playground runs a prompt template through the LLM gateway; a {$skill->type->value} skill has none.",
+            );
+        }
+
         $runId = Str::uuid()->toString();
 
         // Build the rendered user prompt by substituting {{variable}} placeholders
