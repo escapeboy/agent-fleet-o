@@ -582,6 +582,203 @@ docker compose exec app php artisan test          # Run tests
 docker compose exec app php artisan migrate       # Run migrations
 ```
 
+## Decision-Model Eval Harness
+
+`jev:eval` scores a decision model — TypeSafe's Jev, a second System One
+endpoint, or an ordinary chat LLM — against a JSONL dataset, and `jev:report`
+turns the recorded answers into accuracy, calibration, coverage, latency, cost
+and determinism numbers. Nothing in the request path calls it: it is a
+measurement tool, not a production dependency.
+
+### The API key never touches the repo
+
+`TYPESAFE_API_KEY` lives in 1Password and reaches the process only through
+`op run`. `.env.op` (committed) holds the *reference*, never the value:
+
+```
+TYPESAFE_API_KEY="op://AI Agent/Jev API Key/credential"
+```
+
+The baseline drivers follow the same rule — `.env.op` also carries references
+for `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` and
+`OPENAI_API_KEY`, and each command passes only the names it needs through
+`docker compose run -e`.
+
+Every command that calls the API is run through `op run`, which resolves the
+reference into the child process and masks it in the output. Do not pass
+`--no-masking`, do not `op read` the item into a variable, and do not write the
+value into `.env`, a compose file or a fixture.
+
+### Running an eval end to end
+
+```bash
+# 1. Build the datasets.
+python3 base/scripts/jev-eval/export_next_tool_dataset.py    # -> next-tool.jsonl
+python3 base/scripts/jev-eval/export_routing_v2_dataset.py   # -> routing-v2.jsonl + routing-v2-synth.jsonl
+python3 base/scripts/jev-eval/export_domain_prefilter_dataset.py  # -> domain-prefilter.jsonl
+#    both write into ~/jev-eval/datasets/fleetq/
+
+# 2. Make them reachable from the container (storage/ is bind-mounted).
+mkdir -p storage/app/jev-eval
+cp ~/jev-eval/datasets/fleetq/*.jsonl storage/app/jev-eval/
+
+# 3. Run the eval. The key is injected by op, by name, for this process only.
+export OP_SERVICE_ACCOUNT_TOKEN=$(cat ~/.config/op/sa-token)
+
+op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=jev --split=test --concurrency=8
+
+# 4. Report on the run id the eval printed.
+docker compose exec app php artisan jev:report <run-id> \
+  --dataset-path=storage/app/jev-eval/routing-v2.jsonl
+```
+
+Measuring determinism — the same requests sent N times:
+
+```bash
+op run --env-file=.env.op -- docker compose run --rm -e TYPESAFE_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=jev --split=dev --repeat=3
+```
+
+Comparing Jev against a chat model on the same dataset — the LLM drivers use the
+platform AI gateway, so they need no TypeSafe key:
+
+```bash
+op run --env-file=.env.op -- docker compose run --rm -e ANTHROPIC_API_KEY app \
+  php artisan jev:eval storage/app/jev-eval/routing-v2.jsonl --driver=haiku --split=test --team=<team-id>
+```
+
+`--team` is required: the gateway logs every call to the tenant-scoped
+`llm_request_logs`, and an eval has no tenant of its own. The gateway also caps
+Anthropic at 60 requests per minute across the whole process, so the LLM drivers
+publish their own `requests_per_minute` and the eval throttles itself to it —
+two of these running flat out in parallel will still starve each other.
+
+`gemini-flash` and `gpt-mini` exist for one reason: on a dataset whose gold
+labels were produced by Claude models, an Anthropic baseline is scoring its own
+homework. A model family that had no hand in the labels is the only baseline
+that means anything there.
+
+When the metered Anthropic key is unavailable, `claude_cli_haiku` and
+`claude_cli_sonnet` run the same prompts through the local Claude Code CLI on
+its subscription credentials. They need no key, no `--team` and no gateway:
+
+```bash
+docker compose run --rm -v "$HOME/.claude/.credentials.json:/root/.claude/.credentials.json:ro" \
+  -e CLAUDE_CLI_CONCURRENCY=5 app \
+  php artisan jev:eval storage/app/jev-eval/topics-bg.jsonl --driver=claude_cli_sonnet --split=test
+```
+
+Without Docker, the same commands run directly:
+
+```bash
+op run --env-file=.env.op -- php artisan jev:eval ~/jev-eval/datasets/fleetq/routing-v2.jsonl --driver=jev --split=test
+op run --env-file=.env.op -- php artisan jev:report
+```
+
+### Options
+
+`jev:eval`:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--driver` | `jev` | A key from `config/decision.php`: `jev`, `jeff`, `haiku`, `sonnet`, `gemini-flash`, `gpt-mini`, `claude_cli_haiku`, `claude_cli_sonnet` |
+| `--split` | `test` | `dev`, `test`, or `all`. 20/80, decided by a hash of the case id |
+| `--repeat` | `1` | Send each case N times; feeds the determinism columns |
+| `--concurrency` | `8` | Cases in flight at once, for drivers that support batching |
+| `--limit` | `0` | Stop after N cases, taken in file order so two drivers stay comparable |
+| `--team` | — | Team the LLM drivers log their gateway calls under (required for `haiku`/`sonnet`) |
+
+`jev:report`:
+
+| Option | Meaning |
+|---|---|
+| `run_id...` | One or more runs; several put different drivers in one table set |
+| `--group-by=meta.source` | Split every table by a dataset meta key |
+| `--where=meta.source=assistant_turn` | Keep only cases matching a meta key (comma-separated values allowed) |
+| `--questions=domain` | Report only these question ids |
+| `--multi-label` | Score each case as one label SET (Noul per label) instead of per question |
+| `--dataset-path=` | The dataset file; required by `--group-by`, `--where` and the variant analysis |
+
+Accuracy is printed with a 95% Wilson interval, which is what makes a
+per-source table readable when some sources have only a handful of cases.
+
+Each question type also gets its own block under the headline table:
+
+| Type | Extra metrics |
+|---|---|
+| Choice | top-2 accuracy (gold within the two highest-probability options), per-class precision / recall / F1, confusion pairs sorted by count |
+| Noul | precision, recall and F1 of the positive class at t=0.5, PR-AUC (average precision), and the gold positive rate printed next to accuracy |
+| Score | MAE on the level index, and binary accuracy for level 0 vs level > 0 |
+
+The run stays under Jev's published ceilings (1,200 requests/minute and 250,000
+tokens/second) on its own. A case whose state plus longest question is estimated
+over 32k tokens is **rejected and logged by id, never truncated** — a shortened
+state is a different case, and scoring it would move the accuracy number without
+saying so.
+
+### Datasets
+
+JSONL, one case per line:
+
+```json
+{"id":"routing-006cbe1f682e","state":{...},"questions":{"domain":{"type":"choice","instructions":"...","criteria":{...}}},"gold":{"domain":"filesystem"},"meta":{"lang":"en","source":"phoenix:local_agent.tool","split":"test"}}
+```
+
+| File | What it measures | Gold comes from |
+|---|---|---|
+| `next-tool.jsonl` | next-tool prediction inside a coding loop | the tool the agent in fact called next |
+| `routing-v2.jsonl` | which FleetQ MCP domain handles a request | configuration, or a human's recorded choice |
+| `routing-v2-synth.jsonl` | the same question, on registry-phrased requests | the registry domain of the tool a description came from |
+| `domain-prefilter.jsonl` | which domains can be ruled out (multi-label) | every MCP domain the assistant drew a tool from in that turn |
+
+`next-tool.jsonl` is one case per tool call an agent actually made inside a
+session belonging to an experiment that reached `completed`. The state carries
+the task brief and the steps already taken; the gold answer is the tool that was
+in fact chosen next. The assistant's own narration is deliberately excluded — it
+routinely names the next tool, which would turn routing into string extraction.
+This is agent behaviour, not FleetQ routing.
+
+`routing-v2.jsonl` never scores against what an agent decided. Each gold answer
+is a configuration fact or an explicit human choice already in the database:
+a user asked the assistant for something and it called tools from exactly one
+MCP domain (turns spanning two domains are dropped, because the gold would be
+ambiguous); a signal was routed into an experiment whose workflow template was
+configured; a human created an experiment and assigned a specific agent to it.
+`meta.source` records which, so a subset can be scored on its own. A single
+source task contributes at most 15 cases.
+
+`routing-v2-synth.jsonl` is generated from the tool registry's own descriptions
+to cover the domains production data never exercises. Every case carries
+`meta.source = "synthetic"` and it lives in its own file **so it is never mixed
+into headline numbers** — score it separately or not at all.
+
+`domain-prefilter.jsonl` asks a different question from routing-v2: not "which
+one domain handles this" but "which domains can be ruled out" — the shape a
+prefilter in front of a 700-tool MCP server needs. One Noul per domain, all 67
+in a single request, gold true for every domain the turn drew a tool from.
+Multi-domain turns are kept here, because a turn spanning two domains is a
+correct multi-label answer rather than an ambiguous one. Score it with
+`jev:report --multi-label`, which sweeps the threshold and reports the tightest
+prefilter that still keeps essentially every true label.
+
+**On routing-v2 headline numbers:** only the `assistant_turn` source belongs in
+one. The `signal_workflow` and `experiment_agent` sources encode a
+configuration fact that the request text cannot support — a Sentry bug report
+reads like a `signal` whatever the tenant configured it to trigger — and
+`model_tier` has a single value across every case where prod data can derive it.
+Report those per source, never merged:
+
+```bash
+docker compose exec app php artisan jev:report <run-id> \
+  --dataset-path=storage/app/jev-eval/routing-v2.jsonl \
+  --where=meta.source=assistant_turn --questions=domain
+```
+
+The domain option list and its one-sentence descriptions are read out of the
+registry by `base/scripts/jev-eval/mcp_domain_registry.py`; add a tool group and
+the option appears on its own.
+
 ## Upgrading
 
 ```bash

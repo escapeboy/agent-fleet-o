@@ -34,6 +34,8 @@ class ProviderHasApiKeyTest extends TestCase
             'ai.providers.openai.api_key' => null,
             'ai.providers.gemini.key' => null,
             'ai.providers.gemini.api_key' => null,
+            'ai.providers.google.key' => null,
+            'ai.providers.google.api_key' => null,
             'services.anthropic.key' => null,
             'services.anthropic' => null,
             'services.openai.key' => null,
@@ -167,6 +169,80 @@ class ProviderHasApiKeyTest extends TestCase
                 $this->invoke($provider),
                 "providerHasApiKey({$provider}) should return true when ai.providers.{$provider}.key is set",
             );
+        }
+    }
+
+    /**
+     * The gateway calls the provider 'google' (PrismAiGateway::resolveProvider
+     * maps it to Provider::Gemini) but the key is GEMINI_API_KEY. When
+     * config/ai.php declared only 'gemini', this lookup found nothing, the
+     * chain skipped Google before ever calling it, and a valid key surfaced as
+     * "No available providers in fallback chain".
+     */
+    public function test_google_resolves_the_gemini_key_from_the_config_file(): void
+    {
+        $config = $this->aiConfigWith(['GEMINI_API_KEY' => 'gemini-key-from-env']);
+
+        $this->assertArrayHasKey('google', $config['providers']);
+        $this->assertSame('gemini', $config['providers']['google']['driver']);
+        $this->assertSame('gemini-key-from-env', $config['providers']['google']['key']);
+    }
+
+    public function test_google_falls_back_to_the_google_ai_key_name(): void
+    {
+        // An empty GEMINI_API_KEY in .env is a string, not null, so an env()
+        // default would never fire — hence `?:` in the config.
+        $config = $this->aiConfigWith([
+            'GEMINI_API_KEY' => '',
+            'GOOGLE_AI_API_KEY' => 'google-ai-key-from-env',
+        ]);
+
+        $this->assertSame('google-ai-key-from-env', $config['providers']['google']['key']);
+    }
+
+    public function test_fallback_chain_accepts_google_when_the_gemini_key_is_configured(): void
+    {
+        config(['ai.providers.google.key' => 'gemini-key']);
+
+        $this->assertTrue($this->invoke('google'));
+    }
+
+    public function test_fallback_chain_still_skips_google_with_no_key_anywhere(): void
+    {
+        $this->assertFalse($this->invoke('google'));
+    }
+
+    /**
+     * Re-reads the real config/ai.php under a given environment, so the test
+     * guards the file rather than a value this test set itself.
+     *
+     * @param  array<string, string>  $env
+     * @return array<string, mixed>
+     */
+    private function aiConfigWith(array $env): array
+    {
+        $restore = [];
+
+        foreach ($env as $name => $value) {
+            $restore[$name] = getenv($name);
+            putenv("{$name}={$value}");
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
+
+        try {
+            return require base_path('config/ai.php');
+        } finally {
+            foreach ($restore as $name => $value) {
+                if ($value === false) {
+                    putenv($name);
+                    unset($_ENV[$name], $_SERVER[$name]);
+                } else {
+                    putenv("{$name}={$value}");
+                    $_ENV[$name] = $value;
+                    $_SERVER[$name] = $value;
+                }
+            }
         }
     }
 }

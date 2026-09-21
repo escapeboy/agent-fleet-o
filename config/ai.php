@@ -102,6 +102,20 @@ return [
             'key' => env('GEMINI_API_KEY'),
         ],
 
+        // The gateway's canonical provider name for Gemini is 'google' — see
+        // PrismAiGateway::resolveProvider(), which maps 'google' to
+        // Provider::Gemini. The key, though, lives under GEMINI_API_KEY.
+        // Without this alias FallbackAiGateway::providerHasApiKey('google')
+        // finds nothing, skips the provider before it is ever called, and the
+        // chain exhausts with "No available providers in fallback chain" even
+        // when the key is valid — a silent failover hole, not a missing key.
+        // `?:` rather than an env() default: an empty GEMINI_API_KEY in .env is
+        // a string, so a default would never fire.
+        'google' => [
+            'driver' => 'gemini',
+            'key' => env('GEMINI_API_KEY') ?: env('GOOGLE_AI_API_KEY'),
+        ],
+
         'groq' => [
             'driver' => 'groq',
             'key' => env('GROQ_API_KEY'),
