@@ -103,6 +103,10 @@ services:
         condition: service_healthy
 
   scheduler:
+    # Run under an init that reaps finished processes. `php artisan schedule:work` as PID 1
+    # never reaps runInBackground() tasks: they pile up as zombies until the container's pids
+    # limit is hit and every task fails with exit code 2 (pinporn, 28,733 zombies, 2026-09).
+    init: true
     build:
       context: .
       dockerfile: docker/php/Dockerfile
