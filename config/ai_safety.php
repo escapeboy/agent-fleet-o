@@ -142,7 +142,15 @@ return [
     */
     'tool_output_scan' => [
         'enabled' => env('AI_TOOL_OUTPUT_SCAN_ENABLED', false),
-        'scanners' => ['prompt_injection', 'jailbreak', 'invisible_chars'],
+        // jailbreak is left out on purpose: its patterns (e.g. the bare word
+        // "jailbreak") target what a user types, and fire on ordinary documents
+        // about the topic. Tool output is third-party content.
+        'scanners' => ['prompt_injection', 'invisible_chars'],
+        // Joiners (ZWJ in emoji, ZWNJ), bidi controls and a leading BOM are normal
+        // in web pages; tag characters, zero-width spaces and word joiners still match.
+        'scanner_options' => [
+            'invisible_chars' => ['allow_text_marks' => true],
+        ],
         // Window size for scanning; longer output is scanned in overlapping windows.
         'max_scan_chars' => (int) env('AI_TOOL_OUTPUT_SCAN_MAX_CHARS', 200000),
     ],
