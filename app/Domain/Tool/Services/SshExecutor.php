@@ -71,7 +71,8 @@ class SshExecutor
 
         $credential->touchLastUsed();
 
-        $output = $ssh->exec($command);
+        // phpseclib4 exec() returns ?string (null when the channel yields nothing).
+        $output = (string) $ssh->exec($command);
         $exitCode = $ssh->getExitStatus();
 
         $durationMs = (int) round(microtime(true) * 1000) - $startMs;
