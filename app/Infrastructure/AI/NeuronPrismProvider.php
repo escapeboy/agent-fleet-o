@@ -8,10 +8,12 @@ use Generator;
 use NeuronAI\Chat\Messages\AssistantMessage;
 use NeuronAI\Chat\Messages\Message;
 use NeuronAI\Chat\Messages\Stream\Chunks\TextChunk;
+use NeuronAI\Chat\Messages\SystemMessage;
 use NeuronAI\Chat\Messages\Usage;
 use NeuronAI\HttpClient\HttpClientInterface;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\Providers\MessageMapperInterface;
+use NeuronAI\Providers\ProviderResponse;
 use NeuronAI\Providers\ToolMapperInterface;
 use NeuronAI\Tools\ToolInterface;
 use NeuronAI\UniqueIdGenerator;
@@ -45,9 +47,14 @@ class NeuronPrismProvider implements AIProviderInterface
         private readonly ?int $thinkingBudget = null,
     ) {}
 
-    public function systemPrompt(?string $prompt): AIProviderInterface
+    public function getModel(): string
     {
-        $this->storedSystemPrompt = $prompt;
+        return $this->model;
+    }
+
+    public function systemPrompt(SystemMessage|string|null $prompt): AIProviderInterface
+    {
+        $this->storedSystemPrompt = $prompt instanceof SystemMessage ? $prompt->getContent() : $prompt;
 
         return $this;
     }
@@ -82,7 +89,7 @@ class NeuronPrismProvider implements AIProviderInterface
         };
     }
 
-    public function chat(Message ...$messages): Message
+    public function chat(Message ...$messages): ProviderResponse
     {
         [$systemExtra, $userPrompt] = $this->buildPromptParts($messages);
 
@@ -107,14 +114,14 @@ class NeuronPrismProvider implements AIProviderInterface
         $message = AssistantMessage::make($response->content);
         $message->setUsage(new Usage($response->usage->promptTokens, $response->usage->completionTokens));
 
-        return $message;
+        return new ProviderResponse(message: $message);
     }
 
     /**
      * Yield the response as a single text chunk (Prism doesn't support true streaming
      * through the bridge — the gateway complete() call returns the full response).
      *
-     * @return Generator<int, TextChunk, mixed, Message>
+     * @return Generator<int, TextChunk, mixed, ProviderResponse>
      */
     public function stream(Message ...$messages): Generator
     {
@@ -150,7 +157,7 @@ class NeuronPrismProvider implements AIProviderInterface
         $message = AssistantMessage::make($content);
         $message->setUsage(new Usage($response->usage->promptTokens, $response->usage->completionTokens));
 
-        return $message;
+        return new ProviderResponse(message: $message);
     }
 
     /**
@@ -160,7 +167,7 @@ class NeuronPrismProvider implements AIProviderInterface
      *
      * @param  Message|Message[]  $messages
      */
-    public function structured(array|Message $messages, string $class, array $response_schema): Message
+    public function structured(array|Message $messages, string $class, array $response_schema): ProviderResponse
     {
         $msgs = is_array($messages) ? $messages : [$messages];
         [$systemExtra, $userPrompt] = $this->buildPromptParts($msgs);
@@ -190,7 +197,7 @@ class NeuronPrismProvider implements AIProviderInterface
         $message = AssistantMessage::make($response->content);
         $message->setUsage(new Usage($response->usage->promptTokens, $response->usage->completionTokens));
 
-        return $message;
+        return new ProviderResponse(message: $message);
     }
 
     public function setHttpClient(HttpClientInterface $client): AIProviderInterface

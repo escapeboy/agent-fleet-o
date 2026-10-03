@@ -27,9 +27,6 @@ class PrismEmbeddingsProvider extends AbstractEmbeddingsProvider
 
     public function embedDocument(Document $document): Document
     {
-        $text = $document->content;
-        $document->embedding = $this->embedText($text);
-
-        return $document;
+        return $document->setEmbedding($this->embedText($document->getContent()));
     }
 }
