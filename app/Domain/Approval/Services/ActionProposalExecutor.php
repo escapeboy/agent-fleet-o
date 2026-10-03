@@ -12,7 +12,9 @@ use App\Domain\GitRepository\Services\GitOperationRouter;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
+use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolApprovalGate;
+use App\Domain\Tool\Services\ToolDefinitionPinner;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
 use Prism\Prism\ValueObjects\ToolError;
@@ -22,8 +24,8 @@ use RuntimeException;
 
 /**
  * Resolves an approved ActionProposal back to a concrete operation and
- * runs it. Supports tool_call (assistant), agent_tool_call, integration_action
- * and git_push; other types throw
+ * runs it. Supports tool_call (assistant), agent_tool_call, integration_action,
+ * git_push and mcp_tool_definitions; other types throw
  * an unsupported error and the caller marks the proposal as
  * ExecutionFailed.
  */
@@ -41,12 +43,37 @@ class ActionProposalExecutor
         return match ($proposal->target_type) {
             'tool_call' => $this->executeToolCall($proposal, $actor),
             ToolApprovalGate::TARGET_TYPE => $this->executeAgentToolCall($proposal),
+            ToolDefinitionPinner::TARGET_TYPE => $this->executeMcpToolDefinitions($proposal),
             'integration_action' => $this->executeIntegrationAction($proposal, $actor),
             'git_push' => $this->executeGitPush($proposal, $actor),
             default => throw new RuntimeException(
                 "ActionProposalExecutor: unsupported target_type '{$proposal->target_type}'.",
             ),
         };
+    }
+
+    /**
+     * Applies the MCP tool definitions held by ToolDefinitionPinner. Fails when
+     * the server changed again after the proposal was made (stale hash).
+     *
+     * @return array<string, mixed>
+     */
+    private function executeMcpToolDefinitions(ActionProposal $proposal): array
+    {
+        $toolId = $proposal->payload['tool_id'] ?? null;
+        $hash = $proposal->payload['pending_hash'] ?? null;
+
+        if (! is_string($toolId) || ! is_string($hash)) {
+            throw new RuntimeException('ActionProposalExecutor: mcp_tool_definitions payload requires tool_id and pending_hash.');
+        }
+
+        $tool = Tool::withoutGlobalScopes()
+            ->where('team_id', $proposal->team_id)
+            ->findOrFail($toolId);
+
+        app(ToolDefinitionPinner::class)->approvePending($tool, $hash);
+
+        return ['tool_id' => $tool->id, 'applied_hash' => $hash];
     }
 
     /**

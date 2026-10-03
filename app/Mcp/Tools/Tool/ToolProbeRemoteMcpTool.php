@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Tool;
 
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
+use App\Domain\Tool\Services\ToolDefinitionPinner;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -22,7 +23,7 @@ class ToolProbeRemoteMcpTool extends McpTool
 
     protected string $name = 'tool_probe_remote_mcp';
 
-    protected string $description = 'Connect to a remote MCP HTTP/SSE server, fetch its tools/list, and store the definitions in the Tool record. Call this after creating an mcp_http Tool to populate its tool_definitions so agents can use its capabilities.';
+    protected string $description = 'Connect to a remote MCP HTTP/SSE server, fetch its tools/list, and store the definitions in the Tool record. If definition pinning is on and the tool already has definitions, a change is held for human approval (outcome=pending) instead of being applied. Call this after creating an mcp_http Tool to populate its tool_definitions so agents can use its capabilities.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -70,14 +71,11 @@ class ToolProbeRemoteMcpTool extends McpTool
             return $this->failedPreconditionError('MCP server returned no tools.');
         }
 
-        // Normalise to FleetQ tool_definitions format
-        $definitions = array_values(array_map(fn ($t) => [
-            'name' => $t['name'],
-            'description' => $t['description'] ?? '',
-            'input_schema' => $t['inputSchema'] ?? ['type' => 'object', 'properties' => []],
-        ], $tools));
-
-        $tool->update(['tool_definitions' => $definitions]);
+        // A change against already-approved definitions is held for approval
+        // when definition pinning is on (ToolDefinitionPinner).
+        $pinner = app(ToolDefinitionPinner::class);
+        $definitions = $pinner->normalize($tools);
+        $outcome = $pinner->sync($tool, $tools);
 
         return Response::text(json_encode([
             'success' => true,
@@ -85,6 +83,7 @@ class ToolProbeRemoteMcpTool extends McpTool
             'tool_name' => $tool->name,
             'definitions_count' => count($definitions),
             'tools' => array_column($definitions, 'name'),
+            'outcome' => $outcome,
         ]));
     }
 }

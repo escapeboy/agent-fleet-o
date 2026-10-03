@@ -6,6 +6,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
+use App\Domain\Tool\Services\ToolDefinitionPinner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +16,7 @@ class ToolHealthCheckCommand extends Command
 
     protected $description = 'Check health of active MCP HTTP tools and refresh tool definitions if changed';
 
-    public function handle(McpHttpClient $client): int
+    public function handle(McpHttpClient $client, ToolDefinitionPinner $pinner): int
     {
         // Only check HTTP tools — stdio tools require a running local process
         // and cannot be health-checked without side effects.
@@ -27,7 +28,7 @@ class ToolHealthCheckCommand extends Command
         Tool::withoutGlobalScopes()
             ->where('status', ToolStatus::Active)
             ->where('type', ToolType::McpHttp)
-            ->chunk(50, function ($tools) use ($client, &$count, &$healthy, &$unreachable, &$refreshed) {
+            ->chunk(50, function ($tools) use ($client, $pinner, &$count, &$healthy, &$unreachable, &$refreshed) {
                 foreach ($tools as $tool) {
                     $count++;
 
@@ -40,20 +41,31 @@ class ToolHealthCheckCommand extends Command
                         $headers = $this->buildHeaders($tool);
                         $toolDefs = $client->listTools($serverUrl, $headers);
 
-                        $updates = [
+                        $tool->update([
                             'health_status' => 'healthy',
                             'last_health_check' => now(),
-                        ];
+                        ]);
+                        $healthy++;
 
-                        // Normalize for stable comparison
-                        if (! $this->defsMatch($toolDefs, $tool->tool_definitions)) {
-                            $updates['tool_definitions'] = $toolDefs;
-                            $refreshed++;
-                            $this->line("  Refreshed definitions for: {$tool->name}");
+                        // A definition-sync failure says nothing about reachability.
+                        try {
+                            $outcome = $pinner->sync($tool, $toolDefs);
+                        } catch (\Throwable $e) {
+                            Log::warning('ToolHealthCheck: definition sync failed', [
+                                'tool_id' => $tool->id,
+                                'exception' => $e::class,
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            continue;
                         }
 
-                        $tool->update($updates);
-                        $healthy++;
+                        if ($outcome === ToolDefinitionPinner::APPLIED) {
+                            $refreshed++;
+                            $this->line("  Refreshed definitions for: {$tool->name}");
+                        } elseif ($outcome === ToolDefinitionPinner::PENDING) {
+                            $this->line("  Definitions changed, held for approval: {$tool->name}");
+                        }
                     } catch (\Throwable $e) {
                         $tool->update([
                             'health_status' => 'unreachable',
@@ -98,37 +110,5 @@ class ToolHealthCheckCommand extends Command
         }
 
         return $headers;
-    }
-
-    /**
-     * Compare tool definitions using normalized JSON to avoid false updates
-     * from key ordering differences.
-     */
-    private function defsMatch(?array $newDefs, ?array $oldDefs): bool
-    {
-        if ($newDefs === null && $oldDefs === null) {
-            return true;
-        }
-
-        return json_encode($this->sortRecursive($newDefs ?? []))
-            === json_encode($this->sortRecursive($oldDefs ?? []));
-    }
-
-    private function sortRecursive(array $array): array
-    {
-        foreach ($array as &$value) {
-            if (is_array($value)) {
-                $value = $this->sortRecursive($value);
-            }
-        }
-
-        // Sort by keys if associative, leave indexed arrays in order
-        if (array_is_list($array)) {
-            return $array;
-        }
-
-        ksort($array);
-
-        return $array;
     }
 }

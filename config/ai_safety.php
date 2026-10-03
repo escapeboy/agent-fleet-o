@@ -120,4 +120,31 @@ return [
     */
     'llm_classifier' => env('AI_SAFETY_LLM_CLASSIFIER'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tool Output Scan (indirect prompt injection)
+    |--------------------------------------------------------------------------
+    |
+    | Tool results inside the Prism tool loop never pass through the gateway
+    | classifier above: it scans the system + user prompt going in and the
+    | final response coming out, not the tool results fed back in between.
+    | When enabled, ToolOutputGuard scans every result of a Tool-row tool with
+    | the listed scanners before it reaches the model. Local agents
+    | (claude-code-vps, bridge) call MCP servers themselves and are not
+    | covered by this scan.
+    |
+    | Per-team switch: teams.settings['tool_output_scan_mode'] =
+    |   'annotate' (default) — fence the output as untrusted and add a notice
+    |   'block'              — replace the output with a notice
+    |   'off'                — no scan
+    | Every hit is recorded as an audit entry (tool_output.threat_detected).
+    |
+    */
+    'tool_output_scan' => [
+        'enabled' => env('AI_TOOL_OUTPUT_SCAN_ENABLED', false),
+        'scanners' => ['prompt_injection', 'jailbreak', 'invisible_chars'],
+        // Longer output is scanned as head + tail of this many characters each half.
+        'max_scan_chars' => (int) env('AI_TOOL_OUTPUT_SCAN_MAX_CHARS', 200000),
+    ],
+
 ];

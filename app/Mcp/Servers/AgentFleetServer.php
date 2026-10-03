@@ -567,6 +567,7 @@ use App\Mcp\Tools\Skill\SupabaseEdgeFunctionSkillTool;
 use App\Mcp\Tools\System\AuditChainVerifyTool;
 use App\Mcp\Tools\System\AuditLogTool;
 use App\Mcp\Tools\System\BlacklistManageTool;
+use App\Mcp\Tools\System\ComplianceEuAiActReportTool;
 use App\Mcp\Tools\System\DashboardKpisTool;
 use App\Mcp\Tools\System\GlobalSettingsUpdateTool;
 use App\Mcp\Tools\System\InspectDiffCommentsTool;
@@ -593,6 +594,7 @@ use App\Mcp\Tools\Tool\ToolActivateTool;
 use App\Mcp\Tools\Tool\ToolBashPolicyTool;
 use App\Mcp\Tools\Tool\ToolCreateTool;
 use App\Mcp\Tools\Tool\ToolDeactivateTool;
+use App\Mcp\Tools\Tool\ToolDefinitionChangesTool;
 use App\Mcp\Tools\Tool\ToolDeleteTool;
 use App\Mcp\Tools\Tool\ToolDiscoverMcpTool;
 use App\Mcp\Tools\Tool\ToolEmbeddingManageTool;
@@ -1026,6 +1028,7 @@ class AgentFleetServer extends Server
         ToolDiscoverMcpTool::class,
         ToolImportMcpTool::class,
         ToolProbeRemoteMcpTool::class,
+        ToolDefinitionChangesTool::class,
         // Platform-curated MCP server registry (Agentforce-borrowed sprint 2026-05-28)
         McpRegistryListTool::class,
         McpRegistryCreateTool::class,
@@ -1464,6 +1467,7 @@ class AgentFleetServer extends Server
         ShadowTrafficSummaryTool::class,
         SystemDiscoveryGetTool::class,
         AuditLogTool::class,
+        ComplianceEuAiActReportTool::class,
         AuditChainVerifyTool::class,
         SecretScanFindingsTool::class,
         CrewBlackboardGetTool::class,
