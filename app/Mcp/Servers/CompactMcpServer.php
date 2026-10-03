@@ -44,11 +44,11 @@ use Laravel\Mcp\Server;
 /**
  * Compact MCP server for remote clients (Claude.ai, etc.) that have tool count limits.
  *
- * Consolidates 259 individual tools into 33 meta-tools using the "action" parameter.
+ * Consolidates 670+ individual tools into 34 meta-tools using the "action" parameter.
  * Each meta-tool delegates to the original tool class — zero logic duplication.
  *
  * For local CLI agents (Claude Code, Codex) that have no tool limit,
- * use AgentFleetServer which exposes all 259 tools individually.
+ * use AgentFleetServer which exposes all 670+ tools individually.
  */
 class CompactMcpServer extends Server
 {

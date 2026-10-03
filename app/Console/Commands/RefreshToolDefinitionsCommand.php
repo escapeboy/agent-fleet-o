@@ -7,6 +7,7 @@ use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
 use App\Domain\Tool\Services\McpStdioClient;
+use App\Domain\Tool\Services\ToolDefinitionPinner;
 use Illuminate\Console\Command;
 
 class RefreshToolDefinitionsCommand extends Command
@@ -17,7 +18,7 @@ class RefreshToolDefinitionsCommand extends Command
 
     protected $description = 'Refresh tool_definitions for active MCP tools by querying their servers';
 
-    public function handle(McpHttpClient $httpClient, McpStdioClient $stdioClient): int
+    public function handle(McpHttpClient $httpClient, McpStdioClient $stdioClient, ToolDefinitionPinner $pinner): int
     {
         $staleMinutes = (int) $this->option('stale-minutes');
 
@@ -49,11 +50,11 @@ class RefreshToolDefinitionsCommand extends Command
 
                 if ($definitions !== null) {
                     $tool->update([
-                        'tool_definitions' => $definitions,
                         'health_status' => 'healthy',
                         'last_health_check' => now(),
                     ]);
-                    $this->line('  <info>ok</info> '.$tool->name.' — '.count($definitions).' tool(s)');
+                    $outcome = $pinner->sync($tool, $definitions);
+                    $this->line('  <info>ok</info> '.$tool->name.' — '.count($definitions).' tool(s), '.$outcome);
                     $refreshed++;
                 }
             } catch (\Throwable $e) {

@@ -1,18 +1,18 @@
 # MCP Server
 
-FleetQ exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that gives AI agents full programmatic access to the platform. Any MCP-compatible client — Cursor, Claude Code, Codex, or a custom agent — can connect and use all 268+ tools.
+FleetQ exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that gives AI agents full programmatic access to the platform. Any MCP-compatible client — Cursor, Claude Code, Codex, or a custom agent — can connect and use all 670+ tools.
 
 ## Transports
 
 | Transport | Endpoint | Auth | Use case |
 |-----------|----------|------|----------|
 | HTTP/SSE | `POST /mcp` | Sanctum bearer token (or OAuth2 in cloud) | Remote clients (Cursor, Claude Code remote, Claude.ai, ChatGPT) |
-| HTTP/SSE (Full) | `POST /mcp/full` | Sanctum bearer token (or OAuth2 in cloud) | Power users needing all 268+ tools (no consolidation) |
+| HTTP/SSE (Full) | `POST /mcp/full` | Sanctum bearer token (or OAuth2 in cloud) | Power users needing all 670+ tools (no consolidation) |
 | stdio | `php artisan mcp:start agent-fleet` | Auto (default team owner) | Local CLI agents on the same machine |
 
 ### Compact vs Full server
 
-The **compact** endpoint (`/mcp`) consolidates 268+ tools into ~33 meta-tools using an `action` parameter. This is designed for clients with tool count limits (Claude.ai, ChatGPT). The **full** endpoint (`/mcp/full`) exposes every tool individually.
+The **compact** endpoint (`/mcp`) consolidates 670+ tools into 34 meta-tools using an `action` parameter. This is designed for clients with tool count limits (Claude.ai, ChatGPT). The **full** endpoint (`/mcp/full`) exposes every tool individually.
 
 ---
 
@@ -161,7 +161,7 @@ command = ["php", "/path/to/fleetq/artisan", "mcp:start", "agent-fleet"]
 
 ## Available Tools
 
-268+ tools across 37 domains. All tools are scoped to your team — no cross-tenant access is possible.
+670+ tools across 60+ domains. All tools are scoped to your team — no cross-tenant access is possible.
 
 | Domain | Key tools |
 |--------|-----------|
@@ -224,7 +224,7 @@ Teams can customize which tools are available via profiles:
 |---------|-------|----------|
 | `essential` | 11 core tools | Simple agents with focused tasks |
 | `standard` | 33 tools (core + operations) | Most use cases |
-| `full` | All 268+ tools | Power users and automation |
+| `full` | All 670+ tools | Power users and automation |
 | `custom` | Hand-picked | Teams with specific needs |
 
 Configure via **Team Settings → MCP Tools** or the `team_update` MCP tool.

@@ -54,6 +54,31 @@ class ScannerRegistry
     }
 
     /**
+     * Scanners by key, regardless of their gateway 'enabled'/'target' flags —
+     * those describe the gateway's scan direction, not other callers'. Severity
+     * and scanner options still come from config('ai_safety.scanners').
+     *
+     * @param  list<string>  $keys
+     * @return list<ScannerInterface>
+     */
+    public function only(array $keys): array
+    {
+        /** @var array<string, array<string, mixed>> $config */
+        $config = config('ai_safety.scanners', []);
+        $scanners = [];
+
+        foreach ($keys as $key) {
+            $scanner = $this->make($key, $config[$key] ?? []);
+
+            if ($scanner !== null) {
+                $scanners[] = $scanner;
+            }
+        }
+
+        return $scanners;
+    }
+
+    /**
      * @param  array<string, mixed>  $settings
      */
     private function make(string $key, array $settings): ?ScannerInterface

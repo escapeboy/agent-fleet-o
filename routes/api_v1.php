@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\BugReportProjectConfigController;
 use App\Http\Controllers\Api\V1\BugReportSignalController;
 use App\Http\Controllers\Api\V1\ChatbotInstanceController;
+use App\Http\Controllers\Api\V1\ComplianceReportController;
 use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\CrewController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -331,6 +332,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Audit
     Route::get('/audit', [AuditController::class, 'index']);
+
+    // Compliance (EU AI Act evidence report; 404 unless audit.compliance_report.enabled)
+    Route::get('/compliance/eu-ai-act', [ComplianceReportController::class, 'euAiAct']);
 
     // Budget
     Route::get('/budget', [BudgetController::class, 'index']);

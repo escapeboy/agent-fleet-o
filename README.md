@@ -28,7 +28,7 @@
 - [Configuration](#configuration)
 - [SSH Host Access](#ssh-host-access)
 - [Architecture](#architecture)
-- [MCP Server (675+ tools)](#mcp-server)
+- [MCP Server (670+ tools)](#mcp-server)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 - [Changelog](CHANGELOG.md)
@@ -39,7 +39,7 @@
 
 Most agent frameworks give you a Python notebook. FleetQ gives you a **production platform**.
 
-- 🧩 **675+ MCP tools across 45 domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically. New in 1.27: web UIs for previously headless capabilities (agent sessions, release signing keys, drift & eval monitors, broadcasts, test suites, CSV import); **eight outbound chat channels** as first-class drivers; the **Agentic AI Flywheel** (self-growing eval set + drift/production monitors); **policy-governed autonomy** (versioned per-agent policies + replay); **cost-aware orchestration** and **Return on Cognitive Spend (ROCS)** metrics.
+- 🧩 **670+ MCP tools across 60+ domains** — every feature is exposed via Model Context Protocol, so any LLM (Claude Desktop, Cursor, ChatGPT, local agents) can drive the platform programmatically. New in 1.27: web UIs for previously headless capabilities (agent sessions, release signing keys, drift & eval monitors, broadcasts, test suites, CSV import); **eight outbound chat channels** as first-class drivers; the **Agentic AI Flywheel** (self-growing eval set + drift/production monitors); **policy-governed autonomy** (versioned per-agent policies + replay); **cost-aware orchestration** and **Return on Cognitive Spend (ROCS)** metrics.
 - 🔁 **Visual DAG workflows** with 8 node types (agent, conditional, human-task, switch, dynamic-fork, do-while, compensation, sub-workflow) — no Python glue code.
 - 👥 **Multi-agent crews** with coordinator/worker/reviewer roles, weighted QA scoring, and cross-validation.
 - 🛡️ **Real-World Action governance** — assistant tool calls, integration writes, and git pushes route through a per-tier risk policy (auto / ask / reject for low / medium / high). Approvals auto-execute. Audit trail attached.
@@ -225,7 +225,7 @@ Failed tasks display detailed error information including provider, error type, 
 
 ### API & MCP surface
 - **REST API** — 175+ endpoints under `/api/v1/` with Sanctum auth, cursor pagination, auto-generated OpenAPI 3.1 at `/docs/api`
-- **MCP Server** — **675+ Model Context Protocol tools across 45 domains (62 tool groups)** (stdio + HTTP/SSE + OAuth2/PKCE)
+- **MCP Server** — **670+ Model Context Protocol tools across 60+ domains** (stdio + HTTP/SSE + OAuth2/PKCE)
 - **Real-World Action governance** — `ActionProposal` flow gates assistant tool calls, integration writes, and git pushes through a per-tier risk policy with auto-execute on approval
 - **Public discovery endpoint** — `GET /.well-known/fleetq` returns a config-gated capability manifest so external AI tools can auto-configure
 - **Live team graph** — `/team-graph` page with real-time updates via Laravel Reverb WebSockets
@@ -260,7 +260,7 @@ FleetQ is built for teams running AI agents in production, not toy demos.
 | **Open source** | ✅ AGPLv3 | ✅ Sustainable Use | ✅ MIT | ✅ MIT | ❌ Proprietary |
 | **Visual DAG builder** | ✅ 8 node types | ✅ (not AI-first) | ❌ | ❌ | ✅ |
 | **Multi-agent crews** | ✅ 7 process types | ❌ | ✅ | ✅ (build-your-own) | ❌ |
-| **MCP server (native)** | ✅ 675+ tools | ❌ | ❌ | ❌ | ❌ |
+| **MCP server (native)** | ✅ 670+ tools | ❌ | ❌ | ❌ | ❌ |
 | **Human-in-the-loop** | ✅ native | ⚠️ workaround | ⚠️ code | ⚠️ code | ⚠️ approve-node |
 | **Budget ledger + locks** | ✅ pessimistic | ❌ | ❌ | ❌ | ❌ |
 | **Audit trail** | ✅ every action | ✅ | ❌ | ❌ | ✅ |
@@ -487,7 +487,7 @@ flowchart LR
     subgraph App["FleetQ app (Laravel 13 / PHP 8.4)"]
         WEB["Web routes (auth:web)"] --> DOM
         API["/api/v1/* — Sanctum tokens"] --> DOM
-        MCP["AgentFleetServer — 675+ MCP tools / 62 tool groups"] --> DOM
+        MCP["AgentFleetServer — 670+ MCP tools / 60+ domains"] --> DOM
         INGEST["SignalWebhookController / IngestSignalAction"] --> TRIG["TriggerRule evaluator"]
         TRIG --> DOM
 
@@ -527,7 +527,7 @@ flowchart LR
     DOM <--> VOICE
 ```
 
-The platform is a single Laravel 13 monolith that exposes three coequal control surfaces over the same domain layer: the Livewire admin UI, a Sanctum-authenticated REST API at `/api/v1/*` (~175 endpoints), and `AgentFleetServer` — an MCP server with 675+ tools across 62 tool groups served over both HTTP/SSE and local stdio. Inbound signals (webhook, RSS, IMAP, Slack, Telegram, and the rest of the 20+ connectors) flow through `IngestSignalAction` and the `TriggerRule` evaluator into the domain layer, where the `ExperimentStateMachine` walks a 20-state pipeline by emitting `ExperimentTransitioned` events whose listeners dispatch the next `BaseStageJob` onto Horizon-managed Redis queues. Stage jobs talk to LLMs through the PrismPHP-backed AI Gateway (rate-limit, budget, idempotency, semantic-cache, schema-validation, usage-tracking middleware + circuit breakers + provider fallbacks), invoke `Tool` instances translated to PrismPHP tool calls (MCP stdio/HTTP, built-in bash/filesystem/browser, SSH with TOFU fingerprints), park `ApprovalRequest`/`HumanTask` records for the human-in-the-loop inbox, and persist `Artifact` versions plus deliver outbound messages over Email/Telegram/Slack/Webhook/ntfy. State and tenant data live in Postgres 17 with pgvector (semantic cache, UUIDv7 primary keys, JSONB+GIN indexes); Redis 7 carries the six Horizon queues, application cache, and pessimistic budget locks. Optional Docker Compose profiles add Reverb for the live team-graph WebSocket, browserless for browser tools, searxng for web search, a voice worker (LiveKit/Deepgram), a sandboxed bash sidecar, the fleetq-bridge relay, and Jaeger for OpenTelemetry tracing via `--profile observability`.
+The platform is a single Laravel 13 monolith that exposes three coequal control surfaces over the same domain layer: the Livewire admin UI, a Sanctum-authenticated REST API at `/api/v1/*` (~175 endpoints), and `AgentFleetServer` — an MCP server with 670+ tools across 60+ domains served over both HTTP/SSE and local stdio. Inbound signals (webhook, RSS, IMAP, Slack, Telegram, and the rest of the 20+ connectors) flow through `IngestSignalAction` and the `TriggerRule` evaluator into the domain layer, where the `ExperimentStateMachine` walks a 20-state pipeline by emitting `ExperimentTransitioned` events whose listeners dispatch the next `BaseStageJob` onto Horizon-managed Redis queues. Stage jobs talk to LLMs through the PrismPHP-backed AI Gateway (rate-limit, budget, idempotency, semantic-cache, schema-validation, usage-tracking middleware + circuit breakers + provider fallbacks), invoke `Tool` instances translated to PrismPHP tool calls (MCP stdio/HTTP, built-in bash/filesystem/browser, SSH with TOFU fingerprints), park `ApprovalRequest`/`HumanTask` records for the human-in-the-loop inbox, and persist `Artifact` versions plus deliver outbound messages over Email/Telegram/Slack/Webhook/ntfy. State and tenant data live in Postgres 17 with pgvector (semantic cache, UUIDv7 primary keys, JSONB+GIN indexes); Redis 7 carries the six Horizon queues, application cache, and pessimistic budget locks. Optional Docker Compose profiles add Reverb for the live team-graph WebSocket, browserless for browser tools, searxng for web search, a voice worker (LiveKit/Deepgram), a sandboxed bash sidecar, the fleetq-bridge relay, and Jaeger for OpenTelemetry tracing via `--profile observability`.
 
 Built with Laravel 13, Livewire 4, and Tailwind CSS. Domain-driven design with 45 bounded contexts — table below shows the 17 primary domains:
 

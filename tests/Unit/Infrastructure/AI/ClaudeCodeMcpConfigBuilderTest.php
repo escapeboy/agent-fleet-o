@@ -54,6 +54,24 @@ class ClaudeCodeMcpConfigBuilderTest extends TestCase
         $this->assertSame('http://nginx/mcp', $config['mcpServers']['fleetq_platform']['url']);
     }
 
+    public function test_tool_with_pending_definition_change_is_held_back_when_pinning_is_on(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'pending_server',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'https://mcp.example.test'],
+            'credentials' => [],
+            'pending_definitions_hash' => str_repeat('a', 64),
+        ]);
+
+        config(['tools.definition_pinning.enabled' => false]);
+        $this->assertArrayHasKey('pending_server', $this->builder->build(collect([$tool]))['mcpServers']);
+
+        config(['tools.definition_pinning.enabled' => true]);
+        $this->assertSame([], $this->builder->build(collect([$tool])));
+    }
+
     public function test_mcp_http_strips_trailing_slash_before_appending_mcp(): void
     {
         $tool = Tool::factory()->create([

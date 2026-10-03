@@ -149,7 +149,7 @@ app/
       Services/                  # CircuitBreaker, ProviderResolver, LocalAgentDiscovery
   Mcp/                           # MCP Server (Model Context Protocol)
     Concerns/                    # BootstrapsMcpAuth (stdio auth bootstrap)
-    Servers/                     # AgentFleetServer (675 tool files across 62 domains)
+    Servers/                     # AgentFleetServer (670+ tools across 60+ domains)
     Tools/                       # MCP tool implementations
       Agent/                     # agent_list, agent_get, agent_create, agent_update, agent_toggle_status, agent_delete, agent_config_history, agent_rollback, agent_runtime_state, agent_skill_sync, agent_tool_sync, agent_templates_list
       Experiment/                # experiment_list, experiment_get, experiment_create, experiment_start, experiment_pause, experiment_resume, experiment_retry, experiment_kill, experiment_valid_transitions, experiment_retry_from_step, experiment_steps, experiment_cost, experiment_share
@@ -303,7 +303,7 @@ app/
 | HTTP/SSE | `/mcp` | AgentFleetServer | Sanctum bearer token | Remote MCP clients (Cursor, etc.) |
 | stdio | `agent-fleet` | AgentFleetServer | Auto (default team owner) | Local CLI agents (Codex, Claude Code) |
 
-675 MCP tool files across 62 domains. Start local server: `php artisan mcp:start agent-fleet`
+670+ MCP tools across 60+ domains. Start local server: `php artisan mcp:start agent-fleet`
 
 ### Legacy API Routes (`/api/`)
 
@@ -329,7 +329,7 @@ The community edition uses an "implicit single team" pattern:
 The platform exposes a Model Context Protocol (MCP) server via `laravel/mcp`, giving LLMs and agents full programmatic access.
 
 ### Architecture
-- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 675 tool files across 62 domains
+- **Server:** `app/Mcp/Servers/AgentFleetServer.php` — registers 670+ tools across 60+ domains
 - **Auth (stdio):** `BootstrapsMcpAuth` trait auto-resolves default team owner, sets `mcp.active` flag
 - **Auth (HTTP):** Sanctum bearer token via `auth:sanctum` middleware
 - **TeamScope:** Console mode bypasses `TeamScope` unless `mcp.active` is bound in the container

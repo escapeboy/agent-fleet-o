@@ -37,7 +37,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <i class="fa-solid fa-check mt-0.5 text-base text-primary-500"></i>
-                        350+ MCP tools for AI agent access
+                        670+ MCP tools for AI agent access
                     </li>
                     <li class="flex items-start gap-2">
                         <i class="fa-solid fa-check mt-0.5 text-base text-primary-500"></i>

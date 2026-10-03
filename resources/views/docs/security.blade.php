@@ -300,7 +300,7 @@
                 <tr>
                     <td class="py-2.5 pl-4 pr-4 font-medium text-gray-900">MCP Tools</td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">
-                        All 268+ tools use explicit <code class="rounded bg-gray-100 px-1 text-xs">where('team_id', $teamId)</code> guards
+                        All MCP tools use explicit <code class="rounded bg-gray-100 px-1 text-xs">where('team_id', $teamId)</code> guards
                     </td>
                     <td class="py-2.5 pr-4 text-xs text-gray-600">MCP server</td>
                 </tr>

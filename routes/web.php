@@ -60,6 +60,7 @@ use App\Livewire\Chatbots\ChatbotDetailPage;
 use App\Livewire\Chatbots\ChatbotKnowledgeBasePage;
 use App\Livewire\Chatbots\ChatbotListPage;
 use App\Livewire\Chatbots\CreateChatbotForm;
+use App\Livewire\Compliance\EuAiActReportPage;
 use App\Livewire\Credentials\CreateCredentialForm;
 use App\Livewire\Credentials\CredentialDetailPage;
 use App\Livewire\Credentials\CredentialListPage;
@@ -541,6 +542,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');
     Route::get('/audit', AuditLogPage::class)->name('audit');
+    Route::get('/compliance/eu-ai-act', EuAiActReportPage::class)->name('compliance.eu-ai-act');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');
     Route::get('/admin/ai', AiControlCenterPage::class)->name('admin.ai');
     Route::get('/admin/sentry-watchdog', SentryWatchdogPage::class)->name('admin.sentry-watchdog');
