@@ -93,7 +93,8 @@ class ToolTranslator
                 ->for($definition['description'] ?? '');
 
             // Add parameters from input_schema
-            $schema = $definition['input_schema'] ?? [];
+            // Rows written before ToolDefinitionPinner may still hold the raw MCP shape.
+            $schema = $definition['input_schema'] ?? $definition['inputSchema'] ?? [];
             $properties = $schema['properties'] ?? [];
             $required = $schema['required'] ?? [];
 

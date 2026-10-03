@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * Enum and complex-cast @property hints — see Skill.php for context.
@@ -28,6 +29,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property array<string, mixed> $transport_config
  * @property array<string, mixed>|null $credentials
  * @property array<int, mixed> $tool_definitions
+ * @property array<int, mixed>|null $pending_tool_definitions
+ * @property string|null $pending_definitions_hash
+ * @property Carbon|null $pending_definitions_detected_at
  * @property array<string, mixed>|null $server_capabilities
  * @property array<string, mixed>|null $settings
  * @property array<string, mixed>|null $network_policy
@@ -64,6 +68,9 @@ class Tool extends Model
         'health_status',
         'result_as_answer',
         'tags',
+        'pending_tool_definitions',
+        'pending_definitions_hash',
+        'pending_definitions_detected_at',
     ];
 
     protected $hidden = ['credentials'];
@@ -84,6 +91,8 @@ class Tool extends Model
             'result_as_answer' => 'boolean',
             'tags' => 'array',
             'last_health_check' => 'datetime',
+            'pending_tool_definitions' => 'array',
+            'pending_definitions_detected_at' => 'datetime',
         ];
     }
 

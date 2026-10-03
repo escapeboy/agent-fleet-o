@@ -24,6 +24,7 @@ use App\Domain\Tool\Services\SemanticToolSelector;
 use App\Domain\Tool\Services\ToolApprovalGate;
 use App\Domain\Tool\Services\ToolErrorGuard;
 use App\Domain\Tool\Services\ToolFederationResolver;
+use App\Domain\Tool\Services\ToolOutputGuard;
 use App\Domain\Tool\Services\ToolProgramContext;
 use App\Domain\Tool\Services\ToolRagSelector;
 use App\Domain\Tool\Services\ToolTranslator;
@@ -395,6 +396,10 @@ class ResolveAgentToolsAction
 
                 $programContext?->exclude(array_map(fn ($t) => $t->name(), $translated));
             }
+
+            // Tool results reach the model without passing the gateway classifier;
+            // scan them for indirect prompt injection (ai_safety.tool_output_scan).
+            $translated = app(ToolOutputGuard::class)->wrap($translated, $agent, $tool);
 
             $prismTools = array_merge($prismTools, $translated);
         }

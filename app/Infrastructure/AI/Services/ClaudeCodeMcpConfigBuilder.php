@@ -29,6 +29,18 @@ class ClaudeCodeMcpConfigBuilder
         $servers = [];
 
         foreach ($tools as $tool) {
+            // Claude Code fetches tools/list from the server itself, so it would see
+            // a changed definition that is still waiting for approval. Hold the whole
+            // server back until a person decides (ToolDefinitionPinner).
+            if (config('tools.definition_pinning.enabled') && $tool->pending_definitions_hash !== null) {
+                Log::warning('ClaudeCodeMcpConfigBuilder: skipping MCP tool with unapproved definition change', [
+                    'tool_id' => $tool->id,
+                    'tool_name' => $tool->name,
+                ]);
+
+                continue;
+            }
+
             $entry = match ($tool->type) {
                 ToolType::McpHttp => $this->buildHttpEntry($tool),
                 ToolType::McpStdio => $this->buildStdioEntry($tool),

@@ -5,6 +5,7 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
+use App\Domain\Tool\Services\ToolDefinitionPinner;
 use App\Models\User;
 use RuntimeException;
 
@@ -14,6 +15,10 @@ class ApproveActionProposalAction
     {
         if ($proposal->team_id !== $approver->current_team_id) {
             throw new RuntimeException('Approver is not a member of the proposal team.');
+        }
+
+        if ($proposal->target_type === ToolDefinitionPinner::TARGET_TYPE && ! ToolDefinitionPinner::canApprove($approver, (string) $proposal->team_id)) {
+            throw new RuntimeException('Only a team owner or admin can approve a change to MCP tool definitions.');
         }
 
         if (! $proposal->isPending()) {

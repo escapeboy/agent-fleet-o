@@ -25,6 +25,7 @@ use App\Domain\Approval\Listeners\AppendExecutionResultToConversation;
 use App\Domain\Approval\Listeners\DispatchActionProposalExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Audit\Listeners\LogIntegrationExecution;
+use App\Domain\Audit\Listeners\LogSafetyViolation;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Contracts\ChatbotFeedbackRecorderInterface;
 use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
@@ -146,6 +147,7 @@ use App\Domain\Workflow\Listeners\QueueWorkflowYamlPush;
 use App\Domain\Workflow\Models\WorkflowNode;
 use App\Domain\Workflow\Services\WorkflowNodeRegistry;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
+use App\Infrastructure\AI\Events\SafetyViolationDetected;
 use App\Infrastructure\AI\Exceptions\LocalEmbeddingNotConfiguredException;
 use App\Infrastructure\AI\LoopDetection\Contracts\TurnHistoryStore;
 use App\Infrastructure\AI\LoopDetection\Events\AgentLoopDetected;
@@ -606,6 +608,9 @@ class AppServiceProvider extends ServiceProvider
             IntegrationActionExecuted::class,
             LogIntegrationExecution::class,
         );
+
+        // Gateway safety violations become audit entries (EU AI Act report, audit log)
+        Event::listen(SafetyViolationDetected::class, LogSafetyViolation::class);
 
         // /team-graph live activity firehose — broadcast normalized TeamActivity events
         Event::listen(AgentExecuted::class, BroadcastAgentExecuted::class);
