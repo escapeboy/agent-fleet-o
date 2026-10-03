@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Actions;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Agent\Models\AgentRuntimeState;
+use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Enums\DataClassification;
 use Illuminate\Support\Str;
 
@@ -28,7 +29,7 @@ class CreateAgentAction
         ?array $personality = null,
         ?string $dataClassification = null,
     ): Agent {
-        $pricing = config("llm_pricing.providers.{$provider}.{$model}");
+        $pricing = app(CostCalculator::class)->pricing($provider, $model);
 
         $baseSlug = Str::slug($name);
         $slug = $baseSlug;

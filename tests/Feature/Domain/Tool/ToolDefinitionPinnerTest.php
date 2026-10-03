@@ -15,11 +15,13 @@ use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
 use App\Domain\Tool\Services\ToolDefinitionPinner;
 use App\Domain\Tool\Services\ToolTranslator;
+use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Mcp\Tools\Tool\ToolDefinitionChangesTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
+use Livewire\Livewire;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -222,6 +224,24 @@ class ToolDefinitionPinnerTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         app(ActionProposalExecutor::class)->execute($proposal, $member);
+    }
+
+    public function test_refused_approval_in_the_inbox_shows_a_message_not_an_error_page(): void
+    {
+        $tool = $this->mcpTool();
+        $this->pinner->sync($tool, $this->rawDefs('changed'));
+        $proposal = $this->proposals($tool)->first();
+
+        $member = User::factory()->create(['current_team_id' => $this->team->id]);
+        $this->team->users()->attach($member, ['role' => 'member']);
+        $this->actingAs($member);
+
+        Livewire::test(ApprovalInboxPage::class)
+            ->call('approveProposal', $proposal->id)
+            ->assertOk()
+            ->assertSee('Only a team owner or admin can approve a change to MCP tool definitions.');
+
+        $this->assertSame(ActionProposalStatus::Pending, $proposal->refresh()->status);
     }
 
     public function test_stale_proposal_cannot_be_applied(): void

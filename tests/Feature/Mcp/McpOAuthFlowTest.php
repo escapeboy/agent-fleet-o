@@ -203,7 +203,7 @@ class McpOAuthFlowTest extends TestCase
             'scope' => 'mcp:use',
         ]);
 
-        $response->assertOk()
+        $response->assertCreated()
             ->assertJsonStructure([
                 'client_id',
                 'redirect_uris',
@@ -241,7 +241,7 @@ class McpOAuthFlowTest extends TestCase
             'redirect_uris' => ['https://chatgpt.com/oauth/callback'],
         ]);
 
-        $response->assertOk();
+        $response->assertCreated();
         $this->assertNotEmpty($response->json('client_id'));
     }
 
@@ -254,7 +254,7 @@ class McpOAuthFlowTest extends TestCase
             'redirect_uris' => ['https://example.com/callback'],
         ]);
 
-        $response->assertOk()
+        $response->assertCreated()
             ->assertJsonPath('scope', 'mcp:use');
     }
 

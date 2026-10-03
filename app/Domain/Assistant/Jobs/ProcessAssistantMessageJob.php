@@ -4,6 +4,7 @@ namespace App\Domain\Assistant\Jobs;
 
 use App\Domain\Assistant\Actions\SendAssistantMessageAction;
 use App\Domain\Assistant\Agents\FleetQAssistant;
+use App\Domain\Assistant\Agents\InjectTeamCredentialsMiddleware;
 use App\Domain\Assistant\Models\AssistantConversation;
 use App\Domain\Assistant\Models\AssistantMessage;
 use App\Domain\Assistant\Services\CitationExtractor;
@@ -191,113 +192,120 @@ class ProcessAssistantMessageJob implements HasSentryContext, ShouldQueue
             ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? config('ai.default_model');
 
-        $agent = (new FleetQAssistant)
-            ->forUser($user)
-            ->withContext($this->contextType, $this->contextId);
+        app(InjectTeamCredentialsMiddleware::class)->around(
+            $user->current_team_id,
+            (string) $provider,
+            function () use ($conversation, $user, $placeholder, $manager, $provider, $model): void {
+                $agent = (new FleetQAssistant)
+                    ->forUser($user)
+                    ->withContext($this->contextType, $this->contextId);
 
-        // Build conversation history for context
-        $history = $manager->buildMessageHistory($conversation);
-        $prompt = ! empty($history)
-            ? "Previous conversation:\n".implode("\n", array_map(fn ($m) => "[{$m['role']}] {$m['content']}", $history))."\n\nUser: {$this->userMessage}"
-            : $this->userMessage;
+                // Build conversation history for context
+                $history = $manager->buildMessageHistory($conversation);
+                $prompt = ! empty($history)
+                    ? "Previous conversation:\n".implode("\n", array_map(fn ($m) => "[{$m['role']}] {$m['content']}", $history))."\n\nUser: {$this->userMessage}"
+                    : $this->userMessage;
 
-        // Stream the response — iterate events for real-time progress
-        $streamResponse = $agent->stream(
-            prompt: $prompt,
-            provider: $provider,
-            model: $model,
-        );
+                // Stream the response — iterate events for real-time progress
+                $streamResponse = $agent->stream(
+                    prompt: $prompt,
+                    provider: $provider,
+                    model: $model,
+                );
 
-        $streamedContent = '';
-        $toolCallNames = [];
-        $toolResultPayloads = [];
-        $lastFlush = 0.0;
-        $flushInterval = 0.3;
-        $toolCallsCount = 0;
+                $streamedContent = '';
+                $toolCallNames = [];
+                $toolResultPayloads = [];
+                $lastFlush = 0.0;
+                $flushInterval = 0.3;
+                $toolCallsCount = 0;
 
-        foreach ($streamResponse as $event) {
-            if ($event instanceof TextDelta) {
-                $streamedContent .= $event->delta;
+                foreach ($streamResponse as $event) {
+                    if ($event instanceof TextDelta) {
+                        $streamedContent .= $event->delta;
 
-                $now = microtime(true);
-                if (($now - $lastFlush) >= $flushInterval) {
-                    $placeholder->update([
-                        'content' => $streamedContent,
-                        'metadata' => json_encode([
-                            'status' => 'streaming',
-                            'tool_calls_in_progress' => $toolCallNames,
-                        ]),
-                    ]);
-                    try {
-                        event(new AssistantMessageChunk(
-                            conversationId: $this->conversationId,
-                            placeholderId: $this->placeholderMessageId,
-                            content: $streamedContent,
-                            toolCallsInProgress: $toolCallNames,
-                        ));
-                    } catch (\Throwable) {
-                        // Reverb unavailable — poll fallback handles recovery
+                        $now = microtime(true);
+                        if (($now - $lastFlush) >= $flushInterval) {
+                            $placeholder->update([
+                                'content' => $streamedContent,
+                                'metadata' => json_encode([
+                                    'status' => 'streaming',
+                                    'tool_calls_in_progress' => $toolCallNames,
+                                ]),
+                            ]);
+                            try {
+                                event(new AssistantMessageChunk(
+                                    conversationId: $this->conversationId,
+                                    placeholderId: $this->placeholderMessageId,
+                                    content: $streamedContent,
+                                    toolCallsInProgress: $toolCallNames,
+                                ));
+                            } catch (\Throwable) {
+                                // Reverb unavailable — poll fallback handles recovery
+                            }
+                            $lastFlush = $now;
+                        }
+                    } elseif ($event instanceof ToolCall) {
+                        $toolCallNames[] = $event->toolCall->name;
+                        $toolCallsCount++;
+                        $placeholder->update([
+                            'content' => $streamedContent,
+                            'metadata' => json_encode([
+                                'status' => 'streaming',
+                                'tool_calls_in_progress' => $toolCallNames,
+                            ]),
+                        ]);
+                        $lastFlush = microtime(true);
+                    } elseif ($event instanceof ToolResult && $event->successful) {
+                        $toolResultPayloads[] = [
+                            'toolName' => $event->toolResult->name ?? null,
+                            'result' => $event->toolResult->result ?? null,
+                        ];
                     }
-                    $lastFlush = $now;
                 }
-            } elseif ($event instanceof ToolCall) {
-                $toolCallNames[] = $event->toolCall->name;
-                $toolCallsCount++;
+
+                // Final content from stream
+                $finalContent = $streamResponse->text ?? $streamedContent;
+
+                // Grounded citations — validate inline [[kind:uuid]] markers against
+                // the tool results captured during streaming, strip hallucinated IDs,
+                // and attach the citation list to metadata. Mirrors the legacy path.
+                $metadata = ['status' => 'completed'];
+                if ($finalContent !== '' && $toolResultPayloads !== []) {
+                    $cited = app(CitationExtractor::class)->extract($finalContent, $toolResultPayloads);
+                    $finalContent = $cited['text'];
+                    if ($cited['citations'] !== []) {
+                        $metadata['citations'] = $cited['citations'];
+                    }
+                }
+
+                // Save completed message
                 $placeholder->update([
-                    'content' => $streamedContent,
-                    'metadata' => json_encode([
-                        'status' => 'streaming',
-                        'tool_calls_in_progress' => $toolCallNames,
-                    ]),
+                    'content' => $finalContent,
+                    'tool_calls' => $toolCallsCount > 0 ? json_encode(array_map(fn ($n) => ['toolName' => $n], $toolCallNames)) : null,
+                    'token_usage' => $streamResponse->usage ? json_encode([
+                        'prompt_tokens' => $streamResponse->usage->inputTokens,
+                        'completion_tokens' => $streamResponse->usage->outputTokens,
+                        'cost_credits' => app(CostCalculator::class)->calculateCost(
+                            $provider,
+                            $model,
+                            $streamResponse->usage->inputTokens,
+                            $streamResponse->usage->outputTokens,
+                        ),
+                    ]) : null,
+                    'metadata' => json_encode($metadata),
                 ]);
-                $lastFlush = microtime(true);
-            } elseif ($event instanceof ToolResult && $event->successful) {
-                $toolResultPayloads[] = [
-                    'toolName' => $event->toolResult->name ?? null,
-                    'result' => $event->toolResult->result ?? null,
-                ];
-            }
-        }
 
-        // Final content from stream
-        $finalContent = $streamResponse->text ?? $streamedContent;
+                // Save to conversation manager
+                $manager->addMessage(
+                    conversation: $conversation,
+                    role: 'assistant',
+                    content: $finalContent,
+                );
+                $manager->generateTitle($conversation);
 
-        // Grounded citations — validate inline [[kind:uuid]] markers against
-        // the tool results captured during streaming, strip hallucinated IDs,
-        // and attach the citation list to metadata. Mirrors the legacy path.
-        $metadata = ['status' => 'completed'];
-        if ($finalContent !== '' && $toolResultPayloads !== []) {
-            $cited = app(CitationExtractor::class)->extract($finalContent, $toolResultPayloads);
-            $finalContent = $cited['text'];
-            if ($cited['citations'] !== []) {
-                $metadata['citations'] = $cited['citations'];
-            }
-        }
-
-        // Save completed message
-        $placeholder->update([
-            'content' => $finalContent,
-            'tool_calls' => $toolCallsCount > 0 ? json_encode(array_map(fn ($n) => ['toolName' => $n], $toolCallNames)) : null,
-            'token_usage' => $streamResponse->usage ? json_encode([
-                'prompt_tokens' => $streamResponse->usage->inputTokens ?? 0,
-                'completion_tokens' => $streamResponse->usage->outputTokens ?? 0,
-                'cost_credits' => app(CostCalculator::class)->calculateCost(
-                    $provider,
-                    $model,
-                    $streamResponse->usage->inputTokens ?? 0,
-                    $streamResponse->usage->outputTokens ?? 0,
-                ),
-            ]) : null,
-            'metadata' => json_encode($metadata),
-        ]);
-
-        // Save to conversation manager
-        $manager->addMessage(
-            conversation: $conversation,
-            role: 'assistant',
-            content: $finalContent,
+            },
         );
-        $manager->generateTitle($conversation);
     }
 
     /**

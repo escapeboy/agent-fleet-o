@@ -4,8 +4,7 @@ namespace App\Domain\Assistant\Agents;
 
 use App\Domain\Shared\Models\TeamProviderCredential;
 use Closure;
-use Illuminate\Support\Facades\Auth;
-use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\AiManager;
 
 /**
  * Agent middleware that injects team BYOK API credentials into the AI config
@@ -14,23 +13,31 @@ use Laravel\Ai\Prompts\AgentPrompt;
  */
 class InjectTeamCredentialsMiddleware
 {
-    public function handle(AgentPrompt $prompt, Closure $next): mixed
+    /**
+     * Run a laravel/ai call with the team's own provider key.
+     *
+     * laravel/ai caches provider instances per process (MultipleInstanceManager)
+     * and, since 1.0, resolves the provider before agent middleware runs (which
+     * now wraps each generation step). So the key is set around the whole call,
+     * and the cached instance is dropped before (to pick the team key up) and
+     * after (so the next job on this worker never reuses it).
+     */
+    public function around(?string $teamId, string $providerName, Closure $callback): mixed
     {
-        $teamId = Auth::user()?->current_team_id;
-        $providerName = $prompt->provider->name();
         $configKey = "ai.providers.{$providerName}.key";
         $originalKey = config($configKey);
+        $manager = app(AiManager::class);
 
         if ($teamId) {
             $this->applyTeamCredentials($teamId, $providerName, $configKey);
         }
+        $manager->forgetInstance($providerName);
 
         try {
-            return $next($prompt);
+            return $callback();
         } finally {
-            // Restore original config to prevent leaking team's API key
-            // to the next job on this Horizon worker
             config([$configKey => $originalKey]);
+            $manager->forgetInstance($providerName);
         }
     }
 

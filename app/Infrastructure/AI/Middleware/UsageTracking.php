@@ -40,6 +40,7 @@ class UsageTracking implements AiMiddlewareInterface
             'input_tokens' => $response->usage->promptTokens,
             'output_tokens' => $response->usage->completionTokens,
             'cached_input_tokens' => $response->usage->cachedInputTokens,
+            'cache_write_input_tokens' => $response->usage->cacheWriteInputTokens,
             'cache_strategy' => $response->usage->cacheStrategy,
             'cost_credits' => $response->usage->costCredits,
             'latency_ms' => $response->latencyMs,

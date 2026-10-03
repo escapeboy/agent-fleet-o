@@ -128,13 +128,37 @@
             @endif
 
             {{-- Actions --}}
-            @if($status === \App\Domain\Approval\Enums\ActionProposalStatus::Pending)
+            @if($status === \App\Domain\Approval\Enums\ActionProposalStatus::Pending && $editingArgumentsProposalId === $p->id)
+                <div class="space-y-2 border-t border-gray-100 pt-3">
+                    <x-form-textarea wire:model="editedArgumentsJson" label="Arguments the tool will run with" rows="6" mono
+                        hint="Edit the values the agent chose. Only parameters of this tool are accepted." />
+                    @error('editedArgumentsJson') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                    <div class="flex gap-2">
+                        <button wire:click="approveProposalWithEdits"
+                            class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
+                            <i class="fa-solid fa-check mr-1"></i>
+                            Approve with these arguments
+                        </button>
+                        <button wire:click="cancelArgumentEdit"
+                            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            @elseif($status === \App\Domain\Approval\Enums\ActionProposalStatus::Pending)
                 <div class="flex gap-2 border-t border-gray-100 pt-3">
                     <button wire:click="approveProposal('{{ $p->id }}')"
                         class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
                         <i class="fa-solid fa-check mr-1"></i>
                         Approve
                     </button>
+                    @if($p->target_type === \App\Domain\Tool\Services\ToolApprovalGate::TARGET_TYPE)
+                        <button wire:click="openArgumentEdit('{{ $p->id }}')"
+                            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <i class="fa-solid fa-pen mr-1"></i>
+                            Edit arguments
+                        </button>
+                    @endif
                     <button wire:click="openProposalReject('{{ $p->id }}')"
                         class="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100">
                         <i class="fa-solid fa-xmark mr-1"></i>

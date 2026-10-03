@@ -171,7 +171,6 @@ use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use App\Livewire\Hooks\PluginDispatchHook;
 use App\Mcp\DeadlineContext;
 use App\Mcp\ErrorClassifier;
-use App\Mcp\Listeners\McpAppsCapabilityListener;
 use App\Mcp\Services\ConnectorMcpRegistrar;
 use App\Models\ArtifactVersion;
 use App\Models\User;
@@ -201,7 +200,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Laravel\Mcp\Events\SessionInitialized;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\Events\FeatureUpdated;
 use Laravel\Pennant\Feature;
@@ -599,9 +597,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Bridge relay: forward Reverb client-relay.* whispers into Redis stream
         Event::listen(MessageReceived::class, HandleBridgeRelayResponse::class);
-
-        // MCP Apps: record per-session capability flag on initialize handshake
-        Event::listen(SessionInitialized::class, McpAppsCapabilityListener::class);
 
         // Integration audit trail: log every executed driver action
         Event::listen(

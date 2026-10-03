@@ -19,6 +19,7 @@ use App\Domain\Outbound\Models\OutboundProposal;
 use App\Domain\Shared\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CoreChannelDriversTest extends TestCase
@@ -57,10 +58,9 @@ class CoreChannelDriversTest extends TestCase
     }
 
     /**
-     * @dataProvider coreChannelProvider
-     *
      * @param  class-string  $expected
      */
+    #[DataProvider('coreChannelProvider')]
     public function test_connector_for_returns_real_connector(string $channel, string $expected): void
     {
         $connector = $this->manager->connectorFor($channel);
@@ -70,10 +70,8 @@ class CoreChannelDriversTest extends TestCase
         $this->assertTrue($this->manager->hasConnector($channel));
     }
 
-    /**
-     * @dataProvider coreChannelProvider
-     */
-    public function test_channel_enum_is_core(string $channel): void
+    #[DataProvider('coreChannelProvider')]
+    public function test_channel_enum_is_core(string $channel, string $expected): void
     {
         $this->assertTrue(OutboundChannel::from($channel)->isCore());
     }

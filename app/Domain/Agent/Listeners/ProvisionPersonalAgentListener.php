@@ -5,6 +5,7 @@ namespace App\Domain\Agent\Listeners;
 use App\Domain\Agent\Enums\AgentScope;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 
 class ProvisionPersonalAgentListener
@@ -45,7 +46,7 @@ class ProvisionPersonalAgentListener
         try {
             $defaultProvider = config('llm_pricing.default_provider', 'anthropic');
             $defaultModel = config('llm_pricing.default_model', 'claude-sonnet-4-5');
-            $pricing = config("llm_pricing.providers.{$defaultProvider}.{$defaultModel}", []);
+            $pricing = app(CostCalculator::class)->pricing($defaultProvider, $defaultModel) ?? [];
 
             Agent::create([
                 'team_id' => $teamId,

@@ -22,11 +22,14 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolApprovalGate;
+use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Mockery;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -159,6 +162,85 @@ class ToolApprovalGateTest extends TestCase
 
         $this->assertStringContainsString('[ ] ship it', (string) $result);
         $this->assertSame(0, ActionProposal::count());
+    }
+
+    public function test_approver_can_edit_arguments_before_the_replay(): void
+    {
+        $this->attachPlanTool();
+        $this->updatePlanTool()->handle(todos: $this->todos());
+        $proposal = ActionProposal::sole();
+
+        Queue::fake();
+        $edited = ['todos' => json_encode([['content' => 'ship it carefully', 'status' => 'pending']])];
+        app(ApproveActionProposalAction::class)->execute($proposal, $this->owner->fresh(), 'fixed the step', $edited);
+        (new ExecuteActionProposalJob($proposal->id))->handle(app(ActionProposalExecutor::class));
+        $proposal->refresh();
+
+        $this->assertSame(ActionProposalStatus::Executed, $proposal->status, (string) $proposal->execution_error);
+        $this->assertStringContainsString('ship it carefully', json_encode($proposal->execution_result));
+        $this->assertSame(['todos' => $this->todos()], $proposal->payload['arguments'], 'the model\'s original arguments are kept');
+        $this->assertSame($edited, $proposal->payload['edited_arguments']);
+        $this->assertSame($this->owner->id, $proposal->payload['edited_by_user_id']);
+    }
+
+    public function test_edited_arguments_with_an_unknown_parameter_are_not_run(): void
+    {
+        $this->attachPlanTool();
+        $this->updatePlanTool()->handle(todos: $this->todos());
+        $proposal = ActionProposal::sole();
+
+        Queue::fake();
+        app(ApproveActionProposalAction::class)->execute($proposal, $this->owner->fresh(), null, ['todos' => $this->todos(), 'rm_rf' => '/']);
+        (new ExecuteActionProposalJob($proposal->id))->handle(app(ActionProposalExecutor::class));
+        $proposal->refresh();
+
+        $this->assertSame(ActionProposalStatus::ExecutionFailed, $proposal->status);
+        $this->assertStringContainsString('rm_rf', (string) $proposal->execution_error);
+    }
+
+    public function test_edited_arguments_are_refused_for_other_proposals_and_lists(): void
+    {
+        $this->attachPlanTool();
+        $this->updatePlanTool()->handle(todos: $this->todos());
+        $proposal = ActionProposal::sole();
+
+        try {
+            app(ApproveActionProposalAction::class)->execute($proposal, $this->owner->fresh(), null, ['a', 'b']);
+            $this->fail('A list must be refused.');
+        } catch (RuntimeException) {
+            $this->assertSame(ActionProposalStatus::Pending, $proposal->refresh()->status);
+        }
+
+        $other = app(CreateActionProposalAction::class)->execute(
+            teamId: $this->team->id, targetType: 'git_push', targetId: null, summary: 'push', payload: [],
+        );
+        $this->expectException(RuntimeException::class);
+        app(ApproveActionProposalAction::class)->execute($other, $this->owner->fresh(), null, ['branch' => 'main']);
+    }
+
+    public function test_inbox_argument_edit_is_limited_to_own_team_agent_tool_calls(): void
+    {
+        $this->attachPlanTool();
+        $this->updatePlanTool()->handle(todos: $this->todos());
+        $own = ActionProposal::sole();
+
+        $outsider = User::factory()->create();
+        $otherTeam = Team::create(['name' => 'Other', 'slug' => 'other-'.Str::lower(Str::random(6)), 'owner_id' => $outsider->id, 'settings' => []]);
+        $outsider->update(['current_team_id' => $otherTeam->id]);
+        $otherTeam->users()->attach($outsider, ['role' => 'owner']);
+        $this->actingAs($outsider);
+
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
+        Livewire::test(ApprovalInboxPage::class)
+            ->call('openArgumentEdit', $own->id)
+            ->assertStatus(404)
+            ->assertSet('editingArgumentsProposalId', null);
+
+        $this->actingAs($this->owner->fresh());
+        Livewire::test(ApprovalInboxPage::class)
+            ->call('openArgumentEdit', $own->id)
+            ->assertSet('editingArgumentsProposalId', $own->id)
+            ->assertSet('editedArgumentsJson', fn ($json) => str_contains($json, 'ship it'));
     }
 
     public function test_approved_call_is_replayed_once_and_the_result_stored(): void

@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Mcp;
 
+use App\Mcp\Protocol\ProtocolContext;
 use App\Mcp\Services\McpAppsCapability;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -81,5 +82,42 @@ class McpAppsCapabilityTest extends TestCase
     public function test_unknown_session_defaults_to_unsupported(): void
     {
         $this->assertFalse(McpAppsCapability::for('never-stored'));
+    }
+
+    public function test_stateless_request_uses_capabilities_from_meta(): void
+    {
+        app()->instance(ProtocolContext::BINDING, new ProtocolContext(
+            version: '2026-07-28', stateless: true, clientCapabilities: $this->specCapabilities(),
+        ));
+        $this->assertTrue(McpAppsCapability::active());
+
+        app()->instance(ProtocolContext::BINDING, new ProtocolContext(
+            version: '2026-07-28', stateless: true, clientCapabilities: [],
+        ));
+        $this->assertFalse(McpAppsCapability::active());
+    }
+
+    public function test_legacy_http_request_uses_the_issued_session_id(): void
+    {
+        McpAppsCapability::recordInitialize($this->specCapabilities());
+        $sessionId = app(McpAppsCapability::ISSUED_SESSION_BINDING);
+
+        app()->instance(ProtocolContext::BINDING, new ProtocolContext(version: '2025-11-25', stateless: false));
+        request()->headers->set('Mcp-Session-Id', $sessionId);
+        $this->assertTrue(McpAppsCapability::active());
+
+        request()->headers->set('Mcp-Session-Id', 'unknown-session');
+        $this->assertFalse(McpAppsCapability::active());
+    }
+
+    public function test_stdio_uses_the_process_flag_from_initialize(): void
+    {
+        app()->forgetInstance(ProtocolContext::BINDING);
+
+        McpAppsCapability::recordInitialize($this->specCapabilities());
+        $this->assertTrue(McpAppsCapability::active());
+
+        McpAppsCapability::recordInitialize(null);
+        $this->assertFalse(McpAppsCapability::active());
     }
 }
