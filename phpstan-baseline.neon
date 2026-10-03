@@ -351,7 +351,7 @@ parameters:
 		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 3
+			count: 1
 			path: app/Domain/Agent/Actions/UpdateAgentRiskProfileAction.php
 
 		-
@@ -425,6 +425,12 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Domain/Agent/Pipeline/Middleware/InjectWorldModel.php
+
+		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Agent/Pipeline/Middleware/PreExecutionScout.php
 
 		-
 			message: '#^Offset ''context_injection'' does not exist on non\-falsy\-string\.$#'
@@ -1567,12 +1573,6 @@ parameters:
 			path: app/Domain/Assistant/AgentTools/UploadMemoryKnowledgeTool.php
 
 		-
-			message: '#^Call to an undefined method Laravel\\Ai\\Contracts\\Providers\\TextProvider\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Domain/Assistant/Agents/InjectTeamCredentialsMiddleware.php
-
-		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -1903,20 +1903,8 @@ parameters:
 			path: app/Domain/Bridge/Models/BridgeConnection.php
 
 		-
-			message: '#^Anonymous function should return Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Domain/Bridge/Services/BridgeRouter.php
-
-		-
 			message: '#^Method App\\Domain\\Bridge\\Services\\BridgeRouter\:\:allAvailableAgents\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Domain/Bridge/Services/BridgeRouter.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\Bridge\\Models\\BridgeConnection\>\:\:flatMap\(\) expects callable\(App\\Domain\\Bridge\\Models\\BridgeConnection, int\)\: \(array\<int, non\-empty\-array\<string, mixed\>\>\|Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\), Closure\(App\\Domain\\Bridge\\Models\\BridgeConnection\)\: Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\> given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Domain/Bridge/Services/BridgeRouter.php
 
@@ -2083,6 +2071,12 @@ parameters:
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
 		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
+
+		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
@@ -2167,7 +2161,7 @@ parameters:
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
 
 		-
-			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Agent\\Models\\Agent\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Agent\\Models\\Agent\>\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Domain\\Agent\\Models\\Agent\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Agent\\Models\\Agent\>\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Domain/Crew/Actions/DecomposeGoalAction.php
@@ -2189,6 +2183,12 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Domain/Crew/Actions/ExecuteCrewAction.php
+
+		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Crew/Actions/SynthesizeResultAction.php
 
 		-
 			message: '#^If condition is always false\.$#'
@@ -2263,6 +2263,12 @@ parameters:
 			path: app/Domain/Crew/Actions/UpdateCrewAction.php
 
 		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
+
+		-
 			message: '#^Offset ''criterion_scores'' on array\{passed\: bool, score\: float, feedback\: string, issues\: array, unverified\: array, criterion_scores\: array\<string, float\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
@@ -2291,6 +2297,12 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: app/Domain/Crew/Actions/ValidateTaskOutputAction.php
+
+		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Crew/Jobs/CoordinatorDecisionJob.php
 
 		-
 			message: '#^Method App\\Domain\\Crew\\Jobs\\CoordinatorDecisionJob\:\:parseDecision\(\) is unused\.$#'
@@ -2803,6 +2815,18 @@ parameters:
 			path: app/Domain/Crew/Services/TaskDependencyResolver.php
 
 		-
+			message: '#^Method App\\Domain\\Decision\\Services\\StructuredDecisionPrompt\:\:legend\(\) never returns array\<string, string\> so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Domain/Decision/Services/StructuredDecisionPrompt.php
+
+		-
+			message: '#^Method App\\Domain\\Decision\\Services\\StructuredDecisionPrompt\:\:legend\(\) should return array\<string, string\>\|null but returns array\<int, string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Domain/Decision/Services/StructuredDecisionPrompt.php
+
+		-
 			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Email\\Enums\\EmailTemplateStatus\:\:Active will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -3313,12 +3337,6 @@ parameters:
 			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
 
 		-
-			message: '#^Result of \|\| is always true\.$#'
-			identifier: booleanOr.alwaysTrue
-			count: 1
-			path: app/Domain/Experiment/Pipeline/ExecutePlaybookStepJob.php
-
-		-
 			message: '#^Strict comparison using \!\=\= between Throwable and null will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
@@ -3393,12 +3411,6 @@ parameters:
 		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Experiment/Pipeline/RunEvaluationStage.php
-
-		-
-			message: '#^Parameter \#1 \$num of function round expects float\|int, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Domain/Experiment/Pipeline/RunEvaluationStage.php
 
@@ -3665,12 +3677,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Knowledge/Jobs/RagflowSyncStatusJob.php
-
-		-
-			message: '#^Property NeuronAI\\RAG\\Document\:\:\$score \(float\) on left side of \?\? is not nullable\.$#'
-			identifier: nullCoalesce.property
-			count: 1
-			path: app/Domain/Knowledge/Services/KnowledgeBaseRAGFactory.php
 
 		-
 			message: '#^Offset ''valid'' on array\{valid\: bool, reason\: string\|null\} on left side of \?\? always exists and is not nullable\.$#'
@@ -4495,6 +4501,12 @@ parameters:
 			path: app/Domain/Memory/Jobs/CompressAndStoreExecutionMemoryJob.php
 
 		-
+			message: '#^Offset decimal\-int\-string on array\<string, int\<0, max\>\> in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Domain/Memory/Services/MemoryContextInjector.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$experiment_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -4591,6 +4603,12 @@ parameters:
 			path: app/Domain/Migration/Jobs/ExecuteMigrationJob.php
 
 		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Model\:\:update\(\) expects array\<model property of App\\Domain\\Shared\\Models\\ContactIdentity, mixed\>, array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Migration/Services/Importers/ContactImporter.php
+
+		-
 			message: '#^Strict comparison using \!\=\= between non\-empty\-string and '''' will always evaluate to true\.$#'
 			identifier: notIdentical.alwaysTrue
 			count: 1
@@ -4667,6 +4685,12 @@ parameters:
 			identifier: ternary.alwaysFalse
 			count: 1
 			path: app/Domain/Project/Actions/ExecuteHeartbeatTurnAction.php
+
+		-
+			message: '#^Constant JSON_UNESCAPED_UNICODE is not allowed for parameter \#4 \$flags of function json_decode\.$#'
+			identifier: argument.invalidConstant
+			count: 1
+			path: app/Domain/Project/Actions/ExpandProjectGoalAction.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -4833,7 +4857,7 @@ parameters:
 		-
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
-			count: 2
+			count: 1
 			path: app/Domain/Project/Jobs/DeliverWorkflowResultsJob.php
 
 		-
@@ -5329,6 +5353,12 @@ parameters:
 			path: app/Domain/Shared/Models/TeamProviderCredential.php
 
 		-
+			message: '#^Parameter \#1 \$column of method Illuminate\\Database\\Eloquent\\Builder\<covariant Illuminate\\Database\\Eloquent\\Model\>\:\:where\(\) expects array\<int\|model property of never, mixed\>\|\(Closure\(Illuminate\\Database\\Query\\Builder\)\: mixed\)\|Illuminate\\Contracts\\Database\\Query\\Expression\|model property of never, non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Domain/Shared/Scopes/TeamScope.php
+
+		-
 			message: '#^Method App\\Domain\\Shared\\Services\\ContactResolver\:\:resolveOrCreate\(\) should return App\\Domain\\Shared\\Models\\ContactIdentity but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
 			identifier: return.type
 			count: 1
@@ -5671,7 +5701,7 @@ parameters:
 			path: app/Domain/Signal/Services/AutoBugReportClassifier.php
 
 		-
-			message: '#^Offset 1 on array\{list\<string\>, list\<''c''\|''cpp''\|''cs''\|''go''\|''h''\|''java''\|''js''\|''jsx''\|''kt''\|''m''\|''mm''\|''php''\|''py''\|''rb''\|''rs''\|''swift''\|''ts''\|''tsx''\>\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset 1 on array\{list\<string\>, list\<non\-falsy\-string\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Domain/Signal/Services/CodeOwnershipResolver.php
@@ -5749,62 +5779,8 @@ parameters:
 			path: app/Domain/Skill/Actions/ExecuteRunPodSkillAction.php
 
 		-
-			message: '#^Cannot call method execute\(\) on null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''boruna_script'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''browser'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''code_execution'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''gpu_compute'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''runpod_endpoint'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''runpod_pod'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Match arm comparison between App\\Domain\\Skill\\Enums\\SkillType\:\:BorunaScript\|App\\Domain\\Skill\\Enums\\SkillType\:\:Browser\|App\\Domain\\Skill\\Enums\\SkillType\:\:CodeExecution\|App\\Domain\\Skill\\Enums\\SkillType\:\:Connector\|App\\Domain\\Skill\\Enums\\SkillType\:\:GpuCompute\|App\\Domain\\Skill\\Enums\\SkillType\:\:Guardrail\|App\\Domain\\Skill\\Enums\\SkillType\:\:Hybrid\|App\\Domain\\Skill\\Enums\\SkillType\:\:Llm\|App\\Domain\\Skill\\Enums\\SkillType\:\:MultiModelConsensus\|App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:Rule\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodEndpoint\|App\\Domain\\Skill\\Enums\\SkillType\:\:RunpodPod\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction and ''supabase_edge…'' is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
 			message: '#^Match expression does not handle remaining values\: App\\Domain\\Skill\\Enums\\SkillType\:\:RagflowRetrieval\|App\\Domain\\Skill\\Enums\\SkillType\:\:SupabaseEdgeFunction$#'
 			identifier: match.unhandled
-			count: 1
-			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
-
-		-
-			message: '#^Method App\\Domain\\Skill\\Actions\\ExecuteSkillAction\:\:delegateSpecializedType\(\) never returns array\{execution\: App\\Domain\\Skill\\Models\\SkillExecution, output\: array\|string\|null\} so it can be removed from the return type\.$#'
-			identifier: return.unusedType
 			count: 1
 			path: app/Domain/Skill/Actions/ExecuteSkillAction.php
 
@@ -5901,12 +5877,6 @@ parameters:
 		-
 			message: '#^Property App\\Domain\\Skill\\Actions\\RunSkillIterationAction\:\:\$updateSkill is never read, only written\.$#'
 			identifier: property.onlyWritten
-			count: 1
-			path: app/Domain/Skill/Actions/RunSkillIterationAction.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Domain/Skill/Actions/RunSkillIterationAction.php
 
@@ -6745,46 +6715,10 @@ parameters:
 			path: app/Domain/Workflow/Actions/UpdateWorkflowAction.php
 
 		-
-			message: '#^Match arm comparison between \$this\(App\\Domain\\Workflow\\Enums\\WorkflowNodeType\)&App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:BitbucketPrMerge and App\\Domain\\Workflow\\Enums\\WorkflowNodeType\:\:BitbucketPrMerge is always true\.$#'
-			identifier: match.alwaysTrue
-			count: 1
-			path: app/Domain/Workflow/Enums/WorkflowNodeType.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
-
-		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Client\\Response\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Domain/Workflow/Executors/BitbucketPrMergeNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Workflow/Executors/ClassifyPrTierNodeExecutor.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/ClassifyPrTierNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Workflow/Executors/HttpRequestNodeExecutor.php
 
 		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
@@ -6793,22 +6727,10 @@ parameters:
 			path: app/Domain/Workflow/Executors/HttpRequestNodeExecutor.php
 
 		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/HttpRequestNodeExecutor.php
-
-		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Client\\Response\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Domain/Workflow/Executors/HttpRequestNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Workflow/Executors/KnowledgeRetrievalNodeExecutor.php
 
 		-
 			message: '#^Offset ''score'' on array\{content\: string, source\: string, score\: float\} on left side of \?\? always exists and is not nullable\.$#'
@@ -6817,32 +6739,8 @@ parameters:
 			path: app/Domain/Workflow/Executors/KnowledgeRetrievalNodeExecutor.php
 
 		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/KnowledgeRetrievalNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Domain/Workflow/Executors/LlmNodeExecutor.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/LlmNodeExecutor.php
-
-		-
 			message: '#^Access to an undefined property App\\Infrastructure\\AI\\DTOs\\AiResponseDTO\:\:\$structured\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Domain/Workflow/Executors/ParameterExtractorNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
 			count: 1
 			path: app/Domain/Workflow/Executors/ParameterExtractorNodeExecutor.php
 
@@ -6859,38 +6757,14 @@ parameters:
 			path: app/Domain/Workflow/Executors/ParameterExtractorNodeExecutor.php
 
 		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/ParameterExtractorNodeExecutor.php
-
-		-
 			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
-			path: app/Domain/Workflow/Executors/TemplateTransformNodeExecutor.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Domain/Workflow/Executors/TemplateTransformNodeExecutor.php
-
-		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 2
 			path: app/Domain/Workflow/Executors/VariableAggregatorNodeExecutor.php
 
 		-
 			message: '#^Parameter \#1 \$outputs of method App\\Domain\\Workflow\\Executors\\VariableAggregatorNodeExecutor\:\:merge\(\) expects array\<int, array\<string, mixed\>\>, array\<int, string\|null\> given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Domain/Workflow/Executors/VariableAggregatorNodeExecutor.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
 			count: 1
 			path: app/Domain/Workflow/Executors/VariableAggregatorNodeExecutor.php
 
@@ -7271,9 +7145,6 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Domain/WorldModel/Models/TeamWorldModel.php
-
-
-
 
 		-
 			message: '#^Access to an undefined property App\\Domain\\Tool\\Models\\Tool\:\:\$pivot\.$#'
@@ -10588,12 +10459,6 @@ parameters:
 			path: app/Infrastructure/AI/Services/LocalAgentDiscovery.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between array\{trace\: string, span\: string, name\: string, start_nanos\: int, attributes\: array\<string, bool\|float\|int\|string\|null\>, emit\: bool\} and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Infrastructure/AI/Services/PhoenixTraceContext.php
-
-		-
 			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Domain\\Shared\\Enums\\DataClassification\:\:Confidential, App\\Domain\\Shared\\Enums\\DataClassification\:\:Restricted\} and true will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
@@ -10704,12 +10569,6 @@ parameters:
 		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Infrastructure/Encryption/CredentialEncryption.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
 			count: 1
 			path: app/Infrastructure/Encryption/CredentialEncryption.php
 
@@ -10866,18 +10725,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$secret_data\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Infrastructure/Git/Clients/GitHubApiClient.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$secret_data\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Infrastructure/Git/Clients/GitLabApiClient.php
-
-		-
-			message: '#^Property App\\Infrastructure\\Git\\Clients\\GitLabApiClient\:\:\$repo is never read, only written\.$#'
-			identifier: property.onlyWritten
 			count: 1
 			path: app/Infrastructure/Git/Clients/GitLabApiClient.php
 
@@ -11189,12 +11036,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Livewire/Assistant/AssistantPanel.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_message_at\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Livewire/Assistant/AssistantPanel.php
@@ -11524,12 +11365,6 @@ parameters:
 			path: app/Livewire/Dashboard/DashboardPage.php
 
 		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 1
-			path: app/Livewire/Dashboard/DashboardPage.php
-
-		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 2
@@ -11682,18 +11517,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$value\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Livewire/Experiments/MetricsPanel.php
-
-		-
-			message: '#^Binary operation "/" between Illuminate\\Database\\Eloquent\\Model and 100 results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: app/Livewire/Experiments/MetricsPanel.php
-
-		-
-			message: '#^Parameter \#1 \$num of function abs expects float\|int, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Livewire/Experiments/MetricsPanel.php
 
@@ -12532,49 +12355,49 @@ parameters:
 			path: app/Mcp/Services/ToolAutoDiscoverer.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminBillingApplyCreditTool.php
 
 		-
-			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:creditBalance\(\)\.$#'
+			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:creditBalance\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminBillingApplyCreditTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminBillingRefundTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$pm_last_four\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:\$pm_last_four\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminTeamBillingDetailTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$pm_type\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:\$pm_type\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminTeamBillingDetailTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:\$stripe_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Mcp/Tools/Admin/AdminTeamBillingDetailTool.php
 
 		-
-			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:invoices\(\)\.$#'
+			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:invoices\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminTeamBillingDetailTool.php
 
 		-
-			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Shared\\Models\\Team\>\:\:subscription\(\)\.$#'
+			message: '#^Call to an undefined method App\\Domain\\Shared\\Models\\Team\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Shared\\Models\\Team\>\:\:subscription\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Mcp/Tools/Admin/AdminTeamBillingDetailTool.php
@@ -13110,11 +12933,11 @@ parameters:
 		-
 			message: '#^Cannot call method toISOString\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 3
+			count: 1
 			path: app/Mcp/Tools/Bridge/BridgeStatusTool.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Domain\\Bridge\\Models\\BridgeConnection\>\:\:map\(\) contains unresolvable type\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Bridge/BridgeStatusTool.php
@@ -13910,6 +13733,36 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/GitRepository/GitPullRequestListTool.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
+
+		-
+			message: '#^Method App\\Mcp\\Tools\\GitRepository\\GitPullRequestMergeTool\:\:approvalGate\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Approved will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
 
 		-
 			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
@@ -14932,8 +14785,8 @@ parameters:
 			path: app/Mcp/Tools/Signal/ContactManageTool.php
 
 		-
-			message: '#^Anonymous function should return array\{id\: string, display_name\: string\|null, email\: string\|null, phone\: string\|null, channels_count\: int\<0, max\>, channels\: Illuminate\\Support\\Collection\<int, array\{channel\: mixed, external_id\: mixed, external_username\: mixed\}\>, updated_at\: string\} but returns array\{id\: string, display_name\: string\|null, email\: string\|null, phone\: string\|null, channels_count\: int\<0, max\>, channels\: Illuminate\\Support\\Collection\<int, array\{channel\: mixed, external_id\: mixed, external_username\: mixed\}\>, updated_at\: string\}\.$#'
-			identifier: return.type
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Domain\\Shared\\Models\\ContactIdentity\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
 			count: 1
 			path: app/Mcp/Tools/Signal/ContactManageTool.php
 
@@ -14998,7 +14851,7 @@ parameters:
 			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
 
 		-
-			message: '#^Parameter \#1 \$array \(array\{array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog''\|''discord''\|''github''\|''jira''\|''linear''\|''pagerduty''\|''sentry''\|''slack''\|''whatsapp'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, \.\.\.\}\) of array_values is already a list, call has no effect\.$#'
+			message: '#^Parameter \#1 \$array \(array\{array\{driver\: ''github'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''slack'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''jira'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''linear'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''discord'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''sentry'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''pagerduty'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, array\{driver\: ''datadog'', type\: ''webhook'', webhook_url\: string, signals_last_30d\: int, last_received_at\: string\|null\}, \.\.\.\}\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
 			count: 1
 			path: app/Mcp/Tools/Signal/InboundConnectorManageTool.php
@@ -15268,7 +15121,7 @@ parameters:
 			path: app/Mcp/Tools/Skill/SkillBenchmarkStatusTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Skill/SkillGenerateImprovementTool.php
@@ -15286,7 +15139,7 @@ parameters:
 			path: app/Mcp/Tools/Skill/SkillGetTool.php
 
 		-
-			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
+			message: '#^Access to an undefined property App\\Domain\\Skill\\Models\\Skill\|Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), App\\Domain\\Skill\\Models\\Skill\>\:\:\$created_by\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Mcp/Tools/Skill/SkillPlaygroundTestTool.php
@@ -15394,7 +15247,7 @@ parameters:
 			path: app/Mcp/Tools/System/SystemRecentErrorsTool.php
 
 		-
-			message: '#^Parameter \#1 \$column of method Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:where\(\) expects array\<int\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, mixed\>\|\(Closure\(Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\: Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\|\(Closure\(Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\)\: void\)\|Illuminate\\Contracts\\Database\\Query\\Expression\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, ''experiments\.team_id'' given\.$#'
+			message: '#^Parameter \#1 \$column of method Illuminate\\Database\\Eloquent\\Builder\<App\\Domain\\Experiment\\Models\\PlaybookStep\>\:\:where\(\) expects array\<int\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, mixed\>\|\(Closure\(Illuminate\\Database\\Query\\Builder\)\: mixed\)\|Illuminate\\Contracts\\Database\\Query\\Expression\|model property of App\\Domain\\Experiment\\Models\\PlaybookStep, ''experiments\.team_id'' given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Mcp/Tools/System/SystemRecentErrorsTool.php
@@ -15998,45 +15851,3 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Providers/FleetPluginServiceProvider.php
-
-		-
-			message: '#^Dead catch \- App\\Mcp\\Exceptions\\InputRequiredException is never thrown in the try block\.$#'
-			identifier: catch.neverThrown
-			count: 1
-			path: app/Mcp/Methods/MultiRoundTripCallTool.php
-
-		-
-			message: '#^Method App\\Mcp\\Methods\\MultiRoundTripCallTool\:\:inputRequiredResponse\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Mcp/Methods/MultiRoundTripCallTool.php
-
-		-
-			message: '#^Method App\\Mcp\\Tools\\GitRepository\\GitPullRequestMergeTool\:\:approvalGate\(\) never returns null so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Pending will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Domain\\Approval\\Enums\\ApprovalStatus\:\:Approved will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Mcp/Tools/GitRepository/GitPullRequestMergeTool.php
