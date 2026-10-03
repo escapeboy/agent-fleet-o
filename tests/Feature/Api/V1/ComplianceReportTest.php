@@ -142,6 +142,7 @@ class ComplianceReportTest extends ApiTestCase
         $entries = AuditEntry::withoutGlobalScopes()->where('event', LogSafetyViolation::EVENT)->get();
         $this->assertCount(1, $entries);
         $this->assertSame('jailbreak-dan', $entries[0]->properties['rule_id']);
+        $this->assertArrayNotHasKey('snippet', $entries[0]->properties);
         $this->assertSame($this->team->id, $entries[0]->team_id);
     }
 

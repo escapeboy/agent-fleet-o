@@ -143,7 +143,7 @@ return [
     'tool_output_scan' => [
         'enabled' => env('AI_TOOL_OUTPUT_SCAN_ENABLED', false),
         'scanners' => ['prompt_injection', 'jailbreak', 'invisible_chars'],
-        // Longer output is scanned as head + tail of this many characters each half.
+        // Window size for scanning; longer output is scanned in overlapping windows.
         'max_scan_chars' => (int) env('AI_TOOL_OUTPUT_SCAN_MAX_CHARS', 200000),
     ],
 

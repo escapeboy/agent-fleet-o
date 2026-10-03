@@ -43,7 +43,7 @@ class ActionProposalExecutor
         return match ($proposal->target_type) {
             'tool_call' => $this->executeToolCall($proposal, $actor),
             ToolApprovalGate::TARGET_TYPE => $this->executeAgentToolCall($proposal),
-            ToolDefinitionPinner::TARGET_TYPE => $this->executeMcpToolDefinitions($proposal),
+            ToolDefinitionPinner::TARGET_TYPE => $this->executeMcpToolDefinitions($proposal, $actor),
             'integration_action' => $this->executeIntegrationAction($proposal, $actor),
             'git_push' => $this->executeGitPush($proposal, $actor),
             default => throw new RuntimeException(
@@ -58,8 +58,12 @@ class ActionProposalExecutor
      *
      * @return array<string, mixed>
      */
-    private function executeMcpToolDefinitions(ActionProposal $proposal): array
+    private function executeMcpToolDefinitions(ActionProposal $proposal, User $actor): array
     {
+        if (! ToolDefinitionPinner::canApprove($actor, (string) $proposal->team_id)) {
+            throw new RuntimeException('ActionProposalExecutor: only a team owner or admin can apply MCP tool definition changes.');
+        }
+
         $toolId = $proposal->payload['tool_id'] ?? null;
         $hash = $proposal->payload['pending_hash'] ?? null;
 

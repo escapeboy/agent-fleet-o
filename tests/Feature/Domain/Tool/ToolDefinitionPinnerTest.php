@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Domain\Tool;
 
+use App\Domain\Approval\Actions\ApproveActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Services\ActionProposalExecutor;
@@ -201,6 +202,26 @@ class ToolDefinitionPinnerTest extends TestCase
         $this->assertSame('Read a file, now with globs', $tool->tool_definitions[0]['description']);
         $this->assertNull($tool->pending_definitions_hash);
         $this->assertNull($tool->pending_tool_definitions);
+    }
+
+    public function test_only_owner_or_admin_can_approve_a_definition_change(): void
+    {
+        $tool = $this->mcpTool();
+        $this->pinner->sync($tool, $this->rawDefs('changed'));
+        $proposal = $this->proposals($tool)->first();
+
+        $member = User::factory()->create(['current_team_id' => $this->team->id]);
+        $this->team->users()->attach($member, ['role' => 'member']);
+
+        try {
+            app(ApproveActionProposalAction::class)->execute($proposal, $member);
+            $this->fail('A member must not approve a tool definition change.');
+        } catch (RuntimeException) {
+            $this->assertSame(ActionProposalStatus::Pending, $proposal->refresh()->status);
+        }
+
+        $this->expectException(RuntimeException::class);
+        app(ActionProposalExecutor::class)->execute($proposal, $member);
     }
 
     public function test_stale_proposal_cannot_be_applied(): void

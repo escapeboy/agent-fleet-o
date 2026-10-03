@@ -4,14 +4,15 @@ namespace App\Domain\Audit\Listeners;
 
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Audit\Services\OcsfMapper;
-use App\Domain\Tool\Services\ToolErrorGuard;
 use App\Infrastructure\AI\Events\SafetyViolationDetected;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Persists gateway safety violations so they are queryable (audit log, EU AI Act
- * report) instead of living only in the application log.
+ * report) instead of living only in the application log. The matched snippet is
+ * not stored: secret and PII scanners match exactly the data that must not be
+ * copied into a long-retained, exportable audit trail.
  */
 class LogSafetyViolation
 {
@@ -38,7 +39,6 @@ class LogSafetyViolation
                     'rule_id' => $event->violation['rule_id'],
                     'severity' => $event->violation['severity'],
                     'target' => $event->violation['target'],
-                    'snippet' => ToolErrorGuard::capMessage($event->violation['snippet'], 200),
                     'mode' => $event->mode,
                     'strike_count' => $event->strikeCount,
                     'agent_id' => $event->request->agentId,

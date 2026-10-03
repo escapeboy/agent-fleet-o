@@ -5,7 +5,9 @@ namespace App\Domain\Tool\Services;
 use App\Domain\Approval\Actions\CreateActionProposalAction;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Models\ActionProposal;
+use App\Domain\Shared\Models\Team;
 use App\Domain\Tool\Models\Tool;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -133,6 +135,17 @@ class ToolDefinitionPinner
 
             return self::PENDING;
         });
+    }
+
+    /**
+     * Accepting new third-party tool definitions is a supply-chain decision:
+     * owner or admin of the tool's team only.
+     */
+    public static function canApprove(User $user, string $teamId): bool
+    {
+        $team = Team::find($teamId);
+
+        return $team !== null && ($user->teamRole($team)?->canManageTeam() ?? false);
     }
 
     /**
