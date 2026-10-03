@@ -11,6 +11,7 @@ use App\Domain\Integration\Services\IntegrationActionGate;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class IntegrationActionGateTest extends TestCase
@@ -132,9 +133,7 @@ class IntegrationActionGateTest extends TestCase
         $this->assertSame(0, ActionProposal::count());
     }
 
-    /**
-     * @dataProvider riskClassificationCases
-     */
+    #[DataProvider('riskClassificationCases')]
     public function test_classify_action(string $action, string $expected): void
     {
         $this->assertSame($expected, IntegrationActionGate::classifyAction($action));

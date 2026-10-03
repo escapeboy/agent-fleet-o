@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Mcp\Protocol\ProtocolContext;
 use App\Mcp\Protocol\ProtocolVersions;
+use App\Mcp\Services\McpAppsCapability;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,7 +80,15 @@ class NegotiateMcpProtocol
             clientCapabilities: $this->arrayOrNull($meta[ProtocolVersions::META_CLIENT_CAPABILITIES] ?? null),
         ));
 
-        return $next($request);
+        $response = $next($request);
+
+        // laravel/mcp 1.0 issues no sessions; a legacy client gets the id FleetQ
+        // minted at initialize (McpAppsCapability) so it can be echoed back.
+        if (app()->bound(McpAppsCapability::ISSUED_SESSION_BINDING) && ! $response->headers->has(ProtocolVersions::HEADER_SESSION_ID)) {
+            $response->headers->set(ProtocolVersions::HEADER_SESSION_ID, (string) app(McpAppsCapability::ISSUED_SESSION_BINDING));
+        }
+
+        return $response;
     }
 
     /**

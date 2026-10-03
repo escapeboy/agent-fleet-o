@@ -5,8 +5,8 @@ namespace App\Mcp\Methods;
 use App\Mcp\Protocol\ProtocolContext;
 use Laravel\Mcp\Server\Methods\ListTools;
 use Laravel\Mcp\Server\ServerContext;
-use Laravel\Mcp\Server\Transport\JsonRpcRequest;
-use Laravel\Mcp\Server\Transport\JsonRpcResponse;
+use Laravel\Mcp\Transport\JsonRpcRequest;
+use Laravel\Mcp\Transport\JsonRpcResponse;
 
 /**
  * `tools/list` with SEP-2549 cache hints.

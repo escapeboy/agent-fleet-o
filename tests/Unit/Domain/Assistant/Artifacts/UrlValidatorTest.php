@@ -3,17 +3,18 @@
 namespace Tests\Unit\Domain\Assistant\Artifacts;
 
 use App\Domain\Assistant\Artifacts\Support\UrlValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class UrlValidatorTest extends TestCase
 {
-    /** @dataProvider safeUrls */
+    #[DataProvider('safeUrls')]
     public function test_accepts_safe_url(string $url): void
     {
         $this->assertTrue(UrlValidator::isSafe($url), "expected safe: {$url}");
     }
 
-    /** @dataProvider unsafeUrls */
+    #[DataProvider('unsafeUrls')]
     public function test_rejects_unsafe_url(string $url): void
     {
         $this->assertFalse(UrlValidator::isSafe($url), "expected unsafe: {$url}");

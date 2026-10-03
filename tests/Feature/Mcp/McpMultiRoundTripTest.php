@@ -17,8 +17,9 @@ use App\Mcp\Tools\GitRepository\GitPullRequestMergeTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Laravel\Mcp\Schema\Implementation;
 use Laravel\Mcp\Server\ServerContext;
-use Laravel\Mcp\Server\Transport\JsonRpcRequest;
+use Laravel\Mcp\Transport\JsonRpcRequest;
 use Mockery;
 use Tests\TestCase;
 
@@ -88,8 +89,7 @@ class McpMultiRoundTripTest extends TestCase
         return new ServerContext(
             supportedProtocolVersions: ProtocolVersions::SUPPORTED,
             serverCapabilities: [],
-            serverName: 'test',
-            serverVersion: '1.0',
+            implementation: new Implementation(name: 'test', version: '1.0'),
             instructions: '',
             maxPaginationLength: 100,
             defaultPaginationLength: 50,

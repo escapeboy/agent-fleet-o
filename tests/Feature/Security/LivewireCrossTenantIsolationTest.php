@@ -63,30 +63,30 @@ class LivewireCrossTenantIsolationTest extends TestCase
     {
         $foreignExperiment = Experiment::factory()->create(['team_id' => $this->teamA->id]);
 
-        $this->expectException(ModelNotFoundException::class);
-
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
         Livewire::actingAs($this->userB)
-            ->test(ExecutionLogPanel::class, ['experimentId' => $foreignExperiment->id]);
+            ->test(ExecutionLogPanel::class, ['experimentId' => $foreignExperiment->id])
+            ->assertStatus(404);
     }
 
     public function test_workflow_progress_panel_rejects_cross_tenant_experiment(): void
     {
         $foreignExperiment = Experiment::factory()->create(['team_id' => $this->teamA->id]);
 
-        $this->expectException(ModelNotFoundException::class);
-
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
         Livewire::actingAs($this->userB)
-            ->test(WorkflowProgressPanel::class, ['experimentId' => $foreignExperiment->id]);
+            ->test(WorkflowProgressPanel::class, ['experimentId' => $foreignExperiment->id])
+            ->assertStatus(404);
     }
 
     public function test_skill_lineage_panel_rejects_cross_tenant_skill(): void
     {
         $foreignSkill = Skill::factory()->create(['team_id' => $this->teamA->id]);
 
-        $this->expectException(ModelNotFoundException::class);
-
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
         Livewire::actingAs($this->userB)
-            ->test(SkillLineagePanel::class, ['skillId' => $foreignSkill->id]);
+            ->test(SkillLineagePanel::class, ['skillId' => $foreignSkill->id])
+            ->assertStatus(404);
     }
 
     public function test_tool_list_page_toggle_status_rejects_cross_tenant_tool(): void
@@ -97,19 +97,16 @@ class LivewireCrossTenantIsolationTest extends TestCase
         ]);
         $originalStatus = $foreignTool->status;
 
-        $this->expectException(ModelNotFoundException::class);
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
+        Livewire::actingAs($this->userB)
+            ->test(ToolListPage::class)
+            ->call('toggleStatus', $foreignTool->id)
+            ->assertStatus(404);
 
-        try {
-            Livewire::actingAs($this->userB)
-                ->test(ToolListPage::class)
-                ->call('toggleStatus', $foreignTool->id);
-        } finally {
-            $foreignTool->refresh();
-            $this->assertSame(
-                $originalStatus,
-                $foreignTool->status,
-                'Cross-tenant tool status must remain unchanged after the rejected toggle.',
-            );
-        }
+        $this->assertSame(
+            $originalStatus,
+            $foreignTool->refresh()->status,
+            'Cross-tenant tool status must remain unchanged after the rejected toggle.',
+        );
     }
 }

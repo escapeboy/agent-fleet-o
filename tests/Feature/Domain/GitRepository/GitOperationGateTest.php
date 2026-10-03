@@ -11,6 +11,7 @@ use App\Domain\GitRepository\Services\GitOperationGate;
 use App\Domain\Shared\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class GitOperationGateTest extends TestCase
@@ -168,9 +169,7 @@ class GitOperationGateTest extends TestCase
         app(GitOperationGate::class)->check($this->repo, 'someUnknownFutureMethod', []);
     }
 
-    /**
-     * @dataProvider riskClassificationCases
-     */
+    #[DataProvider('riskClassificationCases')]
     public function test_classify_method(string $method, string $expected): void
     {
         $this->assertSame($expected, GitOperationGate::classifyMethod($method));

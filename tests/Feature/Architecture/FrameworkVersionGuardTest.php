@@ -20,10 +20,20 @@ use Tests\TestCase;
  * Horizon worker boot + partner sort on Postgres), the framework must stay
  * below 13.15.0. Raising MAX_EXCLUSIVE without doing that work re-opens the
  * incident.
+ *
+ * 2026-10-03 — raised to 13.35.0 for framework 13.34.0 after:
+ *   - Horizon: laravel/horizon 5.50 declares --stop-when-empty-for in its
+ *     WorkCommand; local Horizon booted on 13.34 and processed
+ *     DispatchScheduledProjectsJob + ComputeProviderRankingJob to DONE with no
+ *     option errors or restart loop.
+ *   - Sort: spatie/laravel-query-builder 7.3.5 passes 'asc'/'desc' strings and
+ *     framework 13.34 orderBy() accepts strings and the SortDirection enum;
+ *     SortOnPostgresTest (Postgres-only) passes against Postgres 17.
+ * Every further bump needs the same two checks before moving the ceiling.
  */
 class FrameworkVersionGuardTest extends TestCase
 {
-    private const MAX_EXCLUSIVE = '13.15.0';
+    private const MAX_EXCLUSIVE = '13.35.0';
 
     public function test_laravel_framework_stays_below_known_bad_version(): void
     {

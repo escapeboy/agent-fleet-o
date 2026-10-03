@@ -6,8 +6,8 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\Tool\DTOs\SshExecutionResult;
 use App\Domain\Tool\Exceptions\SshHostNotAllowedException;
 use Illuminate\Support\Facades\Log;
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Net\SSH2;
+use phpseclib4\Crypt\PublicKeyLoader;
+use phpseclib4\Net\SSH2;
 use RuntimeException;
 
 class SshExecutor
@@ -71,7 +71,8 @@ class SshExecutor
 
         $credential->touchLastUsed();
 
-        $output = $ssh->exec($command);
+        // phpseclib4 exec() returns ?string (null when the channel yields nothing).
+        $output = (string) $ssh->exec($command);
         $exitCode = $ssh->getExitStatus();
 
         $durationMs = (int) round(microtime(true) * 1000) - $startMs;
