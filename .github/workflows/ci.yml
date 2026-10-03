@@ -40,6 +40,17 @@ jobs:
       - name: Laravel Pint
         run: vendor/bin/pint --test
 
+      # TEMP (remove after use): regenerate the baseline on the runner for phpstan 2.2 / larastan 3.12.
+      - name: TEMP regenerate PHPStan baseline
+        continue-on-error: true
+        run: vendor/bin/phpstan analyse --memory-limit=2G --no-progress --generate-baseline=phpstan-baseline.neon --allow-empty-baseline
+
+      - name: TEMP upload regenerated baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpstan-baseline-base
+          path: phpstan-baseline.neon
+
       - name: PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=2G
 
