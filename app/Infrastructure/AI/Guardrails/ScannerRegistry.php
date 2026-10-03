@@ -59,16 +59,17 @@ class ScannerRegistry
      * and scanner options still come from config('ai_safety.scanners').
      *
      * @param  list<string>  $keys
+     * @param  array<string, array<string, mixed>>  $options  per-scanner settings merged over the gateway config
      * @return list<ScannerInterface>
      */
-    public function only(array $keys): array
+    public function only(array $keys, array $options = []): array
     {
         /** @var array<string, array<string, mixed>> $config */
         $config = config('ai_safety.scanners', []);
         $scanners = [];
 
         foreach ($keys as $key) {
-            $scanner = $this->make($key, $config[$key] ?? []);
+            $scanner = $this->make($key, array_merge($config[$key] ?? [], $options[$key] ?? []));
 
             if ($scanner !== null) {
                 $scanners[] = $scanner;
@@ -86,7 +87,7 @@ class ScannerRegistry
         $severity = (string) ($settings['severity'] ?? 'medium');
 
         return match ($key) {
-            'invisible_chars' => new InvisibleCharScanner($severity),
+            'invisible_chars' => new InvisibleCharScanner($severity, (bool) ($settings['allow_text_marks'] ?? false)),
             'secrets' => new SecretScanner($this->secretLibrary, $severity),
             'pii' => new PiiScanner($severity),
             'prompt_injection' => new PromptInjectionScanner($severity),
