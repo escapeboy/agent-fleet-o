@@ -67,7 +67,7 @@
         "laravel/socialite": "^5.25",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.1",
-        "neuron-core/neuron-ai": "^3.2",
+        "neuron-core/neuron-ai": "^4.0",
         "nikic/php-parser": "^5.0",
         "open-telemetry/exporter-otlp": "^1.4",
         "open-telemetry/sdk": "^1.14",
