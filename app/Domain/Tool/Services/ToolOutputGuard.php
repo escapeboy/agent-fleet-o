@@ -135,7 +135,7 @@ final class ToolOutputGuard
         }
 
         $keys = array_values(array_map('strval', (array) config('ai_safety.tool_output_scan.scanners', [])));
-        $scanners = $this->scanners->only($keys);
+        $scanners = $this->scanners->only($keys, (array) config('ai_safety.tool_output_scan.scanner_options', []));
 
         foreach ($this->windows($output) as $window) {
             foreach ($scanners as $scanner) {

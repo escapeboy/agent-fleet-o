@@ -38,6 +38,32 @@ class ScannersTest extends TestCase
         $this->assertNull($scanner->scan('Perfectly normal café 中文 text.', 'input'));
     }
 
+    public function test_invisible_char_scanner_text_mark_mode(): void
+    {
+        $strict = new InvisibleCharScanner;
+        $tolerant = new InvisibleCharScanner('high', allowTextMarks: true);
+
+        // Emoji ZWJ sequence, Persian ZWNJ, LRM/RLM and a leading BOM are ordinary text.
+        foreach (["Family: \u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", "\u{0645}\u{06CC}\u{200C}\u{062E}\u{0648}\u{0627}\u{0647}\u{0645}", "link \u{200E}(en)\u{200F}", "\u{202A}беларуская\u{202C}", "\u{2068}name\u{2069}", "\u{FEFF}# README"] as $text) {
+            $this->assertNotNull($strict->scan($text, 'input'), 'strict mode keeps flagging '.bin2hex($text));
+            $this->assertNull($tolerant->scan($text, 'input'), 'text-mark mode allows '.bin2hex($text));
+        }
+
+        // Real smuggling vectors still match.
+        foreach (["Hello\u{E0041}\u{E0042}", "ig\u{200B}nore", "ig\u{2060}nore", "mid\u{FEFF}text"] as $text) {
+            $this->assertNotNull($tolerant->scan($text, 'input'), 'still detects '.bin2hex($text));
+        }
+    }
+
+    public function test_registry_only_merges_per_scanner_options(): void
+    {
+        $registry = app(ScannerRegistry::class);
+        $emoji = "\u{1F468}\u{200D}\u{1F469}";
+
+        $this->assertNotNull($registry->only(['invisible_chars'])[0]->scan($emoji, 'input'));
+        $this->assertNull($registry->only(['invisible_chars'], ['invisible_chars' => ['allow_text_marks' => true]])[0]->scan($emoji, 'input'));
+    }
+
     public function test_secret_scanner_detects_github_pat_and_reuses_library(): void
     {
         $scanner = new SecretScanner(new SecretPatternLibrary);
