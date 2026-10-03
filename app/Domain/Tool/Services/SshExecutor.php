@@ -6,8 +6,8 @@ use App\Domain\Credential\Models\Credential;
 use App\Domain\Tool\DTOs\SshExecutionResult;
 use App\Domain\Tool\Exceptions\SshHostNotAllowedException;
 use Illuminate\Support\Facades\Log;
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Net\SSH2;
+use phpseclib4\Crypt\PublicKeyLoader;
+use phpseclib4\Net\SSH2;
 use RuntimeException;
 
 class SshExecutor

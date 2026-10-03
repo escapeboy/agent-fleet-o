@@ -140,8 +140,9 @@ class FleetQAssistant implements Agent, HasMiddleware, HasTools
 
     public function middleware(): array
     {
-        return [
-            InjectTeamCredentialsMiddleware::class,
-        ];
+        // Team credentials are applied around the whole run by the job
+        // (InjectTeamCredentialsMiddleware::around); laravel/ai 1.0 middleware
+        // wraps single steps, after the provider is already resolved.
+        return [];
     }
 }

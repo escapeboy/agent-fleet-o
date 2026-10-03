@@ -2,7 +2,10 @@
 
 namespace App\Mcp\Services;
 
+use App\Mcp\Protocol\ProtocolContext;
+use App\Mcp\Protocol\ProtocolVersions;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * Tracks whether a given MCP session supports the MCP Apps extension.
@@ -10,9 +13,8 @@ use Illuminate\Support\Facades\Cache;
  * On initialize, clients that support MCP Apps declare:
  *   capabilities.extensions["io.modelcontextprotocol/ui"].mimeTypes = ["text/html;profile=mcp-app"]
  *
- * We store a per-session boolean in Redis keyed by session ID (30 min TTL).
- * During tools/list and resources/list, mcp.request is bound in the container,
- * so we can resolve the current session's capability flag.
+ * We store a per-session boolean in Redis keyed by the session id FleetQ issues
+ * at initialize (30 min TTL); see active() for how each client kind is resolved.
  */
 class McpAppsCapability
 {
@@ -29,12 +31,37 @@ class McpAppsCapability
      */
     public static function store(string $sessionId, ?array $capabilities): void
     {
+        Cache::store()->put(self::CACHE_PREFIX.$sessionId, self::supports($capabilities), self::TTL);
+    }
+
+    public const ISSUED_SESSION_BINDING = 'mcp.issued_session_id';
+
+    /** stdio: one process is one client, so the handshake result lives here. */
+    private static ?bool $processSupports = null;
+
+    /**
+     * Record the capabilities a legacy client declared in `initialize`.
+     *
+     * laravel/mcp 1.0 no longer issues protocol sessions, so FleetQ issues its own
+     * id for HTTP clients (NegotiateMcpProtocol returns it as Mcp-Session-Id, the
+     * client echoes it back) and keeps a process flag for stdio.
+     */
+    public static function recordInitialize(?array $capabilities): void
+    {
+        $sessionId = (string) Str::uuid();
+        self::store($sessionId, $capabilities);
+        self::$processSupports = self::supports($capabilities);
+        app()->instance(self::ISSUED_SESSION_BINDING, $sessionId);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $capabilities
+     */
+    public static function supports(?array $capabilities): bool
+    {
         $uiExt = $capabilities['extensions'][self::EXTENSION_ID] ?? null;
 
-        $supported = $uiExt !== null
-            && in_array(self::MIME_TYPE, (array) ($uiExt['mimeTypes'] ?? []), true);
-
-        Cache::store()->put(self::CACHE_PREFIX.$sessionId, $supported, self::TTL);
+        return is_array($uiExt) && in_array(self::MIME_TYPE, (array) ($uiExt['mimeTypes'] ?? []), true);
     }
 
     /**
@@ -42,7 +69,7 @@ class McpAppsCapability
      */
     public static function for(?string $sessionId): bool
     {
-        if ($sessionId === null) {
+        if ($sessionId === null || $sessionId === '') {
             return false;
         }
 
@@ -50,16 +77,24 @@ class McpAppsCapability
     }
 
     /**
-     * Check whether the CURRENT request's session supports MCP Apps.
-     * Only valid during MCP method handling (tools/list, resources/list, tools/call, etc.)
-     * where mcp.request is bound in the container.
+     * Whether the client behind the current request supports MCP Apps.
+     *
+     * 2026-07-28 clients declare capabilities in every request's _meta; legacy
+     * HTTP clients are looked up by the session id FleetQ issued at initialize;
+     * stdio uses the process flag.
      */
     public static function active(): bool
     {
-        if (! app()->bound('mcp.request')) {
-            return false;
+        if (app()->bound(ProtocolContext::BINDING)) {
+            $context = ProtocolContext::current();
+
+            if ($context->stateless) {
+                return self::supports($context->clientCapabilities);
+            }
+
+            return self::for(request()->header(ProtocolVersions::HEADER_SESSION_ID));
         }
 
-        return self::for(app('mcp.request')->sessionId());
+        return self::$processSupports ?? false;
     }
 }

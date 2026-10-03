@@ -6,10 +6,11 @@ use App\Mcp\Exceptions\InputRequiredException;
 use App\Mcp\Protocol\ProtocolContext;
 use Generator;
 use Illuminate\Container\Container;
+use Laravel\Mcp\Exceptions\JsonRpcException;
 use Laravel\Mcp\Server\Methods\CallTool;
 use Laravel\Mcp\Server\ServerContext;
-use Laravel\Mcp\Server\Transport\JsonRpcRequest;
-use Laravel\Mcp\Server\Transport\JsonRpcResponse;
+use Laravel\Mcp\Transport\JsonRpcRequest;
+use Laravel\Mcp\Transport\JsonRpcResponse;
 
 /**
  * `tools/call` with SEP-2322 multi round-trip support.
@@ -50,7 +51,18 @@ class MultiRoundTripCallTool extends CallTool
         $container->instance(self::BINDING_REQUEST_STATE, is_string($requestState) ? $requestState : null);
 
         try {
-            return parent::handle($request, $context);
+            if (is_null($request->get('name'))) {
+                throw new JsonRpcException('Missing [name] parameter.', -32602, $request->id);
+            }
+
+            $tool = $context->tools()->first(
+                fn ($tool): bool => $tool->name() === $request->params['name'],
+                fn () => throw new JsonRpcException("Tool [{$request->params['name']}] not found.", -32602, $request->id),
+            );
+
+            // Same as CallTool::handle(), but through an invoker that lets
+            // InputRequiredException reach the catch below.
+            return (new MrtrToolInvoker)->invoke($tool, $request);
         } catch (InputRequiredException $e) {
             return $this->inputRequiredResponse($request, $context, $e);
         } finally {
@@ -103,6 +115,6 @@ class MultiRoundTripCallTool extends CallTool
             ]);
         }
 
-        return $this->toJsonRpcResponse($request, $e->fallback, $this->serializable($tool));
+        return (new MrtrToolInvoker)->terminal($tool, $request, $e->fallback);
     }
 }
