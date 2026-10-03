@@ -230,12 +230,11 @@ class ToolApprovalGateTest extends TestCase
         $otherTeam->users()->attach($outsider, ['role' => 'owner']);
         $this->actingAs($outsider);
 
-        try {
-            Livewire::test(ApprovalInboxPage::class)->call('openArgumentEdit', $own->id);
-            $this->fail('Another team must not open the proposal.');
-        } catch (ModelNotFoundException) {
-            $this->addToAssertionCount(1);
-        }
+        // Livewire 4.4+ renders ModelNotFoundException as a 404 in tests instead of throwing.
+        Livewire::test(ApprovalInboxPage::class)
+            ->call('openArgumentEdit', $own->id)
+            ->assertStatus(404)
+            ->assertSet('editingArgumentsProposalId', null);
 
         $this->actingAs($this->owner->fresh());
         Livewire::test(ApprovalInboxPage::class)
