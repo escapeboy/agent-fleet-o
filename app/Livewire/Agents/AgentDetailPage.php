@@ -21,6 +21,7 @@ use App\Domain\AgentChatProtocol\Actions\PublishAgentManifestAction;
 use App\Domain\AgentChatProtocol\Actions\RevokeAgentManifestAction;
 use App\Domain\AgentChatProtocol\Actions\RotateAgentChatSecretAction;
 use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
+use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Memory\Models\Memory;
@@ -419,7 +420,7 @@ class AgentDetailPage extends Component
             unset($config['use_tool_search'], $config['tool_search_top_k']);
         }
 
-        $pricing = config("llm_pricing.providers.{$this->editProvider}.{$this->editModel}");
+        $pricing = app(CostCalculator::class)->pricing($this->editProvider, $this->editModel);
 
         // Build personality array
         $personality = array_filter([

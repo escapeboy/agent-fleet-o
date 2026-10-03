@@ -5,6 +5,11 @@
             {{ session('message') }}
         </div>
     @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
 
     {{-- View Switcher: Approval Requests vs Real-World Actions --}}
     <div class="mb-4 inline-flex rounded-lg border border-gray-200 bg-white p-0.5">

@@ -337,4 +337,14 @@ return [
 
     // Maximum tokens per request (safety limit)
     'max_output_tokens' => 8192,
+
+    /*
+    | Accurate usage cost (UsageNormalizer). Prism reports Anthropic/OpenAI input
+    | without cached tokens and keeps cache reads, cache writes and Gemini thinking
+    | tokens in separate fields; the legacy formula clamps and re-subtracts cache
+    | reads, charges the cache-write rate on all input, and ignores Gemini thoughts.
+    | OFF: legacy cost is charged, the accurate cost is stored next to it in
+    | llm_request_logs.accurate_cost_credits for comparison. ON: accurate cost is charged.
+    */
+    'accurate_usage_cost' => (bool) env('LLM_ACCURATE_USAGE_COST_ENABLED', false),
 ];

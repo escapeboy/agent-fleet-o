@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use RuntimeException;
 
 class ApprovalInboxPage extends Component
 {
@@ -28,6 +29,10 @@ class ApprovalInboxPage extends Component
     public ?string $expandedProposalId = null;
 
     public ?string $rejectingProposalId = null;
+
+    public ?string $editingArgumentsProposalId = null;
+
+    public string $editedArgumentsJson = '';
 
     public string $proposalRejectionReason = '';
 
@@ -119,9 +124,62 @@ class ApprovalInboxPage extends Component
         Gate::authorize('edit-content');
 
         $proposal = ActionProposal::findOrFail($proposalId);
-        app(ApproveActionProposalAction::class)->execute($proposal, auth()->user());
+        try {
+            app(ApproveActionProposalAction::class)->execute($proposal, auth()->user());
+        } catch (RuntimeException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
         $this->expandedProposalId = null;
         session()->flash('message', 'Proposal approved.');
+    }
+
+    public function openArgumentEdit(string $proposalId): void
+    {
+        Gate::authorize('edit-content');
+
+        $proposal = ActionProposal::findOrFail($proposalId);
+        $this->editingArgumentsProposalId = $proposal->id;
+        $this->editedArgumentsJson = (string) json_encode(
+            (object) ($proposal->payload['arguments'] ?? []),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+        );
+    }
+
+    public function cancelArgumentEdit(): void
+    {
+        $this->editingArgumentsProposalId = null;
+        $this->editedArgumentsJson = '';
+    }
+
+    public function approveProposalWithEdits(): void
+    {
+        Gate::authorize('edit-content');
+
+        if (! $this->editingArgumentsProposalId) {
+            return;
+        }
+
+        $decoded = json_decode($this->editedArgumentsJson, true);
+        if (! is_array($decoded) || ($decoded !== [] && array_is_list($decoded))) {
+            $this->addError('editedArgumentsJson', 'Enter a JSON object of parameter names to values.');
+
+            return;
+        }
+
+        $proposal = ActionProposal::findOrFail($this->editingArgumentsProposalId);
+        try {
+            app(ApproveActionProposalAction::class)->execute($proposal, auth()->user(), 'Approved with edited arguments', $decoded);
+        } catch (RuntimeException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
+        $this->cancelArgumentEdit();
+        $this->expandedProposalId = null;
+        session()->flash('message', 'Proposal approved with edited arguments.');
     }
 
     public function openProposalReject(string $proposalId): void

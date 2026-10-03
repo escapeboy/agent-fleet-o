@@ -266,7 +266,8 @@ class ActionProposalExecutor
     {
         $payload = $proposal->payload;
         $toolName = $payload['tool'] ?? null;
-        $arguments = $payload['arguments'] ?? null;
+        // An approver may have corrected the model's arguments (ApproveActionProposalAction).
+        $arguments = array_key_exists('edited_arguments', $payload) ? $payload['edited_arguments'] : ($payload['arguments'] ?? null);
         $agentId = $payload['agent_id'] ?? $proposal->actor_agent_id;
 
         if (! is_string($toolName) || $toolName === '') {
@@ -313,7 +314,15 @@ class ActionProposalExecutor
                 throw new RuntimeException("ActionProposalExecutor: tool row {$toolId} yields more than one tool named '{$toolName}'; refusing an ambiguous replay.");
             }
 
-            return $matches->first()->handle(...$arguments);
+            $tool = $matches->first();
+            $unknown = array_diff(array_map('strval', array_keys($arguments)), array_map('strval', array_keys($tool->parameters())));
+            if ($unknown !== []) {
+                throw new RuntimeException(
+                    "ActionProposalExecutor: tool '{$toolName}' has no parameter(s) ".implode(', ', $unknown).'; the approved call was not run.',
+                );
+            }
+
+            return $tool->handle(...$arguments);
         });
 
         if ($raw instanceof ToolError) {
