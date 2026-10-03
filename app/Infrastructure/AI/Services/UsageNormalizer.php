@@ -16,6 +16,10 @@ use Prism\Prism\ValueObjects\Usage;
  *   already include reasoning tokens (thoughtTokens is a subset).
  * - Gemini: promptTokens INCLUDES implicitly cached tokens; completionTokens
  *   (candidatesTokenCount) EXCLUDES thinking tokens, which Google bills as output.
+ *   Exception: with providerOptions.cachedContentName Prism subtracts cached
+ *   tokens itself; FleetQ does not use explicit Gemini caches today.
+ * - The stream handlers map usage differently (OpenAI stream does not subtract
+ *   cached tokens); only the text/structured paths call this normalizer.
  */
 final class UsageNormalizer
 {

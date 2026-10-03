@@ -22,11 +22,14 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolApprovalGate;
+use App\Livewire\Approvals\ApprovalInboxPage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Mockery;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -213,6 +216,32 @@ class ToolApprovalGateTest extends TestCase
         );
         $this->expectException(RuntimeException::class);
         app(ApproveActionProposalAction::class)->execute($other, $this->owner->fresh(), null, ['branch' => 'main']);
+    }
+
+    public function test_inbox_argument_edit_is_limited_to_own_team_agent_tool_calls(): void
+    {
+        $this->attachPlanTool();
+        $this->updatePlanTool()->handle(todos: $this->todos());
+        $own = ActionProposal::sole();
+
+        $outsider = User::factory()->create();
+        $otherTeam = Team::create(['name' => 'Other', 'slug' => 'other-'.Str::lower(Str::random(6)), 'owner_id' => $outsider->id, 'settings' => []]);
+        $outsider->update(['current_team_id' => $otherTeam->id]);
+        $otherTeam->users()->attach($outsider, ['role' => 'owner']);
+        $this->actingAs($outsider);
+
+        try {
+            Livewire::test(ApprovalInboxPage::class)->call('openArgumentEdit', $own->id);
+            $this->fail('Another team must not open the proposal.');
+        } catch (ModelNotFoundException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->actingAs($this->owner->fresh());
+        Livewire::test(ApprovalInboxPage::class)
+            ->call('openArgumentEdit', $own->id)
+            ->assertSet('editingArgumentsProposalId', $own->id)
+            ->assertSet('editedArgumentsJson', fn ($json) => str_contains($json, 'ship it'));
     }
 
     public function test_approved_call_is_replayed_once_and_the_result_stored(): void

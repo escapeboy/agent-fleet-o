@@ -865,7 +865,8 @@ class PrismAiGateway implements AiGatewayInterface
             return $request;
         }
 
-        $alias = config("ai.providers.openrouter.model_aliases.{$request->model}");
+        // Array lookup, not dot notation: a bare model id may contain a dot (gpt-4.1).
+        $alias = config('ai.providers.openrouter.model_aliases', [])[$request->model] ?? null;
 
         if (is_string($alias) && $alias !== '') {
             return $request->withModel($alias);

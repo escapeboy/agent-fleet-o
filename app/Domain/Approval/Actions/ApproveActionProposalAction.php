@@ -14,7 +14,7 @@ class ApproveActionProposalAction
 {
     /**
      * @param  array<mixed>|null  $editedArguments  agent_tool_call only: arguments the approver
-     *                                                      corrected; the replay runs with these instead of the model's
+     *                                              corrected; the replay runs with these instead of the model's
      */
     public function execute(ActionProposal $proposal, User $approver, ?string $reason = null, ?array $editedArguments = null): ActionProposal
     {
@@ -53,7 +53,7 @@ class ApproveActionProposalAction
                     ...$proposal->payload,
                     'edited_arguments' => (object) $editedArguments,
                     'edited_by_user_id' => $approver->id,
-                ])] : []),
+                ], JSON_THROW_ON_ERROR)] : []),
                 'status' => ActionProposalStatus::Approved->value,
                 'decided_by_user_id' => $approver->id,
                 'decided_at' => now(),

@@ -28,8 +28,6 @@ class ActionProposalApproveTool extends Tool
         return [
             'proposal_id' => $schema->string()->required(),
             'reason' => $schema->string()->description('Optional approval note'),
-            'edited_arguments' => $schema->object()
-                ->description('agent_tool_call only: corrected arguments the tool will run with instead of the ones the agent chose. Keys must be parameters of the tool.'),
         ];
     }
 
@@ -38,7 +36,6 @@ class ActionProposalApproveTool extends Tool
         $validated = $request->validate([
             'proposal_id' => 'required|string',
             'reason' => 'nullable|string|max:1000',
-            'edited_arguments' => 'nullable|array',
         ]);
 
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
@@ -91,7 +88,7 @@ class ActionProposalApproveTool extends Tool
         }
 
         try {
-            app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null, $validated['edited_arguments'] ?? null);
+            app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null);
         } catch (RuntimeException $e) {
             return $this->failedPreconditionError($e->getMessage());
         }

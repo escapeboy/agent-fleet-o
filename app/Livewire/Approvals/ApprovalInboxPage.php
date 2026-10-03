@@ -10,6 +10,7 @@ use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Tool\Services\ToolApprovalGate;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -139,7 +140,7 @@ class ApprovalInboxPage extends Component
     {
         Gate::authorize('edit-content');
 
-        $proposal = ActionProposal::findOrFail($proposalId);
+        $proposal = $this->editableProposal($proposalId);
         $this->editingArgumentsProposalId = $proposal->id;
         $this->editedArgumentsJson = (string) json_encode(
             (object) ($proposal->payload['arguments'] ?? []),
@@ -168,7 +169,7 @@ class ApprovalInboxPage extends Component
             return;
         }
 
-        $proposal = ActionProposal::findOrFail($this->editingArgumentsProposalId);
+        $proposal = $this->editableProposal($this->editingArgumentsProposalId);
         try {
             app(ApproveActionProposalAction::class)->execute($proposal, auth()->user(), 'Approved with edited arguments', $decoded);
         } catch (RuntimeException $e) {
@@ -180,6 +181,17 @@ class ApprovalInboxPage extends Component
         $this->cancelArgumentEdit();
         $this->expandedProposalId = null;
         session()->flash('message', 'Proposal approved with edited arguments.');
+    }
+
+    /**
+     * Only an agent tool call of the caller's own team can have its arguments shown or edited.
+     */
+    private function editableProposal(string $proposalId): ActionProposal
+    {
+        return ActionProposal::withoutGlobalScopes()
+            ->where('team_id', auth()->user()->current_team_id)
+            ->where('target_type', ToolApprovalGate::TARGET_TYPE)
+            ->findOrFail($proposalId);
     }
 
     public function openProposalReject(string $proposalId): void
