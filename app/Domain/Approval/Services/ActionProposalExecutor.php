@@ -266,7 +266,9 @@ class ActionProposalExecutor
     {
         $payload = $proposal->payload;
         $toolName = $payload['tool'] ?? null;
-        $arguments = $payload['arguments'] ?? null;
+        // An approver may have corrected the model's arguments (ApproveActionProposalAction).
+        $edited = array_key_exists('edited_arguments', $payload);
+        $arguments = $edited ? $payload['edited_arguments'] : ($payload['arguments'] ?? null);
         $agentId = $payload['agent_id'] ?? $proposal->actor_agent_id;
 
         if (! is_string($toolName) || $toolName === '') {
@@ -299,7 +301,7 @@ class ActionProposalExecutor
             throw new RuntimeException("ActionProposalExecutor: agent {$agentId} is disabled; the approved call was not run.");
         }
 
-        $raw = ToolApprovalGate::withBypass($toolName, (string) $agent->id, function () use ($agent, $toolName, $toolId, $context, $arguments) {
+        $raw = ToolApprovalGate::withBypass($toolName, (string) $agent->id, function () use ($agent, $toolName, $toolId, $context, $arguments, $edited) {
             $matches = collect(app(ResolveAgentToolsAction::class)->resolveToolForReplay($agent, $toolId, $context))
                 ->filter(fn (PrismToolObject $t) => $t->name() === $toolName)
                 ->values();
@@ -313,7 +315,17 @@ class ActionProposalExecutor
                 throw new RuntimeException("ActionProposalExecutor: tool row {$toolId} yields more than one tool named '{$toolName}'; refusing an ambiguous replay.");
             }
 
-            return $matches->first()->handle(...$arguments);
+            $tool = $matches->first();
+            // Only a person's edits are checked here: MCP tools take variadic named
+            // arguments, so the model's own call may legitimately carry extra keys.
+            $unknown = $edited ? array_diff(array_map('strval', array_keys($arguments)), array_map('strval', array_keys($tool->parameters()))) : [];
+            if ($unknown !== []) {
+                throw new RuntimeException(
+                    "ActionProposalExecutor: tool '{$toolName}' has no parameter(s) ".implode(', ', $unknown).'; the approved call was not run.',
+                );
+            }
+
+            return $tool->handle(...$arguments);
         });
 
         if ($raw instanceof ToolError) {

@@ -28,8 +28,9 @@ class CostCalculator
         int $outputTokens,
         int $cachedInputTokens = 0,
         ?string $cacheStrategy = null,
+        ?int $cacheWriteInputTokens = null,
     ): int {
-        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy);
+        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens);
 
         if ($rawCostUsd <= 0.0) {
             return 0;
@@ -85,9 +86,10 @@ class CostCalculator
         ?string $cacheStrategy = null,
         ?float $marginOverride = null,
         ?int $maxCapOverride = null,
+        ?int $cacheWriteInputTokens = null,
     ): array {
         $pricing = $this->getPricing($provider, $model);
-        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy);
+        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens);
 
         $margin = $marginOverride ?? (float) config('llm_pricing.margin_multiplier', 1.30);
         $billableCostUsd = $rawCostUsd * $margin;
@@ -223,6 +225,7 @@ class CostCalculator
         int $outputTokens,
         int $cachedInputTokens,
         ?string $cacheStrategy,
+        ?int $cacheWriteInputTokens = null,
     ): float {
         $pricing = $this->getPricing($provider, $model);
 
@@ -235,6 +238,18 @@ class CostCalculator
         $inputRate = (float) ($pricing['input_usd_per_mtok'] ?? 0);
         $outputRate = (float) ($pricing['output_usd_per_mtok'] ?? 0);
         $cacheReadRate = (float) ($pricing['cache_read_usd_per_mtok'] ?? $inputRate);
+
+        // Accurate mode (UsageNormalizer breakdown): the buckets do not overlap.
+        // $inputTokens is uncached input only, $cachedInputTokens are cache reads,
+        // cache writes are priced at the full write rate (falls back to input).
+        if ($cacheWriteInputTokens !== null) {
+            $cacheWriteRate = (float) ($pricing['cache_write_5m_usd_per_mtok'] ?? $inputRate);
+
+            return (max(0, $inputTokens) / 1_000_000.0) * $inputRate
+                + (max(0, $cachedInputTokens) / 1_000_000.0) * $cacheReadRate
+                + (max(0, $cacheWriteInputTokens) / 1_000_000.0) * $cacheWriteRate
+                + (max(0, $outputTokens) / 1_000_000.0) * $outputRate;
+        }
 
         $cachedInputTokens = max(0, min($cachedInputTokens, $inputTokens));
         $uncachedInput = $inputTokens - $cachedInputTokens;
@@ -272,18 +287,29 @@ class CostCalculator
     /**
      * @return array<string,mixed>|null
      */
+    /**
+     * Pricing row for a provider/model, or the provider's `*` row.
+     *
+     * Looked up as an array key, not through config() dot notation: model ids
+     * such as `gemini-2.5-flash` contain dots, which dot notation splits, so the
+     * row was never found and those calls were priced at 0.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function pricing(string $provider, string $model): ?array
+    {
+        $rows = config('llm_pricing.providers', [])[$provider] ?? null;
+        if (! is_array($rows)) {
+            return null;
+        }
+
+        $row = $rows[$model] ?? $rows['*'] ?? null;
+
+        return is_array($row) ? $row : null;
+    }
+
     private function getPricing(string $provider, string $model): ?array
     {
-        $direct = config("llm_pricing.providers.{$provider}.{$model}");
-        if ($direct !== null) {
-            return $direct;
-        }
-
-        $wildcard = config("llm_pricing.providers.{$provider}.*");
-        if ($wildcard !== null) {
-            return $wildcard;
-        }
-
-        return null;
+        return $this->pricing($provider, $model);
     }
 }

@@ -13,6 +13,7 @@ use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Services\UsageNormalizer;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
 use Closure;
@@ -535,6 +536,28 @@ class PrismAiGateway implements AiGatewayInterface
      */
     private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
     {
+        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage);
+        $accurateCost = $this->costCalculator->calculateCost(
+            provider: $request->provider,
+            model: $request->model,
+            inputTokens: $breakdown->uncachedInputTokens,
+            outputTokens: $breakdown->outputTokens,
+            cachedInputTokens: $breakdown->cacheReadInputTokens,
+            cacheWriteInputTokens: $breakdown->cacheWriteInputTokens,
+        );
+
+        if (config('llm_pricing.accurate_usage_cost')) {
+            return new AiUsageDTO(
+                promptTokens: $breakdown->uncachedInputTokens,
+                completionTokens: $breakdown->outputTokens,
+                costCredits: $accurateCost,
+                cachedInputTokens: $breakdown->cacheReadInputTokens,
+                cacheStrategy: null,
+                cacheWriteInputTokens: $breakdown->cacheWriteInputTokens,
+                accurateCostCredits: $accurateCost,
+            );
+        }
+
         $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
         $cacheStrategy = $this->resolveCacheStrategy($request);
 
@@ -551,6 +574,8 @@ class PrismAiGateway implements AiGatewayInterface
             ),
             cachedInputTokens: $cachedInputTokens,
             cacheStrategy: $cacheStrategy,
+            cacheWriteInputTokens: $breakdown->cacheWriteInputTokens,
+            accurateCostCredits: $accurateCost,
         );
     }
 
@@ -840,7 +865,8 @@ class PrismAiGateway implements AiGatewayInterface
             return $request;
         }
 
-        $alias = config("ai.providers.openrouter.model_aliases.{$request->model}");
+        // Array lookup, not dot notation: a bare model id may contain a dot (gpt-4.1).
+        $alias = config('ai.providers.openrouter.model_aliases', [])[$request->model] ?? null;
 
         if (is_string($alias) && $alias !== '') {
             return $request->withModel($alias);
