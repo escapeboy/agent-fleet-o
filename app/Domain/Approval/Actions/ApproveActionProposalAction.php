@@ -5,13 +5,18 @@ namespace App\Domain\Approval\Actions;
 use App\Domain\Approval\Enums\ActionProposalStatus;
 use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
+use App\Domain\Tool\Services\ToolApprovalGate;
 use App\Domain\Tool\Services\ToolDefinitionPinner;
 use App\Models\User;
 use RuntimeException;
 
 class ApproveActionProposalAction
 {
-    public function execute(ActionProposal $proposal, User $approver, ?string $reason = null): ActionProposal
+    /**
+     * @param  array<mixed>|null  $editedArguments  agent_tool_call only: arguments the approver
+     *                                              corrected; the replay runs with these instead of the model's
+     */
+    public function execute(ActionProposal $proposal, User $approver, ?string $reason = null, ?array $editedArguments = null): ActionProposal
     {
         if ($proposal->team_id !== $approver->current_team_id) {
             throw new RuntimeException('Approver is not a member of the proposal team.');
@@ -19,6 +24,15 @@ class ApproveActionProposalAction
 
         if ($proposal->target_type === ToolDefinitionPinner::TARGET_TYPE && ! ToolDefinitionPinner::canApprove($approver, (string) $proposal->team_id)) {
             throw new RuntimeException('Only a team owner or admin can approve a change to MCP tool definitions.');
+        }
+
+        if ($editedArguments !== null) {
+            if ($proposal->target_type !== ToolApprovalGate::TARGET_TYPE) {
+                throw new RuntimeException('Arguments can only be edited when approving an agent tool call.');
+            }
+            if ($editedArguments !== [] && array_is_list($editedArguments)) {
+                throw new RuntimeException('Edited arguments must be an object of parameter names to values.');
+            }
         }
 
         if (! $proposal->isPending()) {
@@ -35,6 +49,11 @@ class ApproveActionProposalAction
             ->where('team_id', $proposal->team_id)
             ->where('status', ActionProposalStatus::Pending->value)
             ->update([
+                ...($editedArguments !== null ? ['payload' => json_encode([
+                    ...$proposal->payload,
+                    'edited_arguments' => (object) $editedArguments,
+                    'edited_by_user_id' => $approver->id,
+                ], JSON_THROW_ON_ERROR)] : []),
                 'status' => ActionProposalStatus::Approved->value,
                 'decided_by_user_id' => $approver->id,
                 'decided_at' => now(),

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Chatbot\Actions;
 
+use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Chatbot\Models\Chatbot;
 
 class UpdateChatbotAction
@@ -49,7 +50,7 @@ class UpdateChatbotAction
             if ($provider !== null || $model !== null) {
                 $p = $provider ?? $chatbot->agent->provider;
                 $m = $model ?? $chatbot->agent->model;
-                $pricing = config("llm_pricing.providers.{$p}.{$m}", ['input' => 0, 'output' => 0]);
+                $pricing = app(CostCalculator::class)->pricing($p, $m) ?? ['input' => 0, 'output' => 0];
                 $agentUpdates['provider'] = $p;
                 $agentUpdates['model'] = $m;
                 $agentUpdates['cost_per_1k_input'] = $pricing['input'] ?? 0;

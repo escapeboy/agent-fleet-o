@@ -80,6 +80,7 @@ class IdempotencyCheck implements AiMiddlewareInterface
                 'input_tokens' => $response->usage->promptTokens,
                 'output_tokens' => $response->usage->completionTokens,
                 'cost_credits' => $response->usage->costCredits,
+                'accurate_cost_credits' => $response->usage->accurateCostCredits,
                 'latency_ms' => $response->latencyMs,
                 'completed_at' => now(),
             ]);

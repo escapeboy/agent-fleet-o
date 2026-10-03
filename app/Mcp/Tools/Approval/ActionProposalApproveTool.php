@@ -11,6 +11,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
+use RuntimeException;
 
 #[IsDestructive]
 #[AssistantTool('destructive')]
@@ -86,7 +87,11 @@ class ActionProposalApproveTool extends Tool
             );
         }
 
-        app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null);
+        try {
+            app(ApproveActionProposalAction::class)->execute($proposal, $user, $validated['reason'] ?? null);
+        } catch (RuntimeException $e) {
+            return $this->failedPreconditionError($e->getMessage());
+        }
 
         return Response::text(json_encode([
             'success' => true,

@@ -41,6 +41,7 @@ class LlmRequestLog extends Model
         'context_window_pct',
         'output_tokens',
         'cost_credits',
+        'accurate_cost_credits',
         'latency_ms',
         'error',
         'completed_at',
@@ -54,6 +55,7 @@ class LlmRequestLog extends Model
             'context_window_pct' => 'float',
             'output_tokens' => 'integer',
             'cost_credits' => 'integer',
+            'accurate_cost_credits' => 'integer',
             'latency_ms' => 'integer',
             'completed_at' => 'datetime',
         ];
