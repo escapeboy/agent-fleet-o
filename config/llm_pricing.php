@@ -225,6 +225,8 @@ return [
         'groq' => [
             'openai/gpt-oss-120b' => ['tier' => 'default', 'input_usd_per_mtok' => 0.15, 'output_usd_per_mtok' => 0.60, 'context_window' => 131_072, 'last_verified_at' => '2026-08-19'],
             'openai/gpt-oss-20b' => ['tier' => 'nano', 'input_usd_per_mtok' => 0.075, 'output_usd_per_mtok' => 0.30, 'context_window' => 131_072, 'last_verified_at' => '2026-08-19'],
+            // Was unpriced: 58 prod calls in 90 days charged 0 credits (2026-10-03).
+            'llama-3.3-70b-versatile' => ['tier' => 'default', 'input_usd_per_mtok' => 0.59, 'output_usd_per_mtok' => 0.79, 'context_window' => 131_072, 'last_verified_at' => '2026-10-03', 'source_url' => 'https://groq.com/pricing'],
         ],
 
         'mistral' => [
@@ -272,7 +274,10 @@ return [
             'claude-opus-4-6' => ['tier' => 'heavy', 'input_usd_per_mtok' => 0, 'output_usd_per_mtok' => 0],
             'claude-haiku-4-5' => ['tier' => 'nano', 'input_usd_per_mtok' => 0, 'output_usd_per_mtok' => 0],
         ],
-        'openrouter' => [],
+        'openrouter' => [
+            // From https://openrouter.ai/api/v1/models (2026-10-03); was unpriced on prod.
+            'thinkingmachines/inkling' => ['tier' => 'default', 'input_usd_per_mtok' => 0.95, 'output_usd_per_mtok' => 4.05, 'context_window' => 524_288, 'last_verified_at' => '2026-10-03', 'source_url' => 'https://openrouter.ai/thinkingmachines/inkling'],
+        ],
         'ollama' => [],
         'openai_compatible' => [],
         'litellm_proxy' => [],

@@ -7,6 +7,7 @@ use App\Infrastructure\AI\NeuronPrismProvider;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\RAG\Embeddings\EmbeddingsProviderInterface;
 use NeuronAI\RAG\RAG;
+use NeuronAI\RAG\VectorStore\SearchRequest;
 use NeuronAI\RAG\VectorStore\VectorStoreInterface;
 
 /**
@@ -90,12 +91,13 @@ class KnowledgeBaseRAGFactory
             return [];
         }
 
-        $docs = $store->similaritySearch($embedding);
+        $docs = $store->search(new SearchRequest($embedding));
 
         return array_map(fn ($doc) => [
-            'content' => $doc->content,
-            'source' => $doc->sourceName,
-            'score' => $doc->score ?? 0.0,
+            'content' => $doc->getContent(),
+            'source' => $doc->getSourceName(),
+            // neuron 4: properties are protected, so `$doc->score ?? 0.0` would silently read 0.0.
+            'score' => $doc->getScore() ?? 0.0,
         ], is_array($docs) ? $docs : iterator_to_array($docs));
     }
 }

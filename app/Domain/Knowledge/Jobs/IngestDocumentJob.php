@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use NeuronAI\RAG\DataLoader\StringDataLoader;
 use NeuronAI\RAG\Splitter\SentenceTextSplitter;
+use NeuronAI\RAG\VectorStore\Filter\Filter;
 
 class IngestDocumentJob implements ShouldQueue
 {
@@ -58,7 +59,7 @@ class IngestDocumentJob implements ShouldQueue
 
             // Remove existing chunks for this source if reindexing
             if ($this->reindex) {
-                $store->deleteBy($this->sourceType, $this->sourceName);
+                $store->delete(Filter::where('sourceType', $this->sourceType)->where('sourceName', $this->sourceName));
             }
 
             // Chunk the content using Neuron's SentenceTextSplitter
@@ -68,8 +69,7 @@ class IngestDocumentJob implements ShouldQueue
 
             // Tag each document with source metadata
             foreach ($documents as $doc) {
-                $doc->sourceName = $this->sourceName;
-                $doc->sourceType = $this->sourceType;
+                $doc->setSourceName($this->sourceName)->setSourceType($this->sourceType);
             }
 
             // Embed and store in batches to avoid memory issues
