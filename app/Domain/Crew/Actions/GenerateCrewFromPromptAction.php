@@ -2,6 +2,7 @@
 
 namespace App\Domain\Crew\Actions;
 
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
@@ -53,6 +54,13 @@ class GenerateCrewFromPromptAction
             }
 
             return $parsed;
+        } catch (AiAccessUnavailableException $e) {
+            // Expected: team has no BYOK key / platform entitlement. The caller
+            // shows the message to the user; it is not a defect, so no error log
+            // (an error-level log reaches Sentry as an unactionable issue, #983).
+            Log::info('GenerateCrewFromPromptAction: team has no AI access', ['team_id' => $teamId]);
+
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('GenerateCrewFromPromptAction: LLM call failed', [
                 'error' => $e->getMessage(),

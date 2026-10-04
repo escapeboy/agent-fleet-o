@@ -41,14 +41,6 @@ class McpOAuthFlowTest extends TestCase
         $this->team->users()->attach($this->user, ['role' => 'owner']);
     }
 
-    protected function tearDown(): void
-    {
-        // Clean up test keys
-        @unlink(storage_path('oauth-private.key'));
-        @unlink(storage_path('oauth-public.key'));
-        parent::tearDown();
-    }
-
     private function generatePassportKeys(): void
     {
         $privateKeyPath = storage_path('oauth-private.key');

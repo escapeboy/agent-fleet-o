@@ -6,6 +6,7 @@ use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use ErrorException;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\MaxAttemptsExceededException;
+use Predis\Connection\ConnectionException as PredisConnectionException;
 use Predis\Connection\Resource\Exception\StreamInitException;
 use Predis\Response\ServerException;
 use Sentry\Event;
@@ -67,6 +68,18 @@ final class BeforeSendFilter
         // A SUSTAINED outage stays visible: HealthController pings Redis and
         // flips /api/v1/health to 503 `degraded`.
         if ($e instanceof StreamInitException) {
+            return null;
+        }
+
+        // Redis restarted UNDER an already-open connection. The long-lived
+        // Horizon master supervisor holds a socket across the restart; its next
+        // read hits EOF and Predis throws ConnectionException "Stream is already
+        // at the end" (#954). MasterSupervisor::loop() catches and reports it,
+        // then reconnects on the next tick, so it self-heals.
+        // Scoped to this exact message — other ConnectionExceptions (timeouts,
+        // "Error while reading line") still report. A SUSTAINED outage stays
+        // visible via HealthController's Redis ping.
+        if ($e instanceof PredisConnectionException && str_contains($msg, 'Stream is already at the end')) {
             return null;
         }
 
