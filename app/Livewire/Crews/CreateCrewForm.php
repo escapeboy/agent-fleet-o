@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Crew\Actions\CreateCrewAction;
 use App\Domain\Crew\Actions\GenerateCrewFromPromptAction;
 use App\Domain\Crew\Enums\CrewProcessType;
+use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -84,6 +85,8 @@ class CreateCrewForm extends Component
             $this->showGenerateModal = false;
 
             session()->flash('message', 'Crew structure generated. Review the form and add your agents.');
+        } catch (AiAccessUnavailableException $e) {
+            $this->addError('generatePrompt', $e->getMessage());
         } finally {
             $this->generating = false;
         }
