@@ -7,6 +7,7 @@ use App\Domain\Shared\Exceptions\AiAccessUnavailableException;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Domain\Tool\Services\GeminiToolSchema;
 use App\Domain\Tool\Services\ToolErrorGuard;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
@@ -253,6 +254,9 @@ class PrismAiGateway implements AiGatewayInterface
             : $request->systemPrompt;
 
         $tools = ToolErrorGuard::apply($request->tools);
+        if ($request->provider === 'google') {
+            $tools = GeminiToolSchema::apply($tools);
+        }
         if ($request->enablePromptCaching && $request->provider === 'anthropic' && count($tools) > 0) {
             $lastIndex = count($tools) - 1;
             $tools[$lastIndex] = (clone $tools[$lastIndex])->withProviderOptions(['cacheType' => 'ephemeral']);
@@ -416,6 +420,9 @@ class PrismAiGateway implements AiGatewayInterface
         // Add tool support when tools are provided
         if ($request->hasTools()) {
             $tools = ToolErrorGuard::apply($request->tools);
+            if ($request->provider === 'google') {
+                $tools = GeminiToolSchema::apply($tools);
+            }
 
             // Mark the last tool with cache_control so Anthropic caches the entire tools block (Anthropic only)
             if ($request->enablePromptCaching && $request->provider === 'anthropic' && count($tools) > 0) {
