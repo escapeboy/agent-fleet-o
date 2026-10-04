@@ -4,6 +4,7 @@ namespace App\Domain\Knowledge\Services;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\NeuronPrismProvider;
+use Illuminate\Support\Str;
 use NeuronAI\Providers\AIProviderInterface;
 use NeuronAI\RAG\Embeddings\EmbeddingsProviderInterface;
 use NeuronAI\RAG\RAG;
@@ -24,6 +25,7 @@ class KnowledgeBaseRAGFactory
      *
      * @param  string  $provider  e.g. 'anthropic'
      * @param  string  $model  e.g. 'claude-haiku-4-5'
+     * @param  string|null  $threadId  conversation id; neuron 4 refuses chat() without one, so a fresh id is minted when omitted
      */
     public function make(
         string $knowledgeBaseId,
@@ -33,6 +35,7 @@ class KnowledgeBaseRAGFactory
         ?string $agentId = null,
         int $topK = 5,
         string $purpose = 'neuron.rag',
+        ?string $threadId = null,
     ): RAG {
         $neuronProvider = new NeuronPrismProvider(
             gateway: $this->gateway,
@@ -46,13 +49,16 @@ class KnowledgeBaseRAGFactory
         $embeddingsProvider = new PrismEmbeddingsProvider;
         $vectorStore = new PgVectorKnowledgeStore($knowledgeBaseId, $topK);
 
-        return new class($neuronProvider, $embeddingsProvider, $vectorStore) extends RAG
+        return new class($neuronProvider, $embeddingsProvider, $vectorStore, $threadId ?? (string) Str::uuid7()) extends RAG
         {
             public function __construct(
                 private readonly AIProviderInterface $neuronProvider,
                 private readonly PrismEmbeddingsProvider $embeds,
                 protected VectorStoreInterface $knowledgeStore,
-            ) {}
+                string $threadId,
+            ) {
+                parent::__construct($threadId);
+            }
 
             protected function provider(): AIProviderInterface
             {
