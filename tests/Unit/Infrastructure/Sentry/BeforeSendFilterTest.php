@@ -3,6 +3,8 @@
 namespace Tests\Unit\Infrastructure\Sentry;
 
 use App\Infrastructure\Sentry\BeforeSendFilter;
+use Predis\Connection\ConnectionException;
+use Predis\Connection\NodeConnectionInterface;
 use Predis\Connection\Resource\Exception\StreamInitException;
 use Predis\Response\ServerException;
 use RuntimeException;
@@ -49,6 +51,22 @@ class BeforeSendFilterTest extends TestCase
         $result = BeforeSendFilter::filter($event, $hint);
 
         $this->assertNull($result);
+    }
+
+    public function test_drops_redis_stream_already_at_end_connection_exception(): void
+    {
+        $conn = $this->createStub(NodeConnectionInterface::class);
+        [$event, $hint] = $this->eventFor(new ConnectionException($conn, 'Stream is already at the end [tcp://agent-fleet-redis:6379]'));
+
+        $this->assertNull(BeforeSendFilter::filter($event, $hint));
+    }
+
+    public function test_keeps_other_predis_connection_exceptions(): void
+    {
+        $conn = $this->createStub(NodeConnectionInterface::class);
+        [$event, $hint] = $this->eventFor(new ConnectionException($conn, 'Error while reading line from the server. [tcp://agent-fleet-redis:6379]'));
+
+        $this->assertSame($event, BeforeSendFilter::filter($event, $hint));
     }
 
     public function test_keeps_unrelated_exceptions(): void
