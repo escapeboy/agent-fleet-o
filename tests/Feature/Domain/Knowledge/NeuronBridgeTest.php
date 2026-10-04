@@ -94,4 +94,22 @@ class NeuronBridgeTest extends TestCase
         $this->assertInstanceOf(PgVectorKnowledgeStore::class, $resolve('vectorStore'));
         $this->assertInstanceOf(PrismEmbeddingsProvider::class, $resolve('embeddings'));
     }
+
+    public function test_rag_factory_binds_a_thread_so_chat_reaches_retrieval(): void
+    {
+        $this->app->instance(AiGatewayInterface::class, Mockery::mock(AiGatewayInterface::class));
+        $embedder = Mockery::mock(EmbeddingProviderInterface::class);
+        $embedder->shouldReceive('embed')->andThrow(new \RuntimeException('retrieval reached'));
+        $this->app->instance(EmbeddingProviderInterface::class, $embedder);
+        $factory = app(KnowledgeBaseRAGFactory::class);
+
+        $first = $factory->make('kb-1', 'anthropic', 'claude-sonnet-4-6', 'team-1');
+        $second = $factory->make('kb-1', 'anthropic', 'claude-sonnet-4-6', 'team-1');
+        $this->assertNotNull($first->getThreadId());
+        $this->assertNotSame($first->getThreadId(), $second->getThreadId());
+        $this->assertSame('thread-7', $factory->make('kb-1', 'anthropic', 'claude-sonnet-4-6', threadId: 'thread-7')->getThreadId());
+
+        $this->expectExceptionMessage('retrieval reached');
+        $first->chat(new UserMessage('What is in the knowledge base?'));
+    }
 }
