@@ -202,7 +202,7 @@ class TracerProvider
             ResourceInfo::create(Attributes::create([
                 ResourceAttributes::SERVICE_NAME => (string) $this->configValue('service_name', (string) config('telemetry.service_name', 'fleetq')),
                 ResourceAttributes::SERVICE_VERSION => (string) $this->configValue('service_version', (string) config('telemetry.service_version', '1.0.0')),
-                ResourceAttributes::DEPLOYMENT_ENVIRONMENT => (string) $this->configValue('deployment_environment', (string) config('telemetry.deployment_environment', 'production')),
+                ResourceAttributes::DEPLOYMENT_ENVIRONMENT_NAME => (string) $this->configValue('deployment_environment', (string) config('telemetry.deployment_environment', 'production')),
             ])),
         );
 
