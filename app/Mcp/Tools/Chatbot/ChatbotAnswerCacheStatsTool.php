@@ -2,14 +2,12 @@
 
 namespace App\Mcp\Tools\Chatbot;
 
-use App\Domain\Chatbot\Models\Chatbot;
-use App\Domain\Chatbot\Models\ChatbotAnswerCacheEntry;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
+use App\Mcp\Concerns\ResolvesTeamChatbot;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -21,7 +19,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[AssistantTool('read')]
 class ChatbotAnswerCacheStatsTool extends Tool
 {
-    use HasStructuredErrors;
+    use HasStructuredErrors, ResolvesTeamChatbot;
 
     protected string $name = 'chatbot_answer_cache_stats';
 
@@ -46,21 +44,12 @@ class ChatbotAnswerCacheStatsTool extends Tool
             'days' => 'sometimes|integer|min:1|max:90',
         ]);
 
-        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return $this->permissionDeniedError('No current team.');
+        $chatbot = $this->resolveTeamChatbot($validated['chatbot_id']);
+        if ($chatbot instanceof Response) {
+            return $chatbot;
         }
 
-        $idOrSlug = $validated['chatbot_id'];
-        $chatbot = Chatbot::withoutGlobalScopes()
-            ->where('team_id', $teamId)
-            ->where(Str::isUuid($idOrSlug) ? 'id' : 'slug', $idOrSlug)
-            ->first();
-
-        if (! $chatbot) {
-            return $this->notFoundError('chatbot', $idOrSlug);
-        }
-
+        $cache = app(ChatbotAnswerCache::class);
         $days = (int) ($validated['days'] ?? 7);
         $status = [];
         $decisions = [];
@@ -104,7 +93,7 @@ class ChatbotAnswerCacheStatsTool extends Tool
         return Response::text(json_encode([
             'chatbot_id' => $chatbot->id,
             'period_days' => $days,
-            'settings' => app(ChatbotAnswerCache::class)->settings($chatbot),
+            'settings' => $cache->settings($chatbot),
             'platform_enabled' => (bool) config('chatbot_answer_cache.enabled', false),
             'by_status' => $status,
             'hit_rate_pct' => $eligible > 0 ? round($served / $eligible * 100, 1) : null,
@@ -113,11 +102,8 @@ class ChatbotAnswerCacheStatsTool extends Tool
             'avg_latency_ms' => ['served' => $avg($latency['served']), 'miss' => $avg($latency['miss'])],
             'saved_tokens' => $savedTokens,
             'saved_cost_credits' => $savedCredits,
-            'entries' => ChatbotAnswerCacheEntry::withoutGlobalScopes()
-                ->where('team_id', $chatbot->team_id)
-                ->where('chatbot_id', $chatbot->id)
-                ->where('generation', (int) $chatbot->answer_cache_generation)
-                ->count(),
+            // Only rows that can still be served (current knowledge + prompt, not expired).
+            'entries' => $cache->scopedQuery($chatbot, (int) $chatbot->answer_cache_generation, $cache->promptHash($chatbot))->count(),
         ]));
     }
 }

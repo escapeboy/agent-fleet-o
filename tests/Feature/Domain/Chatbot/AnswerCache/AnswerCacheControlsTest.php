@@ -40,9 +40,21 @@ class AnswerCacheControlsTest extends AnswerCacheTestCase
         return json_decode((string) $response->content(), true) ?? [];
     }
 
+    public function test_tools_respect_the_team_chatbot_feature_gate(): void
+    {
+        $bot = $this->chatbot();
+        Team::find($bot->team_id)->update(['settings' => ['chatbot_enabled' => false]]);
+        $this->actAsMemberOf($bot->team_id);
+
+        $response = (new ChatbotAnswerCacheStatsTool)->handle(new Request(['chatbot_id' => $bot->id]));
+
+        $this->assertTrue($response->isError());
+    }
+
     public function test_configure_stats_and_purge_tools(): void
     {
         $bot = $this->chatbot(enabled: false);
+        Team::find($bot->team_id)->update(['settings' => ['chatbot_enabled' => true]]);
         $this->actAsMemberOf($bot->team_id);
 
         $configured = $this->decode((new ChatbotAnswerCacheConfigureTool)->handle(new Request([
@@ -64,7 +76,9 @@ class AnswerCacheControlsTest extends AnswerCacheTestCase
     {
         $foreign = $this->chatbot();
         $this->storeEntry($foreign, 'q', 'a', $this->axis(0));
-        $this->actAsMemberOf($this->team()->id);
+        $own = $this->team();
+        $own->update(['settings' => ['chatbot_enabled' => true]]);
+        $this->actAsMemberOf($own->id);
 
         foreach ([ChatbotAnswerCacheConfigureTool::class, ChatbotAnswerCacheStatsTool::class, ChatbotAnswerCachePurgeTool::class] as $tool) {
             $response = (new $tool)->handle(new Request(['chatbot_id' => $foreign->id, 'enabled' => false]));

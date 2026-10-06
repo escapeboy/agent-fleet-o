@@ -82,6 +82,35 @@ class AnswerCacheEligibilityTest extends AnswerCacheTestCase
         $this->assertTrue(mb_check_encoding($normalized, 'UTF-8'));
     }
 
+    public function test_agents_with_callable_agents_or_repos_are_not_cached(): void
+    {
+        foreach (['callable_agent_ids', 'callable_workflow_ids', 'git_repository_ids'] as $key) {
+            $bot = $this->chatbot();
+            $bot->agent->update(['config' => [$key => [(string) Str::uuid7()]]]);
+
+            $this->assertSame('agent_tools', $this->cache()->ineligibilityReason($bot->refresh(), 'q', false), $key);
+        }
+    }
+
+    public function test_date_ranges_are_not_personal_data(): void
+    {
+        $this->assertFalse(ChatbotAnswerCache::containsPersonalData('Валидна ли е промоцията 01.01.2026 - 31.12.2026?'));
+        $this->assertFalse(ChatbotAnswerCache::containsPersonalData('Работите ли на 2026-12-24?'));
+    }
+
+    public function test_prompt_hash_survives_an_agent_run(): void
+    {
+        $bot = $this->chatbot();
+        $before = $this->cache()->promptHash($bot);
+
+        // ExecuteAgentAction does exactly this after every run; it bumps updated_at.
+        $this->travel(1)->seconds();
+        $bot->agent->increment('budget_spent_credits', 5);
+        $bot->refresh();
+
+        $this->assertSame($before, $this->cache()->promptHash($bot));
+    }
+
     public function test_prompt_hash_changes_when_the_agent_changes(): void
     {
         $bot = $this->chatbot();

@@ -2,12 +2,11 @@
 
 namespace App\Mcp\Tools\Chatbot;
 
-use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
+use App\Mcp\Concerns\ResolvesTeamChatbot;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -17,7 +16,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsDestructive;
 #[AssistantTool('destructive')]
 class ChatbotAnswerCachePurgeTool extends Tool
 {
-    use HasStructuredErrors;
+    use HasStructuredErrors, ResolvesTeamChatbot;
 
     protected string $name = 'chatbot_answer_cache_purge';
 
@@ -36,19 +35,9 @@ class ChatbotAnswerCachePurgeTool extends Tool
     {
         $validated = $request->validate(['chatbot_id' => 'required|string']);
 
-        $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
-        if (! $teamId) {
-            return $this->permissionDeniedError('No current team.');
-        }
-
-        $idOrSlug = $validated['chatbot_id'];
-        $chatbot = Chatbot::withoutGlobalScopes()
-            ->where('team_id', $teamId)
-            ->where(Str::isUuid($idOrSlug) ? 'id' : 'slug', $idOrSlug)
-            ->first();
-
-        if (! $chatbot) {
-            return $this->notFoundError('chatbot', $idOrSlug);
+        $chatbot = $this->resolveTeamChatbot($validated['chatbot_id']);
+        if ($chatbot instanceof Response) {
+            return $chatbot;
         }
 
         app(ChatbotAnswerCache::class)->invalidate($chatbot->id);

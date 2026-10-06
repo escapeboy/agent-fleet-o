@@ -114,6 +114,18 @@ class StoreChatbotAnswerCacheJobTest extends AnswerCacheTestCase
         $this->assertSame(0, ChatbotAnswerCacheEntry::count());
     }
 
+    public function test_an_expired_entry_does_not_block_storing_the_question_again(): void
+    {
+        $bot = $this->chatbot();
+        $old = $this->storeEntry($bot, 'Колко струва доставката?', 'стар отговор', $this->axis(0));
+        $old->forceFill(['expires_at' => now()->subMinute()])->save();
+        $this->gatewayReplies = ['{"store": true}'];
+
+        $this->runJob($this->job($bot, 'Доставката е безплатна над 50 лв.'));
+
+        $this->assertSame(['Доставката е безплатна над 50 лв.'], ChatbotAnswerCacheEntry::pluck('answer')->all());
+    }
+
     public function test_lru_cap_drops_the_least_recently_used_entries(): void
     {
         $bot = $this->chatbot(attributes: ['config' => ['answer_cache' => ['enabled' => true, 'max_entries' => 2]]]);
