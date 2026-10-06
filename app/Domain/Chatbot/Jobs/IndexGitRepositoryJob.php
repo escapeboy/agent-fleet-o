@@ -200,7 +200,12 @@ class IndexGitRepositoryJob implements ShouldQueue
         foreach ($chunks as $idx => $chunk) {
             $text = $chunk['content'];
 
-            $embeddingStr = $embeddingProvider->formatForPgvector($embeddingProvider->embed($text));
+            // Team-aware (BYOK → platform key): prod has no platform OpenAI key.
+            $vector = $embeddingProvider->embedForTeam($text, $source->team_id);
+            if ($vector === null) {
+                throw new \RuntimeException('No embedding provider key available for this team (configure an OpenAI key).');
+            }
+            $embeddingStr = $embeddingProvider->formatForPgvector($vector);
 
             DB::table('chatbot_kb_chunks')->insert([
                 'id' => Str::orderedUuid(),

@@ -511,8 +511,13 @@ class ChatbotResponseService implements ChatbotResponderInterface
     private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.5, int $topK = 5): array
     {
         try {
-            // Same provider as IndexKnowledgeSourceJob so query and chunk vectors share one space.
-            $embeddingStr = $this->embedding->formatForPgvector($this->embedding->embed($query));
+            // Same provider and key resolution as IndexKnowledgeSourceJob, so query
+            // and chunk vectors share one space.
+            $vector = $this->embedding->embedForTeam($query, $chatbot->team_id);
+            if ($vector === null) {
+                return [];
+            }
+            $embeddingStr = $this->embedding->formatForPgvector($vector);
 
             $allowedLevels = $this->allowedAccessLevels($chatbot);
             $placeholders = implode(',', array_fill(0, count($allowedLevels), '?'));

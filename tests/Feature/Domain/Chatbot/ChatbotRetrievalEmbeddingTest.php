@@ -50,18 +50,28 @@ class ChatbotRetrievalEmbeddingTest extends TestCase
     public function test_query_is_embedded_with_the_fleetq_embedding_provider(): void
     {
         $embedding = Mockery::mock(EmbeddingProviderInterface::class);
-        $embedding->shouldReceive('embed')->once()->with('Колко струва доставката?')->andReturn([0.1, 0.2]);
+        $chatbot = $this->chatbot();
+        $embedding->shouldReceive('embedForTeam')->once()->with('Колко струва доставката?', $chatbot->team_id)->andReturn([0.1, 0.2]);
         $embedding->shouldReceive('formatForPgvector')->once()->with([0.1, 0.2])->andReturn('[0.1,0.2]');
 
         // SQLite has no pgvector, so the query itself fails and is swallowed;
         // what matters here is which provider produced the query vector.
-        $this->assertSame([], $this->retrieve($embedding, $this->chatbot(), 'Колко струва доставката?'));
+        $this->assertSame([], $this->retrieve($embedding, $chatbot, 'Колко струва доставката?'));
+    }
+
+    public function test_missing_embedding_key_degrades_to_no_chunks(): void
+    {
+        $embedding = Mockery::mock(EmbeddingProviderInterface::class);
+        $embedding->shouldReceive('embedForTeam')->once()->andReturnNull();
+        $embedding->shouldNotReceive('formatForPgvector');
+
+        $this->assertSame([], $this->retrieve($embedding, $this->chatbot(), 'hello'));
     }
 
     public function test_embedding_failure_degrades_to_no_chunks(): void
     {
         $embedding = Mockery::mock(EmbeddingProviderInterface::class);
-        $embedding->shouldReceive('embed')->once()->andThrow(new \RuntimeException('provider down'));
+        $embedding->shouldReceive('embedForTeam')->once()->andThrow(new \RuntimeException('provider down'));
         $embedding->shouldNotReceive('formatForPgvector');
 
         $this->assertSame([], $this->retrieve($embedding, $this->chatbot(), 'hello'));
