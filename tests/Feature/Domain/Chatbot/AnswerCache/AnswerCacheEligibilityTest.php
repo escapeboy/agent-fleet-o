@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Domain\Chatbot\AnswerCache;
 
+use App\Domain\Chatbot\Models\ChatbotKbChunk;
+use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class AnswerCacheEligibilityTest extends AnswerCacheTestCase
 {
@@ -102,9 +105,44 @@ class AnswerCacheEligibilityTest extends AnswerCacheTestCase
     public function test_links_finds_urls_and_bare_domains_but_not_prices(): void
     {
         $this->assertSame(
-            ['https://a.example/x', 'evil.example/refund'],
+            ['a.example/x', 'evil.example/refund'],
             ChatbotAnswerCache::links('Виж https://a.example/x, или evil.example/refund. Цена 50 лв., т.е. евтино.'),
         );
+        $this->assertSame([], ChatbotAnswerCache::links('гр. София, ул. Витоша 1, до 2026 г.'));
+    }
+
+    /**
+     * @return array<string, array{0: string}>
+     */
+    public static function linkBypasses(): array
+    {
+        return [
+            'substring of a known domain' => ['Плащане на pany.com'],
+            'cyrillic homoglyph domain' => ['Плащане на еvil.example'],
+            'bare ip' => ['Плащане на 1.2.3.4/pay'],
+            'protocol relative' => ['Плащане на //evil.example'],
+            'script scheme' => ['[Плати](javascript:alert(1))'],
+            'known host as a subdomain prefix' => ['Плащане на company.com.evil.example'],
+        ];
+    }
+
+    #[DataProvider('linkBypasses')]
+    public function test_links_not_in_the_knowledge_base_are_detected(string $answer): void
+    {
+        $bot = $this->chatbot();
+        $source = ChatbotKnowledgeSource::create([
+            'chatbot_id' => $bot->id, 'team_id' => $bot->team_id, 'type' => 'url',
+            'name' => 'Docs', 'source_url' => 'https://company.com', 'status' => 'ready',
+        ]);
+        $chunk = ChatbotKbChunk::create([
+            'source_id' => $source->id, 'chatbot_id' => $bot->id, 'team_id' => $bot->team_id,
+            'content' => 'Плащане онлайн на https://company.com/pay',
+        ]);
+        $sources = [['chunk_id' => $chunk->id]];
+
+        $this->assertTrue($this->cache()->hasUngroundedLinks($bot, $answer, $sources));
+        $this->assertFalse($this->cache()->hasUngroundedLinks($bot, 'Плащане на Company.com/pay/.', $sources));
+        $this->assertFalse($this->cache()->hasUngroundedLinks($bot, 'Виж company.com', $sources));
     }
 
     public function test_date_ranges_are_not_personal_data(): void
