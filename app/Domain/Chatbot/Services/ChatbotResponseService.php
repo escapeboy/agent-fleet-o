@@ -688,6 +688,10 @@ class ChatbotResponseService implements ChatbotResponderInterface
      */
     private function answerCacheMeta(array $cache): array
     {
+        // Cache off: leave message metadata exactly as it was before the cache existed.
+        if ($cache['reason'] === 'disabled') {
+            return [];
+        }
         if ($cache['reason'] !== null || $cache['lookup'] === null) {
             return ['status' => 'skipped', 'reason' => $cache['reason']];
         }

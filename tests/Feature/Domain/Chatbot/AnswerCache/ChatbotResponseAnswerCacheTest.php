@@ -105,6 +105,17 @@ class ChatbotResponseAnswerCacheTest extends AnswerCacheTestCase
         Queue::assertNotPushed(StoreChatbotAnswerCacheJob::class);
     }
 
+    public function test_cache_off_leaves_message_metadata_unchanged(): void
+    {
+        $bot = $this->chatbot(enabled: false);
+        $this->agentReplies('Безплатна.');
+
+        $result = $this->service()->handle($bot, $this->newSession($bot), 'Колко струва доставката?', $bot->team_id);
+
+        $this->assertSame([], $result['message']->metadata);
+        Queue::assertNotPushed(StoreChatbotAnswerCacheJob::class);
+    }
+
     public function test_low_confidence_reply_with_fallback_is_not_queued(): void
     {
         $bot = $this->chatbot(attributes: ['confidence_threshold' => 0.95, 'fallback_message' => 'Свържете се с нас.']);

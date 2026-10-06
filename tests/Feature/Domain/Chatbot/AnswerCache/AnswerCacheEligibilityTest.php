@@ -73,6 +73,15 @@ class AnswerCacheEligibilityTest extends AnswerCacheTestCase
         );
     }
 
+    public function test_normalize_keeps_utf8_valid_for_words_ending_in_er(): void
+    {
+        // "р" is D1 80; a byte-wise rtrim with "…" (E2 80 A6) in the list cut it in half.
+        $normalized = ChatbotAnswerCache::normalize('Какъв е вашият номер?');
+
+        $this->assertSame('какъв е вашият номер', $normalized);
+        $this->assertTrue(mb_check_encoding($normalized, 'UTF-8'));
+    }
+
     public function test_prompt_hash_changes_when_the_agent_changes(): void
     {
         $bot = $this->chatbot();
