@@ -71,6 +71,26 @@ class TracerProviderTest extends TestCase
         $this->assertInstanceOf(NoopTracer::class, $tracer);
     }
 
+    /**
+     * Regression: the resource used ResourceAttributes::DEPLOYMENT_ENVIRONMENT,
+     * which the installed semconv renamed to DEPLOYMENT_ENVIRONMENT_NAME. The
+     * Error was caught and the provider silently fell back to noop, so enabling
+     * OTEL in prod (2026-10-06) exported nothing.
+     */
+    public function test_builds_a_real_tracer_when_enabled_with_a_valid_endpoint(): void
+    {
+        config([
+            'telemetry.enabled' => true,
+            'telemetry.exporter.endpoint' => 'http://127.0.0.1:4318',
+            'telemetry.sample_rate' => 1.0,
+        ]);
+
+        $provider = new TracerProvider;
+        $provider->tracer()->spanBuilder('probe')->startSpan()->end();
+
+        $this->assertTrue($provider->isActive());
+    }
+
     public function test_tracer_is_cached_across_calls(): void
     {
         config(['telemetry.enabled' => false]);
