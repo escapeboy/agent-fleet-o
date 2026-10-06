@@ -12,7 +12,7 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
 
@@ -22,8 +22,9 @@ class IndexKnowledgeSourceEmbeddingTest extends TestCase
 
     public function test_source_fails_with_clear_message_when_team_has_no_embedding_key(): void
     {
-        Storage::fake();
-        Storage::put('kb/doc.txt', 'Доставката до София е безплатна над 50 лв.');
+        // URL source with faked HTTP: a document source would read the tenant disk,
+        // which is S3 in CI and fails before the embedding step under test.
+        Http::fake(['*' => Http::response(['content' => 'Доставката до София е безплатна над 50 лв.'])]);
 
         $user = User::factory()->create();
         $team = Team::create([
@@ -42,9 +43,9 @@ class IndexKnowledgeSourceEmbeddingTest extends TestCase
         $source = ChatbotKnowledgeSource::create([
             'chatbot_id' => $chatbot->id,
             'team_id' => $team->id,
-            'type' => 'document',
+            'type' => 'url',
             'name' => 'Delivery',
-            'source_data' => ['path' => 'kb/doc.txt'],
+            'source_url' => 'https://docs.example.com/delivery',
         ]);
 
         $embedding = Mockery::mock(EmbeddingProviderInterface::class);
