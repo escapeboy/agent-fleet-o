@@ -7,8 +7,10 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
+use App\Domain\Chatbot\DTOs\AnswerCacheLookup;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Chatbot\Jobs\ExecuteChatbotWorkflowJob;
+use App\Domain\Chatbot\Jobs\StoreChatbotAnswerCacheJob;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Models\ChatbotMessage;
@@ -31,6 +33,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
     public function __construct(
         private readonly ExecuteAgentAction $executeAgent,
         private readonly EmbeddingProviderInterface $embedding,
+        private readonly ChatbotAnswerCache $answerCache,
     ) {}
 
     /**
@@ -47,7 +50,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
         $startedAt = microtime(true);
 
         // Persist the user message
-        ChatbotMessage::create([
+        $userMessage = ChatbotMessage::create([
             'session_id' => $session->id,
             'chatbot_id' => $chatbot->id,
             'team_id' => $chatbot->team_id,
@@ -58,11 +61,25 @@ class ChatbotResponseService implements ChatbotResponderInterface
         // Build conversation context from Redis or DB
         $contextMessages = $this->loadContext($session, $chatbot);
 
+        $hasKnowledge = $chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists();
+        $cache = $this->prepareAnswerCache($chatbot, $session, $userMessage, $userText, $hasKnowledge);
+
+        if ($cache['lookup']?->isServed()) {
+            $assistantMsg = $this->persistCachedReply($chatbot, $session, $userText, $cache, $startedAt);
+
+            return [
+                'message' => $assistantMsg,
+                'escalated' => false,
+                'reply' => $assistantMsg->content,
+                'feedback_message_id' => $assistantMsg->id,
+            ];
+        }
+
         // RAG retrieval — only if chatbot has indexed knowledge sources
         $ragChunks = [];
         $bestRagScore = 0.0;
-        if ($chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists()) {
-            $ragChunks = $this->retrieveRelevantChunks($chatbot, $userText);
+        if ($hasKnowledge) {
+            $ragChunks = $this->retrieveRelevantChunks($chatbot, $cache['vector']);
             $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
         }
 
@@ -101,6 +118,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
         $confidence = $this->estimateConfidence($result, $bestRagScore);
 
         // Append fallback message when low confidence and escalation is disabled
+        $fallbackAppended = false;
         if (
             ! $chatbot->human_escalation_enabled
             && $confidence < (float) $chatbot->confidence_threshold
@@ -109,6 +127,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
             $rawReply = $rawReply
                 ? $rawReply."\n\n".$chatbot->fallback_message
                 : $chatbot->fallback_message;
+            $fallbackAppended = true;
         }
 
         $needsEscalation = $chatbot->human_escalation_enabled
@@ -166,10 +185,16 @@ class ChatbotResponseService implements ChatbotResponderInterface
             'content' => $rawReply,
             'confidence' => $confidence,
             'latency_ms' => $latencyMs,
-            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : [],
+            'metadata' => array_filter(['sources' => $ragSourceMeta, 'answer_cache' => $this->answerCacheMeta($cache)]),
         ]);
 
         $this->updateContextCache($session, $chatbot, $userText, $rawReply);
+
+        $this->queueAnswerForCache(
+            $chatbot, $cache, $userText, $rawReply, $fallbackAppended, $confidence, $ragSourceMeta,
+            generationTokens: null,
+            generationCostCredits: isset($result['execution']) ? (int) $result['execution']->cost_credits : null,
+        );
 
         // Update session stats
         $session->increment('message_count', 2);
@@ -198,7 +223,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
     ): ChatbotMessage {
         $startedAt = microtime(true);
 
-        ChatbotMessage::create([
+        $userMessage = ChatbotMessage::create([
             'session_id' => $session->id,
             'chatbot_id' => $chatbot->id,
             'team_id' => $chatbot->team_id,
@@ -208,10 +233,20 @@ class ChatbotResponseService implements ChatbotResponderInterface
 
         $contextMessages = $this->loadContext($session, $chatbot);
 
+        $hasKnowledge = $chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists();
+        $cache = $this->prepareAnswerCache($chatbot, $session, $userMessage, $userText, $hasKnowledge);
+
+        if ($cache['lookup']?->isServed()) {
+            // A disconnect throws out of $onChunk before anything is persisted.
+            $onChunk($cache['lookup']->answer);
+
+            return $this->persistCachedReply($chatbot, $session, $userText, $cache, $startedAt);
+        }
+
         $ragChunks = [];
         $bestRagScore = 0.0;
-        if ($chatbot->knowledgeSources()->where('status', 'ready')->where('is_enabled', true)->exists()) {
-            $ragChunks = $this->retrieveRelevantChunks($chatbot, $userText);
+        if ($hasKnowledge) {
+            $ragChunks = $this->retrieveRelevantChunks($chatbot, $cache['vector']);
             $bestRagScore = ! empty($ragChunks) ? (float) ($ragChunks[0]['similarity'] ?? 0.0) : 0.0;
         }
 
@@ -241,6 +276,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
             : ($rawReply ? 0.85 : 0.30);
 
         // Append fallback if low confidence
+        $fallbackAppended = false;
         if (
             ! $chatbot->human_escalation_enabled
             && $confidence < (float) $chatbot->confidence_threshold
@@ -249,6 +285,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
             $suffix = "\n\n".$chatbot->fallback_message;
             $rawReply .= $suffix;
             $onChunk($suffix);
+            $fallbackAppended = true;
         }
 
         $ragSourceMeta = $this->buildRagSourceMeta($chatbot, $ragChunks);
@@ -261,10 +298,17 @@ class ChatbotResponseService implements ChatbotResponderInterface
             'content' => $rawReply,
             'confidence' => $confidence,
             'latency_ms' => $latencyMs,
-            'metadata' => $ragSourceMeta ? ['sources' => $ragSourceMeta] : [],
+            'metadata' => array_filter(['sources' => $ragSourceMeta, 'answer_cache' => $this->answerCacheMeta($cache)]),
         ]);
 
         $this->updateContextCache($session, $chatbot, $userText, $rawReply);
+
+        $this->queueAnswerForCache(
+            $chatbot, $cache, $userText, $rawReply, $fallbackAppended, $confidence, $ragSourceMeta,
+            generationTokens: $response->usage->totalTokens(),
+            generationCostCredits: $response->usage->costCredits,
+        );
+
         $session->increment('message_count', 2);
         $session->update(['last_activity_at' => now()]);
 
@@ -504,19 +548,39 @@ class ChatbotResponseService implements ChatbotResponderInterface
     }
 
     /**
-     * Retrieve the top relevant KB chunks for a query using pgvector cosine similarity.
+     * Embed the visitor's question once; RAG and the answer cache both use it.
      *
-     * @return array<array{id: string, content: string, similarity: float, access_level: string, source_id: string}>
+     * @return float[]|null
      */
-    private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.5, int $topK = 5): array
+    private function embedQuery(Chatbot $chatbot, string $query): ?array
     {
         try {
             // Same provider and key resolution as IndexKnowledgeSourceJob, so query
             // and chunk vectors share one space.
-            $vector = $this->embedding->embedForTeam($query, $chatbot->team_id);
-            if ($vector === null) {
-                return [];
-            }
+            return $this->embedding->embedForTeam($query, $chatbot->team_id);
+        } catch (\Throwable $e) {
+            Log::warning('ChatbotResponseService: query embedding failed', [
+                'chatbot_id' => $chatbot->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Retrieve the top relevant KB chunks for a query vector using pgvector cosine similarity.
+     *
+     * @param  float[]|null  $vector
+     * @return array<array{id: string, content: string, similarity: float, access_level: string, source_id: string}>
+     */
+    private function retrieveRelevantChunks(Chatbot $chatbot, ?array $vector, float $threshold = 0.5, int $topK = 5): array
+    {
+        if ($vector === null) {
+            return [];
+        }
+
+        try {
             $embeddingStr = $this->embedding->formatForPgvector($vector);
 
             $allowedLevels = $this->allowedAccessLevels($chatbot);
@@ -562,6 +626,153 @@ class ChatbotResponseService implements ChatbotResponderInterface
 
             return [];
         }
+    }
+
+    /**
+     * Decide whether this message may use the answer cache and, if so, look it up.
+     * Eligibility: see ChatbotAnswerCache::ineligibilityReason(); a follow-up is any
+     * message after the first one in the session.
+     *
+     * @return array{reason: string|null, vector: float[]|null, generation: int, prompt_hash: string|null, lookup: AnswerCacheLookup|null}
+     */
+    private function prepareAnswerCache(
+        Chatbot $chatbot,
+        ChatbotSession $session,
+        ChatbotMessage $userMessage,
+        string $userText,
+        bool $hasKnowledge,
+    ): array {
+        $reason = $this->answerCache->isEnabled($chatbot)
+            ? $this->answerCache->ineligibilityReason(
+                $chatbot,
+                $userText,
+                ChatbotMessage::where('session_id', $session->id)->whereKeyNot($userMessage->id)->exists(),
+            )
+            : 'disabled';
+
+        $vector = ($hasKnowledge || $reason === null) ? $this->embedQuery($chatbot, $userText) : null;
+        if ($reason === null && $vector === null) {
+            $reason = 'no_embedding';
+        }
+
+        $state = [
+            'reason' => $reason,
+            'vector' => $vector,
+            'generation' => (int) $chatbot->answer_cache_generation,
+            'prompt_hash' => null,
+            'lookup' => null,
+        ];
+
+        if ($reason !== null) {
+            return $state;
+        }
+
+        $state['prompt_hash'] = $this->answerCache->promptHash($chatbot);
+
+        try {
+            $state['lookup'] = $this->answerCache->lookup($chatbot, $userText, $vector, $state['prompt_hash'], $state['generation']);
+        } catch (\Throwable $e) {
+            Log::warning('ChatbotResponseService: answer cache lookup failed', [
+                'chatbot_id' => $chatbot->id,
+                'error' => $e->getMessage(),
+            ]);
+            $state['reason'] = 'lookup_failed';
+        }
+
+        return $state;
+    }
+
+    /**
+     * @param  array{reason: string|null, lookup: AnswerCacheLookup|null}  $cache
+     * @return array<string, mixed>
+     */
+    private function answerCacheMeta(array $cache): array
+    {
+        if ($cache['reason'] !== null || $cache['lookup'] === null) {
+            return ['status' => 'skipped', 'reason' => $cache['reason']];
+        }
+
+        $lookup = $cache['lookup'];
+        $meta = [
+            'status' => $lookup->status(),
+            'decision' => $lookup->decision,
+            'lookup_ms' => $lookup->lookupMs,
+            'judge_ms' => $lookup->judgeMs,
+        ];
+
+        if ($lookup->isServed()) {
+            $savings = $lookup->savings();
+            $meta['entry_ids'] = array_map(fn ($e) => $e->id, $lookup->entries);
+            $meta['saved_tokens'] = $savings['tokens'];
+            $meta['saved_cost_credits'] = $savings['cost_credits'];
+        }
+
+        return array_filter($meta, fn ($v) => $v !== null);
+    }
+
+    /**
+     * @param  array{reason: string|null, lookup: AnswerCacheLookup|null}  $cache
+     */
+    private function persistCachedReply(Chatbot $chatbot, ChatbotSession $session, string $userText, array $cache, float $startedAt): ChatbotMessage
+    {
+        $lookup = $cache['lookup'];
+
+        $assistantMsg = ChatbotMessage::create([
+            'session_id' => $session->id,
+            'chatbot_id' => $chatbot->id,
+            'team_id' => $chatbot->team_id,
+            'role' => 'assistant',
+            'content' => $lookup->answer,
+            'confidence' => $lookup->confidence(),
+            'latency_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+            'metadata' => array_filter(['sources' => $lookup->sources(), 'answer_cache' => $this->answerCacheMeta($cache)]),
+        ]);
+
+        $this->updateContextCache($session, $chatbot, $userText, $lookup->answer);
+        $session->increment('message_count', 2);
+        $session->update(['last_activity_at' => now()]);
+
+        return $assistantMsg;
+    }
+
+    /**
+     * On a miss, hand a good answer to the store job. Escalated replies never get
+     * here; replies with the fallback appended or below the threshold are skipped.
+     *
+     * @param  array{reason: string|null, vector: float[]|null, generation: int, prompt_hash: string|null}  $cache
+     */
+    private function queueAnswerForCache(
+        Chatbot $chatbot,
+        array $cache,
+        string $userText,
+        string $reply,
+        bool $fallbackAppended,
+        float $confidence,
+        ?array $sources,
+        ?int $generationTokens,
+        ?int $generationCostCredits,
+    ): void {
+        if ($cache['reason'] !== null
+            || $cache['vector'] === null
+            || $cache['prompt_hash'] === null
+            || $fallbackAppended
+            || trim($reply) === ''
+            || $confidence < (float) $chatbot->confidence_threshold) {
+            return;
+        }
+
+        StoreChatbotAnswerCacheJob::dispatch(
+            chatbotId: $chatbot->id,
+            generation: $cache['generation'],
+            promptHash: $cache['prompt_hash'],
+            question: $userText,
+            vector: $cache['vector'],
+            answer: $reply,
+            sources: $sources,
+            confidence: $confidence,
+            generationTokens: $generationTokens,
+            generationCostCredits: $generationCostCredits,
+        )->onQueue('ai-calls');
     }
 
     /**

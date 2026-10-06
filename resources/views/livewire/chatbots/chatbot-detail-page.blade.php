@@ -222,6 +222,23 @@
                             @endif
                         </dd>
                     </div>
+                    <div>
+                        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Answer Cache</dt>
+                        <dd class="mt-1 flex items-center gap-2">
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $answerCache['enabled'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
+                                {{ $answerCache['enabled'] ? 'Enabled' : 'Disabled' }}
+                            </span>
+                            <button wire:click="toggleAnswerCache" class="text-xs font-medium text-primary-600 hover:text-primary-800">
+                                {{ $answerCache['enabled'] ? 'Turn off' : 'Turn on' }}
+                            </button>
+                        </dd>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Reuses earlier answers to the same first question. Turning it off deletes cached answers.
+                            @unless($answerCachePlatformEnabled)
+                                Not active on this installation (CHATBOT_ANSWER_CACHE_ENABLED is off).
+                            @endunless
+                        </p>
+                    </div>
                 </dl>
             </div>
         @endif
