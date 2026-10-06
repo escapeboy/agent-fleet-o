@@ -495,11 +495,24 @@ class ChatbotAnswerCache
         return self::hasLinksNotIn($answer, $knowledge);
     }
 
+    /**
+     * Every link in $text must equal a link found in $known by the SAME extractor
+     * (or be a shorter form of one at a path boundary: "shop.example" for
+     * "shop.example/delivery"). Exact matching, not substring: "pany.com" must
+     * not pass because the knowledge base mentions "company.com".
+     */
     private static function hasLinksNotIn(string $text, string $known): bool
     {
-        $known = mb_strtolower($known);
+        $knownLinks = self::links($known);
         foreach (self::links($text) as $link) {
-            if (! str_contains($known, $link)) {
+            $grounded = false;
+            foreach ($knownLinks as $k) {
+                if ($k === $link || str_starts_with($k, $link.'/')) {
+                    $grounded = true;
+                    break;
+                }
+            }
+            if (! $grounded) {
                 return true;
             }
         }
@@ -508,19 +521,34 @@ class ChatbotAnswerCache
     }
 
     /**
-     * URLs and bare domains ("evil.example", "shop.bg/pay"), lower-cased, with
-     * trailing punctuation stripped.
+     * Anything a renderer or a reader could follow: script/data schemes, scheme
+     * URLs, protocol-relative "//host", www., IPv4 addresses and dotted names in
+     * ANY script (homoglyph and IDN domains like "еvil.example" with a Cyrillic
+     * "е"). Over-matching only means an answer is not cached. Normalized:
+     * lower-case, no scheme/"//"/www., no trailing punctuation or slash.
      *
      * @return list<string>
      */
     public static function links(string $text): array
     {
-        preg_match_all('~(?:https?://|www\.)[^\s)>\]"\'<]+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b(?:/[^\s)>\]"\'<]*)?~iu', $text, $m);
+        $tail = '[^\s<>"\'`)\]]*';
+        preg_match_all(
+            '~\b(?:javascript|data|vbscript):(?!//)[^\s<>"\'`\]]*'
+            .'|(?:[a-z][a-z0-9+.-]*:)?//[^\s<>"\'`)\]]+'
+            .'|\bwww\.'.$tail
+            .'|\b\d{1,3}(?:\.\d{1,3}){3}\b(?::\d+)?(?:/'.$tail.')?'
+            .'|(?<![\p{L}\p{N}_-])(?:[\p{L}\p{N}-]+\.)+\p{L}{2,}(?![\p{L}\p{N}])(?::\d+)?(?:/'.$tail.')?~iu',
+            $text,
+            $m,
+        );
 
-        return array_values(array_unique(array_map(
-            fn (string $link) => mb_strtolower(rtrim($link, '.,;:!?')),
-            $m[0],
-        )));
+        return array_values(array_unique(array_map(function (string $link): string {
+            $link = mb_strtolower($link);
+            $link = (string) preg_replace('~^(?:[a-z][a-z0-9+.-]*:)?//~u', '', $link);
+            $link = (string) preg_replace('~^www\.~u', '', $link);
+
+            return rtrim($link, '.,;:!?/');
+        }, $m[0])));
     }
 
     /**
