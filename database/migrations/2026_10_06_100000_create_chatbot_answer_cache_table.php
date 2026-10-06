@@ -32,7 +32,7 @@ return new class extends Migration
             $table->timestamp('expires_at');
             $table->timestamps();
 
-            $table->index(['chatbot_id', 'generation', 'prompt_hash']);
+            // The unique index below also serves (chatbot_id, generation, prompt_hash) lookups.
             $table->unique(['chatbot_id', 'generation', 'prompt_hash', 'question_hash'], 'chatbot_answer_cache_question_unique');
             $table->index('expires_at');
         });

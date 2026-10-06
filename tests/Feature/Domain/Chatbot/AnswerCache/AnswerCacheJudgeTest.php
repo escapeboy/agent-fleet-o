@@ -108,6 +108,18 @@ class AnswerCacheJudgeTest extends AnswerCacheTestCase
         $this->assertSame(0, (int) ChatbotAnswerCacheEntry::sum('hit_count'));
     }
 
+    public function test_combine_is_a_miss_on_chatbots_with_human_review(): void
+    {
+        $bot = $this->chatbot(attributes: ['human_escalation_enabled' => true]);
+        $this->storeEntry($bot, 'Цена на доставката?', 'Безплатна над 50 лв.', $this->axis(0));
+        $this->storeEntry($bot, 'Срок на доставката?', '2 работни дни.', $this->axis(0, 0.4));
+        $this->gatewayReplies = ['{"decision":"combine","use":[1,2],"answer":"Безплатна, 2 дни."}'];
+
+        $lookup = $this->cache()->lookup($bot, 'Цена и срок?', $this->axis(0, 0.2), $this->cache()->promptHash($bot), 0);
+
+        $this->assertFalse($lookup->isServed());
+    }
+
     public function test_no_candidate_within_the_prefilter_skips_the_judge(): void
     {
         $bot = $this->chatbot();

@@ -18,8 +18,10 @@ return [
     'candidates' => 5,
 
     // Prefilter only: with nothing this close there is nothing to judge, so the
-    // judge call is skipped. It never decides a hit on its own.
-    'candidate_max_distance' => 0.5,
+    // judge call is skipped. It never decides a hit on its own. Real paraphrases
+    // sit around 0.25; 0.5 sent nearly every same-domain question to the judge.
+    // Tune from the precision/recall evaluation.
+    'candidate_max_distance' => 0.35,
 
     // Per-chatbot defaults (overridable in chatbots.config.answer_cache).
     'ttl_hours' => 168,
