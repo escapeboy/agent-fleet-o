@@ -4,6 +4,7 @@ namespace App\Domain\Chatbot\Models;
 
 use App\Domain\Chatbot\Enums\KnowledgeSourceStatus;
 use App\Domain\Chatbot\Enums\KnowledgeSourceType;
+use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +41,16 @@ class ChatbotKnowledgeSource extends Model
         'chunk_count' => 'integer',
         'indexed_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // Any change to what the chatbot knows makes its cached answers stale.
+        $invalidate = fn (self $source) => app(ChatbotAnswerCache::class)->invalidate($source->chatbot_id);
+
+        static::saved($invalidate);
+        static::deleted($invalidate);
+        static::restored($invalidate);
+    }
 
     public function chatbot(): BelongsTo
     {

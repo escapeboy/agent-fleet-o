@@ -49,4 +49,18 @@ return [
     */
     'ttl_days' => (int) env('SEMANTIC_CACHE_TTL_DAYS', 7),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Skipped Purposes
+    |--------------------------------------------------------------------------
+    |
+    | Request purposes that must always reach the model. Verdict calls over a
+    | changing candidate list must not get a cached verdict for other candidates.
+    |
+    */
+    'skip_purposes' => [
+        'chatbot.answer_cache_judge',
+        'chatbot.answer_cache_check',
+    ],
+
 ];

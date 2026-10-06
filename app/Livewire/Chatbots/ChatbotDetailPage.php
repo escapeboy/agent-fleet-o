@@ -11,6 +11,7 @@ use App\Domain\Chatbot\Enums\ChannelType;
 use App\Domain\Chatbot\Models\Chatbot;
 use App\Domain\Chatbot\Models\ChatbotChannel;
 use App\Domain\Chatbot\Models\ChatbotToken;
+use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Domain\Workflow\Models\Workflow;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use Illuminate\Support\Facades\Gate;
@@ -73,6 +74,16 @@ class ChatbotDetailPage extends Component
         app(ToggleChatbotStatusAction::class)->execute($this->chatbot);
         $this->chatbot->refresh();
         session()->flash('message', 'Chatbot status updated.');
+    }
+
+    public function toggleAnswerCache(): void
+    {
+        Gate::authorize('edit-content');
+
+        $cache = app(ChatbotAnswerCache::class);
+        $cache->updateSettings($this->chatbot, ['enabled' => ! $cache->settings($this->chatbot)['enabled']]);
+        $this->chatbot->refresh();
+        session()->flash('message', 'Answer cache updated.');
     }
 
     public function startEdit(): void
@@ -267,6 +278,8 @@ class ChatbotDetailPage extends Component
             'messagesCount' => $this->chatbot->messages()->count(),
             'providers' => app(ProviderResolver::class)->availableProviders(),
             'workflows' => Workflow::where('status', 'active')->orderBy('name')->get(['id', 'name']),
+            'answerCache' => app(ChatbotAnswerCache::class)->settings($this->chatbot),
+            'answerCachePlatformEnabled' => (bool) config('chatbot_answer_cache.enabled', false),
         ])->layout('layouts.app', ['header' => $this->chatbot->name]);
     }
 }

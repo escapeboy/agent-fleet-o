@@ -170,6 +170,9 @@ use App\Mcp\Tools\Budget\UpstreamCreditRunwayTool;
 use App\Mcp\Tools\Cache\SemanticCachePurgeTool;
 use App\Mcp\Tools\Cache\SemanticCacheStatsTool;
 use App\Mcp\Tools\Chatbot\ChatbotAnalyticsSummaryTool;
+use App\Mcp\Tools\Chatbot\ChatbotAnswerCacheConfigureTool;
+use App\Mcp\Tools\Chatbot\ChatbotAnswerCachePurgeTool;
+use App\Mcp\Tools\Chatbot\ChatbotAnswerCacheStatsTool;
 use App\Mcp\Tools\Chatbot\ChatbotCreateTool;
 use App\Mcp\Tools\Chatbot\ChatbotDeleteTool;
 use App\Mcp\Tools\Chatbot\ChatbotGetTool;
@@ -1506,6 +1509,9 @@ class AgentFleetServer extends Server
         ChatbotTokenRevokeTool::class,
         ChatbotSessionListTool::class,
         ChatbotAnalyticsSummaryTool::class,
+        ChatbotAnswerCacheConfigureTool::class,
+        ChatbotAnswerCacheStatsTool::class,
+        ChatbotAnswerCachePurgeTool::class,
         ChatbotLearningEntriesListTool::class,
         ChatbotKnowledgeSourceCreateTool::class,
 

@@ -11,14 +11,8 @@ class ChatbotResponderBindingTest extends TestCase
 {
     public function test_container_resolves_responder_interface_to_default_service(): void
     {
-        // Barsy\Services\EmbeddingServiceInterface is provided by the downstream
-        // Barsy layer and does not exist in this repo — stub it so the concrete
-        // ChatbotResponseService can be constructed.
-        $this->app->instance(
-            'Barsy\Services\EmbeddingServiceInterface',
-            Mockery::mock('Barsy\Services\EmbeddingServiceInterface'),
-        );
-
+        // No stub: the service must resolve from FleetQ's own bindings alone
+        // (it used to need Barsy's EmbeddingServiceInterface and failed in prod).
         $resolved = $this->app->make(ChatbotResponderInterface::class);
 
         $this->assertInstanceOf(ChatbotResponseService::class, $resolved);

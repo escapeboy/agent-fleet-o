@@ -67,6 +67,7 @@ class Chatbot extends Model
             'confidence_threshold' => 'decimal:2',
             'human_escalation_enabled' => 'boolean',
             'approval_timeout_hours' => 'integer',
+            'answer_cache_generation' => 'integer',
         ];
     }
 

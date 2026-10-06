@@ -24,6 +24,10 @@ class SemanticCache implements AiMiddlewareInterface
             return $next($request);
         }
 
+        if (in_array($request->purpose, config('semantic_cache.skip_purposes', []), true)) {
+            return $next($request);
+        }
+
         // Skip for local agents (zero-cost, no point caching)
         if (str_starts_with($request->provider, 'local/')) {
             return $next($request);
