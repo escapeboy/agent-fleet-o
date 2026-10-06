@@ -14,8 +14,8 @@ use App\Domain\Chatbot\Models\ChatbotKnowledgeSource;
 use App\Domain\Chatbot\Models\ChatbotMessage;
 use App\Domain\Chatbot\Models\ChatbotSession;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
-use Barsy\Services\EmbeddingServiceInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +30,7 @@ class ChatbotResponseService implements ChatbotResponderInterface
 
     public function __construct(
         private readonly ExecuteAgentAction $executeAgent,
-        private readonly EmbeddingServiceInterface $embedding,
+        private readonly EmbeddingProviderInterface $embedding,
     ) {}
 
     /**
@@ -511,8 +511,8 @@ class ChatbotResponseService implements ChatbotResponderInterface
     private function retrieveRelevantChunks(Chatbot $chatbot, string $query, float $threshold = 0.5, int $topK = 5): array
     {
         try {
-            $vector = $this->embedding->generate($query);
-            $embeddingStr = '['.implode(',', $vector).']';
+            // Same provider as IndexKnowledgeSourceJob so query and chunk vectors share one space.
+            $embeddingStr = $this->embedding->formatForPgvector($this->embedding->embed($query));
 
             $allowedLevels = $this->allowedAccessLevels($chatbot);
             $placeholders = implode(',', array_fill(0, count($allowedLevels), '?'));
