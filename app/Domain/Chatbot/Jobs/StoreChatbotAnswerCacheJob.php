@@ -58,6 +58,7 @@ class StoreChatbotAnswerCacheJob implements ShouldQueue
 
         if (ChatbotAnswerCache::looksLikeNonAnswer($this->answer, $chatbot->fallback_message)
             || ChatbotAnswerCache::containsPersonalData($this->answer)
+            || $cache->hasUngroundedLinks($chatbot, $this->answer, $this->sources)
             || ! $cache->passesStoreCheck($chatbot, $this->question, $this->answer)) {
             return;
         }
