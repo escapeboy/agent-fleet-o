@@ -203,7 +203,7 @@ class IndexGitRepositoryJob implements ShouldQueue
             // Team-aware (BYOK → platform key): prod has no platform OpenAI key.
             $vector = $embeddingProvider->embedForTeam($text, $source->team_id);
             if ($vector === null) {
-                throw new \RuntimeException('No embedding provider key available for this team (configure an OpenAI key).');
+                throw new \RuntimeException('Could not embed chunk: the team has no embedding provider key (configure an OpenAI key) or the provider call failed.');
             }
             $embeddingStr = $embeddingProvider->formatForPgvector($vector);
 
