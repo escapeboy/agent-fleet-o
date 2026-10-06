@@ -175,7 +175,8 @@
                                 if (str_starts_with($bcCategory, 'navigation')) {
                                     $from = $bcData['from'] ?? '';
                                     $to   = $bcData['to']   ?? '';
-                                    $bcSummary = trim("$from → $to", ' →');
+                                    // Multibyte-safe: trim() is byte-wise and "→" (E2 86 92) shares bytes with Cyrillic (e.g. "ц" = D1 86).
+                                    $bcSummary = (string) preg_replace('/^[\s→]+|[\s→]+$/u', '', "$from → $to");
                                 } elseif ($bcCategory === 'ui.click' || ($bcCategory === 'ui' && !array_key_exists('value', $bcData))) {
                                     $bcTarget   = is_array($bcData['target'] ?? null) ? $bcData['target'] : [];
                                     $role       = $bcTarget['role'] ?? '';

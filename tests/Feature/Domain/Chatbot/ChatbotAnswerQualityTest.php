@@ -21,8 +21,7 @@ class ChatbotAnswerQualityTest extends TestCase
     private function service(): ChatbotResponseService
     {
         // Build without the constructor: the methods under test use none of the
-        // injected deps, and one of them (Barsy EmbeddingServiceInterface) isn't
-        // loadable in the base-standalone test context.
+        // injected deps.
         return (new ReflectionClass(ChatbotResponseService::class))->newInstanceWithoutConstructor();
     }
 
