@@ -14,6 +14,7 @@ use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Domain\Project\Models\ProjectRun;
+use App\Domain\Project\Services\ProjectHealthEvaluator;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ProjectResource;
 use App\Http\Resources\Api\V1\ProjectRunResource;
@@ -220,5 +221,13 @@ class ProjectController extends Controller
             ->cursorPaginate(min((int) $request->input('per_page', 15), 100));
 
         return ProjectRunResource::collection($runs);
+    }
+
+    /**
+     * @response 200 {"state": "degraded", "reasons": [{"code": "schedule_disabled", "severity": "degraded", "message": "The schedule is disabled, so no runs will start on their own.", "next_step": "Re-enable the schedule."}], "evaluated_at": "2026-10-07T12:00:00+00:00"}
+     */
+    public function health(Project $project, ProjectHealthEvaluator $evaluator): JsonResponse
+    {
+        return response()->json($evaluator->evaluate($project)->toArray());
     }
 }

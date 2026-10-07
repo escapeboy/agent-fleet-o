@@ -2,6 +2,9 @@
 
 namespace App\Domain\Agent\Services;
 
+use App\Domain\GitRepository\Services\GitProvenanceContext;
+use App\Domain\GitRepository\Services\GitProvenanceRecorder;
+use App\Domain\GitRepository\Support\GitTrailers;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
 
@@ -60,6 +63,13 @@ class WorktreeManager
             throw new RuntimeException('Failed to stage changes: '.$stageResult->errorOutput());
         }
 
+        $provenanceEnabled = GitProvenanceRecorder::enabled();
+        $trailers = [];
+        if ($provenanceEnabled) {
+            $trailers = app(GitProvenanceContext::class)->trailers();
+            $message = GitTrailers::append($message, $trailers);
+        }
+
         $commitResult = Process::run(['git', '-C', $worktreePath, 'commit', '-m', $message, '--allow-empty']);
 
         if (! $commitResult->successful()) {
@@ -67,8 +77,20 @@ class WorktreeManager
         }
 
         $shaResult = Process::run(['git', '-C', $worktreePath, 'rev-parse', 'HEAD']);
+        $sha = trim($shaResult->output());
 
-        return trim($shaResult->output());
+        if ($provenanceEnabled) {
+            $branchResult = Process::run(['git', '-C', $worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD']);
+            app(GitProvenanceRecorder::class)->record(
+                app(GitProvenanceContext::class)->teamId,
+                null,
+                $sha,
+                trim($branchResult->output()) ?: null,
+                $trailers,
+            );
+        }
+
+        return $sha;
     }
 
     /**

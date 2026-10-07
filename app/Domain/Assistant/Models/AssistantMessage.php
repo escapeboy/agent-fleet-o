@@ -2,6 +2,7 @@
 
 namespace App\Domain\Assistant\Models;
 
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\MassPrunable;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AssistantMessage extends Model
 {
-    use HasUuids, MassPrunable;
+    use HasUuids, MassPrunable, RedactsSecretsBeforePersist;
 
     public function prunable(): Builder
     {
@@ -32,6 +33,14 @@ class AssistantMessage extends Model
         'ui_artifacts',
         'created_at',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['content', 'tool_calls', 'tool_results'];
+    }
 
     protected function casts(): array
     {

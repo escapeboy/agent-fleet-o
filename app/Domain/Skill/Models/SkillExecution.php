@@ -3,6 +3,7 @@
 namespace App\Domain\Skill\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SkillExecution extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'skill_id',
@@ -33,6 +34,14 @@ class SkillExecution extends Model
         'consensus_level',
         'peer_reviews',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['output'];
+    }
 
     protected function casts(): array
     {

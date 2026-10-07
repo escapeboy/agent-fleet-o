@@ -6,6 +6,7 @@ use App\Domain\GitRepository\Models\ContextGitSync;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\ContextMarkdownRenderer;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserNotification;
@@ -100,10 +101,13 @@ class PushContextToGitJob implements ShouldQueue
         }
 
         $client = $router->resolve($repo);
-        $sha = $client->commit(
-            $changes,
-            'chore(fleetq): sync team context ('.count($changes).' files)',
-            $sync->branch,
+        $sha = app(GitProvenanceContext::class)->with(
+            ['team_id' => (string) $sync->team_id, 'source' => 'context_sync'],
+            fn () => $client->commit(
+                $changes,
+                'chore(fleetq): sync team context ('.count($changes).' files)',
+                $sync->branch,
+            ),
         );
 
         $sync->update([

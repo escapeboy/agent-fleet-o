@@ -39,6 +39,7 @@ use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Services\StepOutputBroadcaster;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Memory\Jobs\ExtractMemoryJob;
 use App\Domain\Project\Models\Project;
 use App\Domain\Shared\Models\Team;
@@ -506,11 +507,21 @@ class ExecuteAgentAction
                 enablePromptCaching: true,
             );
 
-            [$response, $recoveryTier, $isPartial] = $this->toolRecovery->attempt(
-                request: $request,
-                agent: $agent,
-                team: $team,
-                experimentId: $experimentId,
+            // Commit provenance: git tools invoked inside the LLM tool loop stamp
+            // the agent + experiment onto their commits.
+            [$response, $recoveryTier, $isPartial] = app(GitProvenanceContext::class)->with(
+                [
+                    'team_id' => $teamId,
+                    'experiment_id' => $experimentId,
+                    'agent_id' => $agent->id,
+                    'source' => 'agent_tool',
+                ],
+                fn () => $this->toolRecovery->attempt(
+                    request: $request,
+                    agent: $agent,
+                    team: $team,
+                    experimentId: $experimentId,
+                ),
             );
 
             if ($isPartial) {

@@ -10,6 +10,7 @@ use App\Domain\Project\Actions\RestartProjectAction;
 use App\Domain\Project\Actions\RestoreProjectSnapshotAction;
 use App\Domain\Project\Actions\ResumeProjectAction;
 use App\Domain\Project\Actions\TriggerProjectRunAction;
+use App\Domain\Project\DTOs\ProjectHealthReport;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
@@ -17,9 +18,11 @@ use App\Domain\Project\Models\ProjectDependency;
 use App\Domain\Project\Models\ProjectMilestone;
 use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Project\Models\ProjectSnapshot;
+use App\Domain\Project\Services\ProjectHealthEvaluator;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class ProjectDetailPage extends Component
@@ -35,6 +38,12 @@ class ProjectDetailPage extends Component
     public function mount(Project $project): void
     {
         $this->project = $project;
+    }
+
+    #[Computed]
+    public function health(): ProjectHealthReport
+    {
+        return app(ProjectHealthEvaluator::class)->evaluate($this->project);
     }
 
     public function pause(): void

@@ -7,6 +7,7 @@ use App\Domain\Agent\Services\FilesystemGuard;
 use App\Domain\Agent\Services\WorktreeManager;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
@@ -112,9 +113,18 @@ class ExecuteCodeExecutionSkillAction
             if ($succeeded) {
                 $diff = $this->worktreeManager->diff($worktreePath, $baseBranch);
                 if (! empty(trim($diff))) {
-                    $resultCommit = $this->worktreeManager->commit(
-                        $worktreePath,
-                        "agent: {$skill->name} [{$executionId}]",
+                    $resultCommit = app(GitProvenanceContext::class)->with(
+                        [
+                            'team_id' => $teamId,
+                            'experiment_id' => $experimentId,
+                            'agent_id' => $agentId,
+                            'skill_execution_id' => $executionId,
+                            'source' => 'worktree_skill',
+                        ],
+                        fn () => $this->worktreeManager->commit(
+                            $worktreePath,
+                            "agent: {$skill->name} [{$executionId}]",
+                        ),
                     );
                 }
             }

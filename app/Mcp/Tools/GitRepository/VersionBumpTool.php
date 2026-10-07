@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -99,11 +100,11 @@ class VersionBumpTool extends Tool
 
             // Commit the change
             $message = $commitMessage ?? "chore: bump version to {$newVersion}";
-            $sha = $client->commit(
+            $sha = app(GitProvenanceContext::class)->with(['team_id' => (string) $teamId, 'source' => 'mcp_tool'], fn () => $client->commit(
                 [['path' => $filePath, 'content' => $newContent]],
                 $message,
                 $branch,
-            );
+            ));
 
             return Response::text(json_encode([
                 'success' => true,

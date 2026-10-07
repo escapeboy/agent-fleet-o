@@ -84,6 +84,31 @@ class SecretPatternLibrary
                 'name' => 'PEM private key block',
                 'regex' => '/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/',
             ],
+            'JWT' => [
+                'name' => 'JSON Web Token',
+                'regex' => '/eyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/',
+            ],
+            'LARAVEL_APP_KEY' => [
+                'name' => 'Laravel APP_KEY',
+                'regex' => '/base64:[A-Za-z0-9+\/]{43}=/',
+            ],
+            // \K keeps the label out of the match, so redaction replaces the value only.
+            'AWS_SECRET_KEY' => [
+                'name' => 'AWS secret access key',
+                'regex' => '/aws_secret_access_key["\']?\s*[:=]\s*["\']?\K[A-Za-z0-9\/+=]{40}/i',
+            ],
+            'PRIVATE_KEY_BLOCK' => [
+                'name' => 'PEM private key (full block)',
+                // Either a terminated block within 16 KB (bounded so a stray header cannot exhaust
+                // backtracking), or, for truncated output, the header plus up to 16 KB of key
+                // material after it. That class includes backslash and whitespace so JSON escapes
+                // (\n, \/) and legacy Proc-Type/DEK-Info lines cannot cut the match short.
+                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----(?:[\s\S]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----|[A-Za-z0-9+\/=:,.\-\\\\\s]{16,16384}+)/',
+            ],
+            'GITLAB_PAT' => [
+                'name' => 'GitLab Personal Access Token',
+                'regex' => '/glpat-[\w-]{20,}/',
+            ],
         ];
     }
 
@@ -98,14 +123,20 @@ class SecretPatternLibrary
 
         foreach ($this->patterns() as $patternId => $definition) {
             if (preg_match($definition['regex'], $text)) {
-                $findings[] = [
+                $findings[$patternId] = [
                     'pattern_id' => $patternId,
                     'name' => $definition['name'],
                 ];
             }
         }
 
-        return $findings;
+        // One key, one finding: the full-block pattern also covers key types the
+        // header-only pattern misses (ENCRYPTED, DSA, PGP), so keep it only then.
+        if (isset($findings['GENERIC_PRIVATE_KEY'])) {
+            unset($findings['PRIVATE_KEY_BLOCK']);
+        }
+
+        return array_values($findings);
     }
 
     /**
