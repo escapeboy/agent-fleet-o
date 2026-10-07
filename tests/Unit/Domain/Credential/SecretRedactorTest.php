@@ -174,6 +174,34 @@ class SecretRedactorTest extends TestCase
         $this->assertCount(1, (new SecretPatternLibrary)->scan($pem));
     }
 
+    public function test_json_escaped_and_truncated_pem_bodies_are_redacted(): void
+    {
+        $body = 'MIIEowIBAAKCAQEAxyz0123456789abcdefABCDEF';
+        $escaped = '{"key":"-----BEGIN PRIVATE KEY-----\n'.$body.'\n'.$body.'\n-----END PRIVATE KEY-----\n"}';
+        $truncated = "-----BEGIN RSA PRIVATE KEY-----\n{$body}\n{$body}\n";
+
+        $this->assertStringNotContainsString($body, $this->redactor->redactString($escaped)->text);
+        $this->assertStringNotContainsString($body, $this->redactor->redactString($truncated)->text);
+    }
+
+    public function test_terminated_key_with_large_body_is_redacted(): void
+    {
+        $line = str_repeat('A', 64);
+        $pem = "-----BEGIN RSA PRIVATE KEY-----\n".str_repeat($line."\n", 200).'-----END RSA PRIVATE KEY-----';
+
+        $this->assertSame('[REDACTED]', $this->redactor->redactString($pem)->text);
+    }
+
+    public function test_library_detects_key_types_the_header_pattern_misses(): void
+    {
+        $library = new SecretPatternLibrary;
+        $encrypted = "-----BEGIN ENCRYPTED PRIVATE KEY-----\nMIIFHDBOBgkqhkiG9w0BBQ0wQTApBgkq\n-----END ENCRYPTED PRIVATE KEY-----";
+        $dsa = "-----BEGIN DSA PRIVATE KEY-----\nMIIBuwIBAAKBgQDhqK5uG8TwKx01234\n-----END DSA PRIVATE KEY-----";
+
+        $this->assertSame(['PRIVATE_KEY_BLOCK'], array_column($library->scan($encrypted), 'pattern_id'));
+        $this->assertSame(['PRIVATE_KEY_BLOCK'], array_column($library->scan($dsa), 'pattern_id'));
+    }
+
     public function test_non_string_scalars_and_null_pass_through(): void
     {
         foreach ([null, 5, 1.5, true, false] as $value) {

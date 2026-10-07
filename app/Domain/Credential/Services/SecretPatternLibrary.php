@@ -99,7 +99,10 @@ class SecretPatternLibrary
             ],
             'PRIVATE_KEY_BLOCK' => [
                 'name' => 'PEM private key (full block)',
-                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----[A-Za-z0-9+\/=\s:,.\-]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY-----/',
+                // Either a terminated block within 16 KB (bounded so a stray header cannot exhaust
+                // backtracking), or — for truncated or JSON-escaped output — the header plus the
+                // base64 lines that follow it.
+                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----(?:[\s\S]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----|(?:(?:\s|\\\\[nr])*+[A-Za-z0-9+\/=:,.\-]{16,}+)++)/',
             ],
             'GITLAB_PAT' => [
                 'name' => 'GitLab Personal Access Token',
@@ -118,20 +121,21 @@ class SecretPatternLibrary
         $findings = [];
 
         foreach ($this->patterns() as $patternId => $definition) {
-            // The full-block pattern exists for redaction; GENERIC_PRIVATE_KEY already reports the key.
-            if ($patternId === 'PRIVATE_KEY_BLOCK') {
-                continue;
-            }
-
             if (preg_match($definition['regex'], $text)) {
-                $findings[] = [
+                $findings[$patternId] = [
                     'pattern_id' => $patternId,
                     'name' => $definition['name'],
                 ];
             }
         }
 
-        return $findings;
+        // One key, one finding: the full-block pattern also covers key types the
+        // header-only pattern misses (ENCRYPTED, DSA, PGP), so keep it only then.
+        if (isset($findings['GENERIC_PRIVATE_KEY'])) {
+            unset($findings['PRIVATE_KEY_BLOCK']);
+        }
+
+        return array_values($findings);
     }
 
     /**
