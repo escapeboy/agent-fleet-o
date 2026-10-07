@@ -195,7 +195,7 @@ class SecretRedactorTest extends TestCase
         $this->assertStringNotContainsString($body, $this->redactor->redactString($truncated)->text);
     }
 
-    public function test_terminated_key_with_large_body_is_redacted(): void
+    public function test_terminated_key_within_16kb_is_fully_redacted(): void
     {
         $line = str_repeat('A', 64);
         $pem = "-----BEGIN RSA PRIVATE KEY-----\n".str_repeat($line."\n", 200).'-----END RSA PRIVATE KEY-----';
