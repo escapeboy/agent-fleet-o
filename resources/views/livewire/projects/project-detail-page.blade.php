@@ -23,6 +23,24 @@
             @if($project->description)
                 <p class="mt-1 max-w-2xl text-sm text-gray-500">{{ $project->description }}</p>
             @endif
+            @php $health = $this->health; @endphp
+            <div class="mt-2" data-testid="project-health">
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $health->state->color() }}">
+                    Health: {{ $health->state->label() }}
+                </span>
+                @if(count($health->reasons) > 0)
+                    <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                        @foreach($health->reasons as $reason)
+                            <li>
+                                <span class="font-medium text-gray-800">{{ $reason->message }}</span>
+                                @if($reason->nextStep)
+                                    <span class="text-gray-500">Next step: {{ $reason->nextStep }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <a href="{{ route('projects.kanban', $project) }}"

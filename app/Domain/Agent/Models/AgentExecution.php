@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agent\Models;
 
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use App\Domain\Skill\Models\Skill;
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  */
 class AgentExecution extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'agent_id',
@@ -53,6 +54,14 @@ class AgentExecution extends Model
         'extracted_skill_id',
         'workspace_contract',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['input', 'output', 'tools_used'];
+    }
 
     protected function casts(): array
     {

@@ -155,4 +155,16 @@ return [
         'max_scan_chars' => (int) env('AI_TOOL_OUTPUT_SCAN_MAX_CHARS', 200000),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Redact Secrets Before Persist
+    |--------------------------------------------------------------------------
+    |
+    | When on, models using RedactsSecretsBeforePersist replace secrets (API keys,
+    | .env values, credentialed URIs, JWTs, PEM blocks) with [REDACTED] in
+    | their listed attributes on save. Off by default.
+    |
+    */
+    'redact_before_persist' => (bool) env('REDACT_BEFORE_PERSIST_ENABLED', false),
+
 ];

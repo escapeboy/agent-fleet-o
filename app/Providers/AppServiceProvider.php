@@ -51,6 +51,7 @@ use App\Domain\Experiment\Listeners\SendSentryFixPrOpenedEmailListener;
 use App\Domain\FeatureFlag\Listeners\RecordFeatureFlagAudit;
 use App\Domain\FeatureFlag\Services\FeatureFlagService;
 use App\Domain\GitRepository\Listeners\QueueContextGitPush;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Integration\Events\IntegrationActionExecuted;
 use App\Domain\Memory\Listeners\CompressAndStoreExecutionMemoryListener;
 use App\Domain\Memory\Listeners\ExtractFailureLessonListener;
@@ -298,6 +299,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Per-team feature choices — scoped so the team memo resets per request/job
         $this->app->scoped(TeamFeatures::class);
+
+        // Commit provenance context — scoped so it is flushed between queue jobs/requests
+        $this->app->scoped(GitProvenanceContext::class);
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);

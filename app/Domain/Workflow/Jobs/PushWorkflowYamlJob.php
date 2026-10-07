@@ -4,6 +4,7 @@ namespace App\Domain\Workflow\Jobs;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Models\UserNotification;
 use App\Domain\Workflow\Actions\ExportWorkflowAction;
@@ -63,11 +64,14 @@ class PushWorkflowYamlJob implements ShouldQueue
         $path = $sync->path_prefix.$workflow->slug.'.yaml';
 
         $client = $router->resolve($repo);
-        $sha = $client->writeFile(
-            path: $path,
-            content: (string) $yamlString,
-            message: 'chore(fleetq): sync workflow "'.$workflow->name.'"',
-            branch: $sync->branch,
+        $sha = app(GitProvenanceContext::class)->with(
+            ['team_id' => (string) $repo->team_id, 'source' => 'workflow_sync'],
+            fn () => $client->writeFile(
+                path: $path,
+                content: (string) $yamlString,
+                message: 'chore(fleetq): sync workflow "'.$workflow->name.'"',
+                branch: $sync->branch,
+            ),
         );
 
         $sync->update([

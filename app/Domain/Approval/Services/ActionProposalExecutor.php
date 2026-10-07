@@ -9,6 +9,7 @@ use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\GitRepository\Contracts\GitClientInterface;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Domain\Integration\Actions\ExecuteIntegrationActionAction;
 use App\Domain\Integration\Models\Integration;
 use App\Domain\Tool\Actions\ResolveAgentToolsAction;
@@ -118,7 +119,17 @@ class ActionProposalExecutor
         app()->instance('git_gate.bypass', true);
         try {
             $client = app(GitOperationRouter::class)->resolve($repo);
-            $result = $this->invokeGitMethod($client, $method, $args);
+            $provenance = is_array($proposal->payload['provenance'] ?? null) ? $proposal->payload['provenance'] : [];
+            $result = app(GitProvenanceContext::class)->with(
+                [
+                    'team_id' => (string) $proposal->team_id,
+                    'experiment_id' => $provenance['experiment_id'] ?? null,
+                    'agent_id' => $provenance['agent_id'] ?? null,
+                    'skill_execution_id' => $provenance['skill_execution_id'] ?? null,
+                    'source' => 'approval_replay',
+                ],
+                fn () => $this->invokeGitMethod($client, $method, $args),
+            );
         } finally {
             app()->instance('git_gate.bypass', false);
         }

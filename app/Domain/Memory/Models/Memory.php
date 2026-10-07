@@ -3,6 +3,7 @@
 namespace App\Domain\Memory\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Memory\Enums\MemoryBeliefStatus;
 use App\Domain\Memory\Enums\MemoryBeliefType;
 use App\Domain\Memory\Enums\MemoryCategory;
@@ -65,7 +66,7 @@ use Illuminate\Support\Carbon;
  */
 class Memory extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'team_id',
@@ -107,6 +108,14 @@ class Memory extends Model
         'boost',
         'chunk_context',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['content'];
+    }
 
     protected function casts(): array
     {

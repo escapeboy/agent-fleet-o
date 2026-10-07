@@ -200,6 +200,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/projects/{project}/restart', [ProjectController::class, 'restart']);
     Route::post('/projects/{project}/trigger', [ProjectController::class, 'triggerRun']);
     Route::get('/projects/{project}/runs', [ProjectController::class, 'runs']);
+    Route::get('/projects/{project}/health', [ProjectController::class, 'health']);
 
     // Signals
     Route::get('/signals', [SignalController::class, 'index']);

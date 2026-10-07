@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LlmRequestLog extends Model
 {
-    use BelongsToTeam, HasUuids, MassPrunable;
+    use BelongsToTeam, HasUuids, MassPrunable, RedactsSecretsBeforePersist;
 
     public function prunable(): Builder
     {
@@ -46,6 +47,14 @@ class LlmRequestLog extends Model
         'error',
         'completed_at',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['response_body'];
+    }
 
     protected function casts(): array
     {
