@@ -10777,12 +10777,6 @@ parameters:
 			path: app/Infrastructure/Sentry/BeforeSendFilter.php
 
 		-
-			message: '#^Access to undefined constant OpenTelemetry\\SemConv\\ResourceAttributes\:\:DEPLOYMENT_ENVIRONMENT\.$#'
-			identifier: classConstant.notFound
-			count: 1
-			path: app/Infrastructure/Telemetry/TracerProvider.php
-
-		-
 			message: '#^Method App\\Infrastructure\\Telemetry\\TracerProvider\:\:buildSdkProvider\(\) should return OpenTelemetry\\SDK\\Trace\\TracerProvider but returns OpenTelemetry\\SDK\\Trace\\TracerProviderInterface\.$#'
 			identifier: return.type
 			count: 1

@@ -8,6 +8,7 @@ use App\Domain\Evolution\Enums\EvolutionProposalStatus;
 use App\Domain\Evolution\Enums\EvolutionType;
 use App\Domain\Evolution\Models\EvolutionProposal;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +40,7 @@ class OptimizeAgentPromptAction
      */
     public function execute(Agent $agent, ?int $populationSize = null): array
     {
-        if (! config('agent.prompt_optimizer.enabled')) {
+        if (! app(TeamFeatures::class)->enabled('agent_prompt_optimizer', $agent->team_id)) {
             return ['status' => 'disabled', 'message' => 'Agent prompt optimizer is disabled.'];
         }
 

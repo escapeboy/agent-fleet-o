@@ -78,6 +78,7 @@ use App\Domain\Shared\Listeners\RevokeTeamMemberAccess;
 use App\Domain\Shared\Services\DeploymentMode;
 use App\Domain\Shared\Services\NavigationRegistry;
 use App\Domain\Shared\Services\PluginRegistry;
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Domain\Signal\Connectors\ApiPollingConnector;
 use App\Domain\Signal\Connectors\BugReportConnector;
 use App\Domain\Signal\Connectors\CalendarConnector;
@@ -294,6 +295,9 @@ class AppServiceProvider extends ServiceProvider
 
         // MCP deadline context — request-scoped; nested tool calls inherit the same instance
         $this->app->singleton(DeadlineContext::class);
+
+        // Per-team feature choices — scoped so the team memo resets per request/job
+        $this->app->scoped(TeamFeatures::class);
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);
