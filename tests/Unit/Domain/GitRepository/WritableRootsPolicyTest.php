@@ -147,4 +147,18 @@ class WritableRootsPolicyTest extends TestCase
         $this->assertSame([], (new ChangesetPolicyValidator)->violations($changeset, $grant));
         $this->assertTrue((new ChangesetPolicyValidator)->isWithinRoots($changeset, $grant));
     }
+
+    public function test_jail_paths_drop_roots_that_climb_out_of_the_worktree(): void
+    {
+        $policy = new WritableRootsPolicy;
+
+        $this->assertSame(
+            ['/wt/app'],
+            $policy->absoluteWritablePaths(new WritableRootsGrant(allowedRoots: ['app', '../../etc', 'a/../../x'], deniedGlobs: []), '/wt/'),
+        );
+        $this->assertSame(
+            ['/wt'],
+            $policy->absoluteWritablePaths(new WritableRootsGrant(allowedRoots: ['..'], deniedGlobs: []), '/wt'),
+        );
+    }
 }
