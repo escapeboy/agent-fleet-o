@@ -59,10 +59,18 @@ class WritableRootsPolicy
 
         $paths = [];
         foreach ($grant->allowedRoots as $root) {
-            $paths[] = $worktree.'/'.trim(str_replace('\\', '/', $root), '/');
+            $root = trim(str_replace('\\', '/', $root), '/');
+
+            // Roots come from team-editable repo config / experiment constraints;
+            // a ".." segment would hand the jail a writable path outside the worktree.
+            if (in_array('..', explode('/', $root), true)) {
+                continue;
+            }
+
+            $paths[] = $worktree.'/'.$root;
         }
 
-        return $paths;
+        return $paths === [] ? [$worktree] : $paths;
     }
 
     /**
