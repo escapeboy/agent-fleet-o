@@ -100,9 +100,10 @@ class SecretPatternLibrary
             'PRIVATE_KEY_BLOCK' => [
                 'name' => 'PEM private key (full block)',
                 // Either a terminated block within 16 KB (bounded so a stray header cannot exhaust
-                // backtracking), or — for truncated or JSON-escaped output — the header plus the
-                // base64 lines that follow it.
-                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----(?:[\s\S]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----|(?:(?:\s|\\\\[nr])*+[A-Za-z0-9+\/=:,.\-]{16,}+)++)/',
+                // backtracking), or, for truncated output, the header plus up to 16 KB of key
+                // material after it. That class includes backslash and whitespace so JSON escapes
+                // (\n, \/) and legacy Proc-Type/DEK-Info lines cannot cut the match short.
+                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----(?:[\s\S]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----|[A-Za-z0-9+\/=:,.\-\\\\\s]{16,16384}+)/',
             ],
             'GITLAB_PAT' => [
                 'name' => 'GitLab Personal Access Token',

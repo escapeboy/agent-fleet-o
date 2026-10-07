@@ -162,9 +162,20 @@ class SecretRedactorTest extends TestCase
         $text = "-----BEGIN PRIVATE KEY-----\n".str_repeat("const header = 'value';\n", 60000);
 
         $this->assertGreaterThan(1_000_000, strlen($text));
-        // Only the header line is masked (GENERIC_PRIVATE_KEY); the rest of the text survives.
-        $body = str_repeat("const header = 'value';\n", 60000);
-        $this->assertSame("[REDACTED]\n".$body, $this->redactor->redactString($text)->text);
+        // The header and the key-like run after it are masked; the rest of the text survives.
+        $out = $this->redactor->redactString($text)->text;
+        $this->assertStringStartsWith('[REDACTED]', $out);
+        $this->assertStringEndsWith(str_repeat("const header = 'value';\n", 59999), $out);
+    }
+
+    public function test_json_slash_escapes_and_legacy_headers_do_not_cut_a_truncated_key_short(): void
+    {
+        $tail = 'Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZg';
+        $jsonEscaped = '"-----BEGIN RSA PRIVATE KEY-----\nMIIEow\/IBAAKCAQEA\/xyz0123\/'.$tail;
+        $legacy = "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,0A1B2C3D\n\n{$tail}";
+
+        $this->assertStringNotContainsString($tail, $this->redactor->redactString($jsonEscaped)->text);
+        $this->assertStringNotContainsString($tail, $this->redactor->redactString($legacy)->text);
     }
 
     public function test_pem_block_is_not_reported_twice_by_the_library(): void
