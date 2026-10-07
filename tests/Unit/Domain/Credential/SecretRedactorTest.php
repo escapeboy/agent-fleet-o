@@ -157,6 +157,23 @@ class SecretRedactorTest extends TestCase
         );
     }
 
+    public function test_unterminated_pem_header_in_large_text_does_not_exhaust_backtracking(): void
+    {
+        $text = "-----BEGIN PRIVATE KEY-----\n".str_repeat("const header = 'value';\n", 60000);
+
+        $this->assertGreaterThan(1_000_000, strlen($text));
+        // Only the header line is masked (GENERIC_PRIVATE_KEY); the rest of the text survives.
+        $body = str_repeat("const header = 'value';\n", 60000);
+        $this->assertSame("[REDACTED]\n".$body, $this->redactor->redactString($text)->text);
+    }
+
+    public function test_pem_block_is_not_reported_twice_by_the_library(): void
+    {
+        $pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\n-----END RSA PRIVATE KEY-----";
+
+        $this->assertCount(1, (new SecretPatternLibrary)->scan($pem));
+    }
+
     public function test_non_string_scalars_and_null_pass_through(): void
     {
         foreach ([null, 5, 1.5, true, false] as $value) {

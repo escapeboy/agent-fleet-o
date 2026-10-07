@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Models\CreditLedger;
 use App\Domain\Credential\Enums\CredentialStatus;
 use App\Domain\Credential\Models\Credential;
+use App\Domain\Credential\Services\SecretRedactor;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Project\DTOs\ProjectHealthReason;
 use App\Domain\Project\DTOs\ProjectHealthReport;
@@ -155,7 +156,7 @@ class ProjectHealthEvaluator
 
         $error = $project->runs()->where('status', 'failed')->whereNotNull('error_message')->value('error_message');
         if (is_string($error) && $error !== '') {
-            $message .= ' Last error: '.mb_substr($error, 0, self::ERROR_MAX_LENGTH);
+            $message .= ' Last error: '.mb_substr(app(SecretRedactor::class)->redactString($error)->text, 0, self::ERROR_MAX_LENGTH);
         }
 
         return new ProjectHealthReason(

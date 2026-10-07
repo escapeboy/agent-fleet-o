@@ -99,7 +99,7 @@ class SecretPatternLibrary
             ],
             'PRIVATE_KEY_BLOCK' => [
                 'name' => 'PEM private key (full block)',
-                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----.*?-----END (?:[A-Z]+ )*PRIVATE KEY-----/s',
+                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----[A-Za-z0-9+\/=\s:,.\-]{1,16384}?-----END (?:[A-Z]+ )*PRIVATE KEY-----/',
             ],
             'GITLAB_PAT' => [
                 'name' => 'GitLab Personal Access Token',
@@ -118,6 +118,11 @@ class SecretPatternLibrary
         $findings = [];
 
         foreach ($this->patterns() as $patternId => $definition) {
+            // The full-block pattern exists for redaction; GENERIC_PRIVATE_KEY already reports the key.
+            if ($patternId === 'PRIVATE_KEY_BLOCK') {
+                continue;
+            }
+
             if (preg_match($definition['regex'], $text)) {
                 $findings[] = [
                     'pattern_id' => $patternId,

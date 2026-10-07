@@ -101,6 +101,17 @@ class ProjectHealthEvaluatorTest extends TestCase
         $this->assertStringNotContainsString(str_repeat('x', 201), $reason->message);
     }
 
+    public function test_last_error_is_redacted_before_it_is_shown(): void
+    {
+        $project = $this->project(['status' => ProjectStatus::Failed]);
+        $this->makeRun($project, ProjectRunStatus::Failed, 1, ['error_message' => 'connect failed: postgres://app:hunter2hunter@db:5432/x']);
+
+        $message = app(ProjectHealthEvaluator::class)->evaluate($project)->reasons[0]->message;
+
+        $this->assertStringNotContainsString('hunter2hunter', $message);
+        $this->assertStringContainsString('postgres://app:[REDACTED]@db', $message);
+    }
+
     public function test_team_out_of_credits(): void
     {
         $project = $this->project();
