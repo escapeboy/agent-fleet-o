@@ -189,4 +189,16 @@ class TeamFeaturesTest extends TestCase
         $unknown = (new TeamFeatureSetTool)->handle(new Request(['key' => 'nope', 'enabled' => true]), $this->features());
         $this->assertTrue($unknown->isError());
     }
+
+    public function test_mcp_cannot_enable_a_platform_off_feature(): void
+    {
+        [$user, $team] = $this->teamWith(TeamRole::Owner);
+        Config::set('loop_detection.enabled', false);
+        $this->actingAs($user);
+
+        $response = (new TeamFeatureSetTool)->handle(new Request(['key' => 'loop_detection', 'enabled' => true]), $this->features());
+
+        $this->assertTrue($response->isError());
+        $this->assertArrayNotHasKey('features', $team->fresh()->settings ?? []);
+    }
 }
