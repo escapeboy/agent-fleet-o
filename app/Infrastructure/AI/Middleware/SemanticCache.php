@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\AI\Middleware;
 
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
@@ -20,7 +21,7 @@ class SemanticCache implements AiMiddlewareInterface
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
-        if (! config('semantic_cache.enabled', false)) {
+        if (! app(TeamFeatures::class)->enabled('semantic_cache', $request->teamId)) {
             return $next($request);
         }
 

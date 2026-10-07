@@ -9,11 +9,10 @@
 //
 //	writejail --writable /path/a --writable /path/b -- <command> [args...]
 //
-// This is REFERENCE SOURCE. It is intentionally NOT compiled into the app image
-// in this sprint — the application path (App\Infrastructure\Sandbox\WriteJail)
-// stays inert until this binary is built, installed on PATH, and the launcher is
-// pointed at it via EXPERIMENTS_WARM_BUILD_WRITEJAIL_LAUNCHER, then verified with
-// a real kernel round-trip on the VPS (Linux >= 5.13 for Landlock ABI v1).
+// The parent repo's docker/php/Dockerfile builds it into the app image at
+// /usr/local/bin/writejail; the application path (App\Infrastructure\Sandbox\WriteJail)
+// uses it once EXPERIMENTS_WARM_BUILD_WRITEJAIL_LAUNCHER points there
+// (Linux >= 5.13 for Landlock ABI v1).
 //
 // Build: see README.md in this directory.
 package main
@@ -53,7 +52,12 @@ func main() {
 	// that on a kernel without Landlock we degrade to running the command rather
 	// than hard-failing the build (the app layer's ChangesetPolicyValidator is the
 	// backstop in that case).
-	rules := []landlock.Rule{landlock.RODirs("/")}
+	// Device files are opened for writing by node/git/shells (stdio "ignore" is
+	// /dev/null); without these rules the jailed agent fails on its first spawn.
+	rules := []landlock.Rule{
+		landlock.RODirs("/"),
+		landlock.RWFiles("/dev/null", "/dev/zero", "/dev/full", "/dev/tty").IgnoreIfMissing(),
+	}
 	for _, w := range writable {
 		if _, err := os.Stat(w); err == nil {
 			rules = append(rules, landlock.RWDirs(w))

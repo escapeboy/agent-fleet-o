@@ -8,6 +8,7 @@ use App\Domain\Memory\Enums\MemoryCategory;
 use App\Domain\Memory\Enums\MemoryRelevance;
 use App\Domain\Memory\Enums\MemoryTier;
 use App\Domain\Memory\Models\Memory;
+use App\Domain\Shared\Services\TeamFeatures;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -141,8 +142,8 @@ class MemoryContextInjector
         ?string $userId,
     ): Collection {
         if ($this->judge === null
-            || ! config('memory.deep_judgment.enabled', false)
             || ! $teamId
+            || ! app(TeamFeatures::class)->enabled('memory_deep_judgment', $teamId)
             || ! $userId) {
             return $items;
         }

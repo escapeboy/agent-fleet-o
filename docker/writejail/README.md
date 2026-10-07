@@ -5,17 +5,19 @@ Reference helper that jails the `claude-code-vps` agent process so it can only
 + its ephemeral HOME + `/tmp`), while reading the rest of the tree normally.
 Enforced at the kernel via [Landlock](https://landlock.io/) (Linux ≥ 5.13).
 
-## Status: NOT wired into the image yet
+## Status
 
-The application path (`App\Infrastructure\Sandbox\WriteJail`) is **inert by
-default** — it returns the agent command unchanged unless:
+The parent repo's `docker/php/Dockerfile` builds this launcher in a `writejail`
+stage and installs it at `/usr/local/bin/writejail`. The application path
+(`App\Infrastructure\Sandbox\WriteJail`) stays a no-op unless:
 
 1. `EXPERIMENTS_WARM_BUILD_WRITEJAIL=true`, **and**
-2. `EXPERIMENTS_WARM_BUILD_WRITEJAIL_LAUNCHER` points at an executable, **and**
+2. `EXPERIMENTS_WARM_BUILD_WRITEJAIL_LAUNCHER=/usr/local/bin/writejail`, **and**
 3. the OS is Linux.
 
-So shipping this source changes nothing at runtime. Enabling real enforcement is
-an explicit infra step (below) that must be verified on the VPS.
+Besides the `--writable` directories, `/dev/null`, `/dev/zero`, `/dev/full` and
+`/dev/tty` stay writable: node, git and shells open them for writing, and the
+agent fails on its first child process without them.
 
 ## Build
 
@@ -30,7 +32,7 @@ CGO_ENABLED=0 go build -o /usr/local/bin/writejail .
 Add to the Dockerfile (multi-stage; keep Go out of the final image):
 
 ```dockerfile
-FROM golang:1.23-alpine AS writejail
+FROM golang:1.24-alpine AS writejail
 WORKDIR /src
 COPY base/docker/writejail/ .
 RUN CGO_ENABLED=0 go build -o /writejail .

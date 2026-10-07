@@ -7,6 +7,7 @@ use App\Domain\Bridge\Enums\BridgeConnectionStatus;
 use App\Domain\Bridge\Models\BridgeConnection;
 use App\Domain\Shared\Models\TeamProviderCredential;
 use App\Domain\Shared\Services\SsrfGuard;
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Domain\Telegram\Actions\RegisterTelegramBotAction;
 use App\Domain\Telegram\Models\TelegramBot;
 use App\Infrastructure\AI\Services\LocalLlmUrlValidator;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class TeamSettingsPage extends Component
@@ -458,6 +460,42 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Chatbot settings saved.');
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    #[Computed]
+    public function teamFeatureRows(): array
+    {
+        $team = auth()->user()->currentTeam;
+
+        return $team ? app(TeamFeatures::class)->overview($team) : [];
+    }
+
+    public function toggleTeamFeature(string $key): void
+    {
+        $team = auth()->user()->currentTeam;
+        $this->authorize('manage-team', $team);
+
+        $features = app(TeamFeatures::class);
+        abort_unless($features->exists($key), 404);
+
+        if (! $features->platformEnabled($key)) {
+            session()->flash('error', 'This feature is turned off for the whole platform.');
+
+            return;
+        }
+
+        $enabled = ! $features->enabled($key, $team);
+        $features->set($team, $key, $enabled);
+
+        if ($key === 'chatbot') {
+            $this->chatbotEnabled = $enabled;
+        }
+
+        unset($this->teamFeatureRows);
+        session()->flash('message', 'Feature '.($enabled ? 'enabled' : 'disabled').' for your team.');
     }
 
     public function saveAiFeatures(): void

@@ -4,6 +4,7 @@ namespace App\Livewire\ProductGraph;
 
 use App\Domain\ProductGraph\Actions\ReviewChangeAction;
 use App\Domain\ProductGraph\Models\ProductGraphChange;
+use App\Domain\Shared\Services\TeamFeatures;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -63,7 +64,7 @@ class ProductGraphChangesPage extends Component
 
     public function render()
     {
-        if (! config('productgraph.enabled')) {
+        if (! app(TeamFeatures::class)->enabled('product_graph', $this->teamId())) {
             return view('livewire.product-graph.product-graph-changes-page', ['disabled' => true]);
         }
 

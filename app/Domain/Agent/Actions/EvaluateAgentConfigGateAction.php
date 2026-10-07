@@ -4,6 +4,7 @@ namespace App\Domain\Agent\Actions;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Evaluation\Actions\ReplayEvaluationDatasetAction;
+use App\Domain\Shared\Services\TeamFeatures;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -35,7 +36,7 @@ class EvaluateAgentConfigGateAction
      */
     public function execute(Agent $agent, array $candidate): array
     {
-        if (! config('agent.eval_gate.enabled')) {
+        if (! app(TeamFeatures::class)->enabled('agent_eval_gate', $agent->team_id)) {
             return ['gated' => false, 'passed' => true, 'reason' => 'Eval gate disabled.'];
         }
 
