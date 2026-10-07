@@ -103,11 +103,7 @@ class GitOperationGate
             targetType: 'git_push',
             targetId: $repo->id,
             summary: ucfirst($risk)."-risk git operation: {$repo->getAttribute('provider')->value} :: {$method}",
-            payload: [
-                'repository_id' => $repo->id,
-                'method' => $method,
-                'args' => $args,
-            ],
+            payload: $this->buildPayload($repo, $method, $args),
             userId: auth()->id(),
             riskLevel: $risk,
             expiresAt: now()->addHours(24),
@@ -118,6 +114,34 @@ class GitOperationGate
             method: $method,
             riskLevel: $risk,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    private function buildPayload(GitRepository $repo, string $method, array $args): array
+    {
+        $payload = [
+            'repository_id' => $repo->id,
+            'method' => $method,
+            'args' => $args,
+        ];
+
+        // Carry the commit provenance context so approval replay stamps the
+        // original agent/experiment, not the approver's request.
+        if (GitProvenanceRecorder::enabled() && in_array($method, ['commit', 'writeFile'], true)) {
+            $context = app(GitProvenanceContext::class);
+            $payload['provenance'] = [
+                'source' => $context->source,
+                'trailers' => $context->trailers(),
+                'experiment_id' => $context->experimentId,
+                'agent_id' => $context->agentId,
+                'skill_execution_id' => $context->skillExecutionId,
+            ];
+        }
+
+        return $payload;
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -55,12 +56,12 @@ class GitFileWriteTool extends Tool
         try {
             $client = app(GitOperationRouter::class)->resolve($repo);
             $branch = $request->get('branch') ?: $repo->default_branch;
-            $sha = $client->writeFile(
+            $sha = app(GitProvenanceContext::class)->with(['team_id' => (string) $teamId, 'source' => 'mcp_tool'], fn () => $client->writeFile(
                 $request->get('path'),
                 $request->get('content'),
                 $request->get('message'),
                 $branch,
-            );
+            ));
 
             return Response::text(json_encode([
                 'success' => true,

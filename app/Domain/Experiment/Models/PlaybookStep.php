@@ -3,6 +3,7 @@
 namespace App\Domain\Experiment\Models;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Experiment\Enums\ExecutionMode;
 use App\Domain\Skill\Models\Skill;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlaybookStep extends Model
 {
-    use HasUuids;
+    use HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'experiment_id',
@@ -43,6 +44,14 @@ class PlaybookStep extends Model
         'resume_at',
         'root_event_id',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['output'];
+    }
 
     protected function casts(): array
     {

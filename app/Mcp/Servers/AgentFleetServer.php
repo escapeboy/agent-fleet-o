@@ -418,6 +418,7 @@ use App\Mcp\Tools\Project\ProjectCancelRunTool;
 use App\Mcp\Tools\Project\ProjectCloneTool;
 use App\Mcp\Tools\Project\ProjectCreateTool;
 use App\Mcp\Tools\Project\ProjectGetTool;
+use App\Mcp\Tools\Project\ProjectHealthTool;
 use App\Mcp\Tools\Project\ProjectHeartbeatConfigureTool;
 use App\Mcp\Tools\Project\ProjectListTool;
 use App\Mcp\Tools\Project\ProjectPauseTool;
@@ -1121,6 +1122,7 @@ class AgentFleetServer extends Server
         // Project (16)
         ProjectListTool::class,
         ProjectGetTool::class,
+        ProjectHealthTool::class,
         ProjectCreateTool::class,
         ProjectUpdateTool::class,
         ProjectActivateTool::class,

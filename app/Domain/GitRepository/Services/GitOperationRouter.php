@@ -12,6 +12,7 @@ use App\Infrastructure\Git\Clients\BridgeGitClient;
 use App\Infrastructure\Git\Clients\GatedGitClient;
 use App\Infrastructure\Git\Clients\GitHubApiClient;
 use App\Infrastructure\Git\Clients\GitLabApiClient;
+use App\Infrastructure\Git\Clients\ProvenanceGitClient;
 use App\Infrastructure\Git\Clients\SandboxGitClient;
 use InvalidArgumentException;
 
@@ -24,6 +25,17 @@ class GitOperationRouter
             GitRepoMode::Sandbox => app(SandboxGitClient::class, ['repo' => $repo]),
             GitRepoMode::Bridge => app(BridgeGitClient::class, ['repo' => $repo]),
         };
+
+        // Commit provenance: innermost decorator (provider -> Provenance -> Atomic
+        // -> Gated) so Atomic's single-line message rewrite cannot strip trailers.
+        if (config('git_repository.provenance.enabled')) {
+            $client = new ProvenanceGitClient(
+                inner: $client,
+                repo: $repo,
+                context: app(GitProvenanceContext::class),
+                recorder: app(GitProvenanceRecorder::class),
+            );
+        }
 
         // Trendshift top-5 sprint, build #2: Aider-inspired commit discipline.
         // When discipline=atomic, every mutation's commit message is rewritten

@@ -3,6 +3,7 @@
 namespace App\Domain\AgentSession\Models;
 
 use App\Domain\AgentSession\Enums\AgentSessionEventKind;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Shared\Traits\BelongsToTeam;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AgentSessionEvent extends Model
 {
-    use BelongsToTeam, HasUuids;
+    use BelongsToTeam, HasUuids, RedactsSecretsBeforePersist;
 
     public $timestamps = false;
 
@@ -35,6 +36,14 @@ class AgentSessionEvent extends Model
         'payload',
         'created_at',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['payload'];
+    }
 
     protected function casts(): array
     {

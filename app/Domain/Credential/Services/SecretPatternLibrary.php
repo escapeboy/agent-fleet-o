@@ -84,6 +84,27 @@ class SecretPatternLibrary
                 'name' => 'PEM private key block',
                 'regex' => '/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/',
             ],
+            'JWT' => [
+                'name' => 'JSON Web Token',
+                'regex' => '/eyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/',
+            ],
+            'LARAVEL_APP_KEY' => [
+                'name' => 'Laravel APP_KEY',
+                'regex' => '/base64:[A-Za-z0-9+\/]{43}=/',
+            ],
+            // \K keeps the label out of the match, so redaction replaces the value only.
+            'AWS_SECRET_KEY' => [
+                'name' => 'AWS secret access key',
+                'regex' => '/aws_secret_access_key["\']?\s*[:=]\s*["\']?\K[A-Za-z0-9\/+=]{40}/i',
+            ],
+            'PRIVATE_KEY_BLOCK' => [
+                'name' => 'PEM private key (full block)',
+                'regex' => '/-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----.*?-----END (?:[A-Z]+ )*PRIVATE KEY-----/s',
+            ],
+            'GITLAB_PAT' => [
+                'name' => 'GitLab Personal Access Token',
+                'regex' => '/glpat-[\w-]{20,}/',
+            ],
         ];
     }
 

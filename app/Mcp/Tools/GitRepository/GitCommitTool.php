@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\GitRepository;
 
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -62,7 +63,7 @@ class GitCommitTool extends Tool
         try {
             $client = app(GitOperationRouter::class)->resolve($repo);
             $branch = $validated['branch'] ?? $repo->default_branch;
-            $sha = $client->commit($validated['changes'], $validated['message'], $branch);
+            $sha = app(GitProvenanceContext::class)->with(['team_id' => (string) $teamId, 'source' => 'mcp_tool'], fn () => $client->commit($validated['changes'], $validated['message'], $branch));
 
             return Response::text(json_encode([
                 'success' => true,

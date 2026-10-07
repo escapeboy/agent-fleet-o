@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Models;
 
 use App\Domain\Agent\Models\Agent;
 use App\Domain\AgentChatProtocol\Models\ExternalAgent;
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Experiment\Models\WorklogEntry;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CrewTaskExecution extends Model
 {
-    use HasUuids;
+    use HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'crew_execution_id',
@@ -41,6 +42,14 @@ class CrewTaskExecution extends Model
         'claimed_at',
         'belief_state',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['output'];
+    }
 
     protected function casts(): array
     {

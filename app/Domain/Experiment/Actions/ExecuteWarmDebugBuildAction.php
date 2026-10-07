@@ -18,8 +18,11 @@ use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\GitRepository\Services\ChangesetPolicyValidator;
 use App\Domain\GitRepository\Services\GitCloneUrlResolver;
 use App\Domain\GitRepository\Services\GitOperationRouter;
+use App\Domain\GitRepository\Services\GitProvenanceContext;
+use App\Domain\GitRepository\Services\GitProvenanceRecorder;
 use App\Domain\GitRepository\Services\WarmRepoManager;
 use App\Domain\GitRepository\Services\WritableRootsPolicy;
+use App\Domain\GitRepository\Support\GitTrailers;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Gateways\LocalAgentGateway;
@@ -122,6 +125,8 @@ class ExecuteWarmDebugBuildAction
 
             $this->git($winner->worktree, ['push', 'origin', 'HEAD:refs/heads/'.$winner->branch(), '--force']);
 
+            $this->recordWarmBuildProvenance($experiment, $repo, $winner->worktree, $winner->branch());
+
             $pr = $this->gitRouter->resolve($repo)->createPullRequest(
                 title: '[FleetQ] Fix: '.$experiment->title,
                 body: $this->prBody($experiment, $winner, count($candidates)),
@@ -197,11 +202,18 @@ class ExecuteWarmDebugBuildAction
         // The agent edits files with the CLI's own tools; capture whatever it
         // changed as a single commit (a no-op when it already committed).
         if (trim($this->git($worktree, ['status', '--porcelain'])) !== '') {
+            $commitMessage = 'Fix: '.$experiment->title;
+            if (GitProvenanceRecorder::enabled()) {
+                $commitMessage = GitTrailers::append(
+                    $commitMessage,
+                    ['FleetQ-Experiment' => (string) $experiment->id],
+                );
+            }
             $this->git($worktree, ['add', '-A']);
             $this->git($worktree, [
                 '-c', 'user.email=agent@fleetq.ai',
                 '-c', 'user.name=FleetQ Agent',
-                'commit', '-m', 'Fix: '.$experiment->title,
+                'commit', '-m', $commitMessage,
             ]);
         }
 
@@ -409,6 +421,37 @@ class ExecuteWarmDebugBuildAction
                 toState: ExperimentStatus::BuildingFailed,
                 reason: $reason,
             );
+        }
+    }
+
+    /**
+     * Record the pushed winner commit in git_commit_provenance. Never breaks the build.
+     */
+    private function recordWarmBuildProvenance(Experiment $experiment, GitRepository $repo, string $worktree, string $branch): void
+    {
+        if (! GitProvenanceRecorder::enabled()) {
+            return;
+        }
+
+        try {
+            $sha = $this->git($worktree, ['rev-parse', 'HEAD']);
+            $context = app(GitProvenanceContext::class);
+            $context->with(
+                [
+                    'team_id' => (string) $experiment->team_id,
+                    'experiment_id' => (string) $experiment->id,
+                    'source' => 'warm_build',
+                ],
+                fn () => app(GitProvenanceRecorder::class)->record(
+                    (string) $experiment->team_id,
+                    (string) $repo->id,
+                    $sha,
+                    $branch,
+                    $context->trailers(),
+                ),
+            );
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Experiment\Models;
 
+use App\Domain\Credential\Concerns\RedactsSecretsBeforePersist;
 use App\Domain\Experiment\Enums\StageStatus;
 use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Shared\Traits\BelongsToTeam;
@@ -37,7 +38,7 @@ use Illuminate\Support\Carbon;
  */
 class ExperimentStage extends Model
 {
-    use BelongsToTeam, HasFactory, HasUuids;
+    use BelongsToTeam, HasFactory, HasUuids, RedactsSecretsBeforePersist;
 
     protected $fillable = [
         'team_id',
@@ -58,6 +59,14 @@ class ExperimentStage extends Model
         'telemetry',
         'error_metadata',
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function redactableAttributes(): array
+    {
+        return ['output_snapshot'];
+    }
 
     protected function casts(): array
     {

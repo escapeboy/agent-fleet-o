@@ -39,4 +39,13 @@ return [
         'c', 'h', 'cpp', 'hpp', 'cc', 'swift',
         'kt', 'kts', 'scala', 'dart', 'vue', 'svelte', 'lua',
     ],
+
+    /*
+    | Commit provenance: append FleetQ-Experiment / FleetQ-Agent git trailers to
+    | commits made by the platform and record each in git_commit_provenance.
+    | Default off: flag off leaves commits byte-identical to today.
+    */
+    'provenance' => [
+        'enabled' => (bool) env('GIT_COMMIT_PROVENANCE_ENABLED', false),
+    ],
 ];
