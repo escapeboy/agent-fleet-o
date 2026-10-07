@@ -11,6 +11,7 @@ use App\Domain\Audit\Services\OcsfMapper;
 use App\Domain\Credential\Models\Credential;
 use App\Domain\Experiment\Actions\CaptureScreenshotArtifactsAction;
 use App\Domain\Shared\Models\TeamProviderCredential;
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Domain\Tool\Enums\BuiltInToolKind;
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Exceptions\BrowserTaskFailedException;
@@ -202,7 +203,7 @@ class ToolTranslator
             BuiltInToolKind::ComputerUse => $this->buildComputerUseTools($tool),
             BuiltInToolKind::BrowserUseCloud => $this->buildBrowserUseCloudTools($tool),
             BuiltInToolKind::ExecuteCode => $this->buildExecuteCodeTools($tool, $workspace),
-            BuiltInToolKind::Plan => $this->buildPlanTools($workspace),
+            BuiltInToolKind::Plan => $this->buildPlanTools($workspace, $agent),
             default => [],
         };
     }
@@ -498,9 +499,9 @@ class ToolTranslator
      *
      * @return array<PrismToolObject>
      */
-    private function buildPlanTools(?SandboxedWorkspace $workspace = null): array
+    private function buildPlanTools(?SandboxedWorkspace $workspace = null, ?Agent $agent = null): array
     {
-        if (! config('agent.planning_tool.enabled', false)) {
+        if (! app(TeamFeatures::class)->enabled('agent_planning_tool', $agent?->team_id)) {
             return [];
         }
 
@@ -1287,7 +1288,7 @@ class ToolTranslator
      */
     private function buildToolProgramTools(?SandboxedWorkspace $workspace, ?ToolProgramContext $context, ?Agent $agent): array
     {
-        if (! config('agent.programmatic_tool_calling.enabled', false)) {
+        if (! app(TeamFeatures::class)->enabled('programmatic_tool_calling', $agent?->team_id)) {
             return [];
         }
 

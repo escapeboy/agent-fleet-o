@@ -4,6 +4,7 @@ namespace App\Domain\Memory\Actions;
 
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Shared\Models\Team;
+use App\Domain\Shared\Services\TeamFeatures;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
@@ -36,7 +37,7 @@ PROMPT;
      */
     public function execute(Memory $memory, string $documentContext): void
     {
-        if (! config('memory.contextual_rag.enabled', false)) {
+        if (! app(TeamFeatures::class)->enabled('memory_contextual_rag', $memory->team_id)) {
             return;
         }
 

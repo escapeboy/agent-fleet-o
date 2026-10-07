@@ -4,6 +4,7 @@ namespace App\Livewire\ProductGraph;
 
 use App\Domain\ProductGraph\Models\ProductNode;
 use App\Domain\ProductGraph\Services\ImpactAnalyzer;
+use App\Domain\Shared\Services\TeamFeatures;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -24,7 +25,7 @@ class ProductGraphImpactPage extends Component
 
     public function render()
     {
-        if (! config('productgraph.enabled')) {
+        if (! app(TeamFeatures::class)->enabled('product_graph', $this->teamId())) {
             return view('livewire.product-graph.product-graph-impact-page', ['disabled' => true]);
         }
 

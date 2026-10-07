@@ -5,6 +5,7 @@ namespace App\Domain\Evaluation\Listeners;
 use App\Domain\Evaluation\Enums\EvaluationCaseSource;
 use App\Domain\Evaluation\Jobs\AppendRegressionCaseJob;
 use App\Domain\Experiment\Events\ExperimentTransitioned;
+use App\Domain\Shared\Services\TeamFeatures;
 
 /**
  * On an experiment transition to a failed state, append a deferred regression
@@ -16,7 +17,7 @@ class AppendRegressionCaseOnFailureListener
 {
     public function handle(ExperimentTransitioned $event): void
     {
-        if (! config('evaluation.auto_eval.enabled', false)) {
+        if (! app(TeamFeatures::class)->enabled('auto_eval', $event->experiment->team_id)) {
             return;
         }
 

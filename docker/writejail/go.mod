@@ -1,5 +1,11 @@
 module fleetq/writejail
 
-go 1.23
+go 1.24.0
 
-require github.com/landlock-lsm/go-landlock v0.0.0-20240715193425-db0c8d6f89dc
+
+require github.com/landlock-lsm/go-landlock v0.10.1
+
+require (
+	golang.org/x/sys v0.40.0 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.77 // indirect
+)

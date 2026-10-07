@@ -7,12 +7,15 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Services\EmbeddingService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Tests\TestCase;
 
 class SemanticCacheSingleflightTest extends TestCase
 {
+    use RefreshDatabase;
+
     private function makeRequest(string $prompt = 'hello world'): AiRequestDTO
     {
         return new AiRequestDTO(

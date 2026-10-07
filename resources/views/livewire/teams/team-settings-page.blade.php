@@ -1144,6 +1144,8 @@
         </button>
     </div>
 
+    @include('livewire.teams.partials.team-features')
+
     {{-- Model Allowlist --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Model Allowlist</h2>

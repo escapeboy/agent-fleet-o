@@ -12,6 +12,7 @@ use App\Domain\ProductGraph\Enums\NodeType;
 use App\Domain\ProductGraph\Models\ProductEdge;
 use App\Domain\ProductGraph\Models\ProductGraphChange;
 use App\Domain\ProductGraph\Models\ProductNode;
+use App\Domain\Shared\Services\TeamFeatures;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
@@ -176,7 +177,7 @@ class ProductGraphBrowserPage extends Component
 
     public function render()
     {
-        if (! config('productgraph.enabled')) {
+        if (! app(TeamFeatures::class)->enabled('product_graph', $this->teamId())) {
             return view('livewire.product-graph.product-graph-browser-page', ['disabled' => true]);
         }
 
