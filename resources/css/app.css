@@ -9,6 +9,8 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+/* Cloud edition views (absent in the community edition, then this matches nothing). */
+@source '../../../cloud/resources/views/**/*.blade.php';
 
 @theme {
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
