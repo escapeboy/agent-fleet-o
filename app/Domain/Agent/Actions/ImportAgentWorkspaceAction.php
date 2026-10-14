@@ -210,7 +210,7 @@ class ImportAgentWorkspaceAction
 
             $pivotData = [
                 'priority' => $toolData['pivot']['priority'] ?? 0,
-                'overrides' => json_encode($toolData['pivot']['overrides'] ?? []),
+                'overrides' => $toolData['pivot']['overrides'] ?? [],
             ];
 
             if (isset($toolData['pivot']['approval_mode'])) {

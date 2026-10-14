@@ -379,4 +379,23 @@ class AgentControllerTest extends ApiTestCase
             'permission_level' => 'read_only',
         ]);
     }
+
+    public function test_update_agent_keeps_tool_overrides_as_json_object(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+        $plain = Tool::factory()->create(['team_id' => $this->team->id]);
+        $configured = Tool::factory()->create(['team_id' => $this->team->id]);
+        $agent->tools()->attach($plain->id, ['priority' => 0]);
+        $agent->tools()->attach($configured->id, ['priority' => 1, 'overrides' => ['timeout' => 30]]);
+
+        // Two updates: the second one re-syncs pivots copied from the first.
+        $this->putJson("/api/v1/agents/{$agent->id}", ['tool_ids' => [$plain->id, $configured->id]])->assertOk();
+        $this->putJson("/api/v1/agents/{$agent->id}", ['tool_ids' => [$plain->id, $configured->id]])->assertOk();
+
+        $overrides = $agent->fresh()->tools->mapWithKeys(fn ($tool) => [$tool->id => $tool->pivot->overrides]);
+
+        $this->assertSame([], $overrides[$plain->id]);
+        $this->assertSame(['timeout' => 30], $overrides[$configured->id]);
+    }
 }

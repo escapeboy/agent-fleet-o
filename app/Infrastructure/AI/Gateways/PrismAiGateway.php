@@ -975,7 +975,7 @@ class PrismAiGateway implements AiGatewayInterface
 
     /**
      * Sampling parameters were removed from the newer Anthropic models: sending
-     * `temperature` to Opus 4.7+, Sonnet 5, Fable 5 or Mythos 5 comes back as
+     * `temperature` to Opus 4.7+, Sonnet 5, Haiku 5, Fable 5 or Mythos 5 comes back as
      * `400 invalid_request_error - temperature is deprecated for this model`.
      * Older models still take it, so it is decided per model rather than
      * dropped for everyone. Prism omits the parameter when it is null.
@@ -987,7 +987,7 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         $rejectsSampling = (bool) preg_match(
-            '/(opus-(4-7|4-8|5)|sonnet-5|fable-5|mythos-5)/i',
+            '/(opus-(4-7|4-8|5)|sonnet-5|haiku-5|fable-5|mythos-5)/i',
             $request->model,
         );
 

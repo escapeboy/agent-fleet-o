@@ -130,15 +130,16 @@ class AgentController extends Controller
         if ($toolIds !== null) {
             // Preserve approval/permission pivot config for tools that remain attached;
             // a bare sync() would reset retained tools to DB defaults.
+            // overrides is taken decoded: the raw attribute is a JSON string, and the
+            // pivot's array cast would encode it a second time into a JSON string.
             $existingPivots = $agent->tools()->get()->mapWithKeys(fn ($tool) => [
                 $tool->id => Arr::only($tool->pivot->getAttributes(), [
                     'priority',
-                    'overrides',
                     'approval_mode',
                     'approval_timeout_minutes',
                     'approval_timeout_action',
                     'permission_level',
-                ]),
+                ]) + ['overrides' => $tool->pivot->overrides ?? []],
             ]);
 
             $syncData = [];
