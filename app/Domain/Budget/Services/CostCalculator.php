@@ -235,6 +235,19 @@ class CostCalculator
             return 0.0;
         }
 
+        // Long-context tier: once the prompt (uncached + cached + cache-write input)
+        // exceeds the threshold, the whole call is billed at the tier's rates.
+        $longContext = $pricing['long_context'] ?? null;
+        if (is_array($longContext) && isset($longContext['above_prompt_tokens'])) {
+            $promptTokens = $cacheWriteInputTokens !== null
+                ? max(0, $inputTokens) + max(0, $cachedInputTokens) + max(0, $cacheWriteInputTokens)
+                : $inputTokens;
+            if ($promptTokens > (int) $longContext['above_prompt_tokens']) {
+                unset($longContext['above_prompt_tokens']);
+                $pricing = array_merge($pricing, $longContext);
+            }
+        }
+
         $inputRate = (float) ($pricing['input_usd_per_mtok'] ?? 0);
         $outputRate = (float) ($pricing['output_usd_per_mtok'] ?? 0);
         $cacheReadRate = (float) ($pricing['cache_read_usd_per_mtok'] ?? $inputRate);

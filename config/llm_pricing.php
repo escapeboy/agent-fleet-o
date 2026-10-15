@@ -151,8 +151,9 @@ return [
                 'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
-            // Prompts over 100K tokens are $0.50/$2.50; this schema has no tiers,
-            // so those calls are billed at the base rate below.
+            // Prompts over 100K tokens are $0.50/$2.50 (long_context below). No
+            // long-context cache rates are published, so cache reads and writes
+            // stay at the base rates on those calls.
             'claude-haiku-5-5' => [
                 'tier' => 'nano',
                 'input_usd_per_mtok' => 0.10,
@@ -160,6 +161,7 @@ return [
                 'cache_read_usd_per_mtok' => 0.01,
                 'cache_write_5m_usd_per_mtok' => 0.125,
                 'cache_write_1h_usd_per_mtok' => 0.20,
+                'long_context' => ['above_prompt_tokens' => 100_000, 'input_usd_per_mtok' => 0.50, 'output_usd_per_mtok' => 2.50],
                 'context_window' => 1_000_000,
                 'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
@@ -291,9 +293,9 @@ return [
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
+            // Prompts <= 200K tokens; above that Google charges $2.50 / $15.00.
             'gemini-2.5-pro' => [
                 'tier' => 'default',
-            // Prompts <= 200K tokens; above that Google charges $2.50 / $15.00.
                 'input_usd_per_mtok' => 1.25,
                 'output_usd_per_mtok' => 10.00,
                 'context_window' => 1_048_576,
