@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Domain\Agent\Enums\AgentEnvironment;
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Models\Agent;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use Illuminate\Foundation\Http\FormRequest;
@@ -37,6 +38,7 @@ class StoreAgentRequest extends FormRequest
             'skill_ids.*' => ['uuid', Rule::exists('skills', 'id')->where('team_id', $teamId)],
             'tool_profile' => ['nullable', 'string', Rule::in(array_keys(config('tool_profiles.profiles', [])))],
             'environment' => ['sometimes', 'nullable', Rule::enum(AgentEnvironment::class)],
+            'config.execution_tier' => ['sometimes', 'nullable', Rule::enum(ExecutionTier::class)],
             'config.reasoning_effort' => ['sometimes', 'nullable', Rule::enum(ReasoningEffort::class)],
             'config.use_tool_search' => ['sometimes', 'nullable', 'boolean'],
             'config.tool_search_top_k' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:20'],

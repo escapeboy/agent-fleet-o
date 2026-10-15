@@ -221,6 +221,81 @@ class AgentControllerTest extends ApiTestCase
         $this->assertSame('high', $agent->config['reasoning_effort'] ?? null);
     }
 
+    public function test_can_update_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => 'pro'],
+        ])->assertOk()->assertJsonPath('data.config.execution_tier', 'pro');
+
+        $this->assertSame('pro', $agent->fresh()->config['execution_tier'] ?? null);
+    }
+
+    public function test_can_create_agent_with_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+
+        $this->postJson('/api/v1/agents', [
+            'name' => 'Tiered Agent',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'config' => ['execution_tier' => 'ultra'],
+        ])->assertCreated();
+
+        $agent = Agent::where('name', 'Tiered Agent')->firstOrFail();
+        $this->assertSame('ultra', $agent->config['execution_tier'] ?? null);
+    }
+
+    public function test_rejects_invalid_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $this->postJson('/api/v1/agents', [
+            'name' => 'Bad Tier',
+            'config' => ['execution_tier' => 'mega'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['config.execution_tier']);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => 'mega'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['config.execution_tier']);
+    }
+
+    public function test_update_merges_config_and_keeps_unsent_keys(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent([
+            'config' => ['execution_tier' => 'pro', 'working_directory' => '/srv/app'],
+        ]);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['use_tool_search' => false],
+        ])->assertOk();
+
+        $config = $agent->fresh()->config;
+        $this->assertSame('pro', $config['execution_tier'] ?? null);
+        $this->assertSame('/srv/app', $config['working_directory'] ?? null);
+        $this->assertFalse($config['use_tool_search']);
+    }
+
+    public function test_update_removes_config_key_sent_as_null(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent([
+            'config' => ['execution_tier' => 'pro', 'reasoning_effort' => 'high'],
+        ]);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => null],
+        ])->assertOk();
+
+        $config = $agent->fresh()->config;
+        $this->assertArrayNotHasKey('execution_tier', $config);
+        $this->assertSame('high', $config['reasoning_effort'] ?? null);
+    }
+
     public function test_can_create_agent_with_tool_search_config(): void
     {
         $this->actingAsApiUser();
