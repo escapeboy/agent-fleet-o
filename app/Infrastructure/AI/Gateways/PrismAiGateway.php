@@ -570,13 +570,20 @@ class PrismAiGateway implements AiGatewayInterface
 
         $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
 
+        // Legacy treats inputTokens as the prompt total including cache reads. Prism's
+        // OpenAI text handler already subtracts cached tokens and its stream handler
+        // does not, so take the total from the normalised breakdown for OpenAI.
+        $legacyInputTokens = $request->provider === 'openai'
+            ? $breakdown->uncachedInputTokens + $breakdown->cacheReadInputTokens
+            : $usage->promptTokens;
+
         return new AiUsageDTO(
             promptTokens: $usage->promptTokens,
             completionTokens: $usage->completionTokens,
             costCredits: $this->costCalculator->calculateCost(
                 provider: $request->provider,
                 model: $request->model,
-                inputTokens: $usage->promptTokens,
+                inputTokens: $legacyInputTokens,
                 outputTokens: $usage->completionTokens,
                 cachedInputTokens: $cachedInputTokens,
                 cacheStrategy: $cacheStrategy,
