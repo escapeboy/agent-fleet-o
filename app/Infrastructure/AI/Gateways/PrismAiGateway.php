@@ -408,7 +408,11 @@ class PrismAiGateway implements AiGatewayInterface
             $effectiveBudget = min($effectiveBudget, 32_000);
         }
 
-        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic') {
+        // Opus 4.7+, Sonnet 5.x, Haiku 5.5, Fable and Mythos reject budget_tokens with a
+        // 400, and Prism can only send that shape. Those models get no thinking option:
+        // the 5.x models run adaptive thinking when it is omitted, Opus 4.7/4.8 run without.
+        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic'
+            && ! $this->isAdaptiveOnlyAnthropicModel($request->model)) {
             $builder->withProviderOptions([
                 'thinking' => [
                     'enabled' => true,
@@ -987,11 +991,14 @@ class PrismAiGateway implements AiGatewayInterface
             return $request->temperature;
         }
 
-        $rejectsSampling = (bool) preg_match(
-            '/(opus-(4-7|4-8|5)|sonnet-5|haiku-5|fable-5|mythos-5)/i',
-            $request->model,
-        );
+        return $this->isAdaptiveOnlyAnthropicModel($request->model) ? null : $request->temperature;
+    }
 
-        return $rejectsSampling ? null : $request->temperature;
+    /**
+     * Anthropic models that reject sampling parameters and manual thinking budgets.
+     */
+    private function isAdaptiveOnlyAnthropicModel(string $model): bool
+    {
+        return (bool) preg_match('/(opus-(4-7|4-8|5)|sonnet-5|haiku-5|fable-5|mythos-5)/i', $model);
     }
 }
