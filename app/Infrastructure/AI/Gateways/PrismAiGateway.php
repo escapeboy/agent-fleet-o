@@ -223,7 +223,7 @@ class PrismAiGateway implements AiGatewayInterface
         return new AiResponseDTO(
             content: $accumulated,
             parsedOutput: null,
-            usage: $this->buildUsageDTO($usage, $request),
+            usage: $this->buildUsageDTO($usage, $request, streamed: true),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -542,9 +542,9 @@ class PrismAiGateway implements AiGatewayInterface
      * provider handlers when prompt caching is engaged. cacheStrategy is derived
      * from the request flag — Anthropic uses ephemeral_5m by default in our code path.
      */
-    private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
+    private function buildUsageDTO(Usage $usage, AiRequestDTO $request, bool $streamed = false): AiUsageDTO
     {
-        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage);
+        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage, $streamed);
         $cacheStrategy = $this->resolveCacheStrategy($request);
         $accurateCost = $this->costCalculator->calculateCost(
             provider: $request->provider,

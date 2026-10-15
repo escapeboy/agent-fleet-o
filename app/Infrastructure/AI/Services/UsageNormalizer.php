@@ -18,12 +18,13 @@ use Prism\Prism\ValueObjects\Usage;
  *   (candidatesTokenCount) EXCLUDES thinking tokens, which Google bills as output.
  *   Exception: with providerOptions.cachedContentName Prism subtracts cached
  *   tokens itself; FleetQ does not use explicit Gemini caches today.
- * - The stream handlers map usage differently (OpenAI stream does not subtract
- *   cached tokens); only the text/structured paths call this normalizer.
+ * - Stream handlers match their text handlers except OpenAI: its stream
+ *   promptTokens = input_tokens INCLUDING cached_tokens (OpenAI/Handlers/Stream.php
+ *   vs Text.php), so streamed OpenAI usage subtracts them here.
  */
 final class UsageNormalizer
 {
-    public static function fromPrism(string $provider, Usage $usage): UsageBreakdown
+    public static function fromPrism(string $provider, Usage $usage, bool $streamed = false): UsageBreakdown
     {
         $prompt = max(0, (int) $usage->promptTokens);
         $completion = max(0, (int) $usage->completionTokens);
@@ -33,7 +34,9 @@ final class UsageNormalizer
 
         return match ($provider) {
             'anthropic' => new UsageBreakdown($prompt, $cacheRead, $cacheWrite, $completion),
-            'openai' => new UsageBreakdown($prompt, $cacheRead, 0, $completion),
+            'openai' => $streamed
+                ? new UsageBreakdown(max(0, $prompt - $cacheRead), min($cacheRead, $prompt), 0, $completion)
+                : new UsageBreakdown($prompt, $cacheRead, 0, $completion),
             'google', 'gemini' => new UsageBreakdown(max(0, $prompt - $cacheRead), min($cacheRead, $prompt), 0, $completion + $thoughts),
             default => new UsageBreakdown(max(0, $prompt - $cacheRead), min($cacheRead, $prompt), $cacheWrite, $completion),
         };
