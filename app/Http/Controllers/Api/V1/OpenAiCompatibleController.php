@@ -311,6 +311,32 @@ class OpenAiCompatibleController extends Controller
             userId: $user->id,
         );
 
+        // A run that produced no model answer is an error, not an empty "stop":
+        // either it failed outright (no provider, tool-loop breaker, any exception
+        // → failed execution with null output) or tool recovery gave up and
+        // returned a canned notice. A run where the model answered — even after
+        // some tool calls failed and were recovered — is a normal 200.
+        $execution = $result['execution'];
+        $runFailed = ($result['output'] ?? null) === null
+            || $execution->status === 'failed'
+            || isset($execution->quality_details['degraded']);
+        if ($runFailed) {
+            $reason = $execution->error_message
+                ?? 'Task could not be completed due to tool failures.';
+
+            return response()->json(
+                OpenAiResponseTranslator::formatError(
+                    app()->hasDebugModeEnabled()
+                        ? "Agent run failed: {$reason}"
+                        : 'Agent run failed.'.($execution->id ? " Execution ID: {$execution->id}." : ''),
+                    'server_error',
+                    502,
+                    'agent_run_failed',
+                ),
+                502,
+            );
+        }
+
         $content = '';
         if (isset($result['output'])) {
             $content = is_array($result['output'])
@@ -318,7 +344,6 @@ class OpenAiCompatibleController extends Controller
                 : (string) $result['output'];
         }
 
-        $execution = $result['execution'];
         // The `agent_executions` table doesn't store token counts (only cost +
         // tool/step counters); the real per-call tokens live in `llm_request_logs`.
         // Aggregate the rows that belong to this execution (matched by agent_id +

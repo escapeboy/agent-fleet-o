@@ -344,6 +344,84 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
             ->assertJsonPath('error.type', 'server_error');
     }
 
+    private function mockAgentRun(Agent $agent, array $executionAttributes, mixed $output): void
+    {
+        $executeAction = Mockery::mock(ExecuteAgentAction::class);
+        $executeAction->shouldReceive('execute')->once()->andReturnUsing(fn () => [
+            'execution' => AgentExecution::create(array_merge([
+                'agent_id' => $agent->id,
+                'team_id' => $agent->team_id,
+                'input' => ['task' => 'Help me'],
+                'duration_ms' => 10,
+                'cost_credits' => 0,
+            ], $executionAttributes)),
+            'output' => $output,
+        ]);
+        $this->app->instance(ExecuteAgentAction::class, $executeAction);
+    }
+
+    public function test_agent_run_that_failed_returns_error_not_stop(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent(['slug' => 'helper']);
+        $this->mockAgentRun($agent, [
+            'status' => 'failed',
+            'error_message' => 'No LLM provider available',
+        ], null);
+
+        $response = $this->postJson('/v1/chat/completions', [
+            'model' => 'agent/helper',
+            'messages' => [['role' => 'user', 'content' => 'Help me']],
+        ]);
+
+        $response->assertStatus(502)
+            ->assertJsonPath('error.type', 'server_error')
+            ->assertJsonPath('error.code', 'agent_run_failed')
+            ->assertJsonMissingPath('choices');
+    }
+
+    public function test_agent_run_where_tool_recovery_gave_up_returns_error(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent(['slug' => 'helper']);
+        $canned = 'Task could not be completed due to tool failures. Partial context was gathered.';
+        $this->mockAgentRun($agent, [
+            'status' => 'completed',
+            'output' => ['result' => $canned],
+            'quality_details' => ['tier' => 'standard', 'degraded' => 'tool_recovery_exhausted'],
+        ], ['result' => $canned]);
+
+        // Streaming clients must see the failure too, before any SSE chunk is sent.
+        $response = $this->postJson('/v1/chat/completions', [
+            'model' => 'agent/helper',
+            'messages' => [['role' => 'user', 'content' => 'Help me']],
+            'stream' => true,
+        ]);
+
+        $response->assertStatus(502)->assertJsonPath('error.code', 'agent_run_failed');
+    }
+
+    public function test_agent_run_with_recovered_tool_failures_is_still_success(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent(['slug' => 'helper']);
+        $this->mockAgentRun($agent, [
+            'status' => 'completed',
+            'output' => ['result' => 'Partial answer'],
+            'tool_calls_count' => 3,
+            'quality_details' => ['tier' => 'standard'],
+        ], 'Partial answer');
+
+        $response = $this->postJson('/v1/chat/completions', [
+            'model' => 'agent/helper',
+            'messages' => [['role' => 'user', 'content' => 'Help me']],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('choices.0.finish_reason', 'stop')
+            ->assertJsonPath('choices.0.message.content', 'Partial answer');
+    }
+
     // ── Request Translator ──────────────────────────────────────
 
     public function test_bare_slug_resolves_to_agent(): void

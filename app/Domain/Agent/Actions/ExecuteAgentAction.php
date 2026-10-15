@@ -596,6 +596,8 @@ class ExecuteAgentAction
                 'quality_details' => array_filter([
                     'tier' => $tierConfig['tier']->value,
                     'semantic_loop_max_repeat' => $semanticMaxRepeat >= $semanticWarn ? $semanticMaxRepeat : null,
+                    // Tool recovery gave up: the content is a canned notice, not a model answer.
+                    'degraded' => $isPartial ? 'tool_recovery_exhausted' : null,
                 ]),
                 'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
