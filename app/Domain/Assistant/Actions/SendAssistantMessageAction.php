@@ -24,6 +24,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\GlobalSetting;
 use App\Models\User;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -387,7 +388,7 @@ class SendAssistantMessageAction
         $model = $model
             ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($provider);
 
         // Check if provider is a local agent (codex, claude-code, or the generic 'local' key)
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");
@@ -616,7 +617,7 @@ class SendAssistantMessageAction
         $model = $model
             ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($provider);
 
         // Check if provider is a local agent (codex, claude-code, or the generic 'local' key)
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");

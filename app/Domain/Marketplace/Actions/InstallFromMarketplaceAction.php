@@ -20,6 +20,7 @@ use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Support\LlmDefaults;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -79,7 +80,7 @@ class InstallFromMarketplaceAction
                     'personality' => $snapshot['personality'] ?? null,
                     'system_prompt_template' => $snapshot['system_prompt_template'] ?? null,
                     'provider' => $snapshot['provider'] ?? 'anthropic',
-                    'model' => $snapshot['model'] ?? 'claude-sonnet-4-5',
+                    'model' => $snapshot['model'] ?? LlmDefaults::platformModel($snapshot['provider'] ?? 'anthropic'),
                     'status' => 'active',
                     'capabilities' => $snapshot['capabilities'] ?? [],
                     'constraints' => $snapshot['constraints'] ?? [],
@@ -191,7 +192,7 @@ class InstallFromMarketplaceAction
                     'personality' => $configuration['personality'] ?? null,
                     'system_prompt_template' => $configuration['system_prompt_template'] ?? null,
                     'provider' => $configuration['provider'] ?? 'anthropic',
-                    'model' => $configuration['model'] ?? 'claude-sonnet-4-5',
+                    'model' => $configuration['model'] ?? LlmDefaults::platformModel($configuration['provider'] ?? 'anthropic'),
                     'status' => 'active',
                     'capabilities' => $configuration['capabilities'] ?? [],
                     'constraints' => $configuration['constraints'] ?? [],

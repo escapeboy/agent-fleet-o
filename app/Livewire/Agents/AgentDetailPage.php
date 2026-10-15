@@ -32,6 +32,7 @@ use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -305,7 +306,7 @@ class AgentDetailPage extends Component
 
     public function addFallback(): void
     {
-        $this->editFallbackChain[] = ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+        $this->editFallbackChain[] = ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')];
     }
 
     public function removeFallback(int $index): void

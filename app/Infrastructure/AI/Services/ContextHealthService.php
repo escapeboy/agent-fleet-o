@@ -5,6 +5,7 @@ namespace App\Infrastructure\AI\Services;
 use App\Domain\Experiment\Models\Experiment;
 use App\Infrastructure\AI\DTOs\ContextHealthDTO;
 use App\Infrastructure\AI\Models\LlmRequestLog;
+use App\Support\LlmDefaults;
 
 /**
  * Monitors LLM context consumption for an experiment.
@@ -110,7 +111,7 @@ class ContextHealthService
 
         return $lastModel
             ?? $experiment->config['llm']['model']
-            ?? config('llm_pricing.default_model', 'claude-sonnet-4-5-20250929');
+            ?? LlmDefaults::platformModel();
     }
 
     private function resolveContextWindow(string $model): int

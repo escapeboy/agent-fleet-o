@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Exceptions\DataClassificationException;
 use App\Infrastructure\AI\Exceptions\ModelNotAllowedException;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -93,10 +94,7 @@ class ProviderResolver
         $firstModel = array_key_first($available[$firstProvider]['models'] ?? []);
 
         if ($firstModel === null) {
-            $firstModel = (string) config(
-                "llm_pricing.default_models.{$firstProvider}",
-                config('llm_pricing.default_model', 'claude-sonnet-4-5'),
-            );
+            $firstModel = LlmDefaults::platformModel($firstProvider);
         }
 
         Log::warning('ProviderResolver: resolved provider is not available for team — falling back', [
@@ -328,8 +326,8 @@ class ProviderResolver
 
         // 5. Platform default
         return [
-            'provider' => config('llm_pricing.default_provider', 'anthropic'),
-            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'provider' => LlmDefaults::platformProvider(),
+            'model' => LlmDefaults::platformModel(),
         ];
     }
 
@@ -443,8 +441,8 @@ class ProviderResolver
 
         // 5. Config fallback
         return [
-            'provider' => config('llm_pricing.default_provider', 'anthropic'),
-            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'provider' => LlmDefaults::platformProvider(),
+            'model' => LlmDefaults::platformModel(),
             'source' => 'config',
         ];
     }
@@ -996,8 +994,8 @@ class ProviderResolver
         // to the platform default, still subjected to availability enforcement.
         if (! is_array($tierModels) || $tierModels === []) {
             return $this->enforceAvailability([
-                'provider' => (string) config('llm_pricing.default_provider', 'anthropic'),
-                'model' => (string) config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+                'provider' => LlmDefaults::platformProvider(),
+                'model' => LlmDefaults::platformModel(),
             ], $team);
         }
 

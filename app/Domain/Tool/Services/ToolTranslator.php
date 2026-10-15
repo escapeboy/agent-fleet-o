@@ -19,6 +19,7 @@ use App\Domain\Tool\Exceptions\BrowserTaskTimeoutException;
 use App\Domain\Tool\Exceptions\ResultAsAnswerException;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\BuiltIn\ExecuteCodeHandler;
+use App\Support\LlmDefaults;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -1221,7 +1222,7 @@ class ToolTranslator
 
             if ($credential && ! empty($credential->credentials['api_key'])) {
                 $defaultModel = match ($provider) {
-                    'anthropic' => 'claude-sonnet-4-5-20250514',
+                    'anthropic' => LlmDefaults::platformModel('anthropic'),
                     'openai' => 'gpt-4o',
                     default => 'gpt-4o',
                 };

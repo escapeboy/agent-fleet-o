@@ -9,6 +9,7 @@ use App\Domain\Skill\Models\SkillAnnotation;
 use App\Domain\Skill\Models\SkillVersion;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use RuntimeException;
 
 /**
@@ -77,7 +78,7 @@ class GenerateImprovedSkillVersionAction
         // 4. Call the AI gateway to generate the improved prompt
         $response = $this->gateway->complete(new AiRequestDTO(
             provider: 'anthropic',
-            model: 'claude-sonnet-4-5',
+            model: LlmDefaults::platformModel('anthropic'),
             systemPrompt: 'You are a prompt engineering expert. Respond with ONLY the improved prompt template text — no explanation, no markdown fences.',
             userPrompt: $metaPrompt,
             maxTokens: 2048,

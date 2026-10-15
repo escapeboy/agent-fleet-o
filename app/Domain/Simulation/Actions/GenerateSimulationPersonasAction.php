@@ -8,6 +8,7 @@ use App\Domain\Simulation\Models\SimulationSuite;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Support\LlmDefaults;
 
 /**
  * Generates realistic (and adversarial) test-user personas for a suite via the
@@ -95,7 +96,7 @@ class GenerateSimulationPersonasAction
      */
     private function resolveModel(): array
     {
-        $full = (string) config('simulation.default_model', 'anthropic/claude-sonnet-4-5');
+        $full = (string) config('simulation.default_model', 'anthropic/'.LlmDefaults::platformModel('anthropic'));
 
         if (str_contains($full, '/')) {
             [$provider, $model] = explode('/', $full, 2);

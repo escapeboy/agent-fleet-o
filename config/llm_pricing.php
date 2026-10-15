@@ -49,6 +49,12 @@ return [
 
     'last_updated_at' => '2026-05-04',
 
+    // Platform default provider/model — the last step of ProviderResolver. Read
+    // through LlmDefaults::platformModel(): a null model means the first entry of
+    // llm_providers.{provider}.models, so no model id is duplicated here.
+    'default_provider' => 'anthropic',
+    'default_model' => null,
+
     /*
     |--------------------------------------------------------------------------
     | Reservation multipliers (by tier)

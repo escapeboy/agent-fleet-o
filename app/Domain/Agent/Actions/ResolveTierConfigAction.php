@@ -17,7 +17,7 @@ class ResolveTierConfigAction
 {
     /**
      * @return array{
-     *   model_preference: string,
+     *   model_preference: ?string,
      *   max_tokens: int,
      *   max_steps: int,
      *   temperature: float,

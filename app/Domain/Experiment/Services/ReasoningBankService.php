@@ -8,6 +8,7 @@ use App\Domain\Experiment\Models\ReasoningBankEntry;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\Contracts\EmbeddingProviderInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -121,8 +122,8 @@ class ReasoningBankService
         }
 
         return [
-            'provider' => config('llm_pricing.default_provider', 'anthropic'),
-            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'provider' => LlmDefaults::platformProvider(),
+            'model' => LlmDefaults::platformModel(),
         ];
     }
 }

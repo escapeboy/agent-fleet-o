@@ -34,6 +34,7 @@ use App\Infrastructure\AI\Services\ManagedPricingStore;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
+use App\Support\LlmDefaults;
 use Illuminate\Support\ServiceProvider;
 use Prism\Prism\PrismManager;
 use Prism\Prism\Providers\OpenRouter\OpenRouter;
@@ -140,7 +141,7 @@ class AiServiceProvider extends ServiceProvider
                         ['provider' => 'openai', 'model' => 'gpt-4o'],
                     ],
                     'openai/gpt-4o' => [
-                        ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5-20250929'],
+                        ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')],
                     ],
                     'google/gemini-2.5-pro' => [
                         ['provider' => 'google', 'model' => 'gemini-2.5-flash'],

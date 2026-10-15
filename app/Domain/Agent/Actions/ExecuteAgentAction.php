@@ -55,6 +55,7 @@ use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Pipeline;
@@ -485,7 +486,7 @@ class ExecuteAgentAction
             // Tier preference applies only when agent model is set to 'auto' or not set
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
-                : $tierConfig['model_preference'];
+                : ($tierConfig['model_preference'] ?? LlmDefaults::platformModel());
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],
@@ -730,7 +731,7 @@ class ExecuteAgentAction
 
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
-                : $tierConfig['model_preference'];
+                : ($tierConfig['model_preference'] ?? LlmDefaults::platformModel());
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],

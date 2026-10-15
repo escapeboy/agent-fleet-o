@@ -1,5 +1,10 @@
 <?php
 
+// Anthropic default = first entry of the catalog (llm_providers.anthropic.models),
+// the same source as LlmDefaults::platformModel(). A config file cannot call
+// config() for another file, so the catalog file is read directly.
+$anthropicDefault = array_key_first((require __DIR__.'/llm_providers.php')['anthropic']['models']);
+
 return [
 
     /*
@@ -20,7 +25,7 @@ return [
     | "provider/model". The gateway still resolves team BYOK credentials; this
     | is only the default selection (mirrors evaluation.default_judge_model).
     */
-    'default_model' => env('SIMULATION_DEFAULT_MODEL', 'anthropic/claude-sonnet-4-5'),
+    'default_model' => env('SIMULATION_DEFAULT_MODEL', "anthropic/{$anthropicDefault}"),
 
     'defaults' => [
         'persona_count' => 8,
