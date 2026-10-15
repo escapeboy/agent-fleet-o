@@ -3,12 +3,14 @@
 namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\CreateAgentAction;
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -52,6 +54,9 @@ class AgentCreateTool extends Tool
             'environment' => $schema->string()
                 ->description('Environment preset that auto-attaches a tool bundle. Options: minimal, coding, browsing, restricted.')
                 ->enum(['minimal', 'coding', 'browsing', 'restricted']),
+            'execution_tier' => $schema->string()
+                ->description('Execution tier: flash, standard, pro, ultra. Governs max tokens, max agentic steps and sub-agent permission. Defaults to standard.')
+                ->enum(array_column(ExecutionTier::cases(), 'value')),
             'reasoning_effort' => $schema->string()
                 ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. "auto" lets the platform pick by task complexity.')
                 ->enum(['none', 'low', 'medium', 'high', 'auto']),
@@ -88,6 +93,7 @@ class AgentCreateTool extends Tool
             'personality' => 'nullable|array',
             'tool_profile' => 'nullable|string',
             'environment' => 'nullable|string|in:minimal,coding,browsing,restricted',
+            'execution_tier' => ['nullable', Rule::enum(ExecutionTier::class)],
             'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
             'use_tool_search' => 'nullable|boolean',
             'tool_search_top_k' => 'nullable|integer|min:1|max:20',
@@ -156,6 +162,12 @@ class AgentCreateTool extends Tool
             if (! empty($validated['reasoning_effort']) && $validated['reasoning_effort'] !== 'none') {
                 $config = $agent->config ?? [];
                 $config['reasoning_effort'] = $validated['reasoning_effort'];
+                $agent->update(['config' => $config]);
+            }
+
+            if (! empty($validated['execution_tier'])) {
+                $config = $agent->fresh()->config ?? [];
+                $config['execution_tier'] = $validated['execution_tier'];
                 $agent->update(['config' => $config]);
             }
 

@@ -4,12 +4,14 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\EvaluateAgentConfigGateAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
+use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Evaluation\Models\EvaluationDataset;
 use App\Domain\Knowledge\Models\KnowledgeBase;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -59,6 +61,9 @@ class AgentUpdateTool extends Tool
             'environment' => $schema->string()
                 ->description('Environment preset that auto-attaches a tool bundle. Options: minimal, coding, browsing, restricted. Pass empty string to remove.')
                 ->enum(['', 'minimal', 'coding', 'browsing', 'restricted']),
+            'execution_tier' => $schema->string()
+                ->description('Execution tier: flash, standard, pro, ultra. Governs max tokens, max agentic steps and sub-agent permission. Pass empty string to reset to the default (standard).')
+                ->enum(['', ...array_column(ExecutionTier::cases(), 'value')]),
             'reasoning_effort' => $schema->string()
                 ->description('Extended thinking effort (Anthropic). Options: none, low, medium, high, auto. Pass "none" to disable.')
                 ->enum(['none', 'low', 'medium', 'high', 'auto']),
@@ -99,6 +104,7 @@ class AgentUpdateTool extends Tool
             'data_classification' => 'nullable|string|in:public,internal,confidential,restricted',
             'tool_profile' => 'nullable|string',
             'environment' => 'nullable|string|in:,minimal,coding,browsing,restricted',
+            'execution_tier' => ['nullable', 'string', Rule::in(['', ...array_column(ExecutionTier::cases(), 'value')])],
             'reasoning_effort' => 'nullable|string|in:none,low,medium,high,auto',
             'use_tool_search' => 'nullable|boolean',
             'tool_search_top_k' => 'nullable|integer|min:1|max:20',
@@ -185,6 +191,17 @@ class AgentUpdateTool extends Tool
             $data['config'] = $currentConfig;
         }
 
+        // execution_tier: stored in agent.config JSONB; empty string unsets it
+        if (array_key_exists('execution_tier', $validated) && $validated['execution_tier'] !== null) {
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if ($validated['execution_tier'] === '') {
+                unset($currentConfig['execution_tier']);
+            } else {
+                $currentConfig['execution_tier'] = $validated['execution_tier'];
+            }
+            $data['config'] = $currentConfig;
+        }
+
         // reasoning_effort: stored in agent.config JSONB; "none" unsets it
         if (array_key_exists('reasoning_effort', $validated) && $validated['reasoning_effort'] !== null) {
             $currentConfig = $data['config'] ?? $agent->config ?? [];
@@ -259,7 +276,7 @@ class AgentUpdateTool extends Tool
         }
 
         if (empty($data)) {
-            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, execution_tier, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
         }
 
         // Eval-gate (eve borrow): when enabled and an eval dataset is configured,

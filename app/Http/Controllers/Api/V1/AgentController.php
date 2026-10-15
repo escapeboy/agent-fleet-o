@@ -95,6 +95,13 @@ class AgentController extends Controller
             ->setStatusCode(201);
     }
 
+    /**
+     * Update an agent.
+     *
+     * `config` is merged into the agent's existing config: keys you send replace
+     * the stored value, keys you omit are kept, and a key sent as `null` is removed
+     * (e.g. `{"config": {"execution_tier": null}}` resets the tier to the default).
+     */
     public function update(
         UpdateAgentRequest $request,
         Agent $agent,
@@ -105,6 +112,17 @@ class AgentController extends Controller
         unset($data['skill_ids']);
         $toolIds = $data['tool_ids'] ?? null;
         unset($data['tool_ids']);
+
+        // `config` is shared by several writers (UI, per-key MCP tools, this API),
+        // so the sent keys are merged into the stored config rather than replacing
+        // it: a client sending only `use_tool_search` must not wipe the UI-set
+        // `execution_tier`. A key sent as null is removed.
+        if (array_key_exists('config', $data)) {
+            $data['config'] = array_filter(
+                array_merge($agent->config ?? [], $data['config']),
+                fn ($value) => $value !== null,
+            );
+        }
 
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);

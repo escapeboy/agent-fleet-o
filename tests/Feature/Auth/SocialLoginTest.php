@@ -25,6 +25,15 @@ class SocialLoginTest extends TestCase
         parent::setUp();
         // Disable rate limiting and CSRF — both interfere with in-process test requests
         $this->withoutMiddleware([ThrottleRequests::class, ThrottleRequestsWithRedis::class, VerifyCsrfToken::class, ValidateCsrfToken::class]);
+
+        // Both are env-driven (TERMS_CURRENT_VERSION, SOCIAL_VERIFIED_EMAIL_PROVIDERS). A dev
+        // container exports .env as process env, which beats phpunit.xml, so pin them here:
+        // a terms version > 0 redirects the unlink requests to the terms page, and a custom
+        // verified-provider list stops google/github/x from auto-verifying and auto-linking.
+        config([
+            'terms.current_version' => 0,
+            'social.verified_email_providers' => ['google', 'github', 'linkedin-openid', 'x', 'apple'],
+        ]);
     }
 
     /** Create a user with a team (required because cloud EnsureTeamExists middleware redirects teamless users to /onboarding) */
