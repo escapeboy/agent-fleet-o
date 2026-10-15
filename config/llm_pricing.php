@@ -49,6 +49,12 @@ return [
 
     'last_updated_at' => '2026-05-04',
 
+    // Platform default provider/model — the last step of ProviderResolver. Read
+    // through LlmDefaults::platformModel(): a null model means the first entry of
+    // llm_providers.{provider}.models, so no model id is duplicated here.
+    'default_provider' => 'anthropic',
+    'default_model' => null,
+
     /*
     |--------------------------------------------------------------------------
     | Reservation multipliers (by tier)
@@ -145,8 +151,8 @@ return [
                 'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
-            // Prompts over 100K tokens are $0.50/$2.50; this schema has no tiers,
-            // so those calls are billed at the base rate below.
+            // Prompts over 100K tokens pay every rate from long_context below. The
+            // prompt length counts uncached input, cache reads and cache writes.
             'claude-haiku-5-5' => [
                 'tier' => 'nano',
                 'input_usd_per_mtok' => 0.10,
@@ -154,8 +160,16 @@ return [
                 'cache_read_usd_per_mtok' => 0.01,
                 'cache_write_5m_usd_per_mtok' => 0.125,
                 'cache_write_1h_usd_per_mtok' => 0.20,
+                'long_context' => [
+                    'above_prompt_tokens' => 100_000,
+                    'input_usd_per_mtok' => 0.50,
+                    'output_usd_per_mtok' => 2.50,
+                    'cache_read_usd_per_mtok' => 0.05,
+                    'cache_write_5m_usd_per_mtok' => 0.625,
+                    'cache_write_1h_usd_per_mtok' => 1.00,
+                ],
                 'context_window' => 1_000_000,
-                'last_verified_at' => '2026-10-06',
+                'last_verified_at' => '2026-10-15',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
             'claude-opus-4-7' => [
@@ -165,7 +179,7 @@ return [
                 'cache_read_usd_per_mtok' => 0.50,
                 'cache_write_5m_usd_per_mtok' => 6.25,
                 'cache_write_1h_usd_per_mtok' => 10.00,
-                'context_window' => 200_000,
+                'context_window' => 1_000_000,
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
@@ -176,7 +190,7 @@ return [
                 'cache_read_usd_per_mtok' => 0.50,
                 'cache_write_5m_usd_per_mtok' => 6.25,
                 'cache_write_1h_usd_per_mtok' => 10.00,
-                'context_window' => 200_000,
+                'context_window' => 1_000_000,
                 'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
@@ -187,7 +201,7 @@ return [
                 'cache_read_usd_per_mtok' => 0.30,
                 'cache_write_5m_usd_per_mtok' => 3.75,
                 'cache_write_1h_usd_per_mtok' => 6.00,
-                'context_window' => 200_000,
+                'context_window' => 1_000_000,
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
@@ -285,12 +299,13 @@ return [
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
+            // Prompts <= 200K tokens; above that Google charges $2.50 / $15.00.
             'gemini-2.5-pro' => [
                 'tier' => 'default',
                 'input_usd_per_mtok' => 1.25,
-                'output_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 10.00,
                 'context_window' => 1_048_576,
-                'last_verified_at' => '2026-05-04',
+                'last_verified_at' => '2026-10-15',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
         ],
@@ -395,8 +410,8 @@ return [
     'context_windows' => [
         'claude-sonnet-4-5-20250929' => 200_000,
         'claude-haiku-4-5-20251001' => 200_000,
-        'claude-opus-4-6' => 200_000,
-        'claude-opus-4-7' => 200_000,
+        'claude-opus-4-6' => 1_000_000,
+        'claude-opus-4-7' => 1_000_000,
         'gpt-4o' => 128_000,
         'gpt-4o-mini' => 128_000,
         'gpt-5' => 400_000,

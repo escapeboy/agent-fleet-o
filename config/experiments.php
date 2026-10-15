@@ -1,5 +1,10 @@
 <?php
 
+// Anthropic default = first entry of the catalog (llm_providers.anthropic.models),
+// the same source as LlmDefaults::platformModel(). A config file cannot call
+// config() for another file, so the catalog file is read directly.
+$anthropicDefault = array_key_first((require __DIR__.'/llm_providers.php')['anthropic']['models']);
+
 return [
 
     /*
@@ -149,7 +154,7 @@ return [
     'model_tiers' => [
         'cheap' => ['anthropic' => 'claude-haiku-4-5', 'openai' => 'gpt-4o-mini', 'google' => 'gemini-2.5-flash'],
         'standard' => null,
-        'expensive' => ['anthropic' => 'claude-sonnet-4-5', 'openai' => 'gpt-4o', 'google' => 'gemini-2.5-pro'],
+        'expensive' => ['anthropic' => $anthropicDefault, 'openai' => 'gpt-4o', 'google' => 'gemini-2.5-pro'],
     ],
 
     /*

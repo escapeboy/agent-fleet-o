@@ -37,6 +37,7 @@ use App\Jobs\Middleware\HasSentryContext;
 use App\Jobs\Middleware\SentryContextJobMiddleware;
 use App\Jobs\Middleware\TenantRateLimit;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -593,8 +594,8 @@ abstract class BaseStageJob implements HasSentryContext, ShouldQueue
         }
 
         // 4. Platform default (GlobalSetting → config fallback)
-        $platformProvider = GlobalSetting::get('default_llm_provider') ?? config('llm_pricing.default_provider', 'anthropic');
-        $platformModel = GlobalSetting::get('default_llm_model') ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
+        $platformProvider = GlobalSetting::get('default_llm_provider') ?? LlmDefaults::platformProvider();
+        $platformModel = GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel();
 
         return [
             'provider' => $platformProvider,

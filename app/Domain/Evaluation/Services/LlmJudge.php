@@ -4,6 +4,7 @@ namespace App\Domain\Evaluation\Services;
 
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 
 class LlmJudge
 {
@@ -105,7 +106,7 @@ class LlmJudge
      */
     private function resolveProviderModel(?string $model): array
     {
-        $full = $model ?? config('evaluation.default_judge_model', 'anthropic/claude-sonnet-4-5');
+        $full = $model ?? config('evaluation.default_judge_model', 'anthropic/'.LlmDefaults::platformModel('anthropic'));
 
         if (str_contains($full, '/')) {
             [$provider, $modelName] = explode('/', $full, 2);

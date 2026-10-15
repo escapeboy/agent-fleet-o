@@ -10,6 +10,7 @@ use App\Domain\Shared\Enums\TeamRole;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Mcp\Services\McpAppRegistry;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\On;
@@ -56,7 +57,7 @@ class AssistantPanel extends Component
         $this->selectedProvider = $savedProvider;
         $this->selectedModel = $teamSettings['assistant_llm_model']
             ?? GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($savedProvider);
 
         $this->loadRecentConversations();
 

@@ -9,6 +9,7 @@ use App\Domain\Memory\Actions\StoreMemoryAction;
 use App\Domain\Project\Models\ProjectRun;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 
 class StoreExperimentLearnings
@@ -150,8 +151,8 @@ class StoreExperimentLearnings
         }
 
         return [
-            'provider' => config('llm_pricing.default_provider', 'anthropic'),
-            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'provider' => LlmDefaults::platformProvider(),
+            'model' => LlmDefaults::platformModel(),
         ];
     }
 }

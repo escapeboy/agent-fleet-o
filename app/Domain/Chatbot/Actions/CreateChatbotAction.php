@@ -7,6 +7,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Chatbot\Enums\ChatbotStatus;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Domain\Chatbot\Models\Chatbot;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Str;
 
 class CreateChatbotAction
@@ -42,7 +43,7 @@ class CreateChatbotAction
             $agent = $this->createAgentAction->execute(
                 name: $name.' (Chatbot)',
                 provider: $provider ?? 'anthropic',
-                model: $model ?? 'claude-sonnet-4-5',
+                model: $model ?? LlmDefaults::platformModel($provider ?? 'anthropic'),
                 teamId: $teamId,
                 role: 'Chatbot Assistant',
                 goal: 'Answer user questions accurately and helpfully.',

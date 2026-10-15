@@ -390,6 +390,45 @@ class ProviderResolverTest extends TestCase
         $this->assertSame(['provider' => 'anthropic', 'model' => $model], $resolved);
     }
 
+    public function test_resolve_keeps_dated_snapshot_of_a_catalog_model(): void
+    {
+        // claude-haiku-4-5-20251001 is priced and served, but only the undated alias
+        // is in the catalog — the guard used to swap it for the first catalog model.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-haiku-4-5-20251001',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001'], $resolved);
+    }
+
+    public function test_dated_snapshot_of_an_unknown_model_is_still_swapped(): void
+    {
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-3-opus-20240229',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('anthropic', $resolved['provider']);
+        $this->assertArrayHasKey($resolved['model'], config('llm_providers.anthropic.models'));
+    }
+
     public function test_resolve_keeps_team_default_haiku_5_for_background_jobs(): void
     {
         // Memory jobs call resolve(team:) with no agent — the path that sent the

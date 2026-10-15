@@ -37,6 +37,41 @@ class CatalogModelPricingCoverageTest extends TestCase
         $this->assertSame([], $missing, 'Catalog models without a llm_pricing row: '.implode(', ', $missing));
     }
 
+    public function test_catalog_display_prices_equal_the_pricing_rows(): void
+    {
+        // The model pickers show llm_providers input_cost/output_cost; billing uses
+        // llm_pricing. They drifted (gpt-4o shown at 5/15, billed at 2.50/10).
+        $calc = new CostCalculator;
+        $drift = [];
+
+        foreach (config('llm_providers') as $provider => $definition) {
+            foreach ($definition['models'] ?? [] as $model => $row) {
+                $rows = config('llm_pricing.providers', [])[$provider] ?? [];
+                if (! isset($rows[$model])) {
+                    continue;
+                }
+                $pricing = $calc->pricing($provider, $model);
+                $shown = [(float) $row['input_cost'], (float) $row['output_cost']];
+                $billed = [(float) $pricing['input_usd_per_mtok'], (float) $pricing['output_usd_per_mtok']];
+                if ($shown !== $billed) {
+                    $drift[] = "{$provider}/{$model} shown ".implode('/', $shown).' billed '.implode('/', $billed);
+                }
+            }
+        }
+
+        $this->assertSame([], $drift, 'Catalog display prices differ from llm_pricing: '.implode('; ', $drift));
+    }
+
+    public function test_gemini_2_5_pro_is_priced_at_the_published_rate(): void
+    {
+        // ai.google.dev/gemini-api/docs/pricing (2026-10-15), paid tier, prompts <= 200k:
+        // input $1.25, output $10.00 per 1M tokens.
+        $pricing = (new CostCalculator)->pricing('google', 'gemini-2.5-pro');
+
+        $this->assertSame(1.25, (float) $pricing['input_usd_per_mtok']);
+        $this->assertSame(10.00, (float) $pricing['output_usd_per_mtok']);
+    }
+
     public function test_fable_call_is_billed_by_tokens_not_the_per_call_minimum(): void
     {
         config()->set('llm_pricing.usd_per_credit', 0.01);

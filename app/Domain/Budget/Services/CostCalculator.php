@@ -29,8 +29,9 @@ class CostCalculator
         int $cachedInputTokens = 0,
         ?string $cacheStrategy = null,
         ?int $cacheWriteInputTokens = null,
+        ?int $promptTokens = null,
     ): int {
-        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens);
+        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens, $promptTokens);
 
         if ($rawCostUsd <= 0.0) {
             return 0;
@@ -87,9 +88,10 @@ class CostCalculator
         ?float $marginOverride = null,
         ?int $maxCapOverride = null,
         ?int $cacheWriteInputTokens = null,
+        ?int $promptTokens = null,
     ): array {
         $pricing = $this->getPricing($provider, $model);
-        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens);
+        $rawCostUsd = $this->rawCostUsd($provider, $model, $inputTokens, $outputTokens, $cachedInputTokens, $cacheStrategy, $cacheWriteInputTokens, $promptTokens);
 
         $margin = $marginOverride ?? (float) config('llm_pricing.margin_multiplier', 1.30);
         $billableCostUsd = $rawCostUsd * $margin;
@@ -226,6 +228,7 @@ class CostCalculator
         int $cachedInputTokens,
         ?string $cacheStrategy,
         ?int $cacheWriteInputTokens = null,
+        ?int $promptTokens = null,
     ): float {
         $pricing = $this->getPricing($provider, $model);
 
@@ -233,6 +236,18 @@ class CostCalculator
             Log::debug('cost_calculator.unknown_model', ['provider' => $provider, 'model' => $model]);
 
             return 0.0;
+        }
+
+        // Long-context tier: once the prompt (uncached input + cache reads + cache
+        // writes) exceeds the threshold, the whole call is billed at the tier's rates,
+        // cache rates included.
+        $longContext = $pricing['long_context'] ?? null;
+        if (is_array($longContext) && isset($longContext['above_prompt_tokens'])) {
+            $promptTokens ??= $this->promptTokens($provider, $inputTokens, $cachedInputTokens, $cacheWriteInputTokens);
+            if ($promptTokens > (int) $longContext['above_prompt_tokens']) {
+                unset($longContext['above_prompt_tokens']);
+                $pricing = array_merge($pricing, $longContext);
+            }
         }
 
         $inputRate = (float) ($pricing['input_usd_per_mtok'] ?? 0);
@@ -267,6 +282,26 @@ class CostCalculator
         }
 
         return $cost;
+    }
+
+    /**
+     * Prompt length for long-context tier selection when the caller did not pass it.
+     *
+     * Accurate mode: the three buckets do not overlap. Legacy mode: $inputTokens is
+     * Prism's raw promptTokens, which for Anthropic and OpenAI excludes cache reads
+     * and for other providers includes them (see UsageNormalizer). Legacy mode has
+     * no cache-write count here, so callers that know it pass $promptTokens.
+     */
+    private function promptTokens(string $provider, int $inputTokens, int $cachedInputTokens, ?int $cacheWriteInputTokens): int
+    {
+        $input = max(0, $inputTokens);
+        $cached = max(0, $cachedInputTokens);
+
+        if ($cacheWriteInputTokens !== null) {
+            return $input + $cached + max(0, $cacheWriteInputTokens);
+        }
+
+        return in_array($provider, ['anthropic', 'openai'], true) ? $input + $cached : max($input, $cached);
     }
 
     /**

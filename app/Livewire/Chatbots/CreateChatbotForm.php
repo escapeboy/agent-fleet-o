@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Chatbot\Actions\CreateChatbotAction;
 use App\Domain\Chatbot\Enums\ChatbotType;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -25,7 +26,7 @@ class CreateChatbotForm extends Component
     // LLM config (for new agent)
     public string $provider = 'anthropic';
 
-    public string $model = 'claude-sonnet-4-5';
+    public string $model = '';
 
     public string $systemPrompt = '';
 
@@ -36,6 +37,8 @@ class CreateChatbotForm extends Component
 
     public function mount(): void
     {
+        $this->model = LlmDefaults::platformModel($this->provider);
+
         $team = auth()->user()->currentTeam;
 
         if (! ($team->settings['chatbot_enabled'] ?? false)) {

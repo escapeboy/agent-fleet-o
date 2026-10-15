@@ -14,6 +14,7 @@ use App\Domain\Chatbot\Models\ChatbotToken;
 use App\Domain\Chatbot\Services\ChatbotAnswerCache;
 use App\Domain\Workflow\Models\Workflow;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -40,7 +41,7 @@ class ChatbotDetailPage extends Component
 
     public string $editProvider = 'anthropic';
 
-    public string $editModel = 'claude-sonnet-4-5';
+    public string $editModel = '';
 
     public string $editSystemPrompt = '';
 
@@ -95,7 +96,7 @@ class ChatbotDetailPage extends Component
         $this->editConfidenceThreshold = (float) $this->chatbot->confidence_threshold;
         $this->editHumanEscalationEnabled = $this->chatbot->human_escalation_enabled;
         $this->editProvider = $this->chatbot->agent->provider ?? 'anthropic';
-        $this->editModel = $this->chatbot->agent->model ?? 'claude-sonnet-4-5';
+        $this->editModel = $this->chatbot->agent->model ?? LlmDefaults::platformModel($this->editProvider);
         $this->editSystemPrompt = $this->chatbot->agent->backstory ?? '';
         $this->editWorkflowId = $this->chatbot->workflow_id ?? '';
         $this->editing = true;

@@ -6,6 +6,7 @@ use App\Domain\Skill\Enums\SkillType;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillExecution;
 use App\Mcp\Concerns\HasStructuredErrors;
+use App\Support\LlmDefaults;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -107,11 +108,11 @@ class MultiModelConsensusTool extends Tool
     {
         $exampleConfig = [
             'models' => [
-                ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+                ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')],
                 ['provider' => 'openai', 'model' => 'gpt-4o'],
                 ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
             ],
-            'judge_model' => ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+            'judge_model' => ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')],
         ];
 
         if ($skillId) {

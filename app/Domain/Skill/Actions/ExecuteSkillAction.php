@@ -21,6 +21,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 
 class ExecuteSkillAction
@@ -327,7 +328,7 @@ class ExecuteSkillAction
             $config = is_array($skill->configuration) ? $skill->configuration : [];
             $executionData['judge_model'] = ($config['judge_model']['provider'] ?? 'anthropic')
                 .'/'
-                .($config['judge_model']['model'] ?? 'claude-sonnet-4-5');
+                .($config['judge_model']['model'] ?? LlmDefaults::platformModel('anthropic'));
             // Store only the synthesized answer in output, not the metadata columns
             $executionData['output'] = [
                 'answer' => $output['answer'] ?? $response->content,
@@ -572,11 +573,11 @@ class ExecuteSkillAction
     ): AiResponseDTO {
         $config = is_array($skill->configuration) ? $skill->configuration : [];
         $models = $config['models'] ?? [
-            ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'],
+            ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')],
             ['provider' => 'openai', 'model' => 'gpt-4o'],
             ['provider' => 'google', 'model' => 'gemini-2.5-flash'],
         ];
-        $judgeModel = $config['judge_model'] ?? ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+        $judgeModel = $config['judge_model'] ?? ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')];
 
         $result = $this->consensusService->run(
             prompt: $this->buildUserPrompt($skill, $input),
