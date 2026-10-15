@@ -3,10 +3,21 @@
 return [
     'anthropic' => [
         'name' => 'Anthropic',
+        // ProviderResolver::enforceModelBelongsToProvider() swaps any model missing
+        // here for the FIRST entry, so keep a model Anthropic still serves at the top
+        // (claude-sonnet-4-5 now returns 404 not_found_error).
         'models' => [
+            'claude-sonnet-5-5' => ['label' => 'Claude Sonnet 5.5', 'input_cost' => 2, 'output_cost' => 10],
+            'claude-haiku-5-5' => ['label' => 'Claude Haiku 5.5', 'input_cost' => 0.10, 'output_cost' => 0.50],
+            'claude-opus-5-5' => ['label' => 'Claude Opus 5.5', 'input_cost' => 4, 'output_cost' => 20],
+            'claude-fable-5-1' => ['label' => 'Claude Fable 5.1', 'input_cost' => 10, 'output_cost' => 50],
+            'claude-sonnet-5' => ['label' => 'Claude Sonnet 5', 'input_cost' => 2, 'output_cost' => 10],
+            'claude-opus-4-8' => ['label' => 'Claude Opus 4.8', 'input_cost' => 5, 'output_cost' => 25],
+            'claude-opus-4-7' => ['label' => 'Claude Opus 4.7', 'input_cost' => 5, 'output_cost' => 25],
+            'claude-sonnet-4-6' => ['label' => 'Claude Sonnet 4.6', 'input_cost' => 3, 'output_cost' => 15],
             'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 3, 'output_cost' => 15],
             'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 1, 'output_cost' => 5],
-            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 15, 'output_cost' => 75],
+            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 5, 'output_cost' => 25],
         ],
     ],
     'openai' => [
