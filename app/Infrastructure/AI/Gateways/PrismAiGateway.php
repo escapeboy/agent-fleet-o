@@ -175,9 +175,15 @@ class PrismAiGateway implements AiGatewayInterface
         $localConfig = $this->getPerRequestProviderConfig($request);
         $startTime = hrtime(true);
 
+        // Same cache_control as complete(): without it a caching request was billed
+        // for 5m cache writes that Anthropic never made.
+        $systemPromptArg = ($request->enablePromptCaching && $request->provider === 'anthropic')
+            ? (new SystemMessage($request->systemPrompt))->withProviderOptions(['cacheType' => 'ephemeral'])
+            : $request->systemPrompt;
+
         $generator = Prism::text()
             ->using($provider, $request->model, $localConfig)
-            ->withSystemPrompt($request->systemPrompt)
+            ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
             ->usingTemperature($this->temperatureFor($request))
@@ -185,8 +191,7 @@ class PrismAiGateway implements AiGatewayInterface
             ->asStream();
 
         $accumulated = '';
-        $promptTokens = 0;
-        $completionTokens = 0;
+        $usage = new Usage(0, 0);
 
         foreach ($generator as $event) {
             if ($event instanceof TextDeltaEvent) {
@@ -196,37 +201,29 @@ class PrismAiGateway implements AiGatewayInterface
                     $onChunk($event->delta);
                 }
             } elseif ($event instanceof StreamEndEvent && $event->usage) {
-                $promptTokens = $event->usage->promptTokens;
-                $completionTokens = $event->usage->completionTokens;
+                // Keep the whole Usage: it carries the cache read/write counts
+                // (Anthropic: cache_read_input_tokens / cache_creation_input_tokens).
+                $usage = $event->usage;
             }
         }
 
         $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
         // Estimate tokens if usage wasn't reported by the stream
-        if ($completionTokens === 0 && $accumulated !== '') {
-            $completionTokens = (int) ceil(strlen($accumulated) / 4);
+        if ($usage->completionTokens === 0 && $accumulated !== '') {
+            $usage = new Usage(
+                promptTokens: $usage->promptTokens,
+                completionTokens: (int) ceil(strlen($accumulated) / 4),
+                cacheWriteInputTokens: $usage->cacheWriteInputTokens,
+                cacheReadInputTokens: $usage->cacheReadInputTokens,
+                thoughtTokens: $usage->thoughtTokens,
+            );
         }
-
-        $cacheStrategy = $this->resolveCacheStrategy($request);
 
         return new AiResponseDTO(
             content: $accumulated,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $promptTokens,
-                completionTokens: $completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $promptTokens,
-                    outputTokens: $completionTokens,
-                    cachedInputTokens: 0,
-                    cacheStrategy: $cacheStrategy,
-                ),
-                cachedInputTokens: 0,
-                cacheStrategy: $cacheStrategy,
-            ),
+            usage: $this->buildUsageDTO($usage, $request, streamed: true),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
@@ -545,15 +542,17 @@ class PrismAiGateway implements AiGatewayInterface
      * provider handlers when prompt caching is engaged. cacheStrategy is derived
      * from the request flag — Anthropic uses ephemeral_5m by default in our code path.
      */
-    private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
+    private function buildUsageDTO(Usage $usage, AiRequestDTO $request, bool $streamed = false): AiUsageDTO
     {
-        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage);
+        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage, $streamed);
+        $cacheStrategy = $this->resolveCacheStrategy($request);
         $accurateCost = $this->costCalculator->calculateCost(
             provider: $request->provider,
             model: $request->model,
             inputTokens: $breakdown->uncachedInputTokens,
             outputTokens: $breakdown->outputTokens,
             cachedInputTokens: $breakdown->cacheReadInputTokens,
+            cacheStrategy: $cacheStrategy,
             cacheWriteInputTokens: $breakdown->cacheWriteInputTokens,
         );
 
@@ -570,7 +569,13 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
-        $cacheStrategy = $this->resolveCacheStrategy($request);
+
+        // Legacy treats inputTokens as the prompt total including cache reads. Prism's
+        // OpenAI text handler already subtracts cached tokens and its stream handler
+        // does not, so take the total from the normalised breakdown for OpenAI.
+        $legacyInputTokens = $request->provider === 'openai'
+            ? $breakdown->uncachedInputTokens + $breakdown->cacheReadInputTokens
+            : $usage->promptTokens;
 
         return new AiUsageDTO(
             promptTokens: $usage->promptTokens,
@@ -578,7 +583,7 @@ class PrismAiGateway implements AiGatewayInterface
             costCredits: $this->costCalculator->calculateCost(
                 provider: $request->provider,
                 model: $request->model,
-                inputTokens: $usage->promptTokens,
+                inputTokens: $legacyInputTokens,
                 outputTokens: $usage->completionTokens,
                 cachedInputTokens: $cachedInputTokens,
                 cacheStrategy: $cacheStrategy,

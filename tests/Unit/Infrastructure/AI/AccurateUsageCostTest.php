@@ -46,6 +46,20 @@ class AccurateUsageCostTest extends TestCase
         $this->assertSame(24, $credits);
     }
 
+    public function test_accurate_formula_prices_cache_writes_at_the_requested_ttl(): void
+    {
+        $calculator = new CostCalculator;
+
+        // 1 000 000 cache-write tokens: 3.75 USD at the 5m rate, 6.00 USD at the 1h rate.
+        $fiveMinute = $calculator->calculateCost('anthropic', 'claude-sonnet-4-6', 0, 0, 0, CostCalculator::CACHE_STRATEGY_5M, cacheWriteInputTokens: 1_000_000);
+        $oneHour = $calculator->calculateCost('anthropic', 'claude-sonnet-4-6', 0, 0, 0, CostCalculator::CACHE_STRATEGY_1H, cacheWriteInputTokens: 1_000_000);
+        $unspecified = $calculator->calculateCost('anthropic', 'claude-sonnet-4-6', 0, 0, 0, null, cacheWriteInputTokens: 1_000_000);
+
+        $this->assertSame(3750, $fiveMinute);
+        $this->assertSame(6000, $oneHour);
+        $this->assertSame(3750, $unspecified);
+    }
+
     public function test_legacy_formula_unchanged_without_cache_write_param(): void
     {
         // Legacy: cache reads clamped to input (200), write surcharge on all input.
