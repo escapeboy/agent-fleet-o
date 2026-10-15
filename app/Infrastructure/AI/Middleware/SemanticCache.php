@@ -29,6 +29,13 @@ class SemanticCache implements AiMiddlewareInterface
             return $next($request);
         }
 
+        // Never serve or store a tool-using request: the key is the prompt text
+        // only, and a hit returns the old final text with zero tool calls, so the
+        // run reports done while its side effects never happen (same as IdempotencyCheck).
+        if ($request->hasTools()) {
+            return $next($request);
+        }
+
         // Skip for local agents (zero-cost, no point caching)
         if (str_starts_with($request->provider, 'local/')) {
             return $next($request);
@@ -185,7 +192,7 @@ class SemanticCache implements AiMiddlewareInterface
         ]);
     }
 
-    private function hasVectorExtension(): bool
+    protected function hasVectorExtension(): bool
     {
         static $checked = null;
 

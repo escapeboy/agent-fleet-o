@@ -37,24 +37,49 @@ class McpStdioClient
         'MAIL_PASSWORD',
     ];
 
+    /** Seconds a budgeted child gets between SIGTERM and SIGKILL. */
+    private const KILL_GRACE_SECONDS = 0.5;
+
     /**
      * Discover tools exposed by an mcp_stdio Tool's binary.
      *
+     * With a budget, handshake and tools/list share one wall-clock deadline and
+     * the process group is killed (SIGTERM, grace, SIGKILL) instead of waited on,
+     * so the call returns within about budget + KILL_GRACE_SECONDS.
+     *
+     * @param  int|null  $timeoutSeconds  Total budget for the whole call (null = per-step defaults, no group kill)
      * @return array<int, array<string, mixed>> Array of tool definitions (name, description, inputSchema)
      *
      * @throws \RuntimeException on process failure, timeout, or protocol error
      */
-    public function discover(Tool $tool): array
+    public function discover(Tool $tool, ?int $timeoutSeconds = null): array
     {
+        if ($timeoutSeconds === null) {
+            $pipes = [];
+            $process = $this->openProcess($tool, $pipes);
+
+            try {
+                $this->handshake($pipes);
+
+                $tools = $this->listTools($pipes);
+            } finally {
+                $this->closeProcess($process, $pipes);
+            }
+
+            return $tools;
+        }
+
+        $deadline = microtime(true) + $timeoutSeconds;
         $pipes = [];
-        $process = $this->openProcess($tool, $pipes);
+        $groupId = null;
+        $process = $this->openProcess($tool, $pipes, ownProcessGroup: true, groupId: $groupId);
 
         try {
-            $this->handshake($pipes);
+            $this->handshake($pipes, $this->remaining($deadline, $timeoutSeconds));
 
-            $tools = $this->listTools($pipes);
+            $tools = $this->listTools($pipes, $this->remaining($deadline, $timeoutSeconds));
         } finally {
-            $this->closeProcess($process, $pipes);
+            $this->killProcess($process, $pipes, $groupId);
         }
 
         return $tools;
@@ -92,9 +117,10 @@ class McpStdioClient
      * Open the child process with three pipes: stdin (write), stdout (read), stderr (read).
      *
      * @param  array<int, resource>  $pipes  Populated by reference
+     * @param  int|null  $groupId  Set to the child's pid when it leads its own process group
      * @return resource The proc_open handle
      */
-    private function openProcess(Tool $tool, array &$pipes): mixed
+    private function openProcess(Tool $tool, array &$pipes, bool $ownProcessGroup = false, ?int &$groupId = null): mixed
     {
         $config = $tool->transport_config ?? [];
 
@@ -126,10 +152,27 @@ class McpStdioClient
             2 => ['pipe', 'w'],  // child stderr — captured, not forwarded
         ];
 
+        // A new session makes the child a process-group leader (pgid = pid), so
+        // killProcess() can signal its grandchildren too. setsid() fails only
+        // for a process that already leads a group, and the proc_open child never
+        // does (its fresh pid cannot equal a live pgid). So setsid(1) succeeds
+        // and execs in place, keeping the pid — util-linux and busybox alike;
+        // busybox's fork-and-retry fallback only runs when setsid() fails.
+        $setsid = $ownProcessGroup ? $this->setsidBinary() : null;
+        if ($setsid !== null) {
+            $fullCmd = array_merge([$setsid], $fullCmd);
+        }
+
         $process = proc_open($fullCmd, $descriptorspec, $pipes, $workdir, $env);
 
         if (! is_resource($process)) {
             throw new \RuntimeException("McpStdioClient: failed to open process for tool '{$tool->name}'.");
+        }
+
+        // Recorded now, not at teardown: by then the leader may have exited and
+        // been reaped, and its group can no longer be looked up by pid.
+        if ($setsid !== null && function_exists('posix_kill')) {
+            $groupId = proc_get_status($process)['pid'];
         }
 
         // Non-blocking reads so we can implement timeouts
@@ -170,6 +213,83 @@ class McpStdioClient
         }
     }
 
+    /**
+     * Bounded teardown for budgeted calls: never a blocking proc_close on a live
+     * process. SIGTERM the process group, wait up to KILL_GRACE_SECONDS for the
+     * leader, then SIGKILL the group. The group is signalled whether the leader
+     * is still running or has already exited and been reaped, so grandchildren
+     * that outlived the leader or ignore SIGTERM are killed too.
+     *
+     * Signalling -$groupId after the leader is gone is still safe: a process
+     * group id cannot be reused while any member of that group exists, so the
+     * signal only reaches members of the server's own group (or nobody).
+     *
+     * Without ext-posix or setsid(1) there is no group ($groupId is null); the
+     * child alone gets SIGTERM/SIGKILL via proc_terminate() and its own children
+     * may survive.
+     *
+     * @param  resource  $process
+     * @param  array<int, resource>  $pipes
+     * @param  int|null  $groupId  Pid of a child started via setsid(1), from openProcess()
+     */
+    private function killProcess(mixed $process, array $pipes, ?int $groupId): void
+    {
+        foreach ($pipes as $pipe) {
+            if (is_resource($pipe)) {
+                fclose($pipe);
+            }
+        }
+
+        if (! is_resource($process)) {
+            return;
+        }
+
+        $signal = function (int $sig) use ($process, $groupId): void {
+            if ($groupId !== null) {
+                posix_kill(-$groupId, $sig);
+            } elseif (proc_get_status($process)['running']) {
+                proc_terminate($process, $sig);
+            }
+        };
+
+        $signal(SIGTERM);
+
+        $graceEnd = microtime(true) + self::KILL_GRACE_SECONDS;
+        while (proc_get_status($process)['running'] && microtime(true) < $graceEnd) {
+            usleep(10_000);
+        }
+
+        $signal(SIGKILL);
+
+        // The leader is dead (or a zombie) by now, so this reaps without blocking.
+        proc_close($process);
+    }
+
+    private function setsidBinary(): ?string
+    {
+        foreach (['/usr/bin/setsid', '/bin/setsid', '/usr/local/bin/setsid'] as $path) {
+            if (is_executable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Seconds left until $deadline; throws once it has passed, so a slow
+     * handshake cannot buy the listing extra time.
+     */
+    private function remaining(float $deadline, int $budget): float
+    {
+        $left = $deadline - microtime(true);
+        if ($left <= 0) {
+            throw new \RuntimeException("McpStdioClient: discovery budget of {$budget}s exhausted.");
+        }
+
+        return $left;
+    }
+
     // -------------------------------------------------------------------------
     // MCP JSON-RPC protocol
     // -------------------------------------------------------------------------
@@ -179,7 +299,7 @@ class McpStdioClient
      *
      * @param  array<int, resource>  $pipes
      */
-    private function handshake(array $pipes): void
+    private function handshake(array $pipes, float $timeoutSeconds = 10): void
     {
         // Send initialize request
         $this->writeJsonRpc($pipes[0], [
@@ -194,7 +314,7 @@ class McpStdioClient
         ]);
 
         // Read initialize response (id=1)
-        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 1, timeoutSeconds: 10);
+        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 1, timeoutSeconds: $timeoutSeconds);
 
         if (isset($response['error'])) {
             throw new \RuntimeException('MCP initialize error: '.($response['error']['message'] ?? json_encode($response['error'])));
@@ -213,7 +333,7 @@ class McpStdioClient
      * @param  array<int, resource>  $pipes
      * @return array<int, array<string, mixed>>
      */
-    private function listTools(array $pipes): array
+    private function listTools(array $pipes, float $timeoutSeconds = 15): array
     {
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
@@ -222,7 +342,7 @@ class McpStdioClient
             'id' => 2,
         ]);
 
-        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 2, timeoutSeconds: 15);
+        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 2, timeoutSeconds: $timeoutSeconds);
 
         if (isset($response['error'])) {
             throw new \RuntimeException('MCP tools/list error: '.($response['error']['message'] ?? json_encode($response['error'])));
@@ -277,7 +397,7 @@ class McpStdioClient
      *
      * @throws \RuntimeException on timeout or unparseable response
      */
-    private function readJsonRpcResponse(mixed $stdout, int $expectedId, int $timeoutSeconds): array
+    private function readJsonRpcResponse(mixed $stdout, int $expectedId, float $timeoutSeconds): array
     {
         $deadline = microtime(true) + $timeoutSeconds;
         $buffer = '';
@@ -337,7 +457,7 @@ class McpStdioClient
             }
         }
 
-        throw new \RuntimeException("McpStdioClient: timed out waiting for JSON-RPC response (id={$expectedId}, timeout={$timeoutSeconds}s).");
+        throw new \RuntimeException("McpStdioClient: timed out waiting for JSON-RPC response (id={$expectedId}, timeout=".round($timeoutSeconds, 2).'s).');
     }
 
     /**

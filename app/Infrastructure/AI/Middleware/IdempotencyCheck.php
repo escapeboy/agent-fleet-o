@@ -9,6 +9,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use Closure;
+use Illuminate\Support\Str;
 
 class IdempotencyCheck implements AiMiddlewareInterface
 {
@@ -18,6 +19,15 @@ class IdempotencyCheck implements AiMiddlewareInterface
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
+        // A tool-using request must never replay a stored answer: the derived key
+        // ignores tools, and a replay returns the old final text with zero tool
+        // calls, so side effects silently never happen while the run reports done.
+        // Such calls still get a ledger row (cost/telemetry readers depend on it),
+        // under a per-call key. A caller-supplied key keeps its dedup semantics.
+        if ($request->hasTools() && $request->idempotencyKey === null) {
+            return $this->run($request, $this->createLog($request, $request->generateIdempotencyKey().':'.Str::uuid7()->toString()), $next);
+        }
+
         $idempotencyKey = $request->generateIdempotencyKey();
 
         // Check for existing record (withoutGlobalScopes for queue context)
@@ -55,21 +65,31 @@ class IdempotencyCheck implements AiMiddlewareInterface
             ]);
             $log = $existing;
         } else {
-            // Create pending log entry (withoutGlobalScopes for queue context)
-            $log = LlmRequestLog::withoutGlobalScopes()->create([
-                'team_id' => $request->teamId,
-                'user_id' => $request->userId,
-                'idempotency_key' => $idempotencyKey,
-                'agent_id' => $request->agentId,
-                'experiment_id' => $request->experimentId,
-                'experiment_stage_id' => $request->experimentStageId,
-                'provider' => $request->provider,
-                'model' => $request->model,
-                'prompt_hash' => hash('xxh128', $request->systemPrompt.$request->userPrompt),
-                'status' => 'pending',
-            ]);
+            $log = $this->createLog($request, $idempotencyKey);
         }
 
+        return $this->run($request, $log, $next);
+    }
+
+    private function createLog(AiRequestDTO $request, string $idempotencyKey): LlmRequestLog
+    {
+        // Create pending log entry (withoutGlobalScopes for queue context)
+        return LlmRequestLog::withoutGlobalScopes()->create([
+            'team_id' => $request->teamId,
+            'user_id' => $request->userId,
+            'idempotency_key' => $idempotencyKey,
+            'agent_id' => $request->agentId,
+            'experiment_id' => $request->experimentId,
+            'experiment_stage_id' => $request->experimentStageId,
+            'provider' => $request->provider,
+            'model' => $request->model,
+            'prompt_hash' => hash('xxh128', $request->systemPrompt.$request->userPrompt),
+            'status' => 'pending',
+        ]);
+    }
+
+    private function run(AiRequestDTO $request, LlmRequestLog $log, Closure $next): AiResponseDTO
+    {
         try {
             $response = $next($request);
 
