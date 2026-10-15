@@ -151,9 +151,8 @@ return [
                 'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
-            // Prompts over 100K tokens are $0.50/$2.50 (long_context below). No
-            // long-context cache rates are published, so cache reads and writes
-            // stay at the base rates on those calls.
+            // Prompts over 100K tokens pay every rate from long_context below. The
+            // prompt length counts uncached input, cache reads and cache writes.
             'claude-haiku-5-5' => [
                 'tier' => 'nano',
                 'input_usd_per_mtok' => 0.10,
@@ -161,9 +160,16 @@ return [
                 'cache_read_usd_per_mtok' => 0.01,
                 'cache_write_5m_usd_per_mtok' => 0.125,
                 'cache_write_1h_usd_per_mtok' => 0.20,
-                'long_context' => ['above_prompt_tokens' => 100_000, 'input_usd_per_mtok' => 0.50, 'output_usd_per_mtok' => 2.50],
+                'long_context' => [
+                    'above_prompt_tokens' => 100_000,
+                    'input_usd_per_mtok' => 0.50,
+                    'output_usd_per_mtok' => 2.50,
+                    'cache_read_usd_per_mtok' => 0.05,
+                    'cache_write_5m_usd_per_mtok' => 0.625,
+                    'cache_write_1h_usd_per_mtok' => 1.00,
+                ],
                 'context_window' => 1_000_000,
-                'last_verified_at' => '2026-10-06',
+                'last_verified_at' => '2026-10-15',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
             'claude-opus-4-7' => [

@@ -578,6 +578,7 @@ class PrismAiGateway implements AiGatewayInterface
                 outputTokens: $usage->completionTokens,
                 cachedInputTokens: $cachedInputTokens,
                 cacheStrategy: $cacheStrategy,
+                promptTokens: $breakdown->uncachedInputTokens + $breakdown->cacheReadInputTokens + $breakdown->cacheWriteInputTokens,
             ),
             cachedInputTokens: $cachedInputTokens,
             cacheStrategy: $cacheStrategy,
