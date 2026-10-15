@@ -4,6 +4,9 @@ namespace Tests\Unit\Infrastructure\AI;
 
 use App\Infrastructure\AI\Services\ContextCompactor;
 use App\Infrastructure\AI\Services\TokenEstimator;
+use Prism\Prism\Facades\Prism;
+use Prism\Prism\Testing\PrismFake;
+use Prism\Prism\Testing\TextResponseFake;
 use Tests\TestCase;
 
 class ContextCompactorTest extends TestCase
@@ -15,8 +18,17 @@ class ContextCompactorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The summarization stage calls Prism directly. Fake it so no test makes a
+        // live, billed call; with no queued response an unexpected call throws and
+        // the compactor skips the stage.
+        $this->fakeSummary(null);
         $this->estimator = new TokenEstimator;
         $this->compactor = new ContextCompactor($this->estimator);
+    }
+
+    private function fakeSummary(?string $summary): PrismFake
+    {
+        return Prism::fake($summary === null ? [] : [TextResponseFake::make()->withText($summary)]);
     }
 
     public function test_already_within_budget_returns_after_tool_compaction(): void
@@ -51,7 +63,9 @@ class ContextCompactorTest extends TestCase
             'context_compaction.emergency_threshold' => 0.92,
         ]);
 
-        // Set target so that after tool compaction + summarization it still needs window
+        // Summary still too long for the budget, so the window stage must run
+        $this->fakeSummary(str_repeat("Summary detail line with facts and decisions\n", 100));
+
         [$result, $stage] = $this->compactor->compact(
             systemPrompt: 'System',
             userPrompt: $longPrompt,
@@ -72,6 +86,7 @@ class ContextCompactorTest extends TestCase
     {
         // Very large prompt
         $hugePrompt = str_repeat("User: Hello world this is a test\nAssistant: Thank you for the test\n", 5000);
+        $this->fakeSummary(str_repeat("Summary detail line\n", 2000));
 
         config([
             'context_compaction.window_threshold' => 0.85,
@@ -92,6 +107,30 @@ class ContextCompactorTest extends TestCase
         $this->assertStringContainsString('Emergency', $result);
         // Should be substantially shorter
         $this->assertLessThan(mb_strlen($hugePrompt) / 2, mb_strlen($result));
+    }
+
+    public function test_summarization_stage_uses_summary_when_it_fits(): void
+    {
+        $lines = [];
+        for ($i = 0; $i < 200; $i++) {
+            $lines[] = "User: Message number {$i} with some content to make it longer";
+        }
+        $fake = $this->fakeSummary('Short summary of the older conversation.');
+
+        [$result, $stage] = $this->compactor->compact(
+            systemPrompt: 'System',
+            userPrompt: implode("\n", $lines),
+            targetTokens: 1000,
+            utilization: 0.75,
+            summarizationModel: 'anthropic/claude-haiku-4-5',
+            summarizationMaxTokens: 2000,
+            minPreservedLines: 4,
+        );
+
+        $fake->assertCallCount(1);
+        $this->assertSame(ContextCompactor::STAGE_SUMMARIZATION, $stage);
+        $this->assertStringContainsString('Short summary of the older conversation.', $result);
+        $this->assertStringContainsString('Message number 199', $result);
     }
 
     public function test_tool_output_compaction_collapses_old_results(): void
