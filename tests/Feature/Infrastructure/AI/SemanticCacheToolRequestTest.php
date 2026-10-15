@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Mockery;
+use Mockery\MockInterface;
 use Prism\Prism\Facades\Tool as PrismTool;
 use Tests\TestCase;
 
@@ -45,6 +46,7 @@ class SemanticCacheToolRequestTest extends TestCase
 
     private function middleware(): SemanticCache
     {
+        /** @var EmbeddingService&MockInterface $embeddings */
         $embeddings = Mockery::mock(EmbeddingService::class);
         $embeddings->shouldReceive('identifier')->andReturn('test:embedding');
         $embeddings->shouldReceive('embed')->andReturnUsing(function () {

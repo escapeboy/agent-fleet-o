@@ -4,6 +4,7 @@ namespace App\Domain\Tool\Services;
 
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -18,6 +19,13 @@ use Illuminate\Support\Facades\Log;
  *
  * Changes go through ToolDefinitionPinner, so definition pinning still holds
  * an unapproved change. A failed listing keeps the stored definitions.
+ *
+ * Cost bound: at most one listing attempt per tool per min_interval window,
+ * and each attempt has its own short timeout. The window is a cache key, not
+ * last_health_check: tools:health-check also writes that column without
+ * listing anything, and a failed attempt never writes it, so a hanging server
+ * would be retried on every run. Cache::add is atomic, so concurrent runs of
+ * the same tool do not all list at once.
  */
 class McpToolDefinitionRefresher
 {
@@ -42,10 +50,19 @@ class McpToolDefinitionRefresher
             return;
         }
 
+        // The window starts at the attempt, not at success: a server that fails
+        // or hangs costs one timeout per window, not one per run.
+        $interval = (int) config('tools.refresh_definitions_min_interval', 300);
+        if ($interval > 0 && ! Cache::add(self::windowKey($target), now()->getTimestamp(), $interval)) {
+            return;
+        }
+
+        $timeout = max(1, (int) config('tools.refresh_definitions_timeout', 5));
+
         try {
             $definitions = match ($source->type) {
-                ToolType::McpHttp => $this->listHttpTools($source),
-                ToolType::McpStdio => $this->stdioClient->discover($source),
+                ToolType::McpHttp => $this->listHttpTools($source, $timeout),
+                ToolType::McpStdio => $this->stdioClient->discover($source, $timeout),
             };
         } catch (\Throwable $e) {
             Log::warning('MCP tool definitions refresh failed; using stored definitions', [
@@ -66,10 +83,15 @@ class McpToolDefinitionRefresher
         $target->update(['health_status' => 'healthy', 'last_health_check' => now()]);
     }
 
+    public static function windowKey(Tool $tool): string
+    {
+        return "mcp_definitions_refreshed:{$tool->id}";
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function listHttpTools(Tool $tool): array
+    private function listHttpTools(Tool $tool, int $timeout): array
     {
         $config = $tool->transport_config ?? [];
         $url = $config['url'] ?? null;
@@ -83,6 +105,6 @@ class McpToolDefinitionRefresher
             $headers['Authorization'] = $authHeader;
         }
 
-        return $this->httpClient->listTools($url, $headers);
+        return $this->httpClient->listTools($url, $headers, (float) $timeout);
     }
 }

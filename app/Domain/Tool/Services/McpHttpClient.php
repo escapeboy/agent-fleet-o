@@ -48,14 +48,16 @@ class McpHttpClient
      * List all tools exposed by a remote MCP server.
      *
      * @param  array<string, string>  $headers
+     * @param  float|null  $timeoutSeconds  Total budget for the whole listing, both transports included (null = per-request defaults)
      * @return array<int, array<string, mixed>> Array of tool definitions
      */
-    public function listTools(string $serverUrl, array $headers = []): array
+    public function listTools(string $serverUrl, array $headers = [], ?float $timeoutSeconds = null): array
     {
         $serverUrl = rtrim($serverUrl, '/');
+        $deadline = $timeoutSeconds !== null ? microtime(true) + $timeoutSeconds : null;
 
         try {
-            return $this->listToolsStreamableHttp($serverUrl, $headers);
+            return $this->listToolsStreamableHttp($serverUrl, $headers, $deadline);
         } catch (\Throwable $e) {
             Log::debug('McpHttpClient: listTools via Streamable HTTP failed, trying SSE', [
                 'url' => $serverUrl,
@@ -63,7 +65,24 @@ class McpHttpClient
             ]);
         }
 
-        return $this->listToolsSseTransport($serverUrl, $headers);
+        return $this->listToolsSseTransport($serverUrl, $headers, $deadline);
+    }
+
+    /**
+     * Seconds a request may take: the default, capped by what is left before the deadline.
+     */
+    private function budget(?float $deadline, float $default): float
+    {
+        if ($deadline === null) {
+            return $default;
+        }
+
+        $left = $deadline - microtime(true);
+        if ($left <= 0) {
+            throw new \RuntimeException('McpHttpClient: listing deadline exceeded');
+        }
+
+        return min($default, $left);
     }
 
     // -------------------------------------------------------------------------
@@ -77,15 +96,15 @@ class McpHttpClient
      *
      * @param  array<string, string>  $headers
      */
-    private function initializeStreamableHttp(string $url, array $headers): ?string
+    private function initializeStreamableHttp(string $url, array $headers, ?float $deadline = null): ?string
     {
         $response = Http::withHeaders(array_merge([
             'Accept' => 'application/json, text/event-stream',
             'Content-Type' => 'application/json',
             'Connection' => 'close',
         ], $headers))
-            ->timeout(self::TIMEOUT)
-            ->connectTimeout(self::CONNECT_TIMEOUT)
+            ->timeout($this->budget($deadline, self::TIMEOUT))
+            ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'initialize',
@@ -136,9 +155,9 @@ class McpHttpClient
         return $this->extractToolResult($this->parseMcpBody($response->body()));
     }
 
-    private function listToolsStreamableHttp(string $url, array $headers): array
+    private function listToolsStreamableHttp(string $url, array $headers, ?float $deadline = null): array
     {
-        $sessionId = $this->initializeStreamableHttp($url, $headers);
+        $sessionId = $this->initializeStreamableHttp($url, $headers, $deadline);
 
         $requestHeaders = array_merge([
             'Accept' => 'application/json, text/event-stream',
@@ -151,8 +170,8 @@ class McpHttpClient
         }
 
         $response = Http::withHeaders($requestHeaders)
-            ->timeout(self::TIMEOUT)
-            ->connectTimeout(self::CONNECT_TIMEOUT)
+            ->timeout($this->budget($deadline, self::TIMEOUT))
+            ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
             ->post("{$url}/mcp", [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',
@@ -230,14 +249,14 @@ class McpHttpClient
         throw new \RuntimeException('MCP SSE: result not in POST response; async SSE polling not supported.');
     }
 
-    private function listToolsSseTransport(string $url, array $headers): array
+    private function listToolsSseTransport(string $url, array $headers, ?float $deadline = null): array
     {
-        $sessionUrl = $this->initSseSession($url, $headers);
+        $sessionUrl = $this->initSseSession($url, $headers, $deadline);
 
         $response = Http::withHeaders(array_merge([
             'Content-Type' => 'application/json',
         ], $headers))
-            ->timeout(self::TIMEOUT)
+            ->timeout($this->budget($deadline, self::TIMEOUT))
             ->post($sessionUrl, [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',
@@ -255,10 +274,10 @@ class McpHttpClient
     /**
      * Connect to SSE endpoint, read the first 'endpoint' event, return absolute session URL.
      */
-    private function initSseSession(string $serverUrl, array $headers): string
+    private function initSseSession(string $serverUrl, array $headers, ?float $deadline = null): string
     {
         $response = Http::withHeaders(array_merge(['Accept' => 'text/event-stream'], $headers))
-            ->timeout(self::SSE_CONNECT_TIMEOUT)
+            ->timeout($this->budget($deadline, self::SSE_CONNECT_TIMEOUT))
             ->withOptions(['stream' => true])
             ->get("{$serverUrl}/sse");
 

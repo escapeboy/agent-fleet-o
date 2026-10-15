@@ -166,7 +166,11 @@ class ResolveAgentToolsAction
         $tools = $this->filterAgentTools($tools, $agent, $project, $allowedToolIds);
         $tools = $this->applyWatcherFilter($tools, $project);
 
-        $prismTools = $this->translateToPrismTools($tools, $agent, $workspace, null, $context);
+        // No definition refresh here: the person approved a call made against the
+        // stored definitions, and a re-list could change that tool's schema
+        // between approval and execution. It would also put an MCP round trip
+        // on the approval click.
+        $prismTools = $this->translateToPrismTools($tools, $agent, $workspace, null, $context, refreshDefinitions: false);
 
         return ToolErrorGuard::apply($this->applyToolProfile($prismTools, $agent));
     }
@@ -357,7 +361,7 @@ class ResolveAgentToolsAction
     /**
      * @param  array<string, mixed>  $replayContext
      */
-    private function translateToPrismTools(Collection $agentTools, Agent $agent, ?SandboxedWorkspace $workspace, ?ToolProgramContext $programContext = null, array $replayContext = []): array
+    private function translateToPrismTools(Collection $agentTools, Agent $agent, ?SandboxedWorkspace $workspace, ?ToolProgramContext $programContext = null, array $replayContext = [], bool $refreshDefinitions = true): array
     {
         // Read org-level command security policy from GlobalSettings
         $orgPolicy = GlobalSetting::get('org_security_policy', []) ?: null;
@@ -383,8 +387,12 @@ class ResolveAgentToolsAction
 
             // List from the credential-injected clone, persist on the real row.
             // Platform tools are one row shared by every team; listing them with
-            // one team's credentials must not rewrite what other teams get.
-            if (McpToolDefinitionRefresher::supports($tool) && ! $tool->isPlatformTool()) {
+            // one team's credentials must not rewrite what other teams get. The
+            // team check also covers any other row this agent does not own.
+            if ($refreshDefinitions
+                && McpToolDefinitionRefresher::supports($tool)
+                && ! $tool->isPlatformTool()
+                && $tool->team_id === $agent->team_id) {
                 $this->definitionRefresher->refresh($prepared, $tool);
                 $prepared->tool_definitions = $tool->tool_definitions;
             }

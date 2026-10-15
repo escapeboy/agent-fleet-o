@@ -52,8 +52,16 @@ return [
     | its tools (McpToolDefinitionRefresher), so a changed server tool set is
     | picked up by the next run, not only by tools:refresh-definitions.
     |
+    | min_interval: seconds between listing attempts per tool (0 = every run).
+    | timeout: total seconds one listing may take before the run falls back
+    | to the stored definitions.
+    |
     */
 
     'refresh_definitions_on_execution' => (bool) env('MCP_REFRESH_DEFINITIONS_ON_EXECUTION', true),
+
+    'refresh_definitions_min_interval' => (int) env('MCP_REFRESH_DEFINITIONS_MIN_INTERVAL', 300),
+
+    'refresh_definitions_timeout' => (int) env('MCP_REFRESH_DEFINITIONS_TIMEOUT', 5),
 
 ];

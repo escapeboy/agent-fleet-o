@@ -40,19 +40,21 @@ class McpStdioClient
     /**
      * Discover tools exposed by an mcp_stdio Tool's binary.
      *
+     * @param  int|null  $timeoutSeconds  Total budget for handshake + tools/list (null = per-step defaults)
      * @return array<int, array<string, mixed>> Array of tool definitions (name, description, inputSchema)
      *
      * @throws \RuntimeException on process failure, timeout, or protocol error
      */
-    public function discover(Tool $tool): array
+    public function discover(Tool $tool, ?int $timeoutSeconds = null): array
     {
+        $deadline = $timeoutSeconds !== null ? microtime(true) + $timeoutSeconds : null;
         $pipes = [];
         $process = $this->openProcess($tool, $pipes);
 
         try {
-            $this->handshake($pipes);
+            $this->handshake($pipes, $timeoutSeconds ?? 10);
 
-            $tools = $this->listTools($pipes);
+            $tools = $this->listTools($pipes, $deadline !== null ? max(1, (int) ceil($deadline - microtime(true))) : 15);
         } finally {
             $this->closeProcess($process, $pipes);
         }
@@ -179,7 +181,7 @@ class McpStdioClient
      *
      * @param  array<int, resource>  $pipes
      */
-    private function handshake(array $pipes): void
+    private function handshake(array $pipes, int $timeoutSeconds = 10): void
     {
         // Send initialize request
         $this->writeJsonRpc($pipes[0], [
@@ -194,7 +196,7 @@ class McpStdioClient
         ]);
 
         // Read initialize response (id=1)
-        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 1, timeoutSeconds: 10);
+        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 1, timeoutSeconds: $timeoutSeconds);
 
         if (isset($response['error'])) {
             throw new \RuntimeException('MCP initialize error: '.($response['error']['message'] ?? json_encode($response['error'])));
@@ -213,7 +215,7 @@ class McpStdioClient
      * @param  array<int, resource>  $pipes
      * @return array<int, array<string, mixed>>
      */
-    private function listTools(array $pipes): array
+    private function listTools(array $pipes, int $timeoutSeconds = 15): array
     {
         $this->writeJsonRpc($pipes[0], [
             'jsonrpc' => '2.0',
@@ -222,7 +224,7 @@ class McpStdioClient
             'id' => 2,
         ]);
 
-        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 2, timeoutSeconds: 15);
+        $response = $this->readJsonRpcResponse($pipes[1], expectedId: 2, timeoutSeconds: $timeoutSeconds);
 
         if (isset($response['error'])) {
             throw new \RuntimeException('MCP tools/list error: '.($response['error']['message'] ?? json_encode($response['error'])));
