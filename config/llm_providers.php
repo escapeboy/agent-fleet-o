@@ -17,7 +17,7 @@ return [
             'claude-sonnet-4-6' => ['label' => 'Claude Sonnet 4.6', 'input_cost' => 3, 'output_cost' => 15],
             'claude-sonnet-4-5' => ['label' => 'Claude Sonnet 4.5', 'input_cost' => 3, 'output_cost' => 15],
             'claude-haiku-4-5' => ['label' => 'Claude Haiku 4.5', 'input_cost' => 1, 'output_cost' => 5],
-            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 15, 'output_cost' => 75],
+            'claude-opus-4-6' => ['label' => 'Claude Opus 4.6', 'input_cost' => 5, 'output_cost' => 25],
         ],
     ],
     'openai' => [

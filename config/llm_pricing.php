@@ -85,6 +85,78 @@ return [
     'providers' => [
 
         'anthropic' => [
+            // Rates from the claude-api skill model table (cached 2026-10-06). Cache
+            // reads 0.1x input except Fable 5.1 ($0.25) and Opus 5.5 ($0.20); cache
+            // writes 1.25x (5m) / 2x (1h) input. Every catalog model in
+            // llm_providers.anthropic needs a row here or the call is billed at $0.
+            'claude-fable-5-1' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 10.00,
+                'output_usd_per_mtok' => 50.00,
+                'cache_read_usd_per_mtok' => 0.25,
+                'cache_write_5m_usd_per_mtok' => 12.50,
+                'cache_write_1h_usd_per_mtok' => 20.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-opus-5-5' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 4.00,
+                'output_usd_per_mtok' => 20.00,
+                'cache_read_usd_per_mtok' => 0.20,
+                'cache_write_5m_usd_per_mtok' => 5.00,
+                'cache_write_1h_usd_per_mtok' => 8.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-opus-4-8' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 25.00,
+                'cache_read_usd_per_mtok' => 0.50,
+                'cache_write_5m_usd_per_mtok' => 6.25,
+                'cache_write_1h_usd_per_mtok' => 10.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-sonnet-5-5' => [
+                'tier' => 'default',
+                'input_usd_per_mtok' => 2.00,
+                'output_usd_per_mtok' => 10.00,
+                'cache_read_usd_per_mtok' => 0.20,
+                'cache_write_5m_usd_per_mtok' => 2.50,
+                'cache_write_1h_usd_per_mtok' => 4.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-sonnet-5' => [
+                'tier' => 'default',
+                'input_usd_per_mtok' => 2.00,
+                'output_usd_per_mtok' => 10.00,
+                'cache_read_usd_per_mtok' => 0.20,
+                'cache_write_5m_usd_per_mtok' => 2.50,
+                'cache_write_1h_usd_per_mtok' => 4.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            // Prompts over 100K tokens are $0.50/$2.50; this schema has no tiers,
+            // so those calls are billed at the base rate below.
+            'claude-haiku-5-5' => [
+                'tier' => 'nano',
+                'input_usd_per_mtok' => 0.10,
+                'output_usd_per_mtok' => 0.50,
+                'cache_read_usd_per_mtok' => 0.01,
+                'cache_write_5m_usd_per_mtok' => 0.125,
+                'cache_write_1h_usd_per_mtok' => 0.20,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
             'claude-opus-4-7' => [
                 'tier' => 'heavy',
                 'input_usd_per_mtok' => 5.00,
@@ -98,13 +170,13 @@ return [
             ],
             'claude-opus-4-6' => [
                 'tier' => 'heavy',
-                'input_usd_per_mtok' => 15.00,
-                'output_usd_per_mtok' => 75.00,
-                'cache_read_usd_per_mtok' => 1.50,
-                'cache_write_5m_usd_per_mtok' => 18.75,
-                'cache_write_1h_usd_per_mtok' => 30.00,
+                'input_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 25.00,
+                'cache_read_usd_per_mtok' => 0.50,
+                'cache_write_5m_usd_per_mtok' => 6.25,
+                'cache_write_1h_usd_per_mtok' => 10.00,
                 'context_window' => 200_000,
-                'last_verified_at' => '2026-05-04',
+                'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
             'claude-sonnet-4-6' => [
