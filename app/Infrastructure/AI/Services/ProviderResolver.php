@@ -156,6 +156,14 @@ class ProviderResolver
             return $resolved;
         }
 
+        // A dated snapshot of a catalog model (claude-haiku-4-5-20251001 for
+        // claude-haiku-4-5) is served by the provider and priced in llm_pricing,
+        // so the exact id is kept instead of being swapped.
+        $undated = preg_replace('/-\d{8}$/', '', $resolved['model']);
+        if ($undated !== $resolved['model'] && isset($catalog[$undated])) {
+            return $resolved;
+        }
+
         // The model does not belong to this provider. Prefer a model the team can
         // actually use, then fall back to the provider's first catalog model.
         $replacement = null;
