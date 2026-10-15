@@ -116,6 +116,14 @@ class ContextHealthService
 
     private function resolveContextWindow(string $model): int
     {
+        // The per-model pricing row is the source of truth. Array access, not dot
+        // notation: ids such as gemini-2.5-pro contain dots.
+        foreach (config('llm_pricing.providers', []) as $rows) {
+            if (isset($rows[$model]['context_window'])) {
+                return (int) $rows[$model]['context_window'];
+            }
+        }
+
         $windows = config('llm_pricing.context_windows', []);
 
         // Try exact match, then prefix match (e.g. 'claude-sonnet-4-5' matches 'claude-sonnet-4-5-20250929')
