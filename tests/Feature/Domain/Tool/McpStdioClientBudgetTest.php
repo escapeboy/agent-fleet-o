@@ -74,6 +74,16 @@ class McpStdioClientBudgetTest extends TestCase
         $this->assertProcessGone($this->readPid($pidFile));
     }
 
+    public function test_grandchild_of_a_server_that_already_exited_does_not_survive(): void
+    {
+        $pidFile = $this->dir.'/grandchild.pid';
+        $script = $this->fixture('orphan.sh', "sleep 21 &\necho \$! > \"\$1\"\nexit 0\n");
+
+        $this->discoverExpectingFailure('/bin/sh', [$script, $pidFile], 1);
+
+        $this->assertProcessGone($this->readPid($pidFile));
+    }
+
     public function test_responsive_server_still_lists_under_a_budget(): void
     {
         $server = $this->fixture('server.php', <<<'PHP'

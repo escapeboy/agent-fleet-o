@@ -71,14 +71,15 @@ class McpStdioClient
 
         $deadline = microtime(true) + $timeoutSeconds;
         $pipes = [];
-        $process = $this->openProcess($tool, $pipes, ownProcessGroup: true);
+        $groupId = null;
+        $process = $this->openProcess($tool, $pipes, ownProcessGroup: true, groupId: $groupId);
 
         try {
             $this->handshake($pipes, $this->remaining($deadline, $timeoutSeconds));
 
             $tools = $this->listTools($pipes, $this->remaining($deadline, $timeoutSeconds));
         } finally {
-            $this->killProcess($process, $pipes);
+            $this->killProcess($process, $pipes, $groupId);
         }
 
         return $tools;
@@ -116,9 +117,10 @@ class McpStdioClient
      * Open the child process with three pipes: stdin (write), stdout (read), stderr (read).
      *
      * @param  array<int, resource>  $pipes  Populated by reference
+     * @param  int|null  $groupId  Set to the child's pid when it leads its own process group
      * @return resource The proc_open handle
      */
-    private function openProcess(Tool $tool, array &$pipes, bool $ownProcessGroup = false): mixed
+    private function openProcess(Tool $tool, array &$pipes, bool $ownProcessGroup = false, ?int &$groupId = null): mixed
     {
         $config = $tool->transport_config ?? [];
 
@@ -151,9 +153,13 @@ class McpStdioClient
         ];
 
         // A new session makes the child a process-group leader (pgid = pid), so
-        // killProcess() can signal its grandchildren too. setsid(1) execs in
-        // place (the proc_open child is never a group leader), keeping the pid.
-        if ($ownProcessGroup && ($setsid = $this->setsidBinary()) !== null) {
+        // killProcess() can signal its grandchildren too. setsid() fails only
+        // for a process that already leads a group, and the proc_open child never
+        // does (its fresh pid cannot equal a live pgid). So setsid(1) succeeds
+        // and execs in place, keeping the pid — util-linux and busybox alike;
+        // busybox's fork-and-retry fallback only runs when setsid() fails.
+        $setsid = $ownProcessGroup ? $this->setsidBinary() : null;
+        if ($setsid !== null) {
             $fullCmd = array_merge([$setsid], $fullCmd);
         }
 
@@ -161,6 +167,12 @@ class McpStdioClient
 
         if (! is_resource($process)) {
             throw new \RuntimeException("McpStdioClient: failed to open process for tool '{$tool->name}'.");
+        }
+
+        // Recorded now, not at teardown: by then the leader may have exited and
+        // been reaped, and its group can no longer be looked up by pid.
+        if ($setsid !== null && function_exists('posix_kill')) {
+            $groupId = proc_get_status($process)['pid'];
         }
 
         // Non-blocking reads so we can implement timeouts
@@ -203,17 +215,24 @@ class McpStdioClient
 
     /**
      * Bounded teardown for budgeted calls: never a blocking proc_close on a live
-     * process. SIGTERM the process group, wait up to KILL_GRACE_SECONDS, then
-     * SIGKILL the group (also reaches grandchildren that outlived the leader or
-     * inherited an ignored SIGTERM).
+     * process. SIGTERM the process group, wait up to KILL_GRACE_SECONDS for the
+     * leader, then SIGKILL the group. The group is signalled whether the leader
+     * is still running or has already exited and been reaped, so grandchildren
+     * that outlived the leader or ignore SIGTERM are killed too.
      *
-     * Without ext-posix or setsid(1) the group is not available; the child alone
-     * gets SIGTERM/SIGKILL via proc_terminate() and its own children may survive.
+     * Signalling -$groupId after the leader is gone is still safe: a process
+     * group id cannot be reused while any member of that group exists, so the
+     * signal only reaches members of the server's own group (or nobody).
+     *
+     * Without ext-posix or setsid(1) there is no group ($groupId is null); the
+     * child alone gets SIGTERM/SIGKILL via proc_terminate() and its own children
+     * may survive.
      *
      * @param  resource  $process
      * @param  array<int, resource>  $pipes
+     * @param  int|null  $groupId  Pid of a child started via setsid(1), from openProcess()
      */
-    private function killProcess(mixed $process, array $pipes): void
+    private function killProcess(mixed $process, array $pipes, ?int $groupId): void
     {
         foreach ($pipes as $pipe) {
             if (is_resource($pipe)) {
@@ -225,13 +244,9 @@ class McpStdioClient
             return;
         }
 
-        $pid = proc_get_status($process)['pid'];
-        $group = $pid > 0 && function_exists('posix_kill') && function_exists('posix_getpgid')
-            && posix_getpgid($pid) === $pid;
-
-        $signal = function (int $sig) use ($process, $pid, $group): void {
-            if ($group) {
-                posix_kill(-$pid, $sig);
+        $signal = function (int $sig) use ($process, $groupId): void {
+            if ($groupId !== null) {
+                posix_kill(-$groupId, $sig);
             } elseif (proc_get_status($process)['running']) {
                 proc_terminate($process, $sig);
             }
