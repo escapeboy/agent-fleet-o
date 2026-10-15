@@ -256,9 +256,12 @@ class CostCalculator
 
         // Accurate mode (UsageNormalizer breakdown): the buckets do not overlap.
         // $inputTokens is uncached input only, $cachedInputTokens are cache reads,
-        // cache writes are priced at the full write rate (falls back to input).
+        // cache writes are priced at the write rate for the requested TTL (5m unless
+        // the caller says the cache_control asked for 1h; falls back to input).
         if ($cacheWriteInputTokens !== null) {
-            $cacheWriteRate = (float) ($pricing['cache_write_5m_usd_per_mtok'] ?? $inputRate);
+            $cacheWriteRate = $cacheStrategy === self::CACHE_STRATEGY_1H
+                ? (float) ($pricing['cache_write_1h_usd_per_mtok'] ?? $pricing['cache_write_5m_usd_per_mtok'] ?? $inputRate)
+                : (float) ($pricing['cache_write_5m_usd_per_mtok'] ?? $inputRate);
 
             return (max(0, $inputTokens) / 1_000_000.0) * $inputRate
                 + (max(0, $cachedInputTokens) / 1_000_000.0) * $cacheReadRate
