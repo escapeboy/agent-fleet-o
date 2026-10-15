@@ -23,15 +23,15 @@ return [
     'openai' => [
         'name' => 'OpenAI',
         'models' => [
-            'gpt-4o' => ['label' => 'GPT-4o', 'input_cost' => 5, 'output_cost' => 15],
+            'gpt-4o' => ['label' => 'GPT-4o', 'input_cost' => 2.50, 'output_cost' => 10],
             'gpt-4o-mini' => ['label' => 'GPT-4o Mini', 'input_cost' => 0.15, 'output_cost' => 0.60],
         ],
     ],
     'google' => [
         'name' => 'Google',
         'models' => [
-            'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_cost' => 0.5, 'output_cost' => 1.5],
-            'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 7, 'output_cost' => 21],
+            'gemini-2.5-flash' => ['label' => 'Gemini 2.5 Flash', 'input_cost' => 0.30, 'output_cost' => 2.50],
+            'gemini-2.5-pro' => ['label' => 'Gemini 2.5 Pro', 'input_cost' => 1.25, 'output_cost' => 10],
         ],
     ],
     'groq' => [

@@ -293,10 +293,11 @@ return [
             ],
             'gemini-2.5-pro' => [
                 'tier' => 'default',
+            // Prompts <= 200K tokens; above that Google charges $2.50 / $15.00.
                 'input_usd_per_mtok' => 1.25,
-                'output_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 10.00,
                 'context_window' => 1_048_576,
-                'last_verified_at' => '2026-05-04',
+                'last_verified_at' => '2026-10-15',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
         ],
