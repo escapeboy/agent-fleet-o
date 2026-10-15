@@ -85,9 +85,10 @@ return [
     'providers' => [
 
         'anthropic' => [
-            // Rates from the claude-api skill model table (cached 2026-10-06). Cache
-            // reads 0.1x input except Fable 5.1 ($0.25) and Opus 5.5 ($0.20); cache
-            // writes 1.25x (5m) / 2x (1h) input. Every catalog model in
+            // Rates from the claude-api skill model table (cached 2026-10-06), checked
+            // against the Anthropic pricing page on 2026-10-15. Cache reads 0.1x input
+            // except Fable 5.1 ($0.25) and Opus 5.5 / Sonnet 5.5 (0.05x: $0.20 / $0.10);
+            // cache writes 1.25x (5m) / 2x (1h) input. Every catalog model in
             // llm_providers.anthropic needs a row here or the call is billed at $0.
             'claude-fable-5-1' => [
                 'tier' => 'heavy',
@@ -126,7 +127,7 @@ return [
                 'tier' => 'default',
                 'input_usd_per_mtok' => 2.00,
                 'output_usd_per_mtok' => 10.00,
-                'cache_read_usd_per_mtok' => 0.20,
+                'cache_read_usd_per_mtok' => 0.10,
                 'cache_write_5m_usd_per_mtok' => 2.50,
                 'cache_write_1h_usd_per_mtok' => 4.00,
                 'context_window' => 1_000_000,
