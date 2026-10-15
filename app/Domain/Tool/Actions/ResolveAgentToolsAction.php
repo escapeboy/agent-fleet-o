@@ -20,6 +20,7 @@ use App\Domain\Tool\Enums\ToolStatus;
 use App\Domain\Tool\Models\TeamToolActivation;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
+use App\Domain\Tool\Services\McpToolDefinitionRefresher;
 use App\Domain\Tool\Services\SemanticToolSelector;
 use App\Domain\Tool\Services\ToolApprovalGate;
 use App\Domain\Tool\Services\ToolErrorGuard;
@@ -48,6 +49,7 @@ class ResolveAgentToolsAction
         private readonly ToolRagSelector $toolRagSelector,
         private readonly ResolveProjectCredentialsAction $resolveCredentials,
         private readonly ToolFederationResolver $federationResolver,
+        private readonly McpToolDefinitionRefresher $definitionRefresher,
     ) {}
 
     public function execute(Agent $agent, ?Project $project = null, ?string $executionId = null, ?string $sidecarSessionId = null, int $agentToolDepth = 0, ?string $userId = null, ?string $semanticQuery = null, ?array $allowedToolIds = null): array
@@ -377,6 +379,14 @@ class ResolveAgentToolsAction
             $prepared = $this->prepareToolForTranslation($tool, $agent, $activations);
             if ($prepared === null) {
                 continue; // platform tool deactivated for this team
+            }
+
+            // List from the credential-injected clone, persist on the real row.
+            // Platform tools are one row shared by every team; listing them with
+            // one team's credentials must not rewrite what other teams get.
+            if (McpToolDefinitionRefresher::supports($tool) && ! $tool->isPlatformTool()) {
+                $this->definitionRefresher->refresh($prepared, $tool);
+                $prepared->tool_definitions = $tool->tool_definitions;
             }
 
             $translated = $this->translator->toPrismTools($prepared, $overrides, $orgPolicy, $workspace, $agent, $programContext);

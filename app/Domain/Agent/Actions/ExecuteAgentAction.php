@@ -1003,9 +1003,11 @@ class ExecuteAgentAction
             $reservedSteps = $maxSteps - $targetStep;
             $parts[] = implode("\n", [
                 '## Execution Budget',
-                "You have a maximum of {$maxSteps} tool calls for this task.",
-                "Plan to complete your core work by tool call {$targetStep}.",
-                "Reserve the final {$reservedSteps} call(s) for summarising and delivering your result.",
+                "You have a maximum of {$maxSteps} steps for this task. A step is one of your responses (one LLM turn), and your final answer also uses a step.",
+                'The limit counts steps, not tool calls: you can make several tool calls in a single step, and they all run before your next step.',
+                'When calls do not depend on each other\'s results (for example a list of independent payments), make them together in the same step.',
+                "Plan to complete your core work by step {$targetStep}.",
+                "Reserve the final {$reservedSteps} step(s) for summarising and delivering your result.",
                 'If you approach the limit with work still remaining: prioritise the most important items,',
                 'then deliver a partial result with clear notes on what was not completed.',
             ]);

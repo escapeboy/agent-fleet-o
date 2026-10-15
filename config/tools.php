@@ -43,4 +43,17 @@ return [
         'proposal_ttl_days' => (int) env('MCP_DEFINITION_PROPOSAL_TTL_DAYS', 7),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Refresh MCP Definitions Per Execution
+    |--------------------------------------------------------------------------
+    |
+    | Re-list mcp_http / mcp_stdio tools each time an agent execution resolves
+    | its tools (McpToolDefinitionRefresher), so a changed server tool set is
+    | picked up by the next run, not only by tools:refresh-definitions.
+    |
+    */
+
+    'refresh_definitions_on_execution' => (bool) env('MCP_REFRESH_DEFINITIONS_ON_EXECUTION', true),
+
 ];
