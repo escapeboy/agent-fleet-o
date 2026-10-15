@@ -13,7 +13,9 @@ use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\McpHttpClient;
 use App\Models\User;
+use Illuminate\Cache\ArrayStore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -291,6 +293,27 @@ class McpToolDefinitionRefreshOnExecutionTest extends TestCase
 
         $this->assertSame([], $this->listedUrls);
         $this->assertSame(['transfer'], $names);
+    }
+
+    public function test_cache_outage_skips_the_refresh_and_keeps_stored_definitions(): void
+    {
+        $this->servers([self::BANK_URL => [$this->def('transfer'), $this->def('refund')]]);
+        Cache::extend('down', fn () => Cache::repository(new class extends ArrayStore
+        {
+            public function add($key, $value, $seconds)
+            {
+                throw new RuntimeException('cache unavailable');
+            }
+        }));
+        config(['cache.stores.down' => ['driver' => 'down'], 'cache.default' => 'down']);
+        Log::spy();
+
+        $names = $this->resolvedNames();
+
+        $this->assertSame(['transfer'], $names);
+        $this->assertSame([], $this->listedUrls, 'without the window the server is not listed');
+        $this->assertSame(['transfer'], array_column($this->tool->fresh()->tool_definitions, 'name'));
+        Log::shouldHaveReceived('warning')->withArgs(fn (string $message) => str_contains($message, 'refresh failed'));
     }
 
     public function test_hanging_server_falls_back_to_stored_definitions_within_the_timeout(): void

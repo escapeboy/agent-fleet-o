@@ -53,13 +53,17 @@ class McpToolDefinitionRefresher
         // The window starts at the attempt, not at success: a server that fails
         // or hangs costs one timeout per window, not one per run.
         $interval = (int) config('tools.refresh_definitions_min_interval', 300);
-        if ($interval > 0 && ! Cache::add(self::windowKey($target), now()->getTimestamp(), $interval)) {
-            return;
-        }
 
         $timeout = max(1, (int) config('tools.refresh_definitions_timeout', 5));
 
         try {
+            // A cache outage skips the refresh rather than listing anyway: without
+            // the window a hanging server would cost a timeout on every run. The
+            // stored definitions stay, and tools:refresh-definitions still runs.
+            if ($interval > 0 && ! Cache::add(self::windowKey($target), now()->getTimestamp(), $interval)) {
+                return;
+            }
+
             $definitions = match ($source->type) {
                 ToolType::McpHttp => $this->listHttpTools($source, $timeout),
                 ToolType::McpStdio => $this->stdioClient->discover($source, $timeout),
