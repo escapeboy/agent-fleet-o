@@ -32,4 +32,11 @@ class TestEnvironmentProviderKeysTest extends TestCase
     {
         $this->assertEmpty(config('context_compaction.summarizer_api_key'));
     }
+
+    public function test_decision_driver_keys_are_blank(): void
+    {
+        foreach (config('decision.drivers', []) as $driver => $settings) {
+            $this->assertEmpty($settings['key'] ?? null, "decision.drivers.{$driver}.key is set in the test environment");
+        }
+    }
 }

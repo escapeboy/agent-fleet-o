@@ -177,6 +177,7 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
         ]);
 
         $response->assertNotFound()
+            ->assertHeader('x-should-retry', 'false')
             ->assertJsonPath('error.code', 'model_not_found');
     }
 
@@ -321,6 +322,7 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
         ]);
 
         $response->assertStatus(402)
+            ->assertHeader('x-should-retry', 'false')
             ->assertJsonPath('error.type', 'insufficient_quota')
             ->assertJsonPath('error.code', 'insufficient_quota');
     }
@@ -341,7 +343,25 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
         ]);
 
         $response->assertStatus(500)
+            ->assertHeaderMissing('x-should-retry')
             ->assertJsonPath('error.type', 'server_error');
+    }
+
+    public function test_agent_unexpected_error_is_not_retryable(): void
+    {
+        $this->actingAsApiUser();
+        $this->createAgent(['slug' => 'helper']);
+
+        $executeAction = Mockery::mock(ExecuteAgentAction::class);
+        $executeAction->shouldReceive('execute')->once()->andThrow(new \RuntimeException('boom'));
+        $this->app->instance(ExecuteAgentAction::class, $executeAction);
+
+        $response = $this->postJson('/v1/chat/completions', [
+            'model' => 'agent/helper',
+            'messages' => [['role' => 'user', 'content' => 'Help me']],
+        ]);
+
+        $response->assertStatus(500)->assertHeader('x-should-retry', 'false');
     }
 
     private function mockAgentRun(Agent $agent, array $executionAttributes, mixed $output): void
@@ -374,7 +394,9 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
             'messages' => [['role' => 'user', 'content' => 'Help me']],
         ]);
 
+        // OpenAI SDKs retry 5xx by default; a retry would re-run the agent's tools.
         $response->assertStatus(502)
+            ->assertHeader('x-should-retry', 'false')
             ->assertJsonPath('error.type', 'server_error')
             ->assertJsonPath('error.code', 'agent_run_failed')
             ->assertJsonMissingPath('choices');
@@ -398,7 +420,9 @@ class OpenAiCompatibleControllerTest extends ApiTestCase
             'stream' => true,
         ]);
 
-        $response->assertStatus(502)->assertJsonPath('error.code', 'agent_run_failed');
+        $response->assertStatus(502)
+            ->assertHeader('x-should-retry', 'false')
+            ->assertJsonPath('error.code', 'agent_run_failed');
     }
 
     public function test_agent_run_with_recovered_tool_failures_is_still_success(): void

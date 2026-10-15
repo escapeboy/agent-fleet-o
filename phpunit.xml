@@ -105,5 +105,9 @@
         <server name="SUB_PROGRAM_PERPLEXITY_API_KEY" value=""/>
         <env name="SUB_PROGRAM_XAI_API_KEY" value="" force="true"/>
         <server name="SUB_PROGRAM_XAI_API_KEY" value=""/>
+        <env name="TYPESAFE_API_KEY" value="" force="true"/>
+        <server name="TYPESAFE_API_KEY" value=""/>
+        <env name="JEFF_API_KEY" value="" force="true"/>
+        <server name="JEFF_API_KEY" value=""/>
     </php>
 </phpunit>
