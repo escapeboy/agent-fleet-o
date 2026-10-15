@@ -69,6 +69,7 @@ class InstallFromMarketplaceAction
 
                 $installedSkillId = $skill->id;
             } elseif ($listing->type === 'agent') {
+                $provider = (string) ($snapshot['provider'] ?? 'anthropic');
                 $agent = Agent::create([
                     'team_id' => $teamId,
                     'name' => $listing->name,
@@ -79,8 +80,8 @@ class InstallFromMarketplaceAction
                     'taste' => $snapshot['taste'] ?? null,
                     'personality' => $snapshot['personality'] ?? null,
                     'system_prompt_template' => $snapshot['system_prompt_template'] ?? null,
-                    'provider' => $snapshot['provider'] ?? 'anthropic',
-                    'model' => $snapshot['model'] ?? LlmDefaults::platformModel($snapshot['provider'] ?? 'anthropic'),
+                    'provider' => $provider,
+                    'model' => $snapshot['model'] ?? LlmDefaults::platformModel($provider),
                     'status' => 'active',
                     'capabilities' => $snapshot['capabilities'] ?? [],
                     'constraints' => $snapshot['constraints'] ?? [],
