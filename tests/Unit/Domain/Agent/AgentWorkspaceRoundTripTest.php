@@ -32,7 +32,7 @@ class AgentWorkspaceRoundTripTest extends TestCase
 
         $tool = Tool::factory()->create(['team_id' => $team->id, 'name' => 'github-search']);
         $skill = Skill::factory()->create(['team_id' => $team->id, 'slug' => 'summarize-doc']);
-        $agent->tools()->attach($tool->id, ['priority' => 5]);
+        $agent->tools()->attach($tool->id, ['priority' => 5, 'overrides' => ['timeout' => 30]]);
         $agent->skills()->attach($skill->id, ['priority' => 3]);
 
         return $agent->fresh();
@@ -75,6 +75,7 @@ class AgentWorkspaceRoundTripTest extends TestCase
         $this->assertSame(1, $result['skills_linked']);
         $this->assertTrue($new->skills()->where('slug', 'summarize-doc')->exists());
         $this->assertTrue($new->tools()->where('name', 'github-search')->exists());
+        $this->assertSame(['timeout' => 30], $new->tools()->first()->pivot->overrides);
     }
 
     public function test_missing_skill_in_target_team_is_skipped_not_fatal(): void
