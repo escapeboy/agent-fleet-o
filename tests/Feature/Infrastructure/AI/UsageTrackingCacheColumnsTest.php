@@ -51,6 +51,39 @@ class UsageTrackingCacheColumnsTest extends TestCase
         $this->assertSame('5m', $run->cache_strategy);
     }
 
+    public function test_records_whether_the_provider_call_was_streamed(): void
+    {
+        $team = Team::factory()->create();
+
+        $request = new AiRequestDTO(
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-6',
+            systemPrompt: 'sys',
+            userPrompt: 'user',
+            teamId: $team->id,
+            purpose: 'test',
+        );
+
+        foreach ([true, false] as $streamed) {
+            $response = new AiResponseDTO(
+                content: 'ok',
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 10, completionTokens: 5, costCredits: 1),
+                provider: 'anthropic',
+                model: 'claude-sonnet-4-6',
+                latencyMs: $streamed ? 1 : 2,
+                streamed: $streamed,
+            );
+
+            (new UsageTracking)->handle($request, fn () => $response);
+        }
+
+        $runs = AiRun::withoutGlobalScopes()->where('team_id', $team->id)->pluck('stream', 'latency_ms')->all();
+        ksort($runs);
+
+        $this->assertSame([1 => true, 2 => false], $runs);
+    }
+
     public function test_cached_input_tokens_defaults_to_zero(): void
     {
         $team = Team::factory()->create();
