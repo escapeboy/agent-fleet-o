@@ -214,7 +214,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 // are config errors disguised as provider failures — let the chain
                 // advance without breaking the circuit. Mirrors the \RuntimeException
                 // branch above.
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -402,7 +402,7 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -618,6 +618,19 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return false;
+    }
+
+    /**
+     * Prism's Anthropic handlers throw "Anthropic: unknown finish reason" when the API answered 200
+     * with a stop reason Prism does not map (`refusal`, `pause_turn`, `model_context_window_exceeded`).
+     * Anthropic rejected or paused THIS request, so it must not open the per-provider breaker: a
+     * background job's failures (CompressAndStoreExecutionMemoryJob, 2026-10-16) opened it and failed
+     * unrelated agent runs. Only the Anthropic prefix: OpenRouter maps an upstream `finish_reason:
+     * "error"` to the same exception, and that one can be a real outage.
+     */
+    private function isUnmappedFinishReason(Throwable $e): bool
+    {
+        return $e instanceof PrismException && $e->getMessage() === 'Anthropic: unknown finish reason';
     }
 
     /**
