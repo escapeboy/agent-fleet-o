@@ -621,15 +621,16 @@ class FallbackAiGateway implements AiGatewayInterface
     }
 
     /**
-     * Prism throws "<Provider>: unknown finish reason" when the provider answered 200 with a stop
-     * reason Prism does not map (Anthropic `refusal`, `pause_turn`, `model_context_window_exceeded`).
-     * The provider is up; counting it let a background job's refusals open the per-provider breaker
-     * and fail unrelated agent runs with 502 (local FleetQ, 2026-10-16: 20 Sonnet 5.5 failures from
-     * CompressAndStoreExecutionMemoryJob opened the anthropic circuit 4 times).
+     * Prism's Anthropic handlers throw "Anthropic: unknown finish reason" when the API answered 200
+     * with a stop reason Prism does not map (`refusal`, `pause_turn`, `model_context_window_exceeded`).
+     * Anthropic rejected or paused THIS request, so it must not open the per-provider breaker: a
+     * background job's failures (CompressAndStoreExecutionMemoryJob, 2026-10-16) opened it and failed
+     * unrelated agent runs. Only the Anthropic prefix: OpenRouter maps an upstream `finish_reason:
+     * "error"` to the same exception, and that one can be a real outage.
      */
     private function isUnmappedFinishReason(Throwable $e): bool
     {
-        return $e instanceof PrismException && str_ends_with($e->getMessage(), ': unknown finish reason');
+        return $e instanceof PrismException && $e->getMessage() === 'Anthropic: unknown finish reason';
     }
 
     /**

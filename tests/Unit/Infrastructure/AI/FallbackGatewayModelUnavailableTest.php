@@ -143,6 +143,20 @@ class FallbackGatewayModelUnavailableTest extends TestCase
         $fallbackGateway->stream($this->anthropicRequest());
     }
 
+    public function test_openrouter_unmapped_finish_reason_still_opens_the_circuit(): void
+    {
+        config(['services.openrouter.key' => 'sk-or-test', 'ai.providers.openrouter.key' => 'sk-or-test']);
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->once())->method('recordFailure')->with('openrouter');
+
+        $this->gateway->method('complete')->willThrowException(new PrismException('OpenRouter: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete(new AiRequestDTO(provider: 'openrouter', model: 'openai/gpt-oss-120b', systemPrompt: 'test', userPrompt: 'test'));
+    }
+
     /** @return array<string, array{int}> */
     public static function providerFailures(): array
     {
