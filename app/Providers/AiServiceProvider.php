@@ -11,6 +11,7 @@ use App\Infrastructure\AI\Gateways\LocalAgentGateway;
 use App\Infrastructure\AI\Gateways\LocalBridgeGateway;
 use App\Infrastructure\AI\Gateways\PortkeyGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use App\Infrastructure\AI\Gateways\PrismAnthropicProvider;
 use App\Infrastructure\AI\Middleware\BudgetEnforcement;
 use App\Infrastructure\AI\Middleware\BudgetPressureRouting;
 use App\Infrastructure\AI\Middleware\ContextCompaction;
@@ -181,6 +182,16 @@ class AiServiceProvider extends ServiceProvider
                 config(["llm_pricing.providers.{$provider}" => array_merge($existing, $models)]);
             }
         }
+
+        // Same constructor as PrismManager::createAnthropicProvider(), plus output_config.effort.
+        app(PrismManager::class)->extend('anthropic', function ($app, array $config) {
+            return new PrismAnthropicProvider(
+                apiKey: $config['api_key'],
+                apiVersion: $config['version'],
+                url: $config['url'] ?? 'https://api.anthropic.com/v1',
+                betaFeatures: $config['anthropic_beta'] ?? null,
+            );
+        });
 
         // Custom AI endpoints — always available (not gated by local_llm.enabled).
         // Backed by the OpenRouter driver which uses POST /v1/chat/completions.

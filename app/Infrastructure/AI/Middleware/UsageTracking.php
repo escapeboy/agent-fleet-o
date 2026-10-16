@@ -44,6 +44,7 @@ class UsageTracking implements AiMiddlewareInterface
             'cache_strategy' => $response->usage->cacheStrategy,
             'cost_credits' => $response->usage->costCredits,
             'latency_ms' => $response->latencyMs,
+            'stream' => $response->streamed,
             'status' => 'completed',
             'reasoning_chain' => $response->reasoningChain,
             'has_reasoning' => $hasReasoning,

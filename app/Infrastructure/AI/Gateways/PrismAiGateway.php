@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\UsageNormalizer;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
@@ -181,14 +182,19 @@ class PrismAiGateway implements AiGatewayInterface
             ? (new SystemMessage($request->systemPrompt))->withProviderOptions(['cacheType' => 'ephemeral'])
             : $request->systemPrompt;
 
-        $generator = Prism::text()
+        $builder = Prism::text()
             ->using($provider, $request->model, $localConfig)
             ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
             ->usingTemperature($this->temperatureFor($request))
-            ->withClientOptions(['timeout' => 120])
-            ->asStream();
+            ->withClientOptions(['timeout' => 120]);
+
+        if (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
+        }
+
+        $generator = $builder->asStream();
 
         $accumulated = '';
         $usage = new Usage(0, 0);
@@ -227,6 +233,7 @@ class PrismAiGateway implements AiGatewayInterface
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
+            streamed: true,
         );
     }
 
@@ -269,6 +276,10 @@ class PrismAiGateway implements AiGatewayInterface
             ->withClientRetry(2, 500)
             ->withTools($tools)
             ->withMaxSteps($request->maxSteps);
+
+        if (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
+        }
 
         if ($request->toolChoice !== null) {
             $toolChoice = match ($request->toolChoice) {
@@ -406,8 +417,8 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         // Opus 4.7+, Sonnet 5.x, Haiku 5.5, Fable and Mythos reject budget_tokens with a
-        // 400, and Prism can only send that shape. Those models get no thinking option:
-        // the 5.x models run adaptive thinking when it is omitted, Opus 4.7/4.8 run without.
+        // 400. Those models get no thinking option (the 5.x models run adaptive thinking
+        // when it is omitted, Opus 4.7/4.8 run without); their depth is set by effort.
         if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic'
             && ! $this->isAdaptiveOnlyAnthropicModel($request->model)) {
             $builder->withProviderOptions([
@@ -416,6 +427,8 @@ class PrismAiGateway implements AiGatewayInterface
                     'budgetTokens' => $effectiveBudget,
                 ],
             ]);
+        } elseif (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
         }
 
         // Add tool support when tools are provided
@@ -997,6 +1010,32 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         return $this->isAdaptiveOnlyAnthropicModel($request->model) ? null : $request->temperature;
+    }
+
+    /**
+     * `output_config.effort` for the Anthropic models that reject budget_tokens.
+     * The level comes from the same budget the older models get (2K → low,
+     * 8K → medium, above → high), so effort Auto resolved by BudgetPressureRouting
+     * applies too. Effort None maps to low: these models cannot turn thinking off.
+     * Null means send nothing and let the model use its own default.
+     */
+    private function anthropicEffortFor(AiRequestDTO $request): ?string
+    {
+        if ($request->provider !== 'anthropic' || ! $this->isAdaptiveOnlyAnthropicModel($request->model)) {
+            return null;
+        }
+
+        $budget = $request->thinkingBudget ?? $request->effort?->toBudgetTokens();
+
+        if ($budget !== null) {
+            return match (true) {
+                $budget <= 2_000 => 'low',
+                $budget <= 8_000 => 'medium',
+                default => 'high',
+            };
+        }
+
+        return $request->effort === ReasoningEffort::None ? 'low' : null;
     }
 
     /**

@@ -74,6 +74,7 @@ class PrismAiGatewayStreamUsageTest extends TestCase
         // 2 000·0.50 + 150 000·0.05 + 500·2.50 per Mtok = 0.00975 USD → 10 credits.
         // Before the fix the stream reported 0 cache reads: 2 000·0.10 + 500·0.50 → 1 credit.
         $this->assertSame('Hello', $response->content);
+        $this->assertTrue($response->streamed);
         $this->assertSame(150000, $response->usage->cachedInputTokens);
         $this->assertSame(0, $response->usage->cacheWriteInputTokens);
         $this->assertSame(500, $response->usage->completionTokens);
