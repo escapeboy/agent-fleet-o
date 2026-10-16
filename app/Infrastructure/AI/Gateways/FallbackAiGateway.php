@@ -214,7 +214,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 // are config errors disguised as provider failures — let the chain
                 // advance without breaking the circuit. Mirrors the \RuntimeException
                 // branch above.
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -402,7 +402,7 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -618,6 +618,18 @@ class FallbackAiGateway implements AiGatewayInterface
         }
 
         return false;
+    }
+
+    /**
+     * Prism throws "<Provider>: unknown finish reason" when the provider answered 200 with a stop
+     * reason Prism does not map (Anthropic `refusal`, `pause_turn`, `model_context_window_exceeded`).
+     * The provider is up; counting it let a background job's refusals open the per-provider breaker
+     * and fail unrelated agent runs with 502 (local FleetQ, 2026-10-16: 20 Sonnet 5.5 failures from
+     * CompressAndStoreExecutionMemoryJob opened the anthropic circuit 4 times).
+     */
+    private function isUnmappedFinishReason(Throwable $e): bool
+    {
+        return $e instanceof PrismException && str_ends_with($e->getMessage(), ': unknown finish reason');
     }
 
     /**

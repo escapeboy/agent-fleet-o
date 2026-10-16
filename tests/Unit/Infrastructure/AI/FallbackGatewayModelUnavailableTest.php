@@ -117,6 +117,32 @@ class FallbackGatewayModelUnavailableTest extends TestCase
         $fallbackGateway->stream($this->anthropicRequest());
     }
 
+    public function test_unmapped_finish_reason_does_not_open_the_circuit(): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('complete')->willThrowException(new PrismException('Anthropic: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete($this->anthropicRequest());
+    }
+
+    public function test_unmapped_finish_reason_does_not_open_the_circuit_when_streaming(): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('stream')->willThrowException(new PrismException('Anthropic: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->stream($this->anthropicRequest());
+    }
+
     /** @return array<string, array{int}> */
     public static function providerFailures(): array
     {
