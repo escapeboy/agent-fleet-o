@@ -37,6 +37,16 @@ class CatalogModelPricingCoverageTest extends TestCase
         $this->assertSame([], $missing, 'Catalog models without a llm_pricing row: '.implode(', ', $missing));
     }
 
+    public function test_document_ocr_openrouter_default_is_priced(): void
+    {
+        $calc = new CostCalculator;
+
+        // Cloud ProcessDocumentOcrAction sends the dashed id; OpenRouter lists the dotted one.
+        foreach (['anthropic/claude-sonnet-4-5', 'anthropic/claude-sonnet-4.5'] as $model) {
+            $this->assertGreaterThan(0, $calc->calculateCost('openrouter', $model, 1_000_000, 0), $model);
+        }
+    }
+
     public function test_catalog_display_prices_equal_the_pricing_rows(): void
     {
         // The model pickers show llm_providers input_cost/output_cost; billing uses
