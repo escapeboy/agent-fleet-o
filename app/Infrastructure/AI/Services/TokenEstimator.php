@@ -10,14 +10,12 @@ class TokenEstimator
     /** Characters per token for structured content (JSON, code). */
     private const JSON_CHARS_PER_TOKEN = 3.5;
 
-    /** Known model context window sizes (in tokens). */
+    /**
+     * Fallback context window sizes (in tokens) for models without a
+     * `context_window` on their llm_pricing row. Anthropic models are all
+     * priced there, so they are not repeated here.
+     */
     private const MODEL_CONTEXT_LIMITS = [
-        // Anthropic
-        'claude-sonnet-4-5-20250929' => 200_000,
-        'claude-sonnet-4-5' => 200_000,
-        'claude-haiku-4-5-20251001' => 200_000,
-        'claude-haiku-4-5' => 200_000,
-        'claude-opus-4-6' => 1_000_000,
         // OpenAI
         'gpt-4o' => 128_000,
         'gpt-4o-mini' => 128_000,
@@ -57,6 +55,14 @@ class TokenEstimator
      */
     public function getModelContextLimit(string $model): int
     {
+        // The per-model pricing row is the source of truth (same lookup as
+        // ContextHealthService). Array access: ids such as gemini-2.5-pro contain dots.
+        foreach (config('llm_pricing.providers', []) as $rows) {
+            if (isset($rows[$model]['context_window'])) {
+                return (int) $rows[$model]['context_window'];
+            }
+        }
+
         // Try exact match first
         if (isset(self::MODEL_CONTEXT_LIMITS[$model])) {
             return self::MODEL_CONTEXT_LIMITS[$model];

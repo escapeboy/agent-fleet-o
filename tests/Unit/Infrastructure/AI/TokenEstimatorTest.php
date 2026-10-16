@@ -51,6 +51,15 @@ class TokenEstimatorTest extends TestCase
         $this->assertSame(1_048_576, $this->estimator->getModelContextLimit('gemini-2.5-flash'));
     }
 
+    public function test_current_anthropic_models_use_the_pricing_row_window(): void
+    {
+        foreach (['claude-fable-5-1', 'claude-opus-5-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-5-5'] as $model) {
+            $this->assertSame(1_000_000, $this->estimator->getModelContextLimit($model), $model);
+        }
+
+        $this->assertSame(200_000, $this->estimator->getModelContextLimit('claude-haiku-4-5'));
+    }
+
     public function test_versioned_model_matches_base(): void
     {
         $this->assertSame(200_000, $this->estimator->getModelContextLimit('claude-sonnet-4-5-20250929'));
