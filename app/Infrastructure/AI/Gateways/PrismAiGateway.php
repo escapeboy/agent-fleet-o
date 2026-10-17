@@ -1031,8 +1031,10 @@ class PrismAiGateway implements AiGatewayInterface
     {
         $choice = $request->toolChoice;
 
-        if ($choice !== 'auto' && $choice !== 'none'
-            && $this->rejectsForcedToolChoice($request)) {
+        // Prism's OpenRouter ToolChoiceMap throws on ToolChoice::Any (it supports only auto and a tool name).
+        $openRouterAny = $choice === 'any' && str_starts_with($request->provider, 'openrouter');
+
+        if ($openRouterAny || ($choice !== 'auto' && $choice !== 'none' && $this->rejectsForcedToolChoice($request))) {
             Log::debug('PrismAiGateway: forced tool_choice downgraded to auto', [
                 'model' => $request->model,
                 'requested' => $choice,

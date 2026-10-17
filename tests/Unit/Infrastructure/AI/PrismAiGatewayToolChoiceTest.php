@@ -170,4 +170,47 @@ class PrismAiGatewayToolChoiceTest extends TestCase
             ? $this->assertSame('auto', $body['tool_choice'] ?? null)
             : $this->assertSame(['type' => 'function', 'function' => ['name' => 'ping']], $body['tool_choice'] ?? null);
     }
+
+    /**
+     * Before the fix this threw InvalidArgumentException('Invalid tool choice') from
+     * vendor/prism-php/prism/src/Providers/OpenRouter/Maps/ToolChoiceMap.php:29.
+     */
+    #[DataProvider('openRouterAnyModels')]
+    public function test_openrouter_any_does_not_throw_and_is_sent_as_auto(string $path, string $model): void
+    {
+        config(['prism.providers.openrouter.api_key' => 'sk-or-test']);
+        Http::swap(new Factory);
+        Http::fake(['*' => Http::response([
+            'id' => 'gen-1', 'object' => 'chat.completion', 'created' => 1, 'model' => $model,
+            'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => ['role' => 'assistant', 'content' => 'ok']]],
+            'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 2, 'total_tokens' => 12],
+        ])]);
+
+        $tool = Tool::as('ping')->for('Ping')->using(fn (): string => 'pong');
+        $request = new AiRequestDTO(provider: 'openrouter', model: $model, systemPrompt: 's', userPrompt: 'u', maxTokens: 256, tools: [$tool], toolChoice: 'any');
+        $gateway = new PrismAiGateway(new CostCalculator);
+        $path === 'complete' ? $gateway->complete($request) : $gateway->stream($request);
+
+        $body = null;
+        Http::assertSent(function (Request $sent) use (&$body): bool {
+            $body = json_decode($sent->body(), true);
+
+            return true;
+        });
+
+        $this->assertSame('auto', $body['tool_choice'] ?? null);
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function openRouterAnyModels(): array
+    {
+        $out = [];
+        foreach (['openai/gpt-4.1', 'anthropic/claude-opus-5', 'google/gemini-2.5-pro'] as $model) {
+            foreach (['complete', 'stream'] as $path) {
+                $out["$path $model"] = [$path, $model];
+            }
+        }
+
+        return $out;
+    }
 }
