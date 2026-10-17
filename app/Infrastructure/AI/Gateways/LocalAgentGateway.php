@@ -391,6 +391,7 @@ class LocalAgentGateway implements AiGatewayInterface
         $startTime = hrtime(true);
         $exitCode = null;
         $stderr = '';
+        $stdout = '';
 
         try {
             $process = new Process($args, $cwd, $env, $prompt, $timeout);
@@ -439,7 +440,7 @@ class LocalAgentGateway implements AiGatewayInterface
             }
             $cap->release($teamId, $slotToken);
             $this->removeEphemeralWorkdir($workdir);
-            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr);
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout);
         }
     }
 
@@ -658,6 +659,7 @@ class LocalAgentGateway implements AiGatewayInterface
         ?int $exitCode,
         int $startTime,
         string $stderr,
+        ?string $streamJson = null,
     ): void {
         // audit_entries.team_id is NOT NULL (multi-tenancy invariant). When the
         // VPS invocation happened outside any team context (super-admin shell,
@@ -675,19 +677,37 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         try {
+            $properties = [
+                'model' => $request->model,
+                'prompt_length' => strlen($request->userPrompt),
+                'duration_ms' => (int) ((hrtime(true) - $startTime) / 1_000_000),
+                'exit_code' => $exitCode,
+                'stderr_preview' => $stderr !== '' ? substr($stderr, 0, 200) : null,
+            ];
+
+            // Built-in (non-MCP) tool calls, names only. Present only when a
+            // stream-json transcript was available; consumed by Poligon.
+            if ($streamJson !== null && $streamJson !== '') {
+                try {
+                    $calls = LocalAgentOutputParser::builtinToolCalls($streamJson);
+                    $properties['builtin_tool_calls'] = $calls['names'];
+                    if ($calls['truncated']) {
+                        $properties['builtin_tool_calls_truncated'] = true;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('LocalAgentGateway: failed to parse built-in tool calls', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             AuditEntry::create([
                 'team_id' => $team->id,
                 'user_id' => $user?->id,
                 'event' => 'claude_code_vps.invoke',
                 'subject_type' => Team::class,
                 'subject_id' => $team->id,
-                'properties' => [
-                    'model' => $request->model,
-                    'prompt_length' => strlen($request->userPrompt),
-                    'duration_ms' => (int) ((hrtime(true) - $startTime) / 1_000_000),
-                    'exit_code' => $exitCode,
-                    'stderr_preview' => $stderr !== '' ? substr($stderr, 0, 200) : null,
-                ],
+                'properties' => $properties,
                 'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
