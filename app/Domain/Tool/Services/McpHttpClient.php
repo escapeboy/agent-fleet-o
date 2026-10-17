@@ -277,10 +277,11 @@ class McpHttpClient
      */
     private function initSseSession(string $serverUrl, array $headers, ?float $deadline = null): string
     {
+        $sseUrl = McpEndpointUrl::withPathSegment($serverUrl, '/sse');
         $response = Http::withHeaders(array_merge(['Accept' => 'text/event-stream'], $headers))
             ->timeout($this->budget($deadline, self::SSE_CONNECT_TIMEOUT))
             ->withOptions(['stream' => true])
-            ->get(McpEndpointUrl::withPathSegment($serverUrl, '/sse'));
+            ->get($sseUrl);
 
         if (! $response->successful()) {
             throw new \RuntimeException("MCP SSE connect failed: HTTP {$response->status()}");
@@ -300,20 +301,54 @@ class McpHttpClient
             throw new \RuntimeException('MCP SSE: no endpoint event received');
         }
 
-        // Build absolute session URL from base server URL + session path
-        $parsed = parse_url($serverUrl);
-        $base = "{$parsed['scheme']}://{$parsed['host']}";
-        if (isset($parsed['port'])) {
-            $base .= ":{$parsed['port']}";
+        return $this->resolveSessionUrl($serverUrl, $sseUrl, $sessionPath);
+    }
+
+    /**
+     * Resolve the SSE `endpoint` event against the SSE URL: absolute URLs are used as is,
+     * `/path` is joined to the origin, anything else is relative to the SSE URL's directory.
+     * The tool URL's query (e.g. an API key) is added before any fragment, skipping params
+     * the endpoint already has, and only when the result is on the same host.
+     */
+    private function resolveSessionUrl(string $serverUrl, string $sseUrl, string $endpoint): string
+    {
+        $sse = parse_url($sseUrl);
+        $origin = "{$sse['scheme']}://{$sse['host']}".(isset($sse['port']) ? ":{$sse['port']}" : '');
+
+        if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $endpoint)) {
+            $resolved = $endpoint;
+        } elseif (str_starts_with($endpoint, '//')) {
+            $resolved = "{$sse['scheme']}:{$endpoint}";
+        } elseif (str_starts_with($endpoint, '/')) {
+            $resolved = $origin.$endpoint;
+        } else {
+            $dir = substr((string) ($sse['path'] ?? '/'), 0, (int) strrpos((string) ($sse['path'] ?? '/'), '/') + 1);
+            $resolved = $origin.$dir.$endpoint;
         }
 
-        // Keep the tool URL's own query (e.g. an API key) on the session URL
-        $query = $parsed['query'] ?? null;
-        if ($query !== null && $query !== '') {
-            $sessionPath .= (str_contains($sessionPath, '?') ? '&' : '?').$query;
+        $toolQuery = (string) (parse_url($serverUrl, PHP_URL_QUERY) ?? '');
+        if ($toolQuery === '' || parse_url($resolved, PHP_URL_HOST) !== $sse['host']) {
+            return $resolved;
         }
 
-        return $base.$sessionPath;
+        $fragment = '';
+        if (($hash = strpos($resolved, '#')) !== false) {
+            $fragment = substr($resolved, $hash);
+            $resolved = substr($resolved, 0, $hash);
+        }
+        $existing = [];
+        parse_str((string) (parse_url($resolved, PHP_URL_QUERY) ?? ''), $existing);
+
+        $extra = array_filter(
+            explode('&', $toolQuery),
+            fn (string $pair) => $pair !== '' && ! array_key_exists(urldecode(explode('=', $pair, 2)[0]), $existing),
+        );
+
+        if ($extra) {
+            $resolved .= (str_contains($resolved, '?') ? '&' : '?').implode('&', $extra);
+        }
+
+        return $resolved.$fragment;
     }
 
     // -------------------------------------------------------------------------

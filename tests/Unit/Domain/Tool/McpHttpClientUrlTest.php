@@ -81,4 +81,35 @@ class McpHttpClientUrlTest extends TestCase
         Http::assertSent(fn (Request $r) => $r->method() === 'GET' && $r->url() === $sseUrl);
         Http::assertSent(fn (Request $r) => $r->method() === 'POST' && $r->url() === $sessionUrl);
     }
+
+    /**
+     * @return array<string, array{0: string, 1: string, 2: string}>
+     */
+    public static function endpointEvents(): array
+    {
+        return [
+            'fragment: query goes before it' => ['http://h/e/1?k=v', '/messages#x', 'http://h/messages?k=v#x'],
+            'same param is not sent twice' => ['http://h/e/1?k=v', '/messages?k=v&s=1', 'http://h/messages?k=v&s=1'],
+            'other param is added' => ['http://h/e/1?k=v', '/messages?s=1', 'http://h/messages?s=1&k=v'],
+            'absolute endpoint' => ['http://h/e/1', 'http://h/messages?s=1', 'http://h/messages?s=1'],
+            'absolute endpoint, other host gets no query' => ['http://h/e/1?k=v', 'http://other/messages', 'http://other/messages'],
+            'relative without slash' => ['http://h/e/1', 'messages?s=1', 'http://h/e/1/messages?s=1'],
+            'relative without slash, bare host' => ['http://h', 'messages?s=1', 'http://h/messages?s=1'],
+            'with port' => ['http://h:8080/e/1', '/messages', 'http://h:8080/messages'],
+        ];
+    }
+
+    #[DataProvider('endpointEvents')]
+    public function test_sse_endpoint_event_is_resolved(string $input, string $endpoint, string $sessionUrl): void
+    {
+        Http::fake([
+            '*/sse*' => Http::response("event: endpoint\ndata: {$endpoint}\n\n"),
+            '*/mcp*' => Http::response('', 500),
+            '*' => Http::response(['jsonrpc' => '2.0', 'id' => 1, 'result' => ['tools' => []]]),
+        ]);
+
+        (new McpHttpClient)->listTools($input);
+
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST' && $r->url() === $sessionUrl);
+    }
 }
