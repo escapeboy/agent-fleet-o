@@ -5,6 +5,7 @@ namespace Tests\Unit\Infrastructure\AI;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -33,12 +34,12 @@ class PrismAiGatewayToolChoiceTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function send(string $path, string $model, string $toolChoice): array
+    private function send(string $path, string $model, string $toolChoice, string $provider = 'anthropic'): array
     {
         $tool = Tool::as('ping')->for('Ping')->using(fn (): string => 'pong');
 
         $request = new AiRequestDTO(
-            provider: 'anthropic',
+            provider: $provider,
             model: $model,
             systemPrompt: 'sys',
             userPrompt: 'user',
@@ -125,5 +126,48 @@ class PrismAiGatewayToolChoiceTest extends TestCase
     public function test_other_models_keep_a_specific_tool_name(string $path, string $model): void
     {
         $this->assertSame(['type' => 'tool', 'name' => 'ping'], $this->send($path, $model, 'ping'));
+    }
+
+    /** @return array<string, array{string, string, string}> */
+    public static function openRouterModels(): array
+    {
+        $out = [];
+        foreach (['anthropic/claude-sonnet-5.5' => 'auto', 'anthropic/claude-opus-5.5' => 'auto', 'anthropic/claude-fable-5.1' => 'auto', 'anthropic/claude-sonnet-5-5' => 'auto',
+            'anthropic/claude-opus-5' => 'keep', 'anthropic/claude-haiku-5.5' => 'keep', 'openai/gpt-4.1' => 'keep'] as $model => $expected) {
+            foreach (['complete', 'stream'] as $path) {
+                $out["$path $model"] = [$path, $model, $expected];
+            }
+        }
+
+        return $out;
+    }
+
+    #[DataProvider('openRouterModels')]
+    public function test_openrouter_downgrades_only_the_restricted_anthropic_models(string $path, string $model, string $expected): void
+    {
+        config(['prism.providers.openrouter.api_key' => 'sk-or-test']);
+        Http::swap(new Factory);
+        Http::fake(['*' => Http::response([
+            'id' => 'gen-1', 'object' => 'chat.completion', 'created' => 1, 'model' => $model,
+            'choices' => [['index' => 0, 'finish_reason' => 'stop', 'message' => ['role' => 'assistant', 'content' => 'ok']]],
+            'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 2, 'total_tokens' => 12],
+        ])]);
+
+        $tool = Tool::as('ping')->for('Ping')->using(fn (): string => 'pong');
+        $request = new AiRequestDTO(provider: 'openrouter', model: $model, systemPrompt: 's', userPrompt: 'u', maxTokens: 256, tools: [$tool], toolChoice: $expected === 'auto' ? 'any' : 'ping');
+        $gateway = new PrismAiGateway(new CostCalculator);
+        $path === 'complete' ? $gateway->complete($request) : $gateway->stream($request);
+
+        $body = null;
+        Http::assertSent(function (Request $sent) use (&$body): bool {
+            $body = json_decode($sent->body(), true);
+
+            return true;
+        });
+
+        // Prism's OpenRouter map has no 'required': 'any' would throw, so unrestricted models are probed with a tool name.
+        $expected === 'auto'
+            ? $this->assertSame('auto', $body['tool_choice'] ?? null)
+            : $this->assertSame(['type' => 'function', 'function' => ['name' => 'ping']], $body['tool_choice'] ?? null);
     }
 }

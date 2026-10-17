@@ -1032,8 +1032,7 @@ class PrismAiGateway implements AiGatewayInterface
         $choice = $request->toolChoice;
 
         if ($choice !== 'auto' && $choice !== 'none'
-            && $request->provider === 'anthropic'
-            && $this->rejectsForcedToolChoice($request->model)) {
+            && $this->rejectsForcedToolChoice($request)) {
             Log::debug('PrismAiGateway: forced tool_choice downgraded to auto', [
                 'model' => $request->model,
                 'requested' => $choice,
@@ -1051,12 +1050,17 @@ class PrismAiGateway implements AiGatewayInterface
     }
 
     /**
-     * Anthropic models that answer HTTP 400 to tool_choice any/tool: Fable 5.1, Mythos 5.1,
+     * Anthropic models (direct or via OpenRouter) that answer HTTP 400 to tool_choice any/tool: Fable 5.1, Mythos 5.1,
      * Opus 5.5 and Sonnet 5.5. Other models (Opus 5, Sonnet 5, Haiku 5.5, 4.x) accept it.
      */
-    private function rejectsForcedToolChoice(string $model): bool
+    private function rejectsForcedToolChoice(AiRequestDTO $request): bool
     {
-        return (bool) preg_match('/(fable-5-1|mythos-5-1|opus-5-5|sonnet-5-5)(?![0-9])/i', $model);
+        $viaAnthropic = $request->provider === 'anthropic';
+        // OpenRouter forwards "required" to Anthropic and uses dot ids (anthropic/claude-sonnet-5.5).
+        $viaOpenRouter = str_starts_with($request->provider, 'openrouter') && str_starts_with($request->model, 'anthropic/');
+
+        return ($viaAnthropic || $viaOpenRouter)
+            && preg_match('/(fable-5[.-]1|mythos-5[.-]1|opus-5[.-]5|sonnet-5[.-]5)(?![0-9])/i', $request->model) === 1;
     }
 
     /**
