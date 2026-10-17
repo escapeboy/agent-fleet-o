@@ -155,7 +155,7 @@
 // extract — pull structured data from unstructured text
 {
   "operation": "extract",
-  "model": "claude-sonnet-4-5",
+  "model": "claude-sonnet-5-5",
   "prompt_template": "Extract candidate details from: @{{input.cv_text}}",
   "output_schema": {
     "type": "object",
