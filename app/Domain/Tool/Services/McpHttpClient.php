@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tool\Services;
 
+use App\Support\McpEndpointUrl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -105,7 +106,7 @@ class McpHttpClient
         ], $headers))
             ->timeout($this->budget($deadline, self::TIMEOUT))
             ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'initialize',
                 'params' => [
@@ -141,7 +142,7 @@ class McpHttpClient
         $response = Http::withHeaders($requestHeaders)
             ->timeout(self::TIMEOUT)
             ->connectTimeout(self::CONNECT_TIMEOUT)
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/call',
                 'params' => ['name' => $toolName, 'arguments' => $arguments ?: new \stdClass],
@@ -172,7 +173,7 @@ class McpHttpClient
         $response = Http::withHeaders($requestHeaders)
             ->timeout($this->budget($deadline, self::TIMEOUT))
             ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',
                 'params' => new \stdClass,

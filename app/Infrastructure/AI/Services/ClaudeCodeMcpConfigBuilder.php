@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
+use App\Support\McpEndpointUrl;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -104,13 +105,7 @@ class ClaudeCodeMcpConfigBuilder
      */
     private function normalizeMcpUrl(string $url): string
     {
-        if (str_ends_with(rtrim((string) parse_url($url, PHP_URL_PATH), '/'), '/mcp')) {
-            return $url;
-        }
-
-        $pathEnd = strcspn($url, '?#');
-
-        return rtrim(substr($url, 0, $pathEnd), '/').'/mcp'.substr($url, $pathEnd);
+        return McpEndpointUrl::normalize($url);
     }
 
     /**
