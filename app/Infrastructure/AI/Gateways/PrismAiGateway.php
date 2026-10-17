@@ -282,13 +282,7 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         if ($request->toolChoice !== null) {
-            $toolChoice = match ($request->toolChoice) {
-                'any' => ToolChoice::Any,
-                'auto' => ToolChoice::Auto,
-                'none' => ToolChoice::None,
-                default => $request->toolChoice,
-            };
-            $builder->withToolChoice($toolChoice);
+            $builder->withToolChoice($this->resolveToolChoice($request));
         }
 
         $response = $builder->asText();
@@ -448,16 +442,7 @@ class PrismAiGateway implements AiGatewayInterface
                 ->withMaxSteps($request->maxSteps);
 
             if ($request->toolChoice !== null) {
-                // Map string values to ToolChoice enum so all providers get the correct type.
-                // Passing a raw string to PrismPHP is treated as a specific function name,
-                // not as a mode like 'any'/'auto'/'none'.
-                $toolChoice = match ($request->toolChoice) {
-                    'any' => ToolChoice::Any,
-                    'auto' => ToolChoice::Auto,
-                    'none' => ToolChoice::None,
-                    default => $request->toolChoice, // specific tool name — pass as-is
-                };
-                $builder->withToolChoice($toolChoice);
+                $builder->withToolChoice($this->resolveToolChoice($request));
             }
         }
 
@@ -1036,6 +1021,48 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         return $request->effort === ReasoningEffort::None ? 'low' : null;
+    }
+
+    /**
+     * Map the request's tool choice string to what PrismPHP expects. A raw string would be
+     * treated as a specific tool name, so the modes must become enum cases.
+     */
+    private function resolveToolChoice(AiRequestDTO $request): string|ToolChoice
+    {
+        $choice = $request->toolChoice;
+
+        // Prism's OpenRouter ToolChoiceMap throws on ToolChoice::Any (it supports only auto and a tool name).
+        $openRouterAny = $choice === 'any' && str_starts_with($request->provider, 'openrouter');
+
+        if ($openRouterAny || ($choice !== 'auto' && $choice !== 'none' && $this->rejectsForcedToolChoice($request))) {
+            Log::debug('PrismAiGateway: forced tool_choice downgraded to auto', [
+                'model' => $request->model,
+                'requested' => $choice,
+            ]);
+
+            return ToolChoice::Auto;
+        }
+
+        return match ($choice) {
+            'any' => ToolChoice::Any,
+            'auto' => ToolChoice::Auto,
+            'none' => ToolChoice::None,
+            default => $choice, // specific tool name
+        };
+    }
+
+    /**
+     * Anthropic models (direct or via OpenRouter) that answer HTTP 400 to tool_choice any/tool: Fable 5.1, Mythos 5.1,
+     * Opus 5.5 and Sonnet 5.5. Other models (Opus 5, Sonnet 5, Haiku 5.5, 4.x) accept it.
+     */
+    private function rejectsForcedToolChoice(AiRequestDTO $request): bool
+    {
+        $viaAnthropic = $request->provider === 'anthropic';
+        // OpenRouter forwards "required" to Anthropic and uses dot ids (anthropic/claude-sonnet-5.5).
+        $viaOpenRouter = str_starts_with($request->provider, 'openrouter') && str_starts_with($request->model, 'anthropic/');
+
+        return ($viaAnthropic || $viaOpenRouter)
+            && preg_match('/(fable-5[.-]1|mythos-5[.-]1|opus-5[.-]5|sonnet-5[.-]5)(?![0-9])/i', $request->model) === 1;
     }
 
     /**

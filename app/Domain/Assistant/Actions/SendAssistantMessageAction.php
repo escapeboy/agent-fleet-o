@@ -179,9 +179,10 @@ class SendAssistantMessageAction
             );
             // Force toolChoice='any' for providers that support it.
             // anthropic/google: natively support 'any' (Anthropic API / Gemini API).
-            // openai/openrouter: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+            // openai: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+            // openrouter: excluded — Prism's OpenRouter map throws on Any (only auto or a tool name).
             // openai_compatible/custom_endpoint: may or may not support it — excluded.
-            $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai', 'openrouter'], true);
+            $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai'], true);
             $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
         }
 
