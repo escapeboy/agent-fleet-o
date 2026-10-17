@@ -94,7 +94,8 @@ class LocalAgentBuiltinToolCallsTest extends TestCase
             'sudo' => ['sudo systemctl restart x', 'systemctl'],
             'sudo then program' => ['sudo env A=1 time nohup python3 run.py', 'python3'],
             'absolute path' => ['/usr/bin/curl -s https://x.test', 'curl'],
-            'quoted program' => ['"/opt/my tool/bin/git" status', 'git'],
+            'quoted program' => ['"/opt/bin/git" status', 'git'],
+            'quoted with whitespace' => ['"/opt/my tool/bin/git" status', '?'],
             'single quoted' => ["'npm' install", 'npm'],
             'pipe' => ['cat file | grep x', 'cat'],
             'and' => ['cd /tmp&&rm -rf x', 'cd'],
@@ -106,8 +107,27 @@ class LocalAgentBuiltinToolCallsTest extends TestCase
             'subshell' => ['(cd x && ls)', '?'],
             'command substitution' => ['$(whoami) arg', '?'],
             'unterminated quote' => ['"curl -H token=abc', '?'],
-            'illegal chars dropped' => ['py!th@on3 x', 'python3'],
-            'long name capped' => [str_repeat('a', 60).' x', str_repeat('a', 40)],
+            'illegal chars rejected' => ['py!th@on3 x', '?'],
+            'env flag' => ["env -S'curl -H X-Token:sk-abc123' x", '?'],
+            'env -i' => ['env -i ls', '?'],
+            'sudo -u' => ['sudo -u root ls', '?'],
+            'sudo --user=' => ['sudo --user=root ls', '?'],
+            'quoted secret with spaces' => ['"curl -H Bearer sk-abc123" x', '?'],
+            'plus-equals assignment' => ['A+=sk-secret123 cmd', 'cmd'],
+            'indexed assignment' => ['A[0]=sk-secret123 cmd', 'cmd'],
+            'secret as name with equals' => ['sk-abc123=1 cmd', '?'],
+            'url' => ['https://x/?token=sk-abc123', '?'],
+            'github token path' => ['./ghp_'.str_repeat('a1B2', 9).' x', '?'],
+            'sk prefix' => ['sk-abcdef x', '?'],
+            'aws prefix' => ['AKIAABCDEFGH x', '?'],
+            'jwt prefix' => ['eyJhbGciOi x', '?'],
+            'long digit run' => ['tool12345678 x', '?'],
+            'long mixed run' => ['abc123def456ghi789jkl012mno x', '?'],
+            'env var as program' => ['"$TOKEN" x', '?'],
+            'cat' => ['cat f', 'cat'],
+            'bash' => ['bash -c x', 'bash'],
+            'long name rejected' => [str_repeat('a', 33).' x', '?'],
+            'max length ok' => [str_repeat('a', 32).' x', str_repeat('a', 32)],
             'non-string' => [['curl'], '?'],
             'null' => [null, '?'],
             'int' => [42, '?'],
@@ -154,6 +174,7 @@ class LocalAgentBuiltinToolCallsTest extends TestCase
         $this->assertSame(['curl', 'echo', '?'], $r['bash_programs']);
         $this->assertStringNotContainsString('FAKE_TOKEN', json_encode($r));
         $this->assertStringNotContainsString($token, json_encode($r));
+        $this->assertStringNotContainsString('sk-', json_encode($r));
     }
 
     public function test_bash_cap_is_independent_of_names_cap(): void
@@ -172,5 +193,28 @@ class LocalAgentBuiltinToolCallsTest extends TestCase
         $r = LocalAgentOutputParser::builtinToolCalls($this->assistant(array_fill(0, 501, ['type' => 'tool_use', 'name' => 'Bash', 'input' => ['command' => 'ls']])));
         $this->assertCount(500, $r['bash_programs']);
         $this->assertTrue($r['bash_truncated']);
+    }
+
+    public function test_reviewer_secret_cases_store_nothing_secret_through_the_parser(): void
+    {
+        $ghp = 'ghp_'.str_repeat('a1B2', 9);
+        $cmds = [
+            "env -S'curl -H X-Token:sk-abc123'",
+            '"curl -H Bearer sk-abc123" x',
+            'A+=sk-secret123 cmd',
+            'A[0]=sk-secret123 cmd',
+            'sk-abc123=1 cmd',
+            'sudo --user=root ls',
+            'https://x/?token=sk-abc123',
+            "./$ghp",
+        ];
+        $out = implode("\n", array_map(fn ($c) => $this->bash(['command' => $c]), $cmds));
+
+        $r = LocalAgentOutputParser::builtinToolCalls($out);
+
+        $this->assertSame(['?', '?', 'cmd', 'cmd', '?', '?', '?', '?'], $r['bash_programs']);
+        $stored = json_encode($r['bash_programs']);
+        $this->assertStringNotContainsString('sk-', $stored);
+        $this->assertStringNotContainsString('ghp', $stored);
     }
 }

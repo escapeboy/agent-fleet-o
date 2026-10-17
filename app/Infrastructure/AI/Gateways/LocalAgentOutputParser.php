@@ -323,9 +323,11 @@ final class LocalAgentOutputParser
 
     /**
      * The program a Bash command runs: its first command word, after leading
-     * `VAR=value` assignments and sudo/env/time/nohup, reduced to a basename of
-     * at most 40 chars of [A-Za-z0-9._+-]. `?` when empty or unparseable.
-     * Nothing but that one word is ever returned — arguments may hold secrets.
+     * assignments (`NAME=`, `NAME+=`, `NAME[..]=`) and sudo/env/time/nohup,
+     * reduced to a basename. The word is VALIDATED, never filtered: anything
+     * that is not a plain program name (or looks like a secret) becomes `?`,
+     * so no part of an argument, URL or token can end up stored. A wrapper
+     * followed by a flag also gives `?`.
      */
     public static function bashProgram(mixed $command): string
     {
@@ -335,6 +337,7 @@ final class LocalAgentOutputParser
 
         $pos = 0;
         $len = strlen($command);
+        $afterWrapper = false;
 
         while (true) {
             $word = self::nextShellWord($command, $pos, $len);
@@ -345,17 +348,42 @@ final class LocalAgentOutputParser
             if ($raw === '') {
                 return '?';
             }
-            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*=/', $raw) === 1) {
+            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/', $raw) === 1) {
                 continue;
+            }
+            if ($afterWrapper && str_starts_with($raw, '-')) {
+                return '?';
             }
             if (in_array($text, ['sudo', 'env', 'time', 'nohup'], true)) {
+                $afterWrapper = true;
+
                 continue;
             }
+            if (preg_match('/\s/', $text) === 1) {
+                return '?';
+            }
             $base = ($slash = strrpos($text, '/')) === false ? $text : substr($text, $slash + 1);
-            $clean = substr((string) preg_replace('/[^A-Za-z0-9._+-]/', '', $base), 0, 40);
 
-            return $clean === '' ? '?' : $clean;
+            return self::looksLikeProgramName($base) ? $base : '?';
         }
+    }
+
+    private static function looksLikeProgramName(string $name): bool
+    {
+        if (preg_match('/^[A-Za-z][A-Za-z0-9._+-]{0,31}$/', $name) !== 1) {
+            return false;
+        }
+        if (preg_match('/^(sk-|ghp|gho|ghs|xox|AKIA|eyJ)/', $name) === 1 || preg_match('/\d{8}/', $name) === 1) {
+            return false;
+        }
+        preg_match_all('/[A-Za-z0-9]+/', $name, $runs);
+        foreach ($runs[0] as $run) {
+            if (strlen($run) > 20 && preg_match('/[A-Za-z]/', $run) === 1 && preg_match('/\d/', $run) === 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
