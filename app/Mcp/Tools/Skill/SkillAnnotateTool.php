@@ -32,7 +32,7 @@ class SkillAnnotateTool extends Tool
                 ->description('UUID of the SkillVersion that produced the output')
                 ->required(),
             'model_id' => $schema->string()
-                ->description('Model identifier that produced the output, e.g. "anthropic/claude-sonnet-4-5"')
+                ->description('Model identifier that produced the output, e.g. "anthropic/claude-sonnet-5-5"')
                 ->required(),
             'input' => $schema->string()
                 ->description('The test input that was sent to the model')
