@@ -31,7 +31,7 @@ class SkillPlaygroundRunAction
     /**
      * Run the skill's prompt template against each selected model.
      *
-     * @param  string[]  $models  Provider/model strings, e.g. ["anthropic/claude-sonnet-4-5", "openai/gpt-4o"]
+     * @param  string[]  $models  Provider/model strings, e.g. ["anthropic/claude-sonnet-5-5", "openai/gpt-4o"]
      * @return string The run ID used as part of the Redis key for polling
      */
     public function execute(
