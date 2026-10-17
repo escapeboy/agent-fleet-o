@@ -154,7 +154,7 @@ class PrismAiGatewayToolChoiceTest extends TestCase
         ])]);
 
         $tool = Tool::as('ping')->for('Ping')->using(fn (): string => 'pong');
-        $request = new AiRequestDTO(provider: 'openrouter', model: $model, systemPrompt: 's', userPrompt: 'u', maxTokens: 256, tools: [$tool], toolChoice: $expected === 'auto' ? 'any' : 'ping');
+        $request = new AiRequestDTO(provider: 'openrouter', model: $model, systemPrompt: 's', userPrompt: 'u', maxTokens: 256, tools: [$tool], toolChoice: 'ping');
         $gateway = new PrismAiGateway(new CostCalculator);
         $path === 'complete' ? $gateway->complete($request) : $gateway->stream($request);
 
@@ -165,7 +165,7 @@ class PrismAiGatewayToolChoiceTest extends TestCase
             return true;
         });
 
-        // Prism's OpenRouter map has no 'required': 'any' would throw, so unrestricted models are probed with a tool name.
+        // A tool name (not 'any') so the model guard is what is tested, not the general OpenRouter any rule.
         $expected === 'auto'
             ? $this->assertSame('auto', $body['tool_choice'] ?? null)
             : $this->assertSame(['type' => 'function', 'function' => ['name' => 'ping']], $body['tool_choice'] ?? null);
