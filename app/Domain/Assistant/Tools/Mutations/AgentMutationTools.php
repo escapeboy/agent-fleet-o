@@ -100,7 +100,7 @@ final class AgentMutationTools
             ->withStringParameter('backstory', 'New backstory')
             ->withStringParameter('taste', 'New taste — aesthetic/judgment preferences (tone, what "good" looks like).')
             ->withStringParameter('provider', 'LLM provider to switch to (anthropic, openai, google, claude-code, codex)')
-            ->withStringParameter('model', 'LLM model name (e.g. claude-sonnet-4-5, claude-opus-4-6, gpt-4o, gemini-2.5-pro)')
+            ->withStringParameter('model', 'LLM model name (e.g. claude-sonnet-5-5, claude-opus-4-6, gpt-4o, gemini-2.5-pro)')
             ->withNumberParameter('budget_cap_credits', 'Per-agent budget cap in credits. Set to 0 to remove cap.')
             ->using(function (string $agent_id, ?string $name = null, ?string $role = null, ?string $goal = null, ?string $backstory = null, ?string $taste = null, ?string $provider = null, ?string $model = null, ?float $budget_cap_credits = null) {
                 $agent = Agent::find($agent_id);

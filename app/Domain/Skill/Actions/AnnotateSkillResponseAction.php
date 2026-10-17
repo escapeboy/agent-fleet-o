@@ -17,7 +17,7 @@ class AnnotateSkillResponseAction
      * @param  string  $teamId  The team that owns the skill
      * @param  string  $userId  The user providing feedback
      * @param  string  $skillVersionId  The skill version that produced the output
-     * @param  string  $modelId  The model that produced the output (e.g. "anthropic/claude-sonnet-4-5")
+     * @param  string  $modelId  The model that produced the output (e.g. "anthropic/claude-sonnet-5-5")
      * @param  string  $input  The test input that was sent to the model
      * @param  string  $output  The model's output text
      * @param  AnnotationRating  $rating  Whether the output was good or bad

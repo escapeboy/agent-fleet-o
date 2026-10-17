@@ -38,7 +38,7 @@ class SkillPlaygroundTestTool extends Tool
                 ->description('Test input text. Use {{variable}} syntax for placeholder substitution.')
                 ->required(),
             'models' => $schema->array()
-                ->description('List of model identifiers in "provider/model" format, e.g. ["anthropic/claude-sonnet-4-5", "openai/gpt-4o"]')
+                ->description('List of model identifiers in "provider/model" format, e.g. ["anthropic/claude-sonnet-5-5", "openai/gpt-4o"]')
                 ->required(),
         ];
     }

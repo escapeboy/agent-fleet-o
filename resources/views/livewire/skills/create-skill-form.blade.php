@@ -358,7 +358,7 @@
                                     @endforeach
                                 </x-form-select>
                             @else
-                                <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-4-5" />
+                                <x-form-input wire:model="model" label="Model (optional)" type="text" placeholder="e.g. claude-sonnet-5-5" />
                             @endif
                         </div>
 

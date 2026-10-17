@@ -33,7 +33,7 @@
             <div class="sm:col-span-2">
                 <label class="mb-1 block text-xs font-medium text-gray-700">Compare Models</label>
                 <div class="flex flex-wrap gap-2">
-                    @foreach(['anthropic/claude-sonnet-4-5' => 'Claude Sonnet', 'anthropic/claude-haiku-4-5' => 'Claude Haiku', 'openai/gpt-4o' => 'GPT-4o', 'openai/gpt-4o-mini' => 'GPT-4o Mini', 'google/gemini-2.5-flash' => 'Gemini Flash'] as $modelId => $modelLabel)
+                    @foreach(['anthropic/claude-sonnet-5-5' => 'Claude Sonnet', 'anthropic/claude-haiku-4-5' => 'Claude Haiku', 'openai/gpt-4o' => 'GPT-4o', 'openai/gpt-4o-mini' => 'GPT-4o Mini', 'google/gemini-2.5-flash' => 'Gemini Flash'] as $modelId => $modelLabel)
                         <label class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs {{ in_array($modelId, $selectedModels) ? 'border-primary-300 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:border-gray-300' }}">
                             <input
                                 type="checkbox"
