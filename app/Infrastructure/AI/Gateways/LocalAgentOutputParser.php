@@ -258,6 +258,47 @@ final class LocalAgentOutputParser
         return null;
     }
 
+    public const MAX_BUILTIN_TOOL_CALLS = 500;
+
+    /**
+     * Names of the built-in (non-`mcp__`) tools the Claude Code CLI called, read
+     * from the `tool_use` blocks of `assistant` events in a stream-json
+     * transcript, in transcript order, one entry per call. Names only — tool
+     * inputs/outputs are never read. Malformed lines are skipped.
+     *
+     * @return array{names: list<string>, truncated: bool}
+     */
+    public static function builtinToolCalls(string $streamJson): array
+    {
+        $names = [];
+
+        foreach (preg_split('/\r\n|\n|\r/', $streamJson) ?: [] as $line) {
+            $event = json_decode(trim($line), true);
+            if (! is_array($event) || ($event['type'] ?? null) !== 'assistant') {
+                continue;
+            }
+            $content = $event['message']['content'] ?? null;
+            if (! is_array($content)) {
+                continue;
+            }
+            foreach ($content as $block) {
+                if (! is_array($block) || ($block['type'] ?? null) !== 'tool_use') {
+                    continue;
+                }
+                $name = $block['name'] ?? null;
+                if (! is_string($name) || $name === '' || str_starts_with($name, 'mcp__')) {
+                    continue;
+                }
+                if (count($names) >= self::MAX_BUILTIN_TOOL_CALLS) {
+                    return ['names' => $names, 'truncated' => true];
+                }
+                $names[] = $name;
+            }
+        }
+
+        return ['names' => $names, 'truncated' => false];
+    }
+
     /**
      * Rough token estimate (4 chars per token).
      */
