@@ -17,8 +17,16 @@ class McpEndpointUrl
             return $url;
         }
 
+        return self::withPathSegment($url, '/mcp');
+    }
+
+    /**
+     * Append a path segment (e.g. `/sse`) before any query string or fragment.
+     */
+    public static function withPathSegment(string $url, string $segment): string
+    {
         $pathEnd = strcspn($url, '?#');
 
-        return rtrim(substr($url, 0, $pathEnd), '/').'/mcp'.substr($url, $pathEnd);
+        return rtrim(substr($url, 0, $pathEnd), '/').$segment.substr($url, $pathEnd);
     }
 }

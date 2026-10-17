@@ -280,7 +280,7 @@ class McpHttpClient
         $response = Http::withHeaders(array_merge(['Accept' => 'text/event-stream'], $headers))
             ->timeout($this->budget($deadline, self::SSE_CONNECT_TIMEOUT))
             ->withOptions(['stream' => true])
-            ->get("{$serverUrl}/sse");
+            ->get(McpEndpointUrl::withPathSegment($serverUrl, '/sse'));
 
         if (! $response->successful()) {
             throw new \RuntimeException("MCP SSE connect failed: HTTP {$response->status()}");
@@ -305,6 +305,12 @@ class McpHttpClient
         $base = "{$parsed['scheme']}://{$parsed['host']}";
         if (isset($parsed['port'])) {
             $base .= ":{$parsed['port']}";
+        }
+
+        // Keep the tool URL's own query (e.g. an API key) on the session URL
+        $query = $parsed['query'] ?? null;
+        if ($query !== null && $query !== '') {
+            $sessionPath .= (str_contains($sessionPath, '?') ? '&' : '?').$query;
         }
 
         return $base.$sessionPath;
