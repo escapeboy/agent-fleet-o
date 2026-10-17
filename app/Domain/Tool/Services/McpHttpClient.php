@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tool\Services;
 
+use App\Support\McpEndpointUrl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -105,7 +106,7 @@ class McpHttpClient
         ], $headers))
             ->timeout($this->budget($deadline, self::TIMEOUT))
             ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'initialize',
                 'params' => [
@@ -141,7 +142,7 @@ class McpHttpClient
         $response = Http::withHeaders($requestHeaders)
             ->timeout(self::TIMEOUT)
             ->connectTimeout(self::CONNECT_TIMEOUT)
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/call',
                 'params' => ['name' => $toolName, 'arguments' => $arguments ?: new \stdClass],
@@ -172,7 +173,7 @@ class McpHttpClient
         $response = Http::withHeaders($requestHeaders)
             ->timeout($this->budget($deadline, self::TIMEOUT))
             ->connectTimeout($this->budget($deadline, self::CONNECT_TIMEOUT))
-            ->post("{$url}/mcp", [
+            ->post(McpEndpointUrl::normalize($url), [
                 'jsonrpc' => '2.0',
                 'method' => 'tools/list',
                 'params' => new \stdClass,
@@ -276,10 +277,11 @@ class McpHttpClient
      */
     private function initSseSession(string $serverUrl, array $headers, ?float $deadline = null): string
     {
+        $sseUrl = McpEndpointUrl::withPathSegment($serverUrl, '/sse');
         $response = Http::withHeaders(array_merge(['Accept' => 'text/event-stream'], $headers))
             ->timeout($this->budget($deadline, self::SSE_CONNECT_TIMEOUT))
             ->withOptions(['stream' => true])
-            ->get("{$serverUrl}/sse");
+            ->get($sseUrl);
 
         if (! $response->successful()) {
             throw new \RuntimeException("MCP SSE connect failed: HTTP {$response->status()}");
@@ -299,14 +301,54 @@ class McpHttpClient
             throw new \RuntimeException('MCP SSE: no endpoint event received');
         }
 
-        // Build absolute session URL from base server URL + session path
-        $parsed = parse_url($serverUrl);
-        $base = "{$parsed['scheme']}://{$parsed['host']}";
-        if (isset($parsed['port'])) {
-            $base .= ":{$parsed['port']}";
+        return $this->resolveSessionUrl($serverUrl, $sseUrl, $sessionPath);
+    }
+
+    /**
+     * Resolve the SSE `endpoint` event against the SSE URL: absolute URLs are used as is,
+     * `/path` is joined to the origin, anything else is relative to the SSE URL's directory.
+     * The tool URL's query (e.g. an API key) is added before any fragment, skipping params
+     * the endpoint already has, and only when the result is on the same host.
+     */
+    private function resolveSessionUrl(string $serverUrl, string $sseUrl, string $endpoint): string
+    {
+        $sse = parse_url($sseUrl);
+        $origin = "{$sse['scheme']}://{$sse['host']}".(isset($sse['port']) ? ":{$sse['port']}" : '');
+
+        if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $endpoint)) {
+            $resolved = $endpoint;
+        } elseif (str_starts_with($endpoint, '//')) {
+            $resolved = "{$sse['scheme']}:{$endpoint}";
+        } elseif (str_starts_with($endpoint, '/')) {
+            $resolved = $origin.$endpoint;
+        } else {
+            $dir = substr((string) ($sse['path'] ?? '/'), 0, (int) strrpos((string) ($sse['path'] ?? '/'), '/') + 1);
+            $resolved = $origin.$dir.$endpoint;
         }
 
-        return $base.$sessionPath;
+        $toolQuery = (string) (parse_url($serverUrl, PHP_URL_QUERY) ?? '');
+        if ($toolQuery === '' || parse_url($resolved, PHP_URL_HOST) !== $sse['host']) {
+            return $resolved;
+        }
+
+        $fragment = '';
+        if (($hash = strpos($resolved, '#')) !== false) {
+            $fragment = substr($resolved, $hash);
+            $resolved = substr($resolved, 0, $hash);
+        }
+        $existing = [];
+        parse_str((string) (parse_url($resolved, PHP_URL_QUERY) ?? ''), $existing);
+
+        $extra = array_filter(
+            explode('&', $toolQuery),
+            fn (string $pair) => $pair !== '' && ! array_key_exists(urldecode(explode('=', $pair, 2)[0]), $existing),
+        );
+
+        if ($extra) {
+            $resolved .= (str_contains($resolved, '?') ? '&' : '?').implode('&', $extra);
+        }
+
+        return $resolved.$fragment;
     }
 
     // -------------------------------------------------------------------------
