@@ -132,6 +132,12 @@ class LocalAgentBuiltinToolCallsTest extends TestCase
             'null' => [null, '?'],
             'int' => [42, '?'],
             'trailing slash' => ['/usr/bin/ x', '?'],
+            'upper-case key prefix' => ['SK-abc123 x', '?'],
+            'mixed-case key prefix' => ['Sk-proj-abc x', '?'],
+            'aws prefix lower-case a' => ['aKIAabcdefgh x', '?'],
+            'gitlab token' => ['glpat-abcdefghijklmnopqrst x', '?'],
+            'stripe restricted key' => ['rk_live_abc x', '?'],
+            'google api key' => ['AIzaSyAbc x', '?'],
         ];
     }
 

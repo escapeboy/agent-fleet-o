@@ -373,7 +373,7 @@ final class LocalAgentOutputParser
         if (preg_match('/^[A-Za-z][A-Za-z0-9._+-]{0,31}$/', $name) !== 1) {
             return false;
         }
-        if (preg_match('/^(sk-|ghp|gho|ghs|xox|AKIA|eyJ)/', $name) === 1 || preg_match('/\d{8}/', $name) === 1) {
+        if (preg_match('/^(sk-|sk_|rk_|ghp|gho|ghs|ghu|github_pat|glpat|xox|akia|eyj|aiza)/i', $name) === 1 || preg_match('/\d{8}/', $name) === 1) {
             return false;
         }
         preg_match_all('/[A-Za-z0-9]+/', $name, $runs);
