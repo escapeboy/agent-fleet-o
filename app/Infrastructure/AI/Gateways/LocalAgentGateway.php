@@ -694,6 +694,11 @@ class LocalAgentGateway implements AiGatewayInterface
                     if ($calls['truncated']) {
                         $properties['builtin_tool_calls_truncated'] = true;
                     }
+                    // Program name of each Bash call only; never arguments.
+                    $properties['bash_programs'] = $calls['bash_programs'];
+                    if ($calls['bash_truncated']) {
+                        $properties['bash_programs_truncated'] = true;
+                    }
                 } catch (\Throwable $e) {
                     Log::warning('LocalAgentGateway: failed to parse built-in tool calls', [
                         'error' => $e->getMessage(),
