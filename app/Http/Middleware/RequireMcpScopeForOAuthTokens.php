@@ -23,7 +23,11 @@ class RequireMcpScopeForOAuthTokens
             return response()->json([
                 'error' => 'insufficient_scope',
                 'error_description' => 'This token does not carry the mcp:use scope.',
-            ], 403);
+            ], 403, [
+                // RFC 6750 §3.1 + MCP step-up: tells the client which scope to re-authorize with.
+                'WWW-Authenticate' => 'Bearer error="insufficient_scope", scope="mcp:use", resource_metadata="'
+                    .route('mcp.oauth.protected-resource', ['path' => $request->path()]).'"',
+            ]);
         }
 
         return $next($request);

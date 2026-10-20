@@ -44,9 +44,13 @@ class McpOAuthScopeTest extends TestCase
     {
         Passport::actingAs($this->user, [], 'passport');
 
-        $this->postJson('/mcp', self::RPC)
+        $response = $this->postJson('/mcp', self::RPC)
             ->assertStatus(403)
             ->assertJsonPath('error', 'insufficient_scope');
+        $this->assertSame(
+            'Bearer error="insufficient_scope", scope="mcp:use", resource_metadata="'.url('/.well-known/oauth-protected-resource/mcp').'"',
+            $response->headers->get('WWW-Authenticate'),
+        );
 
         $this->postJson('/mcp/full', self::RPC)
             ->assertStatus(403)
