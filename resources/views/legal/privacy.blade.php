@@ -85,6 +85,9 @@
                     <tr><td>OpenAI (USA)</td><td>AI model inference (GPT-4o)</td><td>DPA, SCCs</td></tr>
                     <tr><td>Google (USA)</td><td>AI model inference (Gemini)</td><td>DPA, SCCs</td></tr>
                     <tr><td>Plausible Analytics (EU)</td><td>Privacy-respecting analytics</td><td>EU-hosted, no personal data</td></tr>
+                    @if(config('services.google_analytics.id'))
+                        <tr><td>Google Analytics 4 (Google Ireland Ltd.)</td><td>Usage analytics, loaded only after you accept analytics cookies</td><td>Consent (Art. 6(1)(a)); withdraw via &ldquo;Cookie settings&rdquo;</td></tr>
+                    @endif
                 </tbody>
             </table>
             <p>We do <strong>NOT</strong> sell your personal data.</p>

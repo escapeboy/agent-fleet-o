@@ -69,6 +69,9 @@
                 <ul class="mt-4 space-y-3">
                     <li><a href="{{ route('legal.privacy') }}" class="text-sm transition hover:text-white">Privacy Policy</a></li>
                     <li><a href="{{ route('legal.cookies') }}" class="text-sm transition hover:text-white">Cookie Policy</a></li>
+                    @if(config('services.google_analytics.id'))
+                        <li><x-analytics.settings-link class="text-sm transition hover:text-white" /></li>
+                    @endif
                     <li><a href="{{ route('legal.terms') }}" class="text-sm transition hover:text-white">Terms of Service</a></li>
                     {{ $legalLinks ?? '' }}
                     <li><span class="text-sm text-gray-500">MIT License</span></li>

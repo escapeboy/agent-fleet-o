@@ -18,14 +18,13 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @if(config('services.google_analytics.id'))
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.id') }}"></script>
-        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ config('services.google_analytics.id') }}');</script>
-    @endif
+    <x-analytics.head />
     @livewireStyles
 </head>
 <body class="flex min-h-screen items-center justify-center bg-gray-50 font-sans antialiased">
+    <x-analytics.banner />
     {{ $slot }}
+    <x-analytics.settings-link class="fixed bottom-2 left-3 text-xs text-gray-500 underline hover:text-gray-700" />
 
     @livewireScripts
 </body>
