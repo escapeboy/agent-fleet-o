@@ -70,10 +70,7 @@
     @if(config('services.plausible.domain'))
         <script defer data-domain="{{ config('services.plausible.domain') }}" src="https://plausible.io/js/script.js"></script>
     @endif
-    @if(config('services.google_analytics.id'))
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.id') }}"></script>
-        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ config('services.google_analytics.id') }}');</script>
-    @endif
+    <x-analytics.head />
 
     {{-- Alpine.js + plugins (not injected by Livewire on public pages) --}}
     <style>[x-cloak] { display: none !important; }</style>
@@ -87,6 +84,7 @@
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg">
         Skip to main content
     </a>
+    <x-analytics.banner />
     {{ $beforeMain ?? '' }}
     <main id="main-content">
         {{ $slot }}
