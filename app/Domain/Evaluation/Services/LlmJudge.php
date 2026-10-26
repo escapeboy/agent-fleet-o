@@ -77,16 +77,34 @@ class LlmJudge
         ?string $expected,
         ?string $context,
     ): string {
-        $stepsText = collect($config['steps'])->map(fn ($s, $i) => ($i + 1).'. '.$s)->implode("\n");
-        $rubricText = collect($config['rubric'])->map(fn ($r) => "{$r[0]}-{$r[1]}: {$r[2]}")->implode("\n");
+        if ($expected === null || $expected === '') {
+            // Reference-free rubric: judge on intrinsic quality without comparing to a
+            // known-good answer. Criteria in priority order per the harness2 spec.
+            $stepsText = "1. Delivered: Is there a complete response (not empty, not a refusal)?\n"
+                ."2. Correct by form: Does the response match the expected structure/format for this request type?\n"
+                ."3. True to source: Are the claims grounded in the provided context or factually sound?\n"
+                ."4. Internally consistent: Is the response free of contradictions?\n"
+                ."5. Usable: Can the response be acted on as-is without clarification?\n"
+                .'6. Complete: Does it cover all required aspects of the request?';
+            $rubricText = "0-2: Not delivered or entirely off-task\n"
+                ."3-4: Delivered but major issues (wrong form, unsupported claims, or unusable)\n"
+                ."5-6: Partial — some criteria met, notable gaps remain\n"
+                ."7-8: Good — correct form, grounded, consistent, mostly complete\n"
+                .'9-10: Excellent — all six criteria fully met; concrete value delivered, not a formula or placeholder';
+        } else {
+            $stepsText = collect($config['steps'])->map(fn ($s, $i) => ($i + 1).'. '.$s)->implode("\n");
+            $rubricText = collect($config['rubric'])->map(fn ($r) => "{$r[0]}-{$r[1]}: {$r[2]}")->implode("\n");
+        }
 
-        $prompt = "Evaluate the following output for: {$config['description']}\n\n"
+        $description = $expected !== null && $expected !== '' ? $config['description'] : 'intrinsic output quality (no reference answer available)';
+
+        $prompt = "Evaluate the following output for: {$description}\n\n"
             ."Steps:\n{$stepsText}\n\n"
             ."Rubric:\n{$rubricText}\n\n"
             ."<user_input>{$input}</user_input>\n"
             ."<actual_output>{$output}</actual_output>";
 
-        if ($expected !== null) {
+        if ($expected !== null && $expected !== '') {
             $prompt .= "\n<expected_output>{$expected}</expected_output>";
         }
 

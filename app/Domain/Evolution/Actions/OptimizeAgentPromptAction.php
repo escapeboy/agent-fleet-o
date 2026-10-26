@@ -61,6 +61,9 @@ class OptimizeAgentPromptAction
         }
 
         $variants = $this->generateVariants($agent, $baseline, $populationSize);
+        if ($variants === null) {
+            return ['status' => 'keep_base', 'message' => 'Current prompt is optimal — no variants generated.', 'baseline_score' => $baseline];
+        }
         if ($variants === []) {
             return ['status' => 'no_variants', 'message' => 'No candidate variants were generated.', 'baseline_score' => $baseline];
         }
@@ -186,9 +189,12 @@ class OptimizeAgentPromptAction
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * Returns null when the LLM signals KEEP_BASE (current prompt is optimal),
+     * an empty array when no valid variants were parsed, or a list of variants.
+     *
+     * @return list<array<string, mixed>>|null
      */
-    private function generateVariants(Agent $agent, float $baseline, int $populationSize): array
+    private function generateVariants(Agent $agent, float $baseline, int $populationSize): ?array
     {
         $prompt = $this->buildEvolutionPrompt($agent, $baseline, $populationSize);
 
@@ -214,6 +220,13 @@ class OptimizeAgentPromptAction
         }
 
         $data = $this->decodeJson($response->content);
+
+        if (! empty($data['keep_base'])) {
+            Log::info('OptimizeAgentPrompt: KEEP_BASE — current prompt is optimal', ['agent_id' => $agent->id]);
+
+            return null;
+        }
+
         $variants = $data['variants'] ?? null;
         if (! is_array($variants)) {
             return [];
@@ -248,7 +261,10 @@ Baseline evaluation score: {$baseline}
 
 Generate {$populationSize} improved variants of this agent's goal and backstory. Each must use a different strategy from: add_examples, sharpen_goal, add_constraints, simplify, chain_of_thought. Keep the agent's identity and purpose; improve clarity and task performance.
 
-Return JSON only:
+An unnecessary change is itself a regression. If the current goal and backstory are already clear and well-performing, return:
+{"keep_base": true}
+
+Otherwise return JSON only:
 {
   "variants": [
     {

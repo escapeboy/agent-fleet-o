@@ -54,10 +54,10 @@ class ExtractActionProposalWorkflowTest extends TestCase
 
         $action = new ExtractSuccessPatternAction(
             $this->fakeGateway(json_encode([
+                'cue' => 'file-processing task',
                 'pattern' => 'Use the right tool for the job',
-                'key_technique' => 'tool_selection',
+                'evidence' => 'Stage completed with quality_score 1.0',
                 'confidence' => 0.9,
-                'tags' => ['tooling'],
             ])),
             $store,
         );
@@ -79,10 +79,10 @@ class ExtractActionProposalWorkflowTest extends TestCase
 
         $action = new ExtractSuccessPatternAction(
             $this->fakeGateway(json_encode([
+                'cue' => 'file-processing task',
                 'pattern' => 'Use the right tool for the job',
-                'key_technique' => 'tool_selection',
+                'evidence' => 'Stage completed with quality_score 1.0',
                 'confidence' => 0.9,
-                'tags' => ['tooling'],
             ])),
             $store,
         );
@@ -104,10 +104,10 @@ class ExtractActionProposalWorkflowTest extends TestCase
 
         $action = new ExtractFailureLessonAction(
             $this->fakeGateway(json_encode([
+                'cue' => 'tool_timeout',
                 'lesson' => 'Tool timed out — retry with smaller payload',
-                'root_cause' => 'tool_timeout',
+                'evidence' => 'Stage error: connection timeout after 30s',
                 'confidence' => 0.9,
-                'tags' => ['constraint'],
             ])),
             $store,
         );
@@ -126,10 +126,10 @@ class ExtractActionProposalWorkflowTest extends TestCase
 
         $action = new ExtractFailureLessonAction(
             $this->fakeGateway(json_encode([
+                'cue' => 'tool_timeout',
                 'lesson' => 'Tool timed out — retry with smaller payload',
-                'root_cause' => 'tool_timeout',
+                'evidence' => 'Stage error: connection timeout after 30s',
                 'confidence' => 0.9,
-                'tags' => ['constraint'],
             ])),
             $store,
         );

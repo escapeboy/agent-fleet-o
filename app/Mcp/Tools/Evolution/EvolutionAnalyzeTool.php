@@ -47,6 +47,13 @@ class EvolutionAnalyzeTool extends Tool
             $latestExecution,
         );
 
+        if ($proposal === null) {
+            return Response::text(json_encode([
+                'status' => 'keep_base',
+                'message' => 'Agent is performing well. No evolution proposal was generated.',
+            ]));
+        }
+
         return Response::text(json_encode([
             'id' => $proposal->id,
             'status' => $proposal->status->value,

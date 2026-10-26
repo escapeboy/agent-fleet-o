@@ -61,6 +61,13 @@ class GEPAOptimizer
         }
 
         $data = json_decode($response->content, true);
+
+        if (is_array($data) && ! empty($data['keep_base'])) {
+            Log::info('GEPAOptimizer: KEEP_BASE — current prompt is optimal, no proposals generated', ['skill_id' => $skill->id]);
+
+            return collect();
+        }
+
         $variants = $data['variants'] ?? [];
 
         $proposals = collect();
@@ -107,7 +114,10 @@ Failure patterns: {$failuresText}
 
 Generate {$populationSize} improved system prompt variants. Each must use a different strategy from: add_examples, rephrase_goal, add_constraints, simplify, chain_of_thought
 
-Return JSON:
+An unnecessary change is itself a regression. If the current prompt is already optimal for the observed executions, return:
+{"keep_base": true}
+
+Otherwise return JSON:
 {
   "variants": [
     {
