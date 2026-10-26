@@ -157,6 +157,30 @@ class OptimizeAgentPromptActionTest extends TestCase
         $this->assertSame(0, EvolutionProposal::where('team_id', $this->team->id)->count());
     }
 
+    public function test_keep_base_returns_keep_base_status_without_proposal(): void
+    {
+        config(['agent.prompt_optimizer.enabled' => true]);
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')->andReturn(new AiResponseDTO(
+            content: json_encode(['keep_base' => true]),
+            parsedOutput: null,
+            usage: new AiUsageDTO(promptTokens: 1, completionTokens: 1, costCredits: 0),
+            provider: 'anthropic',
+            model: 'claude-haiku-4-5',
+            latencyMs: 1,
+        ));
+
+        // baseline 5.0 — but KEEP_BASE fires before scoring variants
+        $action = new OptimizeAgentPromptAction($gateway, $this->replayWithScores(5.0));
+
+        $result = $action->execute($this->agent());
+
+        $this->assertSame('keep_base', $result['status']);
+        $this->assertArrayNotHasKey('proposal_id', $result);
+        $this->assertSame(0, EvolutionProposal::where('team_id', $this->team->id)->count());
+    }
+
     public function test_min_improvement_margin_is_respected(): void
     {
         // Candidate beats baseline by only 0.2, but margin requires 0.5 → no proposal.

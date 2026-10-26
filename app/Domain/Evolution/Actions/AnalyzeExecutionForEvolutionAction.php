@@ -15,7 +15,7 @@ class AnalyzeExecutionForEvolutionAction
         private readonly AiGatewayInterface $gateway,
     ) {}
 
-    public function execute(Agent $agent, ?AgentExecution $execution = null): EvolutionProposal
+    public function execute(Agent $agent, ?AgentExecution $execution = null): ?EvolutionProposal
     {
         $context = $this->buildAnalysisContext($agent, $execution);
 
@@ -31,6 +31,10 @@ class AnalyzeExecutionForEvolutionAction
         ));
 
         $parsed = $this->parseResponse($response->content);
+
+        if ($parsed['keep_base']) {
+            return null;
+        }
 
         $complexityDelta = $this->computeComplexityDelta($agent, $parsed['changes']);
 
@@ -70,6 +74,9 @@ Rules:
 - Confidence should be 0.0-1.0 based on how certain you are the changes help
 - Focus on the agent's role, goal clarity, and behavioral alignment
 - Do not change the provider or model
+- An unnecessary change is itself a regression. If the agent is performing well and no
+  specific improvement can be identified, respond instead with:
+  {"keep_base": true, "analysis": "Brief reason why no change is needed"}
 PROMPT;
     }
 
@@ -141,6 +148,7 @@ PROMPT;
             'changes' => [],
             'reasoning' => null,
             'confidence' => 0.5,
+            'keep_base' => false,
         ];
 
         // Extract JSON from response (handle markdown code blocks)
@@ -154,11 +162,19 @@ PROMPT;
             return array_merge($defaults, ['analysis' => $content]);
         }
 
+        if (! empty($parsed['keep_base'])) {
+            return array_merge($defaults, [
+                'keep_base' => true,
+                'analysis' => $parsed['analysis'] ?? 'No change needed.',
+            ]);
+        }
+
         return [
             'analysis' => $parsed['analysis'] ?? $defaults['analysis'],
             'changes' => array_filter($parsed['changes'] ?? [], fn ($v) => $v !== null),
             'reasoning' => $parsed['reasoning'] ?? null,
             'confidence' => min(1.0, max(0.0, (float) ($parsed['confidence'] ?? 0.5))),
+            'keep_base' => false,
         ];
     }
 }

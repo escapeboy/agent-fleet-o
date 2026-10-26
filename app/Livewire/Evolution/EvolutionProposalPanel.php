@@ -30,12 +30,14 @@ class EvolutionProposalPanel extends Component
             /** @var AgentExecution|null $latestExecution */
             $latestExecution = $this->agent->executions()->latest()->first();
 
-            app(AnalyzeExecutionForEvolutionAction::class)->execute(
+            $proposal = app(AnalyzeExecutionForEvolutionAction::class)->execute(
                 $this->agent,
                 $latestExecution,
             );
 
-            $this->success = 'Analysis complete. New evolution proposal created.';
+            $this->success = $proposal !== null
+                ? 'Analysis complete. New evolution proposal created.'
+                : 'Analysis complete. Agent is performing well — no changes proposed (KEEP_BASE).';
         } catch (\Throwable $e) {
             $this->error = $e->getMessage();
         }
