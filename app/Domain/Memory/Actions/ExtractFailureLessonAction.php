@@ -28,14 +28,15 @@ The lesson must be:
 
 Return ONLY valid JSON (no markdown fences):
 {
-  "lesson": "concise failure lesson in one or two sentences",
-  "root_cause": "brief root cause label",
-  "confidence": 0.85,
-  "tags": ["constraint"]
+  "cue": "brief situational trigger — what pattern or condition caused the failure",
+  "lesson": "concise lesson in one or two sentences",
+  "evidence": "what in the execution output supports this lesson",
+  "confidence": 0.85
 }
 
 Confidence: 0.0 = speculative, 1.0 = clearly demonstrated.
-Tags must be one or more of: capability, constraint, preference, pattern, domain, tooling
+If the execution does not contain enough information to form a reliable lesson, return:
+{"NO_ENTRY": true}
 PROMPT;
 
     public function __construct(
@@ -85,9 +86,10 @@ PROMPT;
                 temperature: 0.1,
             ));
 
-            $result = json_decode($response->content, true);
+            $jsonText = self::extractFirstJsonObject($response->content);
+            $result = $jsonText !== null ? json_decode($jsonText, true) : null;
 
-            if (! is_array($result) || empty($result['lesson'])) {
+            if (! is_array($result)) {
                 Log::warning('ExtractFailureLessonAction: invalid response', [
                     'experiment_id' => $experimentId,
                     'content' => substr($response->content, 0, 200),
@@ -96,10 +98,22 @@ PROMPT;
                 return;
             }
 
+            if (! empty($result['NO_ENTRY'])) {
+                return;
+            }
+
+            if (empty($result['lesson'])) {
+                Log::warning('ExtractFailureLessonAction: missing lesson field', [
+                    'experiment_id' => $experimentId,
+                ]);
+
+                return;
+            }
+
             $lesson = trim($result['lesson']);
             $confidence = (float) ($result['confidence'] ?? 0.5);
-            $tags = array_values(array_filter((array) ($result['tags'] ?? []), 'is_string'));
-            $rootCause = trim($result['root_cause'] ?? '');
+            $tags = [];
+            $rootCause = trim($result['cue'] ?? '');
 
             if ($confidence < 0.3) {
                 return;
@@ -113,6 +127,7 @@ PROMPT;
                 'experiment_title' => $experiment->title,
                 'final_status' => $experiment->status?->value,
                 'root_cause' => $rootCause,
+                'evidence' => trim($result['evidence'] ?? ''),
                 'task_type' => $taskType,
                 'extracted_at' => now()->toIso8601String(),
             ];
@@ -161,6 +176,52 @@ PROMPT;
     private function inferTaskType(Experiment $experiment): ?string
     {
         return $experiment->track?->value;
+    }
+
+    /**
+     * Balanced-brace JSON scanner. Strips optional ```json / ``` fences first,
+     * then returns the first complete JSON object from the text, or null if none
+     * is found. Handles escape sequences inside strings so brace counting stays
+     * correct even when the payload itself contains nested JSON.
+     */
+    private static function extractFirstJsonObject(string $text): ?string
+    {
+        $text = trim($text);
+        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $text, $m) === 1) {
+            $text = $m[1];
+        }
+
+        $start = strpos($text, '{');
+        if ($start === false) {
+            return null;
+        }
+
+        $depth = 0;
+        $inString = false;
+        $len = strlen($text);
+        for ($i = $start; $i < $len; $i++) {
+            $ch = $text[$i];
+            if ($ch === '\\' && $inString && $i + 1 < $len) {
+                $i++;
+
+                continue;
+            }
+            if ($ch === '"') {
+                $inString = ! $inString;
+
+                continue;
+            }
+            if ($inString) {
+                continue;
+            }
+            if ($ch === '{') {
+                $depth++;
+            } elseif ($ch === '}' && --$depth === 0) {
+                return substr($text, $start, $i - $start + 1);
+            }
+        }
+
+        return null;
     }
 
     private function buildPrompt(Experiment $experiment): string

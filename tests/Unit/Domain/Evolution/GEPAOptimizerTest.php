@@ -184,6 +184,38 @@ class GEPAOptimizerTest extends TestCase
         $this->assertSame(EvolutionProposalStatus::Pending, $proposal->status);
     }
 
+    public function test_keep_base_returns_empty_collection_without_proposals(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            SkillExecution::withoutGlobalScopes()->create([
+                'skill_id' => $this->skill->id,
+                'team_id' => $this->team->id,
+                'status' => 'completed',
+                'quality_score' => 0.9,
+                'input' => ['text' => 'test'],
+                'output' => ['result' => 'ok'],
+            ]);
+        }
+
+        $gateway = Mockery::mock(AiGatewayInterface::class);
+        $gateway->shouldReceive('complete')
+            ->once()
+            ->andReturn(new AiResponseDTO(
+                content: json_encode(['keep_base' => true]),
+                parsedOutput: null,
+                usage: new AiUsageDTO(promptTokens: 50, completionTokens: 10, costCredits: 1),
+                provider: 'anthropic',
+                model: 'claude-haiku-4-5',
+                latencyMs: 200,
+            ));
+
+        $optimizer = new GEPAOptimizer($gateway);
+        $result = $optimizer->run($this->skill, populationSize: 3);
+
+        $this->assertCount(0, $result);
+        $this->assertSame(0, EvolutionProposal::where('skill_id', $this->skill->id)->count());
+    }
+
     public function test_created_proposals_have_correct_skill_id(): void
     {
         for ($i = 0; $i < 10; $i++) {
