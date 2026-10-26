@@ -95,7 +95,7 @@ class LlmJudge
             $rubricText = collect($config['rubric'])->map(fn ($r) => "{$r[0]}-{$r[1]}: {$r[2]}")->implode("\n");
         }
 
-        $description = $expected !== null ? $config['description'] : 'intrinsic output quality (no reference answer available)';
+        $description = $expected !== null && $expected !== '' ? $config['description'] : 'intrinsic output quality (no reference answer available)';
 
         $prompt = "Evaluate the following output for: {$description}\n\n"
             ."Steps:\n{$stepsText}\n\n"
