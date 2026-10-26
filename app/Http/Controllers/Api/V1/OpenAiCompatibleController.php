@@ -19,6 +19,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OpenAiCompatibleController extends Controller
 {
+    /**
+     * OpenAI SDKs retry 408/409/429/5xx by default and honour this header to
+     * skip the retry. Sent on errors where a retry cannot help or would re-run
+     * an agent whose tools may already have had side effects.
+     */
+    private const NO_RETRY = ['x-should-retry' => 'false'];
+
     public function __construct(
         private readonly AiGatewayInterface $gateway,
         private readonly OpenAiRequestTranslator $requestTranslator,
@@ -156,6 +163,7 @@ class OpenAiCompatibleController extends Controller
                     'model_not_found',
                 ),
                 404,
+                self::NO_RETRY,
             );
         }
 
@@ -214,6 +222,7 @@ class OpenAiCompatibleController extends Controller
                     'model_not_found',
                 ),
                 404,
+                self::NO_RETRY,
             );
         }
 
@@ -238,8 +247,11 @@ class OpenAiCompatibleController extends Controller
             return response()->json(
                 OpenAiResponseTranslator::formatError($e->getMessage(), 'insufficient_quota', 402, 'insufficient_quota'),
                 402,
+                self::NO_RETRY,
             );
         } catch (\Throwable $e) {
+            // A raw-model call is safe to retry; an agent run may have executed
+            // tools before the exception, so a retry would repeat them.
             return response()->json(
                 OpenAiResponseTranslator::formatError(
                     app()->hasDebugModeEnabled() ? $e->getMessage() : 'An internal error occurred.',
@@ -247,6 +259,7 @@ class OpenAiCompatibleController extends Controller
                     500,
                 ),
                 500,
+                $resolved['type'] === 'agent' ? self::NO_RETRY : [],
             );
         }
     }
@@ -311,6 +324,33 @@ class OpenAiCompatibleController extends Controller
             userId: $user->id,
         );
 
+        // A run that produced no model answer is an error, not an empty "stop":
+        // either it failed outright (no provider, tool-loop breaker, any exception
+        // → failed execution with null output) or tool recovery gave up and
+        // returned a canned notice. A run where the model answered — even after
+        // some tool calls failed and were recovered — is a normal 200.
+        $execution = $result['execution'];
+        $runFailed = ($result['output'] ?? null) === null
+            || $execution->status === 'failed'
+            || isset($execution->quality_details['degraded']);
+        if ($runFailed) {
+            $reason = $execution->error_message
+                ?? 'Task could not be completed due to tool failures.';
+
+            return response()->json(
+                OpenAiResponseTranslator::formatError(
+                    app()->hasDebugModeEnabled()
+                        ? "Agent run failed: {$reason}"
+                        : 'Agent run failed.'.($execution->id ? " Execution ID: {$execution->id}." : ''),
+                    'server_error',
+                    502,
+                    'agent_run_failed',
+                ),
+                502,
+                self::NO_RETRY,
+            );
+        }
+
         $content = '';
         if (isset($result['output'])) {
             $content = is_array($result['output'])
@@ -318,7 +358,6 @@ class OpenAiCompatibleController extends Controller
                 : (string) $result['output'];
         }
 
-        $execution = $result['execution'];
         // The `agent_executions` table doesn't store token counts (only cost +
         // tool/step counters); the real per-call tokens live in `llm_request_logs`.
         // Aggregate the rows that belong to this execution (matched by agent_id +

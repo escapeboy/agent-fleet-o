@@ -19,5 +19,7 @@ final readonly class AiResponseDTO
         public int $stepsCount = 0,
         public ?array $reasoningChain = null,
         public ?array $loopAnalysis = null,
+        /** True when the provider call itself was streamed. */
+        public bool $streamed = false,
     ) {}
 }

@@ -55,6 +55,7 @@ use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Pipeline;
@@ -485,7 +486,7 @@ class ExecuteAgentAction
             // Tier preference applies only when agent model is set to 'auto' or not set
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
-                : $tierConfig['model_preference'];
+                : ($tierConfig['model_preference'] ?? LlmDefaults::platformModel());
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],
@@ -596,6 +597,8 @@ class ExecuteAgentAction
                 'quality_details' => array_filter([
                     'tier' => $tierConfig['tier']->value,
                     'semantic_loop_max_repeat' => $semanticMaxRepeat >= $semanticWarn ? $semanticMaxRepeat : null,
+                    // Tool recovery gave up: the content is a canned notice, not a model answer.
+                    'degraded' => $isPartial ? 'tool_recovery_exhausted' : null,
                 ]),
                 'workspace_contract' => $this->currentWorkspaceContract?->toArray(),
             ]);
@@ -730,7 +733,7 @@ class ExecuteAgentAction
 
             $model = ($agent->model !== null && $agent->model !== 'auto')
                 ? $agent->model
-                : $tierConfig['model_preference'];
+                : ($tierConfig['model_preference'] ?? LlmDefaults::platformModel());
 
             $request = new AiRequestDTO(
                 provider: $resolved['provider'],
@@ -1003,9 +1006,11 @@ class ExecuteAgentAction
             $reservedSteps = $maxSteps - $targetStep;
             $parts[] = implode("\n", [
                 '## Execution Budget',
-                "You have a maximum of {$maxSteps} tool calls for this task.",
-                "Plan to complete your core work by tool call {$targetStep}.",
-                "Reserve the final {$reservedSteps} call(s) for summarising and delivering your result.",
+                "You have a maximum of {$maxSteps} steps for this task. A step is one of your responses (one LLM turn), and your final answer also uses a step.",
+                'The limit counts steps, not tool calls: you can make several tool calls in a single step, and they all run before your next step.',
+                'When calls do not depend on each other\'s results (for example a list of independent payments), make them together in the same step.',
+                "Plan to complete your core work by step {$targetStep}.",
+                "Reserve the final {$reservedSteps} step(s) for summarising and delivering your result.",
                 'If you approach the limit with work still remaining: prioritise the most important items,',
                 'then deliver a partial result with clear notes on what was not completed.',
             ]);

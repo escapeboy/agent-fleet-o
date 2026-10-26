@@ -24,6 +24,7 @@ use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Models\GlobalSetting;
 use App\Models\User;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 use Prism\Prism\Tool;
 use Prism\Prism\Tool as PrismToolObject;
@@ -178,9 +179,10 @@ class SendAssistantMessageAction
             );
             // Force toolChoice='any' for providers that support it.
             // anthropic/google: natively support 'any' (Anthropic API / Gemini API).
-            // openai/openrouter: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+            // openai: PrismPHP maps ToolChoice::Any → "required" (OpenAI spec).
+            // openrouter: excluded — Prism's OpenRouter map throws on Any (only auto or a tool name).
             // openai_compatible/custom_endpoint: may or may not support it — excluded.
-            $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai', 'openrouter'], true);
+            $supportsAnyToolChoice = in_array($provider, ['anthropic', 'google', 'openai'], true);
             $toolChoice = ($needsTool && $supportsAnyToolChoice) ? 'any' : null;
         }
 
@@ -387,7 +389,7 @@ class SendAssistantMessageAction
         $model = $model
             ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($provider);
 
         // Check if provider is a local agent (codex, claude-code, or the generic 'local' key)
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");
@@ -616,7 +618,7 @@ class SendAssistantMessageAction
         $model = $model
             ?? ($teamSettings['assistant_llm_model'] ?? null)
             ?? GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($provider);
 
         // Check if provider is a local agent (codex, claude-code, or the generic 'local' key)
         $isLocal = $provider === 'local' || (bool) config("llm_providers.{$provider}.local");

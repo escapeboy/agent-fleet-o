@@ -85,7 +85,7 @@ class ClaudeCodeMcpConfigBuilderTest extends TestCase
         $this->assertSame('http://nginx/mcp', $entry['url']);
     }
 
-    public function test_mcp_http_with_explicit_path_is_left_alone(): void
+    public function test_mcp_http_with_path_already_ending_in_mcp_is_left_alone(): void
     {
         $tool = Tool::factory()->create([
             'team_id' => $this->team->id,
@@ -96,6 +96,73 @@ class ClaudeCodeMcpConfigBuilderTest extends TestCase
 
         $entry = $this->builder->build(collect([$tool]))['mcpServers']['with_path'];
         $this->assertSame('https://api.example.com/v1/mcp', $entry['url']);
+    }
+
+    public function test_mcp_http_with_path_not_ending_in_mcp_appends_mcp_like_mcp_http_client(): void
+    {
+        // Regression: a gateway serving `/e/<id>/mcp` was handed `/e/<id>` as-is,
+        // answered 404, and Claude Code started with zero tools and no error.
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'gateway_endpoint',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'http://host:8775/e/ep_123'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['gateway_endpoint'];
+        $this->assertSame('http://host:8775/e/ep_123/mcp', $entry['url']);
+    }
+
+    public function test_mcp_http_path_with_trailing_slash_appends_mcp_once(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'path_slash',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'http://host:8775/e/ep_123/'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['path_slash'];
+        $this->assertSame('http://host:8775/e/ep_123/mcp', $entry['url']);
+    }
+
+    public function test_mcp_http_keeps_query_string_after_appended_mcp(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'with_query',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'https://host/e/ep_123?key=abc&x=1'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['with_query'];
+        $this->assertSame('https://host/e/ep_123/mcp?key=abc&x=1', $entry['url']);
+    }
+
+    public function test_mcp_http_ending_in_mcp_with_query_string_is_left_alone(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'mcp_query',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'https://host/v1/mcp?key=abc'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['mcp_query'];
+        $this->assertSame('https://host/v1/mcp?key=abc', $entry['url']);
+    }
+
+    public function test_mcp_http_root_url_with_query_string_appends_mcp_before_query(): void
+    {
+        $tool = Tool::factory()->create([
+            'team_id' => $this->team->id,
+            'slug' => 'root_query',
+            'type' => ToolType::McpHttp,
+            'transport_config' => ['url' => 'https://host?key=abc'],
+        ]);
+
+        $entry = $this->builder->build(collect([$tool]))['mcpServers']['root_query'];
+        $this->assertSame('https://host/mcp?key=abc', $entry['url']);
     }
 
     public function test_mcp_http_with_inline_credentials_adds_authorization_header(): void

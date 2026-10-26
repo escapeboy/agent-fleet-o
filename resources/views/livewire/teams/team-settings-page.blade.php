@@ -1149,7 +1149,7 @@
     {{-- Model Allowlist --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Model Allowlist</h2>
-        <p class="mb-4 text-sm text-gray-500">Restrict which AI models your team can use. Leave empty to allow all models. Enter one <code class="rounded bg-gray-100 px-1 font-mono text-xs">provider/model</code> per line (e.g. <code class="rounded bg-gray-100 px-1 font-mono text-xs">anthropic/claude-sonnet-4-5</code>).</p>
+        <p class="mb-4 text-sm text-gray-500">Restrict which AI models your team can use. Leave empty to allow all models. Enter one <code class="rounded bg-gray-100 px-1 font-mono text-xs">provider/model</code> per line (e.g. <code class="rounded bg-gray-100 px-1 font-mono text-xs">anthropic/claude-sonnet-5-5</code>).</p>
 
         <x-form-textarea
             wire:model="allowedModelsInput"

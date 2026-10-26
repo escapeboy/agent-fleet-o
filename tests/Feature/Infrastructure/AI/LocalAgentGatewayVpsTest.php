@@ -102,6 +102,99 @@ SH);
         $this->assertSame(0, $audit->properties['exit_code']);
     }
 
+    private function runAndGetAudit(string $shim, ?string $purpose = null): AuditEntry
+    {
+        $this->writeShim($shim);
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(false, $user);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            purpose: $purpose,
+        ));
+
+        return AuditEntry::withoutGlobalScopes()->where('event', 'claude_code_vps.invoke')->firstOrFail();
+    }
+
+    public function test_audit_records_builtin_tool_calls_names_only(): void
+    {
+        $audit = $this->runAndGetAudit(<<<'SH'
+#!/bin/sh
+echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"echo SECRET"}},{"type":"tool_use","name":"mcp__fleetq__x","input":{}}]}}'
+echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{}}]}}'
+SH);
+
+        $this->assertSame(['Bash', 'Read'], $audit->properties['builtin_tool_calls']);
+        $this->assertArrayNotHasKey('builtin_tool_calls_truncated', $audit->properties);
+        $this->assertStringNotContainsString('SECRET', json_encode($audit->properties));
+    }
+
+    public function test_audit_records_bash_programs_without_arguments(): void
+    {
+        $audit = $this->runAndGetAudit(<<<'SH'
+#!/bin/sh
+echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"TOK=FAKE_SECRET /usr/bin/curl -H FAKE_SECRET http://x"}},{"type":"tool_use","name":"Bash","input":{"command":""}},{"type":"tool_use","name":"Read","input":{}}]}}'
+SH);
+
+        $this->assertSame(['curl', '?'], $audit->properties['bash_programs']);
+        $this->assertArrayNotHasKey('bash_programs_truncated', $audit->properties);
+        $this->assertStringNotContainsString('FAKE_SECRET', json_encode($audit->properties));
+    }
+
+    public function test_audit_has_empty_bash_programs_when_no_bash_calls(): void
+    {
+        $audit = $this->runAndGetAudit("#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}}'");
+
+        $this->assertSame([], $audit->properties['bash_programs']);
+    }
+
+    public function test_audit_has_empty_builtin_list_when_parsed_without_builtins(): void
+    {
+        $audit = $this->runAndGetAudit("#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}}'");
+
+        $this->assertArrayHasKey('builtin_tool_calls', $audit->properties);
+        $this->assertSame([], $audit->properties['builtin_tool_calls']);
+    }
+
+    public function test_audit_omits_builtin_key_for_assistant_runs(): void
+    {
+        $audit = $this->runAndGetAudit(
+            "#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{}}]}}'",
+            'platform_assistant',
+        );
+
+        $this->assertArrayNotHasKey('builtin_tool_calls', $audit->properties);
+        $this->assertArrayNotHasKey('bash_programs', $audit->properties);
+    }
+
+    public function test_audit_omits_builtin_key_when_stdout_empty(): void
+    {
+        $this->writeShim("#!/bin/sh\necho boom >&2\nexit 1");
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(false, $user);
+
+        try {
+            app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+                provider: 'claude-code-vps',
+                model: 'claude-sonnet-4-5',
+                systemPrompt: 'sys',
+                userPrompt: 'usr',
+                userId: $user->id,
+                teamId: $team->id,
+            ));
+            $this->fail('expected exception');
+        } catch (\RuntimeException) {
+        }
+
+        $audit = AuditEntry::withoutGlobalScopes()->where('event', 'claude_code_vps.invoke')->firstOrFail();
+        $this->assertArrayNotHasKey('builtin_tool_calls', $audit->properties);
+    }
+
     public function test_denied_user_cannot_invoke_vps_path(): void
     {
         $this->writeShim("#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"x\"}]}}'");

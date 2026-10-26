@@ -1,8 +1,13 @@
 <?php
 
+// Anthropic default = first entry of the catalog (llm_providers.anthropic.models),
+// the same source as LlmDefaults::platformModel(). A config file cannot call
+// config() for another file, so the catalog file is read directly.
+$anthropicDefault = array_key_first((require __DIR__.'/llm_providers.php')['anthropic']['models']);
+
 return [
 
-    'default_judge_model' => env('EVALUATION_JUDGE_MODEL', 'anthropic/claude-sonnet-4-5'),
+    'default_judge_model' => env('EVALUATION_JUDGE_MODEL', "anthropic/{$anthropicDefault}"),
     'default_judge_provider' => env('EVALUATION_JUDGE_PROVIDER', 'anthropic'),
 
     'criteria' => [

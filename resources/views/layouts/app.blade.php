@@ -30,10 +30,7 @@
     @if(config('services.plausible.domain'))
         <script defer data-domain="{{ config('services.plausible.domain') }}" src="https://plausible.io/js/script.js"></script>
     @endif
-    @if(config('services.google_analytics.id'))
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.id') }}"></script>
-        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ config('services.google_analytics.id') }}');</script>
-    @endif
+    <x-analytics.head />
 
     @livewireStyles
     @stack('styles')
@@ -58,6 +55,7 @@
     </script>
 </head>
 <body class="bg-(--color-surface-alt) font-sans antialiased text-(--color-on-surface)">
+    <x-analytics.banner />
     {{-- Offline banner — shown when device loses connectivity --}}
     <div x-data="networkStatus" x-show="!isOnline"
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="-translate-y-full" x-transition:enter-end="translate-y-0"
@@ -151,6 +149,7 @@
                                         <i class="fa-solid fa-users text-base text-gray-400 shrink-0"></i>
                                         Team Settings
                                     </a>
+                                    <x-analytics.settings-link class="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors" />
                                 </div>
                                 {{-- Sign out --}}
                                 <div class="border-t border-gray-100 py-1">

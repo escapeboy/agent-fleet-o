@@ -61,12 +61,12 @@ class GlobalSettingsPage extends Component
     // Default pipeline LLM
     public string $defaultLlmProvider = 'anthropic';
 
-    public string $defaultLlmModel = 'claude-sonnet-4-5';
+    public string $defaultLlmModel = '';
 
     // Assistant LLM
     public string $assistantProvider = 'anthropic';
 
-    public string $assistantModel = 'claude-sonnet-4-5';
+    public string $assistantModel = '';
 
     // Approval settings
     public int $approvalTimeoutHours = 48;

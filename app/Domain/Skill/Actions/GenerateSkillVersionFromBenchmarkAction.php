@@ -8,6 +8,7 @@ use App\Domain\Skill\Models\SkillIterationLog;
 use App\Domain\Skill\Models\SkillVersion;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use RuntimeException;
 
 /**
@@ -51,7 +52,7 @@ class GenerateSkillVersionFromBenchmarkAction
 
         $response = $this->gateway->complete(new AiRequestDTO(
             provider: 'anthropic',
-            model: 'claude-sonnet-4-5',
+            model: LlmDefaults::platformModel('anthropic'),
             systemPrompt: 'You are a prompt engineering expert optimising for a specific metric. Respond with ONLY the improved prompt template text — no explanation, no markdown fences.',
             userPrompt: $metaPrompt,
             maxTokens: 2048,

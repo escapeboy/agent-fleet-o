@@ -16,8 +16,11 @@ enum ExecutionTier: string
     case Ultra = 'ultra';
 
     /**
+     * A null model_preference means the platform default model; the caller
+     * resolves it through LlmDefaults::platformModel().
+     *
      * @return array{
-     *   model_preference: string,
+     *   model_preference: ?string,
      *   max_tokens: int,
      *   max_steps: int,
      *   temperature: float,
@@ -37,7 +40,7 @@ enum ExecutionTier: string
                 'planning_depth' => 1,
             ],
             self::Standard => [
-                'model_preference' => 'claude-sonnet-4-5',
+                'model_preference' => null,
                 'max_tokens' => 4096,
                 'max_steps' => 10,
                 'temperature' => 0.7,
@@ -45,7 +48,7 @@ enum ExecutionTier: string
                 'planning_depth' => 2,
             ],
             self::Pro => [
-                'model_preference' => 'claude-sonnet-4-5',
+                'model_preference' => null,
                 'max_tokens' => 8192,
                 'max_steps' => 20,
                 'temperature' => 0.7,

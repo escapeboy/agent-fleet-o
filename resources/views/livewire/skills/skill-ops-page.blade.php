@@ -170,7 +170,7 @@
                             <option value="{{ $v->id }}">{{ $v->skill?->name ?? '—' }} · v{{ $v->version }}</option>
                         @endforeach
                     </x-form-select>
-                    <x-form-input wire:model="annotateModelId" label="Model" placeholder="anthropic/claude-sonnet-4-5" />
+                    <x-form-input wire:model="annotateModelId" label="Model" placeholder="anthropic/claude-sonnet-5-5" />
                     <x-form-textarea wire:model="annotateInput" label="Input" mono rows="3" />
                     <x-form-textarea wire:model="annotateOutput" label="Output" mono rows="4" />
                     <x-form-select wire:model="annotateRating" label="Rating">

@@ -11,10 +11,12 @@ use App\Infrastructure\AI\Services\CircuitBreaker;
 use App\Infrastructure\AI\Services\EscalationStrategy;
 use App\Infrastructure\AI\Services\ProviderRanker;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
+use Prism\Prism\Exceptions\PrismException;
 use Prism\Prism\Exceptions\PrismRateLimitedException;
 use Throwable;
 
@@ -212,7 +214,7 @@ class FallbackAiGateway implements AiGatewayInterface
                 // are config errors disguised as provider failures — let the chain
                 // advance without breaking the circuit. Mirrors the \RuntimeException
                 // branch above.
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -400,7 +402,7 @@ class FallbackAiGateway implements AiGatewayInterface
                     'error' => $e->getMessage(),
                 ]);
             } catch (Throwable $e) {
-                if ($this->isAuthError($e) || $this->isModelUnavailableError($e)) {
+                if ($this->isAuthError($e) || $this->isModelUnavailableError($e) || $this->isClientRequestError($e) || $this->isUnmappedFinishReason($e)) {
                     $firstException ??= $e;
                     $lastException = $e;
                     Log::warning("AI Gateway stream fallback: {$providerName}/{$modelName} config error (not recording CB failure)", [
@@ -591,6 +593,44 @@ class FallbackAiGateway implements AiGatewayInterface
             || str_contains($msg, 'is not a valid model ID')
             || str_contains($msg, 'model_not_found')
             || str_contains($msg, 'The model `');
+    }
+
+    /**
+     * A 4xx answer (Anthropic `404 not_found_error` for an unknown model id, `400
+     * invalid_request_error`, …) means the provider is up and rejected THIS request.
+     * The breaker is keyed per provider, so counting it lets one misconfigured model
+     * open the circuit and fail unrelated agent runs. 408 and 429 are transient and
+     * still count. The status is read from the exception chain, not the message:
+     * Prism puts it in PrismException::$code and keeps the RequestException as previous.
+     */
+    private function isClientRequestError(Throwable $e): bool
+    {
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            $status = match (true) {
+                $current instanceof RequestException => $current->response->status(),
+                $current instanceof PrismException => $current->getCode(),
+                default => 0,
+            };
+
+            if ($status >= 400 && $status < 500) {
+                return ! in_array($status, [408, 429], true);
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Prism's Anthropic handlers throw "Anthropic: unknown finish reason" when the API answered 200
+     * with a stop reason Prism does not map (`refusal`, `pause_turn`, `model_context_window_exceeded`).
+     * Anthropic rejected or paused THIS request, so it must not open the per-provider breaker: a
+     * background job's failures (CompressAndStoreExecutionMemoryJob, 2026-10-16) opened it and failed
+     * unrelated agent runs. Only the Anthropic prefix: OpenRouter maps an upstream `finish_reason:
+     * "error"` to the same exception, and that one can be a real outage.
+     */
+    private function isUnmappedFinishReason(Throwable $e): bool
+    {
+        return $e instanceof PrismException && $e->getMessage() === 'Anthropic: unknown finish reason';
     }
 
     /**

@@ -95,6 +95,13 @@ class AgentController extends Controller
             ->setStatusCode(201);
     }
 
+    /**
+     * Update an agent.
+     *
+     * `config` is merged into the agent's existing config: keys you send replace
+     * the stored value, keys you omit are kept, and a key sent as `null` is removed
+     * (e.g. `{"config": {"execution_tier": null}}` resets the tier to the default).
+     */
     public function update(
         UpdateAgentRequest $request,
         Agent $agent,
@@ -105,6 +112,17 @@ class AgentController extends Controller
         unset($data['skill_ids']);
         $toolIds = $data['tool_ids'] ?? null;
         unset($data['tool_ids']);
+
+        // `config` is shared by several writers (UI, per-key MCP tools, this API),
+        // so the sent keys are merged into the stored config rather than replacing
+        // it: a client sending only `use_tool_search` must not wipe the UI-set
+        // `execution_tier`. A key sent as null is removed.
+        if (array_key_exists('config', $data)) {
+            $data['config'] = array_filter(
+                array_merge($agent->config ?? [], $data['config']),
+                fn ($value) => $value !== null,
+            );
+        }
 
         if (isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
@@ -130,15 +148,16 @@ class AgentController extends Controller
         if ($toolIds !== null) {
             // Preserve approval/permission pivot config for tools that remain attached;
             // a bare sync() would reset retained tools to DB defaults.
+            // overrides is taken decoded: the raw attribute is a JSON string, and the
+            // pivot's array cast would encode it a second time into a JSON string.
             $existingPivots = $agent->tools()->get()->mapWithKeys(fn ($tool) => [
                 $tool->id => Arr::only($tool->pivot->getAttributes(), [
                     'priority',
-                    'overrides',
                     'approval_mode',
                     'approval_timeout_minutes',
                     'approval_timeout_action',
                     'permission_level',
-                ]),
+                ]) + ['overrides' => $tool->pivot->overrides ?? []],
             ]);
 
             $syncData = [];

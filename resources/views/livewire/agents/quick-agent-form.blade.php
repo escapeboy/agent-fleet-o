@@ -52,7 +52,7 @@ more than 10% price movement as urgent.</pre>
                     <option value="openai">OpenAI</option>
                     <option value="google">Google</option>
                 </x-form-select>
-                <x-form-input wire:model="model" label="Model" type="text" placeholder="claude-sonnet-4-5"
+                <x-form-input wire:model="model" label="Model" type="text" placeholder="claude-sonnet-5-5"
                     :error="$errors->first('model')" />
             </div>
 

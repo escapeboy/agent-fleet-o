@@ -221,6 +221,81 @@ class AgentControllerTest extends ApiTestCase
         $this->assertSame('high', $agent->config['reasoning_effort'] ?? null);
     }
 
+    public function test_can_update_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => 'pro'],
+        ])->assertOk()->assertJsonPath('data.config.execution_tier', 'pro');
+
+        $this->assertSame('pro', $agent->fresh()->config['execution_tier'] ?? null);
+    }
+
+    public function test_can_create_agent_with_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+
+        $this->postJson('/api/v1/agents', [
+            'name' => 'Tiered Agent',
+            'provider' => 'anthropic',
+            'model' => 'claude-sonnet-4-5',
+            'config' => ['execution_tier' => 'ultra'],
+        ])->assertCreated();
+
+        $agent = Agent::where('name', 'Tiered Agent')->firstOrFail();
+        $this->assertSame('ultra', $agent->config['execution_tier'] ?? null);
+    }
+
+    public function test_rejects_invalid_execution_tier(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+
+        $this->postJson('/api/v1/agents', [
+            'name' => 'Bad Tier',
+            'config' => ['execution_tier' => 'mega'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['config.execution_tier']);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => 'mega'],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['config.execution_tier']);
+    }
+
+    public function test_update_merges_config_and_keeps_unsent_keys(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent([
+            'config' => ['execution_tier' => 'pro', 'working_directory' => '/srv/app'],
+        ]);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['use_tool_search' => false],
+        ])->assertOk();
+
+        $config = $agent->fresh()->config;
+        $this->assertSame('pro', $config['execution_tier'] ?? null);
+        $this->assertSame('/srv/app', $config['working_directory'] ?? null);
+        $this->assertFalse($config['use_tool_search']);
+    }
+
+    public function test_update_removes_config_key_sent_as_null(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent([
+            'config' => ['execution_tier' => 'pro', 'reasoning_effort' => 'high'],
+        ]);
+
+        $this->putJson("/api/v1/agents/{$agent->id}", [
+            'config' => ['execution_tier' => null],
+        ])->assertOk();
+
+        $config = $agent->fresh()->config;
+        $this->assertArrayNotHasKey('execution_tier', $config);
+        $this->assertSame('high', $config['reasoning_effort'] ?? null);
+    }
+
     public function test_can_create_agent_with_tool_search_config(): void
     {
         $this->actingAsApiUser();
@@ -378,5 +453,24 @@ class AgentControllerTest extends ApiTestCase
             'approval_mode' => 'ask',
             'permission_level' => 'read_only',
         ]);
+    }
+
+    public function test_update_agent_keeps_tool_overrides_as_json_object(): void
+    {
+        $this->actingAsApiUser();
+        $agent = $this->createAgent();
+        $plain = Tool::factory()->create(['team_id' => $this->team->id]);
+        $configured = Tool::factory()->create(['team_id' => $this->team->id]);
+        $agent->tools()->attach($plain->id, ['priority' => 0]);
+        $agent->tools()->attach($configured->id, ['priority' => 1, 'overrides' => ['timeout' => 30]]);
+
+        // Two updates: the second one re-syncs pivots copied from the first.
+        $this->putJson("/api/v1/agents/{$agent->id}", ['tool_ids' => [$plain->id, $configured->id]])->assertOk();
+        $this->putJson("/api/v1/agents/{$agent->id}", ['tool_ids' => [$plain->id, $configured->id]])->assertOk();
+
+        $overrides = $agent->fresh()->tools->mapWithKeys(fn ($tool) => [$tool->id => $tool->pivot->overrides]);
+
+        $this->assertSame([], $overrides[$plain->id]);
+        $this->assertSame(['timeout' => 30], $overrides[$configured->id]);
     }
 }

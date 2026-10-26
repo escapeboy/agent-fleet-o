@@ -8,6 +8,7 @@ use App\Domain\Memory\Actions\StoreMemoryAction;
 use App\Domain\Project\Models\ProjectRun;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 
@@ -183,8 +184,8 @@ class FlushAgentMemoryOnCompletion implements ShouldQueue
         }
 
         return [
-            'provider' => config('llm_pricing.default_provider', 'anthropic'),
-            'model' => config('llm_pricing.default_model', 'claude-sonnet-4-5'),
+            'provider' => LlmDefaults::platformProvider(),
+            'model' => LlmDefaults::platformModel(),
         ];
     }
 }

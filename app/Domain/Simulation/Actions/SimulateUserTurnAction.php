@@ -5,6 +5,7 @@ namespace App\Domain\Simulation\Actions;
 use App\Domain\Simulation\Models\SimulationPersona;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
+use App\Support\LlmDefaults;
 
 /**
  * Produces the next user message for a persona given the conversation so far —
@@ -63,7 +64,7 @@ class SimulateUserTurnAction
      */
     private function resolveModel(): array
     {
-        $full = (string) config('simulation.default_model', 'anthropic/claude-sonnet-4-5');
+        $full = (string) config('simulation.default_model', 'anthropic/'.LlmDefaults::platformModel('anthropic'));
 
         if (str_contains($full, '/')) {
             [$provider, $model] = explode('/', $full, 2);

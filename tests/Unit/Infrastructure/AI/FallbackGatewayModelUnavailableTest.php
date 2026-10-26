@@ -7,6 +7,8 @@ use App\Infrastructure\AI\Gateways\FallbackAiGateway;
 use App\Infrastructure\AI\Gateways\PrismAiGateway;
 use App\Infrastructure\AI\Services\CircuitBreaker;
 use Exception;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Prism\Prism\Exceptions\PrismException;
 use Tests\TestCase;
 
 class FallbackGatewayModelUnavailableTest extends TestCase
@@ -19,7 +21,7 @@ class FallbackGatewayModelUnavailableTest extends TestCase
     {
         parent::setUp();
 
-        $this->gateway = $this->createMock(PrismAiGateway::class);
+        $this->gateway = $this->createStub(PrismAiGateway::class);
         $this->circuitBreaker = $this->createMock(CircuitBreaker::class);
 
         config(['services.groq.key' => 'gsk-test']);
@@ -61,5 +63,123 @@ class FallbackGatewayModelUnavailableTest extends TestCase
 
         $this->expectException(Exception::class);
         $fallbackGateway->complete($this->makeRequest());
+    }
+
+    private function anthropicRequest(): AiRequestDTO
+    {
+        config(['ai.providers.anthropic.key' => 'sk-ant-test']);
+
+        return new AiRequestDTO(
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'test',
+            userPrompt: 'test',
+        );
+    }
+
+    /** @return array<string, array{int, string, string}> */
+    public static function clientErrors(): array
+    {
+        return [
+            '404 unknown model (2026-10-15 incident)' => [404, 'not_found_error', 'model: claude-sonnet-4-5'],
+            '400 invalid request' => [400, 'invalid_request_error', 'model: invalid model id'],
+        ];
+    }
+
+    #[DataProvider('clientErrors')]
+    public function test_anthropic_client_error_does_not_open_the_circuit(int $status, string $type, string $message): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('complete')->willThrowException(
+            PrismException::providerRequestErrorWithDetails('Anthropic', $status, $type, $message),
+        );
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete($this->anthropicRequest());
+    }
+
+    public function test_anthropic_client_error_does_not_open_the_circuit_when_streaming(): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('stream')->willThrowException(
+            PrismException::providerRequestErrorWithDetails('Anthropic', 404, 'not_found_error', 'model: claude-sonnet-4-5'),
+        );
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->stream($this->anthropicRequest());
+    }
+
+    public function test_unmapped_finish_reason_does_not_open_the_circuit(): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('complete')->willThrowException(new PrismException('Anthropic: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete($this->anthropicRequest());
+    }
+
+    public function test_unmapped_finish_reason_does_not_open_the_circuit_when_streaming(): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->never())->method('recordFailure');
+
+        $this->gateway->method('stream')->willThrowException(new PrismException('Anthropic: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->stream($this->anthropicRequest());
+    }
+
+    public function test_openrouter_unmapped_finish_reason_still_opens_the_circuit(): void
+    {
+        config(['services.openrouter.key' => 'sk-or-test', 'ai.providers.openrouter.key' => 'sk-or-test']);
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->once())->method('recordFailure')->with('openrouter');
+
+        $this->gateway->method('complete')->willThrowException(new PrismException('OpenRouter: unknown finish reason'));
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete(new AiRequestDTO(provider: 'openrouter', model: 'openai/gpt-oss-120b', systemPrompt: 'test', userPrompt: 'test'));
+    }
+
+    /** @return array<string, array{int}> */
+    public static function providerFailures(): array
+    {
+        return [
+            '408 timeout' => [408],
+            '500 server error' => [500],
+            '503 unavailable' => [503],
+        ];
+    }
+
+    #[DataProvider('providerFailures')]
+    public function test_anthropic_timeout_and_server_errors_still_open_the_circuit(int $status): void
+    {
+        $fallbackGateway = new FallbackAiGateway($this->gateway, $this->circuitBreaker, []);
+
+        $this->circuitBreaker->method('isAvailable')->willReturn(true);
+        $this->circuitBreaker->expects($this->once())->method('recordFailure')->with('anthropic');
+
+        $this->gateway->method('complete')->willThrowException(
+            PrismException::providerRequestErrorWithDetails('Anthropic', $status, 'api_error', 'upstream failure'),
+        );
+
+        $this->expectException(PrismException::class);
+        $fallbackGateway->complete($this->anthropicRequest());
     }
 }

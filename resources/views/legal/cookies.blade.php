@@ -40,7 +40,12 @@
                 <li>Is hosted in the EU</li>
                 <li>Complies with GDPR, CCPA, and PECR without requiring consent</li>
             </ul>
-            <p><strong>No analytics cookies are set by FleetQ.</strong></p>
+            @if(config('services.google_analytics.id'))
+                <p>This site also uses <strong>Google Analytics 4</strong> (Google Ireland Ltd.), but only after you click <strong>Accept</strong> in the cookie banner. Until then, and if you click <strong>Reject</strong>, the Google Analytics script is not loaded, no request goes to Google, and no analytics cookies are set. If you accept, Google Analytics sets the cookies <code>_ga</code> and <code>_ga_&lt;ID&gt;</code> (up to 13 months) to count visits; Google's advertising features stay off.</p>
+                <p>We keep your choice, with a version and a date, in your browser's local storage for 12 months. You can withdraw at any time with the &ldquo;Cookie settings&rdquo; link: choosing Reject there disables Google Analytics and deletes the <code>_ga</code> cookies.</p>
+            @else
+                <p><strong>No analytics cookies are set by FleetQ.</strong></p>
+            @endif
 
             <h3>3.3 Functionality Storage</h3>
             <table>
@@ -63,12 +68,19 @@
                 </thead>
                 <tbody>
                     <tr><td>Plausible Analytics</td><td>Usage analytics</td><td>No (cookieless)</td><td><a href="https://plausible.io/privacy" rel="noopener noreferrer" target="_blank">plausible.io/privacy</a></td></tr>
+                    @if(config('services.google_analytics.id'))
+                        <tr><td>Google Analytics 4</td><td>Usage analytics (only after you accept)</td><td>Yes, after Accept: <code>_ga</code>, <code>_ga_&lt;ID&gt;</code></td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">policies.google.com/privacy</a></td></tr>
+                    @endif
                     <tr><td>Stripe</td><td>Payment processing</td><td>Yes (on payment pages only)</td><td><a href="https://stripe.com/privacy" rel="noopener noreferrer" target="_blank">stripe.com/privacy</a></td></tr>
                 </tbody>
             </table>
 
             <h2>5. Managing Your Cookies</h2>
-            <p>Since FleetQ only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3).</p>
+            @if(config('services.google_analytics.id'))
+                <p>Besides strictly necessary cookies and cookieless analytics (Plausible), we use Google Analytics cookies only with your consent. The banner has equal Accept and Reject buttons, and the &ldquo;Cookie settings&rdquo; link lets you change your choice at any time.</p>
+            @else
+                <p>Since FleetQ only uses strictly necessary cookies (session, CSRF) and cookieless analytics (Plausible), no cookie consent banner is required under ePrivacy Directive Article 5(3).</p>
+            @endif
             <p>You can control cookies through your browser settings:</p>
             <ul>
                 <li><strong>Chrome:</strong> Settings &gt; Privacy and Security &gt; Cookies</li>

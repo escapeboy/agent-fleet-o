@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI\Services;
 
 use App\Domain\Tool\Enums\ToolType;
 use App\Domain\Tool\Models\Tool;
+use App\Support\McpEndpointUrl;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -93,23 +94,18 @@ class ClaudeCodeMcpConfigBuilder
      * Mirror McpHttpClient::callTool's URL convention. Tool records store
      * the MCP server's base URL; the actual Streamable HTTP endpoint lives
      * at `/mcp` on that base. Cloud-side McpHttpClient appends `/mcp` for
-     * every request — Claude Code's MCP client doesn't, so the bridge must
-     * supply the full endpoint URL up front.
+     * every request, whatever path the base URL carries — Claude Code's MCP
+     * client doesn't, so the bridge must supply the full endpoint URL up front.
      *
-     * Heuristic: if the URL already has a path component beyond `/`, leave
-     * it alone (caller intentionally pointed at a specific endpoint, e.g.
-     * `https://api.example.com/v1/mcp`). Otherwise append `/mcp`.
+     * Rule: append `/mcp` to the path unless it already ends with `/mcp`
+     * (the URL already names the endpoint, e.g. `https://api.example.com/v1/mcp`).
+     * A base with a path (`http://host/e/ep_123`) still gets `/mcp` — leaving it
+     * as-is made Claude Code hit a 404 and start with no tools, silently.
+     * The query string and fragment are kept after the new path.
      */
     private function normalizeMcpUrl(string $url): string
     {
-        $parsed = parse_url($url);
-        $path = $parsed['path'] ?? '';
-
-        if ($path === '' || $path === '/') {
-            return rtrim($url, '/').'/mcp';
-        }
-
-        return $url;
+        return McpEndpointUrl::normalize($url);
     }
 
     /**

@@ -10,6 +10,27 @@
  * `last_verified_at` flags pricing entries — admin alerts fire if not refreshed in N days (P1).
  * Snapshot of this entire structure is persisted to llm_pricing_snapshots on every change for audit.
  */
+// OpenRouter rates for Claude Sonnet 4.5, from https://openrouter.ai/api/v1/models (2026-10-16).
+$openrouterClaudeSonnet45 = [
+    'tier' => 'default',
+    'input_usd_per_mtok' => 3.00,
+    'output_usd_per_mtok' => 15.00,
+    'cache_read_usd_per_mtok' => 0.30,
+    'cache_write_5m_usd_per_mtok' => 3.75,
+    'cache_write_1h_usd_per_mtok' => 6.00,
+    'long_context' => [
+        'above_prompt_tokens' => 200_000,
+        'input_usd_per_mtok' => 6.00,
+        'output_usd_per_mtok' => 22.50,
+        'cache_read_usd_per_mtok' => 0.60,
+        'cache_write_5m_usd_per_mtok' => 7.50,
+        'cache_write_1h_usd_per_mtok' => 12.00,
+    ],
+    'context_window' => 1_000_000,
+    'last_verified_at' => '2026-10-16',
+    'source_url' => 'https://openrouter.ai/anthropic/claude-sonnet-4.5',
+];
+
 return [
 
     // 1 cost_credit = $0.001 USD. Anchor for back-compat calculateCost() call sites.
@@ -49,6 +70,12 @@ return [
 
     'last_updated_at' => '2026-05-04',
 
+    // Platform default provider/model — the last step of ProviderResolver. Read
+    // through LlmDefaults::platformModel(): a null model means the first entry of
+    // llm_providers.{provider}.models, so no model id is duplicated here.
+    'default_provider' => 'anthropic',
+    'default_model' => null,
+
     /*
     |--------------------------------------------------------------------------
     | Reservation multipliers (by tier)
@@ -85,6 +112,87 @@ return [
     'providers' => [
 
         'anthropic' => [
+            // Rates from the claude-api skill model table (cached 2026-10-06), checked
+            // against the Anthropic pricing page on 2026-10-15. Cache reads 0.1x input
+            // except Fable 5.1 ($0.25) and Opus 5.5 / Sonnet 5.5 (0.05x: $0.20 / $0.10);
+            // cache writes 1.25x (5m) / 2x (1h) input. Every catalog model in
+            // llm_providers.anthropic needs a row here or the call is billed at $0.
+            'claude-fable-5-1' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 10.00,
+                'output_usd_per_mtok' => 50.00,
+                'cache_read_usd_per_mtok' => 0.25,
+                'cache_write_5m_usd_per_mtok' => 12.50,
+                'cache_write_1h_usd_per_mtok' => 20.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-opus-5-5' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 4.00,
+                'output_usd_per_mtok' => 20.00,
+                'cache_read_usd_per_mtok' => 0.20,
+                'cache_write_5m_usd_per_mtok' => 5.00,
+                'cache_write_1h_usd_per_mtok' => 8.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-opus-4-8' => [
+                'tier' => 'heavy',
+                'input_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 25.00,
+                'cache_read_usd_per_mtok' => 0.50,
+                'cache_write_5m_usd_per_mtok' => 6.25,
+                'cache_write_1h_usd_per_mtok' => 10.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-sonnet-5-5' => [
+                'tier' => 'default',
+                'input_usd_per_mtok' => 2.00,
+                'output_usd_per_mtok' => 10.00,
+                'cache_read_usd_per_mtok' => 0.10,
+                'cache_write_5m_usd_per_mtok' => 2.50,
+                'cache_write_1h_usd_per_mtok' => 4.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            'claude-sonnet-5' => [
+                'tier' => 'default',
+                'input_usd_per_mtok' => 2.00,
+                'output_usd_per_mtok' => 10.00,
+                'cache_read_usd_per_mtok' => 0.20,
+                'cache_write_5m_usd_per_mtok' => 2.50,
+                'cache_write_1h_usd_per_mtok' => 4.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
+            // Prompts over 100K tokens pay every rate from long_context below. The
+            // prompt length counts uncached input, cache reads and cache writes.
+            'claude-haiku-5-5' => [
+                'tier' => 'nano',
+                'input_usd_per_mtok' => 0.10,
+                'output_usd_per_mtok' => 0.50,
+                'cache_read_usd_per_mtok' => 0.01,
+                'cache_write_5m_usd_per_mtok' => 0.125,
+                'cache_write_1h_usd_per_mtok' => 0.20,
+                'long_context' => [
+                    'above_prompt_tokens' => 100_000,
+                    'input_usd_per_mtok' => 0.50,
+                    'output_usd_per_mtok' => 2.50,
+                    'cache_read_usd_per_mtok' => 0.05,
+                    'cache_write_5m_usd_per_mtok' => 0.625,
+                    'cache_write_1h_usd_per_mtok' => 1.00,
+                ],
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-15',
+                'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
+            ],
             'claude-opus-4-7' => [
                 'tier' => 'heavy',
                 'input_usd_per_mtok' => 5.00,
@@ -92,19 +200,19 @@ return [
                 'cache_read_usd_per_mtok' => 0.50,
                 'cache_write_5m_usd_per_mtok' => 6.25,
                 'cache_write_1h_usd_per_mtok' => 10.00,
-                'context_window' => 200_000,
+                'context_window' => 1_000_000,
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
             'claude-opus-4-6' => [
                 'tier' => 'heavy',
-                'input_usd_per_mtok' => 15.00,
-                'output_usd_per_mtok' => 75.00,
-                'cache_read_usd_per_mtok' => 1.50,
-                'cache_write_5m_usd_per_mtok' => 18.75,
-                'cache_write_1h_usd_per_mtok' => 30.00,
-                'context_window' => 200_000,
-                'last_verified_at' => '2026-05-04',
+                'input_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 25.00,
+                'cache_read_usd_per_mtok' => 0.50,
+                'cache_write_5m_usd_per_mtok' => 6.25,
+                'cache_write_1h_usd_per_mtok' => 10.00,
+                'context_window' => 1_000_000,
+                'last_verified_at' => '2026-10-06',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
             'claude-sonnet-4-6' => [
@@ -114,7 +222,7 @@ return [
                 'cache_read_usd_per_mtok' => 0.30,
                 'cache_write_5m_usd_per_mtok' => 3.75,
                 'cache_write_1h_usd_per_mtok' => 6.00,
-                'context_window' => 200_000,
+                'context_window' => 1_000_000,
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://docs.claude.com/en/docs/about-claude/pricing',
             ],
@@ -212,12 +320,13 @@ return [
                 'last_verified_at' => '2026-05-04',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
+            // Prompts <= 200K tokens; above that Google charges $2.50 / $15.00.
             'gemini-2.5-pro' => [
                 'tier' => 'default',
                 'input_usd_per_mtok' => 1.25,
-                'output_usd_per_mtok' => 5.00,
+                'output_usd_per_mtok' => 10.00,
                 'context_window' => 1_048_576,
-                'last_verified_at' => '2026-05-04',
+                'last_verified_at' => '2026-10-15',
                 'source_url' => 'https://ai.google.dev/pricing',
             ],
         ],
@@ -277,6 +386,10 @@ return [
         'openrouter' => [
             // From https://openrouter.ai/api/v1/models (2026-10-03); was unpriced on prod.
             'thinkingmachines/inkling' => ['tier' => 'default', 'input_usd_per_mtok' => 0.95, 'output_usd_per_mtok' => 4.05, 'context_window' => 524_288, 'last_verified_at' => '2026-10-03', 'source_url' => 'https://openrouter.ai/thinkingmachines/inkling'],
+            // Document OCR's OpenRouter default sends `anthropic/claude-sonnet-4-5`; OpenRouter
+            // lists the model as `anthropic/claude-sonnet-4.5`. Both ids priced so neither bills $0.
+            'anthropic/claude-sonnet-4.5' => $openrouterClaudeSonnet45,
+            'anthropic/claude-sonnet-4-5' => $openrouterClaudeSonnet45,
         ],
         'ollama' => [],
         'openai_compatible' => [],
@@ -322,8 +435,8 @@ return [
     'context_windows' => [
         'claude-sonnet-4-5-20250929' => 200_000,
         'claude-haiku-4-5-20251001' => 200_000,
-        'claude-opus-4-6' => 200_000,
-        'claude-opus-4-7' => 200_000,
+        'claude-opus-4-6' => 1_000_000,
+        'claude-opus-4-7' => 1_000_000,
         'gpt-4o' => 128_000,
         'gpt-4o-mini' => 128_000,
         'gpt-5' => 400_000,

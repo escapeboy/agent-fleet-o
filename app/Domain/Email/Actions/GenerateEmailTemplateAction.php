@@ -8,6 +8,7 @@ use App\Domain\Shared\Services\FormatGuidePromptInjector;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Log;
 
 class GenerateEmailTemplateAction
@@ -36,7 +37,7 @@ class GenerateEmailTemplateAction
         $provider = GlobalSetting::get('assistant_llm_provider')
             ?? GlobalSetting::get('default_llm_provider', 'anthropic');
         $model = GlobalSetting::get('assistant_llm_model')
-            ?? GlobalSetting::get('default_llm_model', 'claude-sonnet-4-5');
+            ?? GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel($provider);
 
         $response = $this->gateway->complete(new AiRequestDTO(
             provider: $provider,

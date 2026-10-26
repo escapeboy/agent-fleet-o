@@ -11,6 +11,7 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\ProviderResolver;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -117,7 +118,7 @@ class CreateAgentForm extends Component
 
     public function addFallback(): void
     {
-        $this->fallbackChain[] = ['provider' => 'anthropic', 'model' => 'claude-sonnet-4-5'];
+        $this->fallbackChain[] = ['provider' => 'anthropic', 'model' => LlmDefaults::platformModel('anthropic')];
     }
 
     public function removeFallback(int $index): void

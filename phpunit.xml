@@ -36,6 +36,78 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="TERMS_CURRENT_VERSION" value="0"/>
+        <env name="TERMS_CURRENT_VERSION" value="0" force="true"/>
+        <server name="TERMS_CURRENT_VERSION" value="0"/>
+        <!-- Blank every paid LLM / AI provider key so no test can make a live,
+             billed call with keys from .env or the shell. Tests fake providers.
+             Each key needs both entries: <env force> sets putenv/$_ENV, but a key
+             exported by docker compose or the shell also sits in $_SERVER, which
+             Laravel reads first and only <server> overwrites. -->
+        <env name="ANTHROPIC_API_KEY" value="" force="true"/>
+        <server name="ANTHROPIC_API_KEY" value=""/>
+        <env name="OPENAI_API_KEY" value="" force="true"/>
+        <server name="OPENAI_API_KEY" value=""/>
+        <env name="GOOGLE_AI_API_KEY" value="" force="true"/>
+        <server name="GOOGLE_AI_API_KEY" value=""/>
+        <env name="GEMINI_API_KEY" value="" force="true"/>
+        <server name="GEMINI_API_KEY" value=""/>
+        <env name="AZURE_OPENAI_API_KEY" value="" force="true"/>
+        <server name="AZURE_OPENAI_API_KEY" value=""/>
+        <env name="COHERE_API_KEY" value="" force="true"/>
+        <server name="COHERE_API_KEY" value=""/>
+        <env name="DEEPSEEK_API_KEY" value="" force="true"/>
+        <server name="DEEPSEEK_API_KEY" value=""/>
+        <env name="FIREWORKS_API_KEY" value="" force="true"/>
+        <server name="FIREWORKS_API_KEY" value=""/>
+        <env name="GROQ_API_KEY" value="" force="true"/>
+        <server name="GROQ_API_KEY" value=""/>
+        <env name="MISTRAL_API_KEY" value="" force="true"/>
+        <server name="MISTRAL_API_KEY" value=""/>
+        <env name="OPENROUTER_API_KEY" value="" force="true"/>
+        <server name="OPENROUTER_API_KEY" value=""/>
+        <env name="PERPLEXITY_API_KEY" value="" force="true"/>
+        <server name="PERPLEXITY_API_KEY" value=""/>
+        <env name="XAI_API_KEY" value="" force="true"/>
+        <server name="XAI_API_KEY" value=""/>
+        <env name="VOYAGEAI_API_KEY" value="" force="true"/>
+        <server name="VOYAGEAI_API_KEY" value=""/>
+        <env name="JINA_API_KEY" value="" force="true"/>
+        <server name="JINA_API_KEY" value=""/>
+        <env name="ELEVENLABS_API_KEY" value="" force="true"/>
+        <server name="ELEVENLABS_API_KEY" value=""/>
+        <env name="DEEPGRAM_API_KEY" value="" force="true"/>
+        <server name="DEEPGRAM_API_KEY" value=""/>
+        <env name="SERPER_API_KEY" value="" force="true"/>
+        <server name="SERPER_API_KEY" value=""/>
+        <env name="BROWSER_USE_CLOUD_API_KEY" value="" force="true"/>
+        <server name="BROWSER_USE_CLOUD_API_KEY" value=""/>
+        <env name="CLAUDE_CODE_OAUTH_TOKEN" value="" force="true"/>
+        <server name="CLAUDE_CODE_OAUTH_TOKEN" value=""/>
+        <env name="CONTEXT_COMPACTION_ANTHROPIC_API_KEY" value="" force="true"/>
+        <server name="CONTEXT_COMPACTION_ANTHROPIC_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_ANTHROPIC_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_ANTHROPIC_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_OPENAI_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_OPENAI_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_GOOGLE_AI_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_GOOGLE_AI_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_DEEPSEEK_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_DEEPSEEK_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_FIREWORKS_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_FIREWORKS_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_GROQ_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_GROQ_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_MISTRAL_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_MISTRAL_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_OPENROUTER_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_OPENROUTER_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_PERPLEXITY_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_PERPLEXITY_API_KEY" value=""/>
+        <env name="SUB_PROGRAM_XAI_API_KEY" value="" force="true"/>
+        <server name="SUB_PROGRAM_XAI_API_KEY" value=""/>
+        <env name="TYPESAFE_API_KEY" value="" force="true"/>
+        <server name="TYPESAFE_API_KEY" value=""/>
+        <env name="JEFF_API_KEY" value="" force="true"/>
+        <server name="JEFF_API_KEY" value=""/>
     </php>
 </phpunit>

@@ -14,6 +14,7 @@ use App\Infrastructure\AI\Contracts\AiMiddlewareInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Enums\ReasoningEffort;
 use App\Infrastructure\AI\Services\UsageNormalizer;
 use App\Infrastructure\Encryption\CredentialEncryption;
 use App\Infrastructure\Telemetry\TracerProvider as FleetTracerProvider;
@@ -175,18 +176,28 @@ class PrismAiGateway implements AiGatewayInterface
         $localConfig = $this->getPerRequestProviderConfig($request);
         $startTime = hrtime(true);
 
-        $generator = Prism::text()
+        // Same cache_control as complete(): without it a caching request was billed
+        // for 5m cache writes that Anthropic never made.
+        $systemPromptArg = ($request->enablePromptCaching && $request->provider === 'anthropic')
+            ? (new SystemMessage($request->systemPrompt))->withProviderOptions(['cacheType' => 'ephemeral'])
+            : $request->systemPrompt;
+
+        $builder = Prism::text()
             ->using($provider, $request->model, $localConfig)
-            ->withSystemPrompt($request->systemPrompt)
+            ->withSystemPrompt($systemPromptArg)
             ->withPrompt($request->userPrompt)
             ->withMaxTokens($request->maxTokens)
             ->usingTemperature($this->temperatureFor($request))
-            ->withClientOptions(['timeout' => 120])
-            ->asStream();
+            ->withClientOptions(['timeout' => 120]);
+
+        if (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
+        }
+
+        $generator = $builder->asStream();
 
         $accumulated = '';
-        $promptTokens = 0;
-        $completionTokens = 0;
+        $usage = new Usage(0, 0);
 
         foreach ($generator as $event) {
             if ($event instanceof TextDeltaEvent) {
@@ -196,40 +207,33 @@ class PrismAiGateway implements AiGatewayInterface
                     $onChunk($event->delta);
                 }
             } elseif ($event instanceof StreamEndEvent && $event->usage) {
-                $promptTokens = $event->usage->promptTokens;
-                $completionTokens = $event->usage->completionTokens;
+                // Keep the whole Usage: it carries the cache read/write counts
+                // (Anthropic: cache_read_input_tokens / cache_creation_input_tokens).
+                $usage = $event->usage;
             }
         }
 
         $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
         // Estimate tokens if usage wasn't reported by the stream
-        if ($completionTokens === 0 && $accumulated !== '') {
-            $completionTokens = (int) ceil(strlen($accumulated) / 4);
+        if ($usage->completionTokens === 0 && $accumulated !== '') {
+            $usage = new Usage(
+                promptTokens: $usage->promptTokens,
+                completionTokens: (int) ceil(strlen($accumulated) / 4),
+                cacheWriteInputTokens: $usage->cacheWriteInputTokens,
+                cacheReadInputTokens: $usage->cacheReadInputTokens,
+                thoughtTokens: $usage->thoughtTokens,
+            );
         }
-
-        $cacheStrategy = $this->resolveCacheStrategy($request);
 
         return new AiResponseDTO(
             content: $accumulated,
             parsedOutput: null,
-            usage: new AiUsageDTO(
-                promptTokens: $promptTokens,
-                completionTokens: $completionTokens,
-                costCredits: $this->costCalculator->calculateCost(
-                    provider: $request->provider,
-                    model: $request->model,
-                    inputTokens: $promptTokens,
-                    outputTokens: $completionTokens,
-                    cachedInputTokens: 0,
-                    cacheStrategy: $cacheStrategy,
-                ),
-                cachedInputTokens: 0,
-                cacheStrategy: $cacheStrategy,
-            ),
+            usage: $this->buildUsageDTO($usage, $request, streamed: true),
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
+            streamed: true,
         );
     }
 
@@ -273,14 +277,12 @@ class PrismAiGateway implements AiGatewayInterface
             ->withTools($tools)
             ->withMaxSteps($request->maxSteps);
 
+        if (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
+        }
+
         if ($request->toolChoice !== null) {
-            $toolChoice = match ($request->toolChoice) {
-                'any' => ToolChoice::Any,
-                'auto' => ToolChoice::Auto,
-                'none' => ToolChoice::None,
-                default => $request->toolChoice,
-            };
-            $builder->withToolChoice($toolChoice);
+            $builder->withToolChoice($this->resolveToolChoice($request));
         }
 
         $response = $builder->asText();
@@ -408,13 +410,19 @@ class PrismAiGateway implements AiGatewayInterface
             $effectiveBudget = min($effectiveBudget, 32_000);
         }
 
-        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic') {
+        // Opus 4.7+, Sonnet 5.x, Haiku 5.5, Fable and Mythos reject budget_tokens with a
+        // 400. Those models get no thinking option (the 5.x models run adaptive thinking
+        // when it is omitted, Opus 4.7/4.8 run without); their depth is set by effort.
+        if ($effectiveBudget !== null && $effectiveBudget > 0 && $request->provider === 'anthropic'
+            && ! $this->isAdaptiveOnlyAnthropicModel($request->model)) {
             $builder->withProviderOptions([
                 'thinking' => [
                     'enabled' => true,
                     'budgetTokens' => $effectiveBudget,
                 ],
             ]);
+        } elseif (($effort = $this->anthropicEffortFor($request)) !== null) {
+            $builder->withProviderOptions(['effort' => $effort]);
         }
 
         // Add tool support when tools are provided
@@ -434,16 +442,7 @@ class PrismAiGateway implements AiGatewayInterface
                 ->withMaxSteps($request->maxSteps);
 
             if ($request->toolChoice !== null) {
-                // Map string values to ToolChoice enum so all providers get the correct type.
-                // Passing a raw string to PrismPHP is treated as a specific function name,
-                // not as a mode like 'any'/'auto'/'none'.
-                $toolChoice = match ($request->toolChoice) {
-                    'any' => ToolChoice::Any,
-                    'auto' => ToolChoice::Auto,
-                    'none' => ToolChoice::None,
-                    default => $request->toolChoice, // specific tool name — pass as-is
-                };
-                $builder->withToolChoice($toolChoice);
+                $builder->withToolChoice($this->resolveToolChoice($request));
             }
         }
 
@@ -541,15 +540,17 @@ class PrismAiGateway implements AiGatewayInterface
      * provider handlers when prompt caching is engaged. cacheStrategy is derived
      * from the request flag — Anthropic uses ephemeral_5m by default in our code path.
      */
-    private function buildUsageDTO(Usage $usage, AiRequestDTO $request): AiUsageDTO
+    private function buildUsageDTO(Usage $usage, AiRequestDTO $request, bool $streamed = false): AiUsageDTO
     {
-        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage);
+        $breakdown = UsageNormalizer::fromPrism($request->provider, $usage, $streamed);
+        $cacheStrategy = $this->resolveCacheStrategy($request);
         $accurateCost = $this->costCalculator->calculateCost(
             provider: $request->provider,
             model: $request->model,
             inputTokens: $breakdown->uncachedInputTokens,
             outputTokens: $breakdown->outputTokens,
             cachedInputTokens: $breakdown->cacheReadInputTokens,
+            cacheStrategy: $cacheStrategy,
             cacheWriteInputTokens: $breakdown->cacheWriteInputTokens,
         );
 
@@ -566,7 +567,13 @@ class PrismAiGateway implements AiGatewayInterface
         }
 
         $cachedInputTokens = (int) ($usage->cacheReadInputTokens ?? 0);
-        $cacheStrategy = $this->resolveCacheStrategy($request);
+
+        // Legacy treats inputTokens as the prompt total including cache reads. Prism's
+        // OpenAI text handler already subtracts cached tokens and its stream handler
+        // does not, so take the total from the normalised breakdown for OpenAI.
+        $legacyInputTokens = $request->provider === 'openai'
+            ? $breakdown->uncachedInputTokens + $breakdown->cacheReadInputTokens
+            : $usage->promptTokens;
 
         return new AiUsageDTO(
             promptTokens: $usage->promptTokens,
@@ -574,10 +581,11 @@ class PrismAiGateway implements AiGatewayInterface
             costCredits: $this->costCalculator->calculateCost(
                 provider: $request->provider,
                 model: $request->model,
-                inputTokens: $usage->promptTokens,
+                inputTokens: $legacyInputTokens,
                 outputTokens: $usage->completionTokens,
                 cachedInputTokens: $cachedInputTokens,
                 cacheStrategy: $cacheStrategy,
+                promptTokens: $breakdown->uncachedInputTokens + $breakdown->cacheReadInputTokens + $breakdown->cacheWriteInputTokens,
             ),
             cachedInputTokens: $cachedInputTokens,
             cacheStrategy: $cacheStrategy,
@@ -975,7 +983,7 @@ class PrismAiGateway implements AiGatewayInterface
 
     /**
      * Sampling parameters were removed from the newer Anthropic models: sending
-     * `temperature` to Opus 4.7+, Sonnet 5, Fable 5 or Mythos 5 comes back as
+     * `temperature` to Opus 4.7+, Sonnet 5, Haiku 5, Fable 5 or Mythos 5 comes back as
      * `400 invalid_request_error - temperature is deprecated for this model`.
      * Older models still take it, so it is decided per model rather than
      * dropped for everyone. Prism omits the parameter when it is null.
@@ -986,11 +994,82 @@ class PrismAiGateway implements AiGatewayInterface
             return $request->temperature;
         }
 
-        $rejectsSampling = (bool) preg_match(
-            '/(opus-(4-7|4-8|5)|sonnet-5|fable-5|mythos-5)/i',
-            $request->model,
-        );
+        return $this->isAdaptiveOnlyAnthropicModel($request->model) ? null : $request->temperature;
+    }
 
-        return $rejectsSampling ? null : $request->temperature;
+    /**
+     * `output_config.effort` for the Anthropic models that reject budget_tokens.
+     * The level comes from the same budget the older models get (2K → low,
+     * 8K → medium, above → high), so effort Auto resolved by BudgetPressureRouting
+     * applies too. Effort None maps to low: these models cannot turn thinking off.
+     * Null means send nothing and let the model use its own default.
+     */
+    private function anthropicEffortFor(AiRequestDTO $request): ?string
+    {
+        if ($request->provider !== 'anthropic' || ! $this->isAdaptiveOnlyAnthropicModel($request->model)) {
+            return null;
+        }
+
+        $budget = $request->thinkingBudget ?? $request->effort?->toBudgetTokens();
+
+        if ($budget !== null) {
+            return match (true) {
+                $budget <= 2_000 => 'low',
+                $budget <= 8_000 => 'medium',
+                default => 'high',
+            };
+        }
+
+        return $request->effort === ReasoningEffort::None ? 'low' : null;
+    }
+
+    /**
+     * Map the request's tool choice string to what PrismPHP expects. A raw string would be
+     * treated as a specific tool name, so the modes must become enum cases.
+     */
+    private function resolveToolChoice(AiRequestDTO $request): string|ToolChoice
+    {
+        $choice = $request->toolChoice;
+
+        // Prism's OpenRouter ToolChoiceMap throws on ToolChoice::Any (it supports only auto and a tool name).
+        $openRouterAny = $choice === 'any' && str_starts_with($request->provider, 'openrouter');
+
+        if ($openRouterAny || ($choice !== 'auto' && $choice !== 'none' && $this->rejectsForcedToolChoice($request))) {
+            Log::debug('PrismAiGateway: forced tool_choice downgraded to auto', [
+                'model' => $request->model,
+                'requested' => $choice,
+            ]);
+
+            return ToolChoice::Auto;
+        }
+
+        return match ($choice) {
+            'any' => ToolChoice::Any,
+            'auto' => ToolChoice::Auto,
+            'none' => ToolChoice::None,
+            default => $choice, // specific tool name
+        };
+    }
+
+    /**
+     * Anthropic models (direct or via OpenRouter) that answer HTTP 400 to tool_choice any/tool: Fable 5.1, Mythos 5.1,
+     * Opus 5.5 and Sonnet 5.5. Other models (Opus 5, Sonnet 5, Haiku 5.5, 4.x) accept it.
+     */
+    private function rejectsForcedToolChoice(AiRequestDTO $request): bool
+    {
+        $viaAnthropic = $request->provider === 'anthropic';
+        // OpenRouter forwards "required" to Anthropic and uses dot ids (anthropic/claude-sonnet-5.5).
+        $viaOpenRouter = str_starts_with($request->provider, 'openrouter') && str_starts_with($request->model, 'anthropic/');
+
+        return ($viaAnthropic || $viaOpenRouter)
+            && preg_match('/(fable-5[.-]1|mythos-5[.-]1|opus-5[.-]5|sonnet-5[.-]5)(?![0-9])/i', $request->model) === 1;
+    }
+
+    /**
+     * Anthropic models that reject sampling parameters and manual thinking budgets.
+     */
+    private function isAdaptiveOnlyAnthropicModel(string $model): bool
+    {
+        return (bool) preg_match('/(opus-(4-7|4-8|5)|sonnet-5|haiku-5|fable-5|mythos-5)/i', $model);
     }
 }

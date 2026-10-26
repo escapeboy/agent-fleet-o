@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ProviderResolverTest extends TestCase
@@ -351,6 +352,117 @@ class ProviderResolverTest extends TestCase
 
         $this->assertSame('openai', $resolved['provider']);
         $this->assertSame('gpt-4o', $resolved['model']);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function currentAnthropicModels(): array
+    {
+        return [
+            'haiku 5.5' => ['claude-haiku-5-5'],
+            'sonnet 5.5' => ['claude-sonnet-5-5'],
+            'opus 5.5' => ['claude-opus-5-5'],
+            'fable 5.1' => ['claude-fable-5-1'],
+            'sonnet 5' => ['claude-sonnet-5'],
+            'opus 4.8' => ['claude-opus-4-8'],
+            'opus 4.7' => ['claude-opus-4-7'],
+            'sonnet 4.6' => ['claude-sonnet-4-6'],
+        ];
+    }
+
+    #[DataProvider('currentAnthropicModels')]
+    public function test_resolve_keeps_current_anthropic_model_untouched(string $model): void
+    {
+        // 2026-10-15: an anthropic/claude-haiku-5-5 agent was swapped to
+        // claude-sonnet-4-5 (404 not_found_error) because the catalog only knew 4.x ids.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => $model,
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame(['provider' => 'anthropic', 'model' => $model], $resolved);
+    }
+
+    public function test_resolve_keeps_dated_snapshot_of_a_catalog_model(): void
+    {
+        // claude-haiku-4-5-20251001 is priced and served, but only the undated alias
+        // is in the catalog — the guard used to swap it for the first catalog model.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-haiku-4-5-20251001',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame(['provider' => 'anthropic', 'model' => 'claude-haiku-4-5-20251001'], $resolved);
+    }
+
+    public function test_dated_snapshot_of_an_unknown_model_is_still_swapped(): void
+    {
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-3-opus-20240229',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('anthropic', $resolved['provider']);
+        $this->assertArrayHasKey($resolved['model'], config('llm_providers.anthropic.models'));
+    }
+
+    public function test_resolve_keeps_team_default_haiku_5_for_background_jobs(): void
+    {
+        // Memory jobs call resolve(team:) with no agent — the path that sent the
+        // swapped claude-sonnet-4-5 and tripped the anthropic circuit breaker.
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create([
+            'settings' => ['default_llm_provider' => 'anthropic', 'default_llm_model' => 'claude-haiku-5-5'],
+        ]);
+
+        $resolved = $this->resolver->resolve(team: $team);
+
+        $this->assertSame(['provider' => 'anthropic', 'model' => 'claude-haiku-5-5'], $resolved);
+    }
+
+    public function test_unknown_anthropic_model_swaps_to_a_current_model(): void
+    {
+        Config::set('local_llm.enabled', false);
+        Config::set('local_agents.enabled', false);
+        Config::set('services.platform_api_keys.anthropic', 'sk-ant-key');
+
+        $team = Team::factory()->create();
+        $agent = Agent::factory()->create([
+            'team_id' => $team->id,
+            'provider' => 'anthropic',
+            'model' => 'claude-not-a-model',
+        ]);
+
+        $resolved = $this->resolver->resolve(agent: $agent, team: $team);
+
+        $this->assertSame('anthropic', $resolved['provider']);
+        $this->assertSame('claude-sonnet-5-5', $resolved['model']);
     }
 
     public function test_model_label_matches_model_id_for_dynamically_discovered_ollama_models(): void

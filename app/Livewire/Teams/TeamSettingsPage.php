@@ -17,6 +17,7 @@ use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Infrastructure\Telemetry\TenantTracerProviderFactory;
 use App\Infrastructure\Telemetry\TenantTracerTester;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
@@ -59,7 +60,7 @@ class TeamSettingsPage extends Component
     // Assistant LLM
     public string $assistantProvider = 'anthropic';
 
-    public string $assistantModel = 'claude-sonnet-4-5';
+    public string $assistantModel = '';
 
     // Media analysis
     public bool $mediaAnalysisEnabled = false;
@@ -172,7 +173,7 @@ class TeamSettingsPage extends Component
         $this->defaultProvider = $settings['default_llm_provider'] ?? '';
         $this->defaultModel = $settings['default_llm_model'] ?? '';
         $this->assistantProvider = $settings['assistant_llm_provider'] ?? GlobalSetting::get('assistant_llm_provider', 'anthropic') ?? 'anthropic';
-        $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model', 'claude-sonnet-4-5') ?? 'claude-sonnet-4-5';
+        $this->assistantModel = $settings['assistant_llm_model'] ?? GlobalSetting::get('assistant_llm_model') ?? LlmDefaults::platformModel();
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);

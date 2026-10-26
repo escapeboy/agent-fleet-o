@@ -6,6 +6,7 @@ use App\Domain\Agent\Models\Agent;
 use App\Domain\Memory\Models\Memory;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Tool\Models\Tool;
+use App\Support\LlmDefaults;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
@@ -132,7 +133,7 @@ class ImportAgentWorkspaceAction
             'taste' => $identity['taste'] ?? null,
             'personality' => $identity['personality'] ?? null,
             'provider' => $identity['provider'] ?? 'anthropic',
-            'model' => $identity['model'] ?? 'claude-sonnet-4-5',
+            'model' => $identity['model'] ?? LlmDefaults::platformModel($identity['provider'] ?? 'anthropic'),
             'status' => 'active',
             'system_prompt_template' => $workspace['system_prompt_template'] ?? null,
             'capabilities' => $identity['capabilities'] ?? [],
@@ -210,7 +211,7 @@ class ImportAgentWorkspaceAction
 
             $pivotData = [
                 'priority' => $toolData['pivot']['priority'] ?? 0,
-                'overrides' => json_encode($toolData['pivot']['overrides'] ?? []),
+                'overrides' => $toolData['pivot']['overrides'] ?? [],
             ];
 
             if (isset($toolData['pivot']['approval_mode'])) {

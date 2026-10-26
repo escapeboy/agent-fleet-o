@@ -258,6 +258,183 @@ final class LocalAgentOutputParser
         return null;
     }
 
+    public const MAX_BUILTIN_TOOL_CALLS = 500;
+
+    /**
+     * Names of the built-in (non-`mcp__`) tools the Claude Code CLI called, read
+     * from the `tool_use` blocks of `assistant` events in a stream-json
+     * transcript, in transcript order, one entry per call. Malformed lines are
+     * skipped.
+     *
+     * For each `Bash` call it also returns the program name only (see
+     * bashProgram()); arguments and the rest of the command are never kept.
+     * Both lists are capped at MAX_BUILTIN_TOOL_CALLS independently.
+     *
+     * @return array{names: list<string>, truncated: bool, bash_programs: list<string>, bash_truncated: bool}
+     */
+    public static function builtinToolCalls(string $streamJson): array
+    {
+        $names = [];
+        $programs = [];
+        $truncated = false;
+        $bashTruncated = false;
+
+        foreach (preg_split('/\r\n|\n|\r/', $streamJson) ?: [] as $line) {
+            $event = json_decode(trim($line), true);
+            if (! is_array($event) || ($event['type'] ?? null) !== 'assistant') {
+                continue;
+            }
+            $content = $event['message']['content'] ?? null;
+            if (! is_array($content)) {
+                continue;
+            }
+            foreach ($content as $block) {
+                if (! is_array($block) || ($block['type'] ?? null) !== 'tool_use') {
+                    continue;
+                }
+                $name = $block['name'] ?? null;
+                if (! is_string($name) || $name === '' || str_starts_with($name, 'mcp__')) {
+                    continue;
+                }
+                if (count($names) >= self::MAX_BUILTIN_TOOL_CALLS) {
+                    $truncated = true;
+                } else {
+                    $names[] = $name;
+                }
+                if ($name === 'Bash') {
+                    if (count($programs) >= self::MAX_BUILTIN_TOOL_CALLS) {
+                        $bashTruncated = true;
+                    } else {
+                        $input = $block['input'] ?? null;
+                        $command = is_array($input) ? ($input['command'] ?? null) : null;
+                        $programs[] = self::bashProgram($command);
+                    }
+                }
+            }
+        }
+
+        return [
+            'names' => $names,
+            'truncated' => $truncated,
+            'bash_programs' => $programs,
+            'bash_truncated' => $bashTruncated,
+        ];
+    }
+
+    /**
+     * The program a Bash command runs: its first command word, after leading
+     * assignments (`NAME=`, `NAME+=`, `NAME[..]=`) and sudo/env/time/nohup,
+     * reduced to a basename. The word is VALIDATED, never filtered: anything
+     * that is not a plain program name (or looks like a secret) becomes `?`,
+     * so no part of an argument, URL or token can end up stored. A wrapper
+     * followed by a flag also gives `?`.
+     */
+    public static function bashProgram(mixed $command): string
+    {
+        if (! is_string($command)) {
+            return '?';
+        }
+
+        $pos = 0;
+        $len = strlen($command);
+        $afterWrapper = false;
+
+        while (true) {
+            $word = self::nextShellWord($command, $pos, $len);
+            if ($word === null) {
+                return '?';
+            }
+            [$raw, $text] = $word;
+            if ($raw === '') {
+                return '?';
+            }
+            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/', $raw) === 1) {
+                continue;
+            }
+            if ($afterWrapper && str_starts_with($raw, '-')) {
+                return '?';
+            }
+            if (in_array($text, ['sudo', 'env', 'time', 'nohup'], true)) {
+                $afterWrapper = true;
+
+                continue;
+            }
+            if (preg_match('/\s/', $text) === 1) {
+                return '?';
+            }
+            $base = ($slash = strrpos($text, '/')) === false ? $text : substr($text, $slash + 1);
+
+            return self::looksLikeProgramName($base) ? $base : '?';
+        }
+    }
+
+    private static function looksLikeProgramName(string $name): bool
+    {
+        if (preg_match('/^[A-Za-z][A-Za-z0-9._+-]{0,31}$/', $name) !== 1) {
+            return false;
+        }
+        if (preg_match('/^(sk-|sk_|rk_|ghp|gho|ghs|ghu|github_pat|glpat|xox|akia|eyj|aiza)/i', $name) === 1 || preg_match('/\d{8}/', $name) === 1) {
+            return false;
+        }
+        preg_match_all('/[A-Za-z0-9]+/', $name, $runs);
+        foreach ($runs[0] as $run) {
+            if (strlen($run) > 20 && preg_match('/[A-Za-z]/', $run) === 1 && preg_match('/\d/', $run) === 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Reads one shell word starting at $pos (advanced past it). Returns
+     * [raw, unquoted] or null on an unterminated quote. A word ends at
+     * whitespace or ; | & < > ( ) outside quotes; an empty raw word means the
+     * command starts with such an operator or is exhausted.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    private static function nextShellWord(string $s, int &$pos, int $len): ?array
+    {
+        while ($pos < $len && ctype_space($s[$pos])) {
+            $pos++;
+        }
+
+        $raw = '';
+        $text = '';
+        $quote = null;
+
+        while ($pos < $len) {
+            $c = $s[$pos];
+            if ($quote !== null) {
+                $raw .= $c;
+                $pos++;
+                if ($c === $quote) {
+                    $quote = null;
+                } else {
+                    $text .= $c;
+                }
+
+                continue;
+            }
+            if ($c === "'" || $c === '"') {
+                $quote = $c;
+                $raw .= $c;
+                $pos++;
+
+                continue;
+            }
+            if (ctype_space($c) || str_contains(';|&<>()', $c)) {
+                break;
+            }
+            $raw .= $c;
+            $text .= $c;
+            $pos++;
+        }
+
+        return $quote !== null ? null : [$raw, $text];
+    }
+
     /**
      * Rough token estimate (4 chars per token).
      */

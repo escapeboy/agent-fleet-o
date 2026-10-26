@@ -17,6 +17,7 @@ use App\Jobs\Middleware\TenantRateLimit;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use App\Models\GlobalSetting;
+use App\Support\LlmDefaults;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -336,8 +337,8 @@ class BuildArtifactJob implements ShouldQueue
         }
 
         // 4. Platform default
-        $platformProvider = GlobalSetting::get('default_llm_provider') ?? config('llm_pricing.default_provider', 'anthropic');
-        $platformModel = GlobalSetting::get('default_llm_model') ?? config('llm_pricing.default_model', 'claude-sonnet-4-5');
+        $platformProvider = GlobalSetting::get('default_llm_provider') ?? LlmDefaults::platformProvider();
+        $platformModel = GlobalSetting::get('default_llm_model') ?? LlmDefaults::platformModel();
 
         return [
             'provider' => $platformProvider,

@@ -10,6 +10,7 @@ use App\Domain\Skill\Exceptions\InsufficientAnnotationsException;
 use App\Domain\Skill\Models\Skill;
 use App\Domain\Skill\Models\SkillAnnotation;
 use App\Domain\Skill\Models\SkillVersion;
+use App\Support\LlmDefaults;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -33,7 +34,7 @@ class SkillPlayground extends Component
     public string $testInput = '';
 
     /** @var string[] */
-    public array $selectedModels = ['anthropic/claude-sonnet-4-5', 'openai/gpt-4o'];
+    public array $selectedModels = [];
 
     /**
      * Keyed by model_id: [output, cost, latency_ms, done, error]
@@ -57,6 +58,7 @@ class SkillPlayground extends Component
     {
         $this->skillId = $skillId;
         $this->versionId = $versionId;
+        $this->selectedModels = ['anthropic/'.LlmDefaults::platformModel('anthropic'), 'openai/gpt-4o'];
         $this->refreshAnnotationCount();
     }
 
