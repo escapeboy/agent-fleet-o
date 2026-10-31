@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use Closure;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -20,7 +21,7 @@ class RestrictSentryFixTokens
 
         if ($token instanceof PersonalAccessToken
             && in_array('sentry-fixes', $token->abilities ?? [], true)
-            && ! $request->is('api/v1/sentry-fix-tasks', 'api/v1/sentry-fix-tasks/*')) {
+            && ! CompatibleSanctumGuard::isSentryFixTaskPath($request)) {
             abort(403, 'Tokens with the sentry-fixes ability can only access the sentry fix task endpoints.');
         }
 

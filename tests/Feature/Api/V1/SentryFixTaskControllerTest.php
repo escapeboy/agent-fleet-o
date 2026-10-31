@@ -11,6 +11,7 @@ use App\Domain\Signal\Models\Signal;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -316,7 +317,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
         $this->postJson("/api/v1/sentry-fix-tasks/{$foreign->id}/events", ['state' => 'claimed', 'message' => 'x'])->assertNotFound();
         $this->postJson("/api/v1/sentry-fix-tasks/{$foreign->id}/classify", ['files' => [], 'diff_lines' => 1])->assertNotFound();
         $this->getJson('/api/v1/sentry-fix-tasks')->assertJsonCount(0, 'data');
-        $this->getJson('/api/v1/sentry-fix-tasks/not-a-uuid')->assertNotFound();
+        $this->assertContains($this->getJson('/api/v1/sentry-fix-tasks/not-a-uuid')->getStatusCode(), [403, 404]);
         $this->assertSame(SentryFixTaskState::Queued, $foreign->refresh()->state);
     }
 
@@ -467,18 +468,25 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_sentry_fixes_token_can_only_reach_the_fix_task_routes(): void
     {
         $task = $this->task();
-        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+        $token = SanctumTokenIssuer::create($this->user, 'fix', ['team:'.$this->team->id, 'sentry-fixes'])->plainTextToken;
 
-        $this->postJson('/api/v1/team/tokens', ['name' => 'more', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertForbidden();
-        $this->getJson('/api/v1/team/tokens')->assertForbidden();
-        $this->putJson('/api/v1/team', ['name' => 'Hijacked'])->assertForbidden();
-        $this->getJson('/api/v1/team')->assertForbidden();
+        $this->app['auth']->forgetGuards();
+        $this->assertContains($this->withToken($token)->postJson('/api/v1/team/tokens', ['name' => 'more', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->getStatusCode(), [401, 403]);
+        $this->app['auth']->forgetGuards();
+        $this->assertContains($this->withToken($token)->getJson('/api/v1/team/tokens')->getStatusCode(), [401, 403]);
+        $this->app['auth']->forgetGuards();
+        $this->assertContains($this->withToken($token)->putJson('/api/v1/team', ['name' => 'Hijacked'])->getStatusCode(), [401, 403]);
+        $this->app['auth']->forgetGuards();
+        $this->assertContains($this->withToken($token)->getJson('/api/v1/team')->getStatusCode(), [401, 403]);
         $this->assertSame(0, PersonalAccessToken::where('name', 'more')->count());
         $this->assertSame('Test Team', $this->team->refresh()->name);
 
-        $this->getJson('/api/v1/sentry-fix-tasks')->assertOk();
-        $this->getJson("/api/v1/sentry-fix-tasks/{$task->id}")->assertOk();
-        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/v1/sentry-fix-tasks')->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson("/api/v1/sentry-fix-tasks/{$task->id}")->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertOk();
     }
 
     public function test_tokens_without_the_ability_are_not_restricted_by_the_fix_token_rule(): void
@@ -512,5 +520,39 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x', 'worker' => 'fixer-1'])
             ->assertOk()->assertJsonPath('data.state', 'fixing');
+    }
+
+    public function test_sentry_fixes_token_does_not_authenticate_on_mcp_or_other_route_groups(): void
+    {
+        Route::middleware('auth:sanctum')->get('/cloudlike/ping', fn () => response()->json(['ok' => true]));
+        $fix = SanctumTokenIssuer::create($this->user, 'fix', ['team:'.$this->team->id, 'sentry-fixes'])->plainTextToken;
+        $plain = SanctumTokenIssuer::create($this->user, 'plain', ['*'])->plainTextToken;
+        $mint = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'api_token_manage', 'arguments' => ['action' => 'create', 'name' => 'escalated']]];
+        $list = ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => []];
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($fix)->postJson('/mcp/full', $mint)->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($fix)->postJson('/mcp', $list)->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($fix)->getJson('/cloudlike/ping')->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($fix)->getJson('/api/v1/sentry-fix-tasks/../team')->assertStatus(404);
+        $this->assertSame(0, PersonalAccessToken::where('name', 'escalated')->count());
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($plain)->getJson('/cloudlike/ping')->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($fix)->getJson('/api/v1/sentry-fix-tasks')->assertOk();
+    }
+
+    public function test_sentry_fixes_token_is_rejected_on_lookalike_paths(): void
+    {
+        $fix = SanctumTokenIssuer::create($this->user, 'fix', ['team:'.$this->team->id, 'sentry-fixes'])->plainTextToken;
+
+        foreach (['/api/v1/sentry-fix-tasks-evil', '/api/v1/sentry-fix-tasks/x/y', '/api/v1/team', '/api/v1/me'] as $uri) {
+            $this->app['auth']->forgetGuards();
+            $this->assertContains($this->withToken($fix)->getJson($uri)->getStatusCode(), [401, 403, 404], $uri);
+        }
     }
 }
