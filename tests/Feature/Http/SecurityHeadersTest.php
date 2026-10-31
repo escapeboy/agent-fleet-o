@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Domain\Shared\Models\Team;
+use App\Domain\Website\Enums\WebsitePageStatus;
+use App\Domain\Website\Enums\WebsitePageType;
+use App\Domain\Website\Enums\WebsiteStatus;
+use App\Domain\Website\Models\Website;
+use App\Domain\Website\Models\WebsitePage;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use App\Models\User;
@@ -55,5 +60,46 @@ class SecurityHeadersTest extends TestCase
 
         $this->assertStringContainsString("default-src 'self'", $csp);
         $this->assertStringNotContainsString('form-action', $csp);
+    }
+
+    public function test_website_preview_csp_allows_https_assets_but_not_inline_script(): void
+    {
+        $user = User::factory()->create();
+        $team = Team::create([
+            'name' => 'Preview Test',
+            'slug' => 'preview-test-'.uniqid(),
+            'owner_id' => $user->id,
+            'settings' => [],
+        ]);
+        $user->update(['current_team_id' => $team->id]);
+
+        $website = Website::create([
+            'team_id' => $team->id,
+            'user_id' => $user->id,
+            'name' => 'Demo',
+            'slug' => 'demo',
+            'status' => WebsiteStatus::Published,
+        ]);
+        $page = WebsitePage::create([
+            'website_id' => $website->id,
+            'team_id' => $team->id,
+            'slug' => 'home',
+            'title' => 'Home',
+            'page_type' => WebsitePageType::Page,
+            'status' => WebsitePageStatus::Draft,
+            'exported_html' => '<p>x</p>',
+            'sort_order' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->get("/websites/{$website->id}/pages/{$page->id}/preview");
+
+        $response->assertOk();
+        $csp = (string) $response->headers->get('Content-Security-Policy');
+        $this->assertMatchesRegularExpression('/(^|; )img-src [^;]*https:/', $csp);
+        $this->assertMatchesRegularExpression('/(^|; )font-src [^;]*https:/', $csp);
+        $this->assertMatchesRegularExpression('/(^|; )style-src [^;]*https:/', $csp);
+        $this->assertMatchesRegularExpression("/(^|; )script-src 'nonce-[^']+'(;|$)/", $csp);
+        $this->assertStringNotContainsString('unsafe-inline\'; img', $csp);
+        $this->assertDoesNotMatchRegularExpression("/script-src [^;]*'unsafe-(inline|eval)'/", $csp);
     }
 }
