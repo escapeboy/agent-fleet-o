@@ -41,8 +41,9 @@ class SentryFixTaskControllerTest extends ApiTestCase
     }
 
     /** Real personal access token (the guard rejects mocked/transient ones). */
-    protected function actingAsApiUser(array $abilities = ['*'], ?User $user = null): static
+    protected function actingAsApiUser(?array $abilities = null, ?User $user = null): static
     {
+        $abilities ??= ['team:'.$this->team->id];
         $this->withToken(SanctumTokenIssuer::create($user ?? $this->user, 't', $abilities)->plainTextToken);
 
         return $this;
@@ -60,7 +61,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $oldest = $this->task();
         $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $response = $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'fixer-1']);
 
@@ -82,7 +83,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $this->task();
         $critical = $this->task(['is_critical' => true]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])
             ->assertOk()
@@ -93,7 +94,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $first = $this->task();
         $second = $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'a'])->assertJsonPath('data.id', $first->id);
         $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'b'])->assertJsonPath('data.id', $second->id);
@@ -104,7 +105,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $this->task(['repository' => 'acme/excluded']);
         $kept = $this->task(['repository' => 'acme/other']);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson('/api/v1/sentry-fix-tasks/claim', [
             'worker' => 'w',
@@ -121,14 +122,14 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $this->task(['state' => SentryFixTaskState::Fixing]);
         $this->task([], $this->otherTeam());
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertNoContent();
     }
 
     public function test_claim_requires_worker(): void
     {
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson('/api/v1/sentry-fix-tasks/claim', [])->assertStatus(422);
     }
@@ -137,7 +138,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         $approved = $this->task(['state' => SentryFixTaskState::Approved]);
         $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->getJson('/api/v1/sentry-fix-tasks?state=approved')
             ->assertOk()
@@ -157,7 +158,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_allowed_event_updates_state_appends_trail_and_extends_lease(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Claimed, 'lease_expires_at' => now()->addMinute()]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", [
             'state' => 'pr_open',
@@ -177,7 +178,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_awaiting_approval_clears_the_lease(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::PrOpen, 'lease_expires_at' => now()->addHour()]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'awaiting_approval', 'message' => 'sent'])->assertOk();
 
@@ -187,7 +188,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_disallowed_transition_returns_422_and_changes_nothing(): void
     {
         $task = $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'done', 'message' => 'x'])
             ->assertStatus(422);
@@ -200,7 +201,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_terminal_task_accepts_no_further_events(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Done]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'done', 'message' => 'x'])->assertStatus(422);
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'queued', 'message' => 'x'])->assertStatus(422);
@@ -209,7 +210,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_unknown_state_is_a_validation_error(): void
     {
         $task = $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'bogus', 'message' => 'x'])->assertStatus(422);
     }
@@ -226,7 +227,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
             'status' => SignalStatus::DelegatedToAgent,
         ]);
         $task = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'done', 'message' => 'healthy'])
             ->assertOk()->assertJsonPath('data.state', 'done');
@@ -247,7 +248,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
             'status' => SignalStatus::DelegatedToAgent,
         ]);
         $task = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'reverted', 'message' => 'regression'])->assertOk();
 
@@ -258,7 +259,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_classify_returns_and_stores_the_classifier_tier(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Fixing]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/classify", ['files' => ['app/Foo.php'], 'diff_lines' => 10])
             ->assertOk()->assertJsonPath('data.tier', 't1');
@@ -275,7 +276,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_classify_validates_input(): void
     {
         $task = $this->task();
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/classify", ['files' => ['a.php']])->assertStatus(422);
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/classify", ['files' => [], 'diff_lines' => 5])
@@ -311,7 +312,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_other_teams_task_is_404(): void
     {
         $foreign = $this->task([], $this->otherTeam());
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->getJson("/api/v1/sentry-fix-tasks/{$foreign->id}")->assertNotFound();
         $this->postJson("/api/v1/sentry-fix-tasks/{$foreign->id}/events", ['state' => 'claimed', 'message' => 'x'])->assertNotFound();
@@ -388,7 +389,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     {
         foreach (['viewer', 'member'] as $role) {
             $user = $this->createTeamMember($role);
-            $this->actingAsApiUser(['*'], $user);
+            $this->actingAsApiUser(['team:'.$this->team->id], $user);
 
             $this->postJson('/api/v1/team/tokens', ['name' => "t-$role", 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertForbidden();
             $this->postJson('/api/v1/team/tokens', ['name' => "ok-$role"])->assertCreated();
@@ -399,7 +400,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_admin_can_mint_a_sentry_fixes_token(): void
     {
         $admin = $this->createTeamMember('admin');
-        $this->actingAsApiUser(['*'], $admin);
+        $this->actingAsApiUser(['team:'.$this->team->id], $admin);
 
         $this->postJson('/api/v1/team/tokens', ['name' => 'admin-fix', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertCreated();
     }
@@ -407,7 +408,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_classify_refuses_terminal_tasks(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Done]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/classify", ['files' => [], 'diff_lines' => 1])->assertStatus(422);
         $this->assertNull($task->refresh()->tier);
@@ -416,7 +417,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_pr_url_must_be_https(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Fixing]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         foreach (['javascript:alert(1)', 'http://example.com/pr/1', 'not a url'] as $bad) {
             $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'pr_open', 'message' => 'x', 'pr_url' => $bad])->assertStatus(422);
@@ -438,7 +439,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
         ]);
         $withSignal = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
         $without = $this->task(['state' => SentryFixTaskState::Watching]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$withSignal->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
         $this->postJson("/api/v1/sentry-fix-tasks/{$without->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
@@ -458,7 +459,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
             'status' => SignalStatus::Received,
         ]);
         $task = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
 
@@ -491,7 +492,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
     public function test_tokens_without_the_ability_are_not_restricted_by_the_fix_token_rule(): void
     {
-        $this->actingAsApiUser(['*']);
+        $this->actingAsApiUser(['team:'.$this->team->id]);
 
         $this->getJson('/api/v1/team')->assertOk();
     }
@@ -499,7 +500,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_sentry_fixes_token_gets_an_expiry_and_other_tokens_do_not(): void
     {
         config(['sentry_watchdog.fix_token_ttl_days' => 30]);
-        $this->actingAsApiUser(['*']);
+        $this->actingAsApiUser(['team:'.$this->team->id]);
 
         $this->postJson('/api/v1/team/tokens', ['name' => 'fix', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertCreated();
         $this->postJson('/api/v1/team/tokens', ['name' => 'plain'])->assertCreated();
@@ -512,7 +513,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
     public function test_events_for_claim_phases_must_come_from_the_claiming_worker(): void
     {
         $task = $this->task(['state' => SentryFixTaskState::Claimed, 'claimed_by' => 'fixer-1', 'attempts' => 1]);
-        $this->actingAsApiUser(['sentry-fixes']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
 
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x'])->assertForbidden();
         $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x', 'worker' => 'other'])->assertForbidden();
@@ -531,7 +532,7 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
         Route::middleware('auth:sanctum')->get('/cloudlike/ping', fn () => response()->json(['ok' => true]));
         $fix = SanctumTokenIssuer::create($this->user, 'fix', ['team:'.$this->team->id, 'sentry-fixes'])->plainTextToken;
-        $plain = SanctumTokenIssuer::create($this->user, 'plain', ['*'])->plainTextToken;
+        $plain = SanctumTokenIssuer::create($this->user, 'plain', ['team:'.$this->team->id])->plainTextToken;
         $mint = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'api_token_manage', 'arguments' => ['action' => 'create', 'name' => 'escalated']]];
         $list = ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => []];
 
@@ -545,6 +546,8 @@ class SentryFixTaskControllerTest extends ApiTestCase
         $this->withToken($fix)->getJson('/api/v1/sentry-fix-tasks/../team')->assertStatus(404);
         $this->assertSame(0, PersonalAccessToken::where('name', 'escalated')->count());
 
+        $this->app['auth']->forgetGuards();
+        $this->assertLessThan(400, $this->withToken($plain)->postJson('/mcp', $list)->getStatusCode()); // positive control: a team-scoped token still reaches MCP
         $this->app['auth']->forgetGuards();
         $this->withToken($plain)->getJson('/cloudlike/ping')->assertOk();
         $this->app['auth']->forgetGuards();
