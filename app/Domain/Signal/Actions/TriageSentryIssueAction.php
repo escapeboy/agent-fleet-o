@@ -3,6 +3,7 @@
 namespace App\Domain\Signal\Actions;
 
 use App\Domain\GitRepository\Models\GitRepository;
+use App\Domain\Integration\Models\Integration;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\DTOs\SentryTriageResult;
 use App\Domain\Signal\Enums\FixTier;
@@ -14,6 +15,7 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -55,9 +57,11 @@ class TriageSentryIssueAction
         private readonly SentryFixTierClassifier $classifier,
         private readonly DelegateBugReportToAgentAction $delegate,
         private readonly NotifyCriticalSentryIssueAction $notifyCritical,
+        private readonly CreateSentryFixTaskAction $createFixTask,
+        private readonly UpdateSignalStatusAction $updateSignalStatus,
     ) {}
 
-    public function execute(Signal $signal, ?string $targetRepositoryOverride = null): SentryTriageResult
+    public function execute(Signal $signal, ?string $targetRepositoryOverride = null, ?Integration $integration = null): SentryTriageResult
     {
         // Idempotency — never re-triage a signal already delegated or closed.
         if ($signal->experiment_id !== null
@@ -154,6 +158,12 @@ class TriageSentryIssueAction
             return $this->investigateOnlyResult($signal, $tier, $investigation);
         }
 
+        // External executor: queue a fix task for an external worker instead of
+        // creating an Experiment. No delegation actor is needed.
+        if ($this->resolveExecutor($integration) === 'external') {
+            return $this->queueExternalFix($signal, $payload, $integration, $tier, $investigation, $target['full_name']);
+        }
+
         $actorId = Team::ownerIdFor($team->id);
         $actor = $actorId !== null ? User::find($actorId) : null;
         if ($actor === null) {
@@ -208,6 +218,91 @@ class TriageSentryIssueAction
             summary: $investigation['summary'],
             experimentId: $experiment->id,
             suspectFiles: $investigation['suspect_files'],
+        );
+    }
+
+    /**
+     * Integration config `executor` wins; falls back to `sentry_watchdog.executor`.
+     * Anything other than `external` means the built-in Experiment path.
+     */
+    private function resolveExecutor(?Integration $integration): string
+    {
+        $executor = data_get($integration?->config, 'executor');
+        if (! is_string($executor) || $executor === '') {
+            $executor = (string) config('sentry_watchdog.executor', 'experiment');
+        }
+
+        return $executor === 'external' ? 'external' : 'experiment';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array{root_cause: string, confidence: float, suspect_files: list<string>, estimated_diff_lines: int, is_critical: bool, summary: string}  $investigation
+     */
+    private function queueExternalFix(
+        Signal $signal,
+        array $payload,
+        ?Integration $integration,
+        FixTier $tier,
+        array $investigation,
+        string $repository,
+    ): SentryTriageResult {
+        $issueId = (string) ($payload['id'] ?? ($signal->payload['source_id'] ?? $signal->id));
+
+        try {
+            $task = DB::transaction(function () use ($signal, $payload, $integration, $investigation, $repository, $issueId) {
+                [$task, $created] = $this->createFixTask->execute([
+                    'team_id' => $signal->team_id,
+                    'integration_id' => $integration?->id,
+                    'signal_id' => $signal->id,
+                    'sentry_issue_id' => $issueId,
+                    'project' => $integration->name ?? $signal->project_key,
+                    'repository' => $repository,
+                    'title' => $this->clean((string) ($payload['title'] ?? 'Sentry issue'), 500),
+                    'culprit' => $this->clean((string) ($payload['culprit'] ?? ''), 500) ?: null,
+                    'sentry_url' => $this->clean((string) ($payload['permalink'] ?? ''), 1000) ?: null,
+                    'root_cause' => $investigation['root_cause'],
+                    'suspect_files' => $investigation['suspect_files'],
+                    'confidence' => $investigation['confidence'],
+                    'is_critical' => $investigation['is_critical'],
+                ]);
+
+                if (! $created) {
+                    // Same Sentry issue already has a live task: stamp this signal so it
+                    // is not re-triaged, but do not queue a second fix.
+                    $this->markTriaged($signal);
+
+                    return null;
+                }
+
+                $this->markTriaged($signal);
+                $this->updateSignalStatus->execute($signal, SignalStatus::DelegatedToAgent);
+
+                return $task;
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Sentry watchdog external delegation failed', [
+                'signal_id' => $signal->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return SentryTriageResult::failed($signal->id, 'Delegation failed: '.$e->getMessage());
+        }
+
+        if ($task === null) {
+            return SentryTriageResult::skipped($signal->id);
+        }
+
+        return new SentryTriageResult(
+            signalId: $signal->id,
+            outcome: SentryTriageOutcome::Delegated,
+            tier: $tier,
+            rootCause: $investigation['root_cause'],
+            confidence: $investigation['confidence'],
+            isCritical: $investigation['is_critical'],
+            summary: $investigation['summary'],
+            suspectFiles: $investigation['suspect_files'],
+            fixTaskId: $task->id,
         );
     }
 

@@ -50,6 +50,12 @@ class CompatibleSanctumGuard extends Guard
                 return null;
             }
 
+            // Fix-worker tokens authenticate only on the fix-task queue, whatever route
+            // (api group, MCP, cloud routes) the request arrives on.
+            if (in_array('sentry-fixes', $accessToken->abilities ?? [], true) && ! self::isSentryFixTaskPath($request)) {
+                return null;
+            }
+
             $tokenable = $accessToken->tokenable->withAccessToken($accessToken);
 
             event(new TokenAuthenticated($accessToken));
@@ -62,6 +68,14 @@ class CompatibleSanctumGuard extends Guard
         }
 
         return null;
+    }
+
+    public static function isSentryFixTaskPath(Request $request): bool
+    {
+        return (bool) preg_match(
+            '#^api/v1/sentry-fix-tasks(/claim|/[0-9a-f-]{36}(/events|/classify)?)?$#',
+            $request->path(),
+        );
     }
 
     protected function supportsTokens($tokenable = null): bool

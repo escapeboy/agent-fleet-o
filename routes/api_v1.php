@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\V1\OutboundConnectorConfigController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProviderConfigController;
 use App\Http\Controllers\Api\V1\RouteMapController;
+use App\Http\Controllers\Api\V1\SentryFixTaskController;
 use App\Http\Controllers\Api\V1\SignalController;
 use App\Http\Controllers\Api\V1\SkillBenchmarkController;
 use App\Http\Controllers\Api\V1\SkillController;
@@ -118,6 +119,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/me/bootstrap', BootstrapController::class)->name('api.v1.me.bootstrap');
     Route::get('/me/social-accounts', [AuthController::class, 'socialAccounts']);
     Route::delete('/me/social-accounts/{provider}', [AuthController::class, 'unlinkSocialAccount']);
+
+    // Sentry fix tasks (external fix worker queue; token ability `sentry-fixes`)
+    Route::post('/sentry-fix-tasks/claim', [SentryFixTaskController::class, 'claim']);
+    Route::get('/sentry-fix-tasks', [SentryFixTaskController::class, 'index']);
+    Route::get('/sentry-fix-tasks/{id}', [SentryFixTaskController::class, 'show']);
+    Route::post('/sentry-fix-tasks/{id}/events', [SentryFixTaskController::class, 'event']);
+    Route::post('/sentry-fix-tasks/{id}/classify', [SentryFixTaskController::class, 'classify']);
 
     // Experiments
     Route::get('/experiments', [ExperimentController::class, 'index']);

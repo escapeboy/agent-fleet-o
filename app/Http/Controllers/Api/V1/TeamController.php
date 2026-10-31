@@ -167,14 +167,29 @@ class TeamController extends Controller
         ]);
 
         // Force team-scoped ability — reject wildcard or foreign-team abilities.
+        // `sentry-fixes` is the only non-team ability a token may opt into: it
+        // grants access to the external Sentry fix worker queue.
         $teamAbility = 'team:'.$request->user()->current_team_id;
         $requested = $request->input('abilities', [$teamAbility]);
 
-        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility])) {
+        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility, 'sentry-fixes'])) {
             abort(422, 'Token abilities must be limited to the current team.');
         }
 
-        $token = SanctumTokenIssuer::create($request->user(), $request->name, [$teamAbility]);
+        if (in_array('sentry-fixes', $requested, true)) {
+            $team = $request->user()->currentTeam;
+            abort_unless(
+                $team !== null && $team->memberRole($request->user())?->canManageTeam(),
+                403,
+                'Only team owners and admins can issue a token with the sentry-fixes ability.',
+            );
+        }
+
+        $abilities = array_values(array_unique(array_merge([$teamAbility], $requested)));
+        $expiresAt = in_array('sentry-fixes', $abilities, true)
+            ? now()->addDays(max(1, (int) config('sentry_watchdog.fix_token_ttl_days', 90)))
+            : null;
+        $token = SanctumTokenIssuer::create($request->user(), $request->name, $abilities, $expiresAt);
 
         return response()->json([
             'data' => [
