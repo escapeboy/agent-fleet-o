@@ -66,7 +66,9 @@ class WebsitePagePreviewController extends Controller
             'Content-Type' => 'text/html; charset=utf-8',
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'SAMEORIGIN',
-            'Content-Security-Policy' => "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline'; frame-src 'self'",
+            // The srcdoc iframe inherits this policy, so it must allow what a built page needs
+            // (images, stylesheets, fonts over https). Scripts stay nonce-only; the iframe is also sandboxed.
+            'Content-Security-Policy' => "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline' https:; img-src https: data: blob:; font-src https: data:; media-src https: data: blob:; frame-src 'self'",
         ]);
     }
 }
