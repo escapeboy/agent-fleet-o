@@ -524,6 +524,11 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
     public function test_sentry_fixes_token_does_not_authenticate_on_mcp_or_other_route_groups(): void
     {
+        // The MCP routes fall through to the passport guard, which needs OAuth keys (absent in CI).
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        openssl_pkey_export($key, $privatePem);
+        config(['passport.private_key' => $privatePem, 'passport.public_key' => openssl_pkey_get_details($key)['key']]);
+
         Route::middleware('auth:sanctum')->get('/cloudlike/ping', fn () => response()->json(['ok' => true]));
         $fix = SanctumTokenIssuer::create($this->user, 'fix', ['team:'.$this->team->id, 'sentry-fixes'])->plainTextToken;
         $plain = SanctumTokenIssuer::create($this->user, 'plain', ['*'])->plainTextToken;
