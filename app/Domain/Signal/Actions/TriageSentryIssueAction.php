@@ -256,7 +256,7 @@ class TriageSentryIssueAction
                     'integration_id' => $integration?->id,
                     'signal_id' => $signal->id,
                     'sentry_issue_id' => $issueId,
-                    'project' => $integration?->name ?? $signal->project_key,
+                    'project' => $integration->name ?? $signal->project_key,
                     'repository' => $repository,
                     'title' => $this->clean((string) ($payload['title'] ?? 'Sentry issue'), 500),
                     'culprit' => $this->clean((string) ($payload['culprit'] ?? ''), 500) ?: null,
