@@ -176,6 +176,15 @@ class TeamController extends Controller
             abort(422, 'Token abilities must be limited to the current team.');
         }
 
+        if (in_array('sentry-fixes', $requested, true)) {
+            $team = $request->user()->currentTeam;
+            abort_unless(
+                $team !== null && $team->memberRole($request->user())?->canManageTeam(),
+                403,
+                'Only team owners and admins can issue a token with the sentry-fixes ability.',
+            );
+        }
+
         $abilities = array_values(array_unique(array_merge([$teamAbility], $requested)));
         $token = SanctumTokenIssuer::create($request->user(), $request->name, $abilities);
 

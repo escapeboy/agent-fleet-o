@@ -8,6 +8,7 @@ use App\Domain\Signal\Enums\SentryFixTaskState;
 use App\Domain\Signal\Enums\SignalStatus;
 use App\Domain\Signal\Models\SentryFixTask;
 use App\Domain\Signal\Models\Signal;
+use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -36,6 +37,14 @@ class SentryFixTaskControllerTest extends ApiTestCase
             'events' => [],
             'created_at' => now()->subMinutes(100 - $this->seq),
         ], $overrides));
+    }
+
+    /** Real personal access token (the guard rejects mocked/transient ones). */
+    protected function actingAsApiUser(array $abilities = ['*'], ?User $user = null): static
+    {
+        $this->withToken(SanctumTokenIssuer::create($user ?? $this->user, 't', $abilities)->plainTextToken);
+
+        return $this;
     }
 
     private function otherTeam(): Team
@@ -325,5 +334,133 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
         $this->postJson('/api/v1/team/tokens', ['name' => 'bad', 'abilities' => ['*']])->assertStatus(422);
         $this->postJson('/api/v1/team/tokens', ['name' => 'bad2', 'abilities' => ['team:'.$this->team->id, 'admin']])->assertStatus(422);
+    }
+
+    public function test_wildcard_token_is_rejected(): void
+    {
+        $this->actingAsApiUser(['*']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertForbidden();
+    }
+
+    public function test_cookie_session_user_without_a_personal_access_token_is_rejected(): void
+    {
+        $this->task();
+        $this->actingAs($this->user, 'web');
+
+        $this->getJson('/api/v1/sentry-fix-tasks')->assertForbidden();
+    }
+
+    public function test_viewer_token_is_rejected_even_with_the_ability(): void
+    {
+        $viewer = $this->createTeamMember('viewer');
+        $this->actingAsApiUser(['sentry-fixes'], $viewer);
+
+        $this->getJson('/api/v1/sentry-fix-tasks')->assertForbidden();
+    }
+
+    public function test_token_team_wins_over_current_team_id(): void
+    {
+        $other = $this->otherTeam();
+        $other->users()->attach($this->user, ['role' => 'owner']);
+        $mine = $this->task();
+        $theirs = $this->task([], $other);
+        $this->user->update(['current_team_id' => $other->id]);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->getJson('/api/v1/sentry-fix-tasks')->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $mine->id);
+        $this->getJson("/api/v1/sentry-fix-tasks/{$mine->id}")->assertOk();
+        $this->getJson("/api/v1/sentry-fix-tasks/{$theirs->id}")->assertNotFound();
+        $this->postJson("/api/v1/sentry-fix-tasks/{$mine->id}/classify", ['files' => [], 'diff_lines' => 1])->assertOk();
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertOk()->assertJsonPath('data.id', $mine->id);
+    }
+
+    public function test_token_for_a_team_the_user_left_is_rejected(): void
+    {
+        $other = $this->otherTeam();
+        $this->actingAsApiUser(['team:'.$other->id, 'sentry-fixes']);
+
+        $this->getJson('/api/v1/sentry-fix-tasks')->assertForbidden();
+    }
+
+    public function test_viewer_and_member_cannot_mint_a_sentry_fixes_token(): void
+    {
+        foreach (['viewer', 'member'] as $role) {
+            $user = $this->createTeamMember($role);
+            $this->actingAsApiUser(['*'], $user);
+
+            $this->postJson('/api/v1/team/tokens', ['name' => "t-$role", 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertForbidden();
+            $this->postJson('/api/v1/team/tokens', ['name' => "ok-$role"])->assertCreated();
+        }
+        $this->assertSame(0, PersonalAccessToken::where('name', 'like', 't-%')->count());
+    }
+
+    public function test_admin_can_mint_a_sentry_fixes_token(): void
+    {
+        $admin = $this->createTeamMember('admin');
+        $this->actingAsApiUser(['*'], $admin);
+
+        $this->postJson('/api/v1/team/tokens', ['name' => 'admin-fix', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertCreated();
+    }
+
+    public function test_classify_refuses_terminal_tasks(): void
+    {
+        $task = $this->task(['state' => SentryFixTaskState::Done]);
+        $this->actingAsApiUser(['sentry-fixes']);
+
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/classify", ['files' => [], 'diff_lines' => 1])->assertStatus(422);
+        $this->assertNull($task->refresh()->tier);
+    }
+
+    public function test_pr_url_must_be_https(): void
+    {
+        $task = $this->task(['state' => SentryFixTaskState::Fixing]);
+        $this->actingAsApiUser(['sentry-fixes']);
+
+        foreach (['javascript:alert(1)', 'http://example.com/pr/1', 'not a url'] as $bad) {
+            $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'pr_open', 'message' => 'x', 'pr_url' => $bad])->assertStatus(422);
+        }
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'pr_open', 'message' => 'x', 'pr_url' => 'https://example.com/pr/1'])
+            ->assertOk()->assertJsonPath('data.pr_url', 'https://example.com/pr/1');
+    }
+
+    public function test_done_leaves_an_already_resolved_signal_and_works_without_a_signal(): void
+    {
+        $signal = Signal::create([
+            'team_id' => $this->team->id,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'payload' => ['title' => 'x'],
+            'content_hash' => hash('sha256', 'resolved-signal'),
+            'received_at' => now(),
+            'status' => SignalStatus::Resolved,
+        ]);
+        $withSignal = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
+        $without = $this->task(['state' => SentryFixTaskState::Watching]);
+        $this->actingAsApiUser(['sentry-fixes']);
+
+        $this->postJson("/api/v1/sentry-fix-tasks/{$withSignal->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
+        $this->postJson("/api/v1/sentry-fix-tasks/{$without->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
+
+        $this->assertSame(SignalStatus::Resolved, $signal->refresh()->status);
+    }
+
+    public function test_done_resolves_a_signal_whose_status_has_no_direct_transition(): void
+    {
+        $signal = Signal::create([
+            'team_id' => $this->team->id,
+            'source_type' => 'integration',
+            'source_identifier' => 'sentry',
+            'payload' => ['title' => 'x'],
+            'content_hash' => hash('sha256', 'received-signal'),
+            'received_at' => now(),
+            'status' => SignalStatus::Received,
+        ]);
+        $task = $this->task(['state' => SentryFixTaskState::Watching, 'signal_id' => $signal->id]);
+        $this->actingAsApiUser(['sentry-fixes']);
+
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'done', 'message' => 'ok'])->assertOk();
+
+        $this->assertSame(SignalStatus::Resolved, $signal->refresh()->status);
     }
 }

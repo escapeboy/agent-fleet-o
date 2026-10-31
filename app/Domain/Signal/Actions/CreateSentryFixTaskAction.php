@@ -5,6 +5,7 @@ namespace App\Domain\Signal\Actions;
 use App\Domain\Signal\Enums\SentryFixTaskState;
 use App\Domain\Signal\Models\SentryFixTask;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Queues a fix task for an external fix worker. Idempotent: while a task for
@@ -31,7 +32,8 @@ class CreateSentryFixTaskAction
         $task->appendEvent(SentryFixTaskState::Queued, 'Queued for external fix worker.');
 
         try {
-            $task->save();
+            // Savepoint: on PostgreSQL a failed insert aborts the surrounding transaction.
+            DB::transaction(fn () => $task->save());
         } catch (UniqueConstraintViolationException) {
             // Lost a race with a concurrent triage of the same issue.
             $existing = $this->findLive($attributes['team_id'], $attributes['integration_id'] ?? null, $attributes['sentry_issue_id']);
@@ -44,7 +46,7 @@ class CreateSentryFixTaskAction
         return [$task, true];
     }
 
-    private function findLive(string $teamId, ?string $integrationId, string $sentryIssueId): ?SentryFixTask
+    protected function findLive(string $teamId, ?string $integrationId, string $sentryIssueId): ?SentryFixTask
     {
         return SentryFixTask::withoutGlobalScopes()
             ->where('team_id', $teamId)

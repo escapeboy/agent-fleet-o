@@ -8,6 +8,7 @@ use App\Domain\Signal\Models\SentryFixTask;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -100,6 +101,48 @@ class ReapSentryFixTasksTest extends TestCase
         $this->artisan('sentry-fix-tasks:reap')->assertSuccessful();
 
         $this->assertSame(SentryFixTaskState::Escalated, $task->refresh()->state);
+    }
+
+    public function test_lease_renewed_after_selection_is_not_reaped(): void
+    {
+        $task = $this->task(SentryFixTaskState::Fixing, 1, now()->subMinute());
+        $renewed = now()->addHours(3);
+        $fired = false;
+
+        // A worker event lands between the reaper's selection and its locked re-read.
+        DB::listen(function ($query) use ($task, $renewed, &$fired): void {
+            if ($fired || ! str_contains($query->sql, 'lease_expires_at')) {
+                return;
+            }
+            $fired = true;
+            DB::table('sentry_fix_tasks')->where('id', $task->id)->update(['lease_expires_at' => $renewed]);
+        });
+
+        $this->artisan('sentry-fix-tasks:reap')->assertSuccessful();
+
+        $task->refresh();
+        $this->assertTrue($fired);
+        $this->assertSame(SentryFixTaskState::Fixing, $task->state);
+        $this->assertSame('fixer-1', $task->claimed_by);
+        $this->assertSame([], $task->events);
+    }
+
+    public function test_task_that_left_a_reapable_state_after_selection_is_not_touched(): void
+    {
+        $task = $this->task(SentryFixTaskState::Fixing, 1, now()->subMinute());
+        $fired = false;
+
+        DB::listen(function ($query) use ($task, &$fired): void {
+            if ($fired || ! str_contains($query->sql, 'lease_expires_at')) {
+                return;
+            }
+            $fired = true;
+            DB::table('sentry_fix_tasks')->where('id', $task->id)->update(['state' => 'awaiting_approval', 'lease_expires_at' => null]);
+        });
+
+        $this->artisan('sentry-fix-tasks:reap')->assertSuccessful();
+
+        $this->assertSame(SentryFixTaskState::AwaitingApproval, $task->refresh()->state);
     }
 
     public function test_command_is_scheduled_every_fifteen_minutes(): void

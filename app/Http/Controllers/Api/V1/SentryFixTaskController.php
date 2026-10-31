@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Actions\ClaimSentryFixTaskAction;
 use App\Domain\Signal\Actions\RecordSentryFixTaskEventAction;
 use App\Domain\Signal\Enums\SentryFixTaskState;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Laravel\Sanctum\PersonalAccessToken;
 
 /**
  * Work queue for an external Sentry fix worker. Requires a Sanctum token with
@@ -67,7 +69,7 @@ class SentryFixTaskController extends Controller
             'limit' => ['sometimes', 'integer', 'min:1', 'max:200'],
         ]);
 
-        $query = SentryFixTask::query()->where('team_id', $this->teamId($request));
+        $query = SentryFixTask::withoutGlobalScopes()->where('team_id', $this->teamId($request));
 
         if ($request->filled('state')) {
             $states = array_filter(array_map('trim', explode(',', (string) $request->query('state'))));
@@ -109,7 +111,7 @@ class SentryFixTaskController extends Controller
         $data = $request->validate([
             'state' => ['required', 'string', Rule::enum(SentryFixTaskState::class)],
             'message' => ['required', 'string', 'max:2000'],
-            'pr_url' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'pr_url' => ['sometimes', 'nullable', 'string', 'url:https', 'max:1000'],
         ]);
 
         $task = $this->findTask($request, $id);
@@ -144,6 +146,9 @@ class SentryFixTaskController extends Controller
         ]);
 
         $task = $this->findTask($request, $id);
+        if ($task->state->isTerminal()) {
+            return response()->json(['message' => "Cannot classify a {$task->state->value} sentry fix task."], 422);
+        }
         $tier = $classifier->classify($data['files'], (int) $data['diff_lines']);
 
         $task->tier = $tier;
@@ -152,18 +157,46 @@ class SentryFixTaskController extends Controller
         return response()->json(['data' => ['tier' => $tier->value]]);
     }
 
+    /**
+     * Only a real personal access token that lists the ability explicitly is
+     * accepted: cookie-session (transient) tokens and `*` tokens are rejected, and
+     * the token owner must still be an owner/admin of the token's team.
+     */
     private function authorizeAbility(Request $request): void
     {
         $token = $request->user()?->currentAccessToken();
 
-        if ($token === null || ! $token->can(self::ABILITY)) {
+        if (! $token instanceof PersonalAccessToken || ! in_array(self::ABILITY, $token->abilities ?? [], true)) {
             abort(403, 'Token lacks the '.self::ABILITY.' ability.');
+        }
+
+        $team = Team::withoutGlobalScopes()->find($this->teamId($request));
+        if ($team === null || ! $team->memberRole($request->user())?->canManageTeam()) {
+            abort(403, 'Token owner must be an owner or admin of the team.');
         }
     }
 
+    /**
+     * The token's `team:<uuid>` ability wins over `users.current_team_id` so a
+     * worker token keeps working on its own team after the owner switches teams.
+     */
     private function teamId(Request $request): string
     {
-        $teamId = $request->user()->current_team_id;
+        $user = $request->user();
+        $token = $user->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            foreach ($token->abilities ?? [] as $ability) {
+                if (is_string($ability) && str_starts_with($ability, 'team:')) {
+                    $teamId = substr($ability, 5);
+                    abort_unless(Str::isUuid($teamId) && $user->teams()->where('teams.id', $teamId)->exists(), 403, 'Token team is not accessible.');
+
+                    return $teamId;
+                }
+            }
+        }
+
+        $teamId = $user->currentTeam?->getKey() ?? $user->current_team_id;
         abort_if($teamId === null, 403, 'No active team.');
 
         return (string) $teamId;
@@ -173,7 +206,7 @@ class SentryFixTaskController extends Controller
     {
         abort_unless(Str::isUuid($id), 404);
 
-        return SentryFixTask::query()
+        return SentryFixTask::withoutGlobalScopes()
             ->where('team_id', $this->teamId($request))
             ->where('id', $id)
             ->firstOrFail();

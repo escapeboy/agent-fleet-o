@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Domain\Signal\Enums\SentryFixTaskState;
 use App\Domain\Signal\Models\SentryFixTask;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Recovers sentry fix tasks whose worker lease expired (worker crashed or
@@ -26,32 +27,45 @@ class ReapSentryFixTasks extends Command
         $failed = 0;
         $escalated = 0;
 
-        $expired = SentryFixTask::withoutGlobalScopes()
+        $reapable = [
+            SentryFixTaskState::Claimed->value,
+            SentryFixTaskState::Fixing->value,
+            SentryFixTaskState::PrOpen->value,
+            SentryFixTaskState::Merging->value,
+            SentryFixTaskState::Deploying->value,
+            SentryFixTaskState::Watching->value,
+        ];
+
+        $ids = SentryFixTask::withoutGlobalScopes()
             ->whereNotNull('lease_expires_at')
             ->where('lease_expires_at', '<', now())
-            ->whereIn('state', [
-                SentryFixTaskState::Claimed->value,
-                SentryFixTaskState::Fixing->value,
-                SentryFixTaskState::PrOpen->value,
-                SentryFixTaskState::Merging->value,
-                SentryFixTaskState::Deploying->value,
-                SentryFixTaskState::Watching->value,
-            ])
-            ->get();
+            ->whereIn('state', $reapable)
+            ->pluck('id');
 
-        foreach ($expired as $task) {
-            if (in_array($task->state, [SentryFixTaskState::Merging, SentryFixTaskState::Deploying, SentryFixTaskState::Watching], true)) {
-                // The change may already be merged; re-queueing would start a second fix.
-                $this->close($task, SentryFixTaskState::Escalated, 'Lease expired after merge started; needs manual check.');
-                $escalated++;
-            } elseif ($task->attempts < self::MAX_ATTEMPTS) {
-                $task->claimed_by = null;
-                $this->close($task, SentryFixTaskState::Queued, 'Lease expired; re-queued.');
-                $requeued++;
-            } else {
-                $this->close($task, SentryFixTaskState::Failed, 'Lease expired after '.$task->attempts.' attempts.');
-                $failed++;
-            }
+        foreach ($ids as $id) {
+            DB::transaction(function () use ($id, $reapable, &$requeued, &$failed, &$escalated): void {
+                // Re-read under a row lock: a worker may have renewed the lease or moved on.
+                $task = SentryFixTask::withoutGlobalScopes()->lockForUpdate()->find($id);
+                if ($task === null
+                    || $task->lease_expires_at === null
+                    || $task->lease_expires_at->isFuture()
+                    || ! in_array($task->state->value, $reapable, true)) {
+                    return;
+                }
+
+                if (in_array($task->state, [SentryFixTaskState::Merging, SentryFixTaskState::Deploying, SentryFixTaskState::Watching], true)) {
+                    // The change may already be merged; re-queueing would start a second fix.
+                    $this->close($task, SentryFixTaskState::Escalated, 'Lease expired after merge started; needs manual check.');
+                    $escalated++;
+                } elseif ($task->attempts < self::MAX_ATTEMPTS) {
+                    $task->claimed_by = null;
+                    $this->close($task, SentryFixTaskState::Queued, 'Lease expired; re-queued.');
+                    $requeued++;
+                } else {
+                    $this->close($task, SentryFixTaskState::Failed, 'Lease expired after '.$task->attempts.' attempts.');
+                    $failed++;
+                }
+            });
         }
 
         $this->info("Reaped: {$requeued} re-queued, {$failed} failed, {$escalated} escalated.");
