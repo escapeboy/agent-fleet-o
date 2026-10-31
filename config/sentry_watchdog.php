@@ -19,6 +19,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Executor
+    |--------------------------------------------------------------------------
+    |
+    | Who carries out a delegated fix in phase1. Overridable per Sentry
+    | integration via its config key `executor`.
+    |
+    | experiment — create a FleetQ Experiment for the built-in agent (default).
+    | external   — queue a SentryFixTask that an external fix worker claims over
+    |              the API (token ability `sentry-fixes`).
+    |
+    */
+
+    'executor' => env('SENTRY_WATCHDOG_EXECUTOR', 'experiment'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Triage thresholds
     |--------------------------------------------------------------------------
     |
