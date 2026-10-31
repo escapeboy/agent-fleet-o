@@ -129,7 +129,7 @@ class RunSentryWatchdogJob implements ShouldQueue
             }
 
             try {
-                $result = $triage->execute($signal, $targetRepositoryOverride);
+                $result = $triage->execute($signal, $targetRepositoryOverride, $integration);
             } catch (\Throwable $e) {
                 // TriageSentryIssueAction is designed not to throw; this is
                 // defence-in-depth so one bad signal cannot abort the batch.
@@ -169,7 +169,7 @@ class RunSentryWatchdogJob implements ShouldQueue
 
             $lines[] = '• ['.strtoupper($result->tier->value).'] '
                 .($result->summary ?? 'Sentry issue')
-                .' — '.($result->wasDelegated() ? 'PR opened' : 'investigate-only');
+                .' — '.($result->wasDelegated() ? ($result->fixTaskId !== null ? 'fix queued' : 'PR opened') : 'investigate-only');
         }
 
         if ($quotaReached) {

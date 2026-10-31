@@ -19,6 +19,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Executor
+    |--------------------------------------------------------------------------
+    |
+    | Who carries out a delegated fix in phase1. Overridable per Sentry
+    | integration via its config key `executor`.
+    |
+    | experiment — create a FleetQ Experiment for the built-in agent (default).
+    | external   — queue a SentryFixTask that an external fix worker claims over
+    |              the API (token ability `sentry-fixes`).
+    |
+    */
+
+    'executor' => env('SENTRY_WATCHDOG_EXECUTOR', 'experiment'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Triage thresholds
     |--------------------------------------------------------------------------
     |
@@ -156,6 +172,13 @@ return [
     */
 
     'max_prs_per_run' => (int) env('SENTRY_WATCHDOG_MAX_PRS_PER_RUN', 3),
+
+    /*
+    | fix_token_ttl_days — lifetime of API tokens minted with the `sentry-fixes`
+    |   ability (the worker host holds them next to untrusted Sentry text).
+    */
+
+    'fix_token_ttl_days' => (int) env('SENTRY_FIX_TOKEN_TTL_DAYS', 90),
 
     'vps_invoke_cap_per_run' => (int) env('SENTRY_WATCHDOG_VPS_INVOKE_CAP', 50),
 

@@ -154,3 +154,8 @@ Schedule::job(new RefreshExpiringWebhooksJob)->weekly();
 Schedule::command('sentry:watchdog')
     ->twiceDaily(9, 18)
     ->withoutOverlapping(60);
+
+// Recover Sentry fix tasks whose external worker lease expired
+Schedule::command('sentry-fix-tasks:reap')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(15);

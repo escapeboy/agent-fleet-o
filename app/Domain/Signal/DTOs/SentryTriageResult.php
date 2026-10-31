@@ -24,6 +24,7 @@ final readonly class SentryTriageResult
         public ?string $summary = null,
         public ?string $experimentId = null,
         public array $suspectFiles = [],
+        public ?string $fixTaskId = null,
     ) {}
 
     public static function skipped(string $signalId): self
