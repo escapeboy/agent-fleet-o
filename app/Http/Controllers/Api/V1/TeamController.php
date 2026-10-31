@@ -186,7 +186,10 @@ class TeamController extends Controller
         }
 
         $abilities = array_values(array_unique(array_merge([$teamAbility], $requested)));
-        $token = SanctumTokenIssuer::create($request->user(), $request->name, $abilities);
+        $expiresAt = in_array('sentry-fixes', $abilities, true)
+            ? now()->addDays(max(1, (int) config('sentry_watchdog.fix_token_ttl_days', 90)))
+            : null;
+        $token = SanctumTokenIssuer::create($request->user(), $request->name, $abilities, $expiresAt);
 
         return response()->json([
             'data' => [

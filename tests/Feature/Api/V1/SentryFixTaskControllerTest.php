@@ -463,4 +463,54 @@ class SentryFixTaskControllerTest extends ApiTestCase
 
         $this->assertSame(SignalStatus::Resolved, $signal->refresh()->status);
     }
+
+    public function test_sentry_fixes_token_can_only_reach_the_fix_task_routes(): void
+    {
+        $task = $this->task();
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/team/tokens', ['name' => 'more', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertForbidden();
+        $this->getJson('/api/v1/team/tokens')->assertForbidden();
+        $this->putJson('/api/v1/team', ['name' => 'Hijacked'])->assertForbidden();
+        $this->getJson('/api/v1/team')->assertForbidden();
+        $this->assertSame(0, PersonalAccessToken::where('name', 'more')->count());
+        $this->assertSame('Test Team', $this->team->refresh()->name);
+
+        $this->getJson('/api/v1/sentry-fix-tasks')->assertOk();
+        $this->getJson("/api/v1/sentry-fix-tasks/{$task->id}")->assertOk();
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w'])->assertOk();
+    }
+
+    public function test_tokens_without_the_ability_are_not_restricted_by_the_fix_token_rule(): void
+    {
+        $this->actingAsApiUser(['*']);
+
+        $this->getJson('/api/v1/team')->assertOk();
+    }
+
+    public function test_sentry_fixes_token_gets_an_expiry_and_other_tokens_do_not(): void
+    {
+        config(['sentry_watchdog.fix_token_ttl_days' => 30]);
+        $this->actingAsApiUser(['*']);
+
+        $this->postJson('/api/v1/team/tokens', ['name' => 'fix', 'abilities' => ['team:'.$this->team->id, 'sentry-fixes']])->assertCreated();
+        $this->postJson('/api/v1/team/tokens', ['name' => 'plain'])->assertCreated();
+
+        $fix = PersonalAccessToken::where('name', 'fix')->sole();
+        $this->assertEqualsWithDelta(now()->addDays(30)->timestamp, $fix->expires_at->timestamp, 60);
+        $this->assertNull(PersonalAccessToken::where('name', 'plain')->sole()->expires_at);
+    }
+
+    public function test_events_for_claim_phases_must_come_from_the_claiming_worker(): void
+    {
+        $task = $this->task(['state' => SentryFixTaskState::Claimed, 'claimed_by' => 'fixer-1', 'attempts' => 1]);
+        $this->actingAsApiUser(['sentry-fixes']);
+
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x'])->assertForbidden();
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x', 'worker' => 'other'])->assertForbidden();
+        $this->assertSame(SentryFixTaskState::Claimed, $task->refresh()->state);
+
+        $this->postJson("/api/v1/sentry-fix-tasks/{$task->id}/events", ['state' => 'fixing', 'message' => 'x', 'worker' => 'fixer-1'])
+            ->assertOk()->assertJsonPath('data.state', 'fixing');
+    }
 }

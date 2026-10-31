@@ -173,6 +173,13 @@ return [
 
     'max_prs_per_run' => (int) env('SENTRY_WATCHDOG_MAX_PRS_PER_RUN', 3),
 
+    /*
+    | fix_token_ttl_days — lifetime of API tokens minted with the `sentry-fixes`
+    |   ability (the worker host holds them next to untrusted Sentry text).
+    */
+
+    'fix_token_ttl_days' => (int) env('SENTRY_FIX_TOKEN_TTL_DAYS', 90),
+
     'vps_invoke_cap_per_run' => (int) env('SENTRY_WATCHDOG_VPS_INVOKE_CAP', 50),
 
 ];

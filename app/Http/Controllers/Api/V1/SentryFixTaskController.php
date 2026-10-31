@@ -112,9 +112,18 @@ class SentryFixTaskController extends Controller
             'state' => ['required', 'string', Rule::enum(SentryFixTaskState::class)],
             'message' => ['required', 'string', 'max:2000'],
             'pr_url' => ['sometimes', 'nullable', 'string', 'url:https', 'max:1000'],
+            'worker' => ['sometimes', 'string', 'max:255'],
         ]);
 
         $task = $this->findTask($request, $id);
+
+        // The worker-driven phases must come from the worker that holds the claim.
+        $newState = SentryFixTaskState::from($data['state']);
+        if (in_array($newState, [SentryFixTaskState::Claimed, SentryFixTaskState::Fixing, SentryFixTaskState::PrOpen], true)
+            && $task->claimed_by !== null
+            && ($data['worker'] ?? null) !== $task->claimed_by) {
+            return response()->json(['message' => 'Event must come from the worker that claimed the task.'], 403);
+        }
 
         try {
             $task = $record->execute(
