@@ -13,7 +13,9 @@ use App\Domain\Website\Models\WebsitePage;
 use App\Models\Artifact;
 use App\Models\ArtifactVersion;
 use App\Models\User;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class SecurityHeadersTest extends TestCase
@@ -46,9 +48,15 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringNotContainsString('unsafe-inline', (string) $response->headers->get('Content-Security-Policy'));
     }
 
-    public function test_pages_without_their_own_csp_get_the_app_policy(): void
+    public function test_base_policy_keeps_form_action_self_off_the_authorize_page_only(): void
     {
-        $csp = (string) $this->get('/login')->headers->get('Content-Security-Policy');
+        // Instantiate the base class directly: a deployment may register a subclass globally.
+        $middleware = new SecurityHeaders;
+        $handle = fn (string $uri): string => (string) $middleware
+            ->handle(Request::create($uri), fn () => response('ok'))
+            ->headers->get('Content-Security-Policy');
+
+        $csp = $handle('/login');
 
         $this->assertStringContainsString("default-src 'self'", $csp);
         $this->assertStringContainsString("form-action 'self'", $csp);
