@@ -30,7 +30,7 @@
                         ] as $example)
                             <button
                                 type="button"
-                                wire:click="$set('thesis', '{{ addslashes($example) }}')"
+                                wire:click="$set('thesis', @js($example))"
                                 class="w-full rounded border border-gray-100 bg-gray-50 px-3 py-1.5 text-left text-sm text-gray-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                             >
                                 {{ $example }}

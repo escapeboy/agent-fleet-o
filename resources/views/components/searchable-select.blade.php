@@ -49,7 +49,7 @@
 
     <button type="button" @click="toggle()"
         class="flex w-full items-center justify-between rounded-lg border border-(--color-input-border) bg-(--color-input-bg) px-3 py-2.5 text-left text-sm text-(--color-on-surface) focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none">
-        <span class="truncate" x-text="selectedLabel || '{{ $placeholder }}'" :class="selectedLabel ? '' : 'text-gray-400'"></span>
+        <span class="truncate" x-text="selectedLabel || @js($placeholder)" :class="selectedLabel ? '' : 'text-gray-400'"></span>
         <svg class="ml-2 h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>

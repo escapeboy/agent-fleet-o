@@ -67,7 +67,7 @@
                         <div class="flex items-center gap-2 text-xs text-gray-500">
                             <span>{{ count($defaultLlmModels) }} models · live catalog</span>
                             <button type="button"
-                                    wire:click="refreshManagedModels('{{ $defaultLlmProvider }}')"
+                                    wire:click="refreshManagedModels(@js($defaultLlmProvider))"
                                     wire:loading.attr="disabled"
                                     wire:target="refreshManagedModels"
                                     class="rounded border border-gray-300 px-2 py-1 font-medium text-gray-700 hover:bg-gray-50">

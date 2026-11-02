@@ -30,7 +30,7 @@
             </div>
 
             {{-- Search & Filters --}}
-            <div class="mt-10" x-data="{ search: '{{ request('search', '') }}', type: '{{ request('type', '') }}', sort: '{{ request('sort', '-install_count') }}' }">
+            <div class="mt-10" x-data="{ search: @js(request('search', '')), type: @js(request('type', '')), sort: @js(request('sort', '-install_count')) }">
                 <form method="GET" action="{{ route('marketplace.index') }}" class="flex flex-wrap items-center gap-4">
                     {{-- Search --}}
                     <div class="relative flex-1 min-w-[200px]">

@@ -661,7 +661,7 @@
                 <div class="rounded-lg {{ $conn->isActive() ? 'bg-green-50' : 'bg-gray-50' }} p-4" wire:key="bridge-{{ $conn->id }}">
                     <div class="flex items-center justify-between">
                         <div class="min-w-0 flex-1"
-                             x-data="{ editing: false, name: '{{ e($conn->label ?? '') }}' }">
+                             x-data="{ editing: false, name: @js($conn->label ?? '') }">
                             <div x-show="!editing" class="flex items-center gap-2">
                                 <span class="inline-block h-2 w-2 rounded-full {{ $conn->isActive() ? 'bg-green-500' : 'bg-gray-400' }}"></span>
                                 <span class="font-medium {{ $conn->isActive() ? 'text-green-900' : 'text-gray-700' }}">

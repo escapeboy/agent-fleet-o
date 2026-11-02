@@ -304,7 +304,7 @@
                                     @endif
 
                                     {{-- Tags editor --}}
-                                    <div x-data="{ editing: false, tagInput: '{{ implode(', ', $memory->tags ?? []) }}' }" class="flex flex-wrap items-center gap-2">
+                                    <div x-data="{ editing: false, tagInput: @js(implode(', ', $memory->tags ?? [])) }" class="flex flex-wrap items-center gap-2">
                                         <span class="text-xs font-medium uppercase text-gray-500">Tags:</span>
                                         @if(!empty($memory->tags))
                                             @foreach($memory->tags as $tag)

@@ -139,14 +139,14 @@
                     @if($result && $result['done'] && $result['error'] === null)
                         <div class="flex items-center gap-2 border-t border-gray-100 px-4 py-2">
                             <button
-                                wire:click="annotate('{{ $modelId }}', 'good')"
+                                wire:click="annotate(@js($modelId), 'good')"
                                 title="Mark as good"
                                 class="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600"
                             >
                                 <i class="fa-solid fa-thumbs-up text-lg"></i>
                             </button>
                             <button
-                                wire:click="annotate('{{ $modelId }}', 'bad')"
+                                wire:click="annotate(@js($modelId), 'bad')"
                                 title="Mark as bad"
                                 class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
                             >

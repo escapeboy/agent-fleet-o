@@ -16,6 +16,8 @@ jobs:
   # ─────────────────────────────────────────
   quality:
     name: Code Quality
+    # Fork PRs never run on the self-hosted runners.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
 
     steps:
@@ -48,6 +50,8 @@ jobs:
   # ─────────────────────────────────────────
   tests:
     name: Tests
+    # Fork PRs never run on the self-hosted runners.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
     needs: quality
 
@@ -113,6 +117,8 @@ jobs:
   # ─────────────────────────────────────────
   build:
     name: Build Assets
+    # Fork PRs never run on the self-hosted runners.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
 
     steps:

@@ -539,8 +539,8 @@
                     >All</button>
                     @foreach($availableSourceTypes as $sourceType)
                         <button
-                            @click="filter = '{{ $sourceType }}'"
-                            :class="filter === '{{ $sourceType }}' ? 'bg-primary-600 text-white border-primary-600' : 'border-(--color-theme-border-strong) text-(--color-on-surface) hover:bg-(--color-surface-alt)'"
+                            @click="filter = @js($sourceType)"
+                            :class="filter === @js($sourceType) ? 'bg-primary-600 text-white border-primary-600' : 'border-(--color-theme-border-strong) text-(--color-on-surface) hover:bg-(--color-surface-alt)'"
                             class="rounded-full border px-3 py-1 text-xs font-medium transition"
                         >{{ ucfirst(str_replace('_', ' ', $sourceType)) }}</button>
                     @endforeach
@@ -594,7 +594,7 @@
                             @endphp
                             <tr
                                 data-source="{{ $signal->source_type }}"
-                                x-show="filter === 'all' || filter === '{{ $signal->source_type }}'"
+                                x-show="filter === 'all' || filter === @js($signal->source_type)"
                                 class="transition hover:bg-(--color-surface-alt)/50"
                             >
                                 <td class="px-4 py-2.5">
