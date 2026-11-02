@@ -28,7 +28,9 @@ class SentryFixTaskController extends Controller
     private const ABILITY = 'sentry-fixes';
 
     /**
-     * Atomically claim the oldest queued task (critical first).
+     * Atomically claim the oldest queued task (critical first). Optional
+     * `exclude_repositories` and `exclude_task_ids` (up to 200 task UUIDs) are
+     * skipped; ids of other teams' tasks have no effect.
      *
      * @response 200 {"data": {"id": "uuid", "state": "claimed", "attempts": 1}}
      * @response 204
@@ -41,12 +43,15 @@ class SentryFixTaskController extends Controller
             'worker' => ['required', 'string', 'max:255'],
             'exclude_repositories' => ['sometimes', 'array'],
             'exclude_repositories.*' => ['string', 'max:255'],
+            'exclude_task_ids' => ['sometimes', 'array', 'max:200'],
+            'exclude_task_ids.*' => ['string', 'uuid'],
         ]);
 
         $task = $claim->execute(
             $this->teamId($request),
             $data['worker'],
             $data['exclude_repositories'] ?? [],
+            array_values(array_unique($data['exclude_task_ids'] ?? [])),
         );
 
         if ($task === null) {

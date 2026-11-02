@@ -15,14 +15,16 @@ class ClaimSentryFixTaskAction
 
     /**
      * @param  list<string>  $excludeRepositories
+     * @param  list<string>  $excludeTaskIds  tasks the worker wants to skip this time (e.g. snoozed)
      */
-    public function execute(string $teamId, string $worker, array $excludeRepositories = []): ?SentryFixTask
+    public function execute(string $teamId, string $worker, array $excludeRepositories = [], array $excludeTaskIds = []): ?SentryFixTask
     {
-        return DB::transaction(function () use ($teamId, $worker, $excludeRepositories): ?SentryFixTask {
+        return DB::transaction(function () use ($teamId, $worker, $excludeRepositories, $excludeTaskIds): ?SentryFixTask {
             $query = SentryFixTask::withoutGlobalScopes()
                 ->where('team_id', $teamId)
                 ->where('state', SentryFixTaskState::Queued->value)
                 ->when($excludeRepositories !== [], fn ($q) => $q->whereNotIn('repository', $excludeRepositories))
+                ->when($excludeTaskIds !== [], fn ($q) => $q->whereNotIn('id', $excludeTaskIds))
                 ->orderByDesc('is_critical')
                 ->orderBy('created_at')
                 ->orderBy('id');
