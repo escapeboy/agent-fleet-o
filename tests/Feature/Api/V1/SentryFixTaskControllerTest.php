@@ -118,6 +118,91 @@ class SentryFixTaskControllerTest extends ApiTestCase
         ])->assertNoContent();
     }
 
+    public function test_claim_skips_excluded_task_ids(): void
+    {
+        $snoozed = $this->task();
+        $next = $this->task();
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', [
+            'worker' => 'w',
+            'exclude_task_ids' => [$snoozed->id],
+        ])->assertOk()->assertJsonPath('data.id', $next->id);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', [
+            'worker' => 'w',
+            'exclude_task_ids' => [$snoozed->id],
+        ])->assertNoContent();
+
+        $this->assertSame(SentryFixTaskState::Queued, $snoozed->fresh()->state);
+        $this->assertSame(0, $snoozed->fresh()->attempts);
+    }
+
+    public function test_claim_combines_task_id_and_repository_exclusion(): void
+    {
+        $this->task(['repository' => 'acme/excluded']);
+        $snoozed = $this->task(['repository' => 'acme/other']);
+        $kept = $this->task(['repository' => 'acme/other']);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', [
+            'worker' => 'w',
+            'exclude_repositories' => ['acme/excluded'],
+            'exclude_task_ids' => [$snoozed->id],
+        ])->assertOk()->assertJsonPath('data.id', $kept->id);
+    }
+
+    public function test_claim_returns_204_when_every_queued_task_is_excluded(): void
+    {
+        $a = $this->task();
+        $b = $this->task(['is_critical' => true]);
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', [
+            'worker' => 'w',
+            'exclude_task_ids' => [$a->id, $b->id],
+        ])->assertNoContent();
+
+        $this->assertSame(SentryFixTaskState::Queued, $a->fresh()->state);
+        $this->assertSame(SentryFixTaskState::Queued, $b->fresh()->state);
+    }
+
+    public function test_excluding_another_teams_task_id_has_no_effect(): void
+    {
+        $foreign = $this->task([], $this->otherTeam());
+        $own = $this->task();
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', [
+            'worker' => 'w',
+            'exclude_task_ids' => [$foreign->id, (string) Str::uuid()],
+        ])->assertOk()->assertJsonPath('data.id', $own->id);
+
+        $this->assertSame(SentryFixTaskState::Queued, $foreign->fresh()->state);
+    }
+
+    public function test_claim_validates_exclude_task_ids(): void
+    {
+        $task = $this->task();
+        $this->actingAsApiUser(['team:'.$this->team->id, 'sentry-fixes']);
+
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w', 'exclude_task_ids' => 'not-an-array'])
+            ->assertStatus(422)->assertJsonValidationErrors('exclude_task_ids');
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w', 'exclude_task_ids' => ['not-a-uuid']])
+            ->assertStatus(422)->assertJsonValidationErrors('exclude_task_ids.0');
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w', 'exclude_task_ids' => [123]])
+            ->assertStatus(422)->assertJsonValidationErrors('exclude_task_ids.0');
+        $tooMany = array_map(static fn (): string => (string) Str::uuid(), range(1, 201));
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w', 'exclude_task_ids' => $tooMany])
+            ->assertStatus(422)->assertJsonValidationErrors('exclude_task_ids');
+
+        $this->assertSame(SentryFixTaskState::Queued, $task->fresh()->state);
+
+        $maxAllowed = array_map(static fn (): string => (string) Str::uuid(), range(1, 200));
+        $this->postJson('/api/v1/sentry-fix-tasks/claim', ['worker' => 'w', 'exclude_task_ids' => $maxAllowed])
+            ->assertOk()->assertJsonPath('data.id', $task->id);
+    }
+
     public function test_claim_ignores_other_teams_and_non_queued_tasks(): void
     {
         $this->task(['state' => SentryFixTaskState::Fixing]);
