@@ -136,7 +136,7 @@
 
             {{-- Native share / Copy link --}}
             <div x-data="webShare">
-                <button @click="share('{{ $experiment->name }}', '{{ $experiment->thesis }}', '{{ url()->current() }}')"
+                <button @click="share(@js($experiment->title), @js($experiment->thesis), @js(url()->current()))"
                     class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     :title="copied ? 'Link copied!' : 'Share'">
                     <span x-text="copied ? 'Copied!' : (canShare ? 'Share' : 'Copy link')"></span>

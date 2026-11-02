@@ -82,7 +82,7 @@
                     {{ \Illuminate\Support\Str::limit((string) ($agent['address'] ?? ''), 40) }}
                 </div>
 
-                <button wire:click="install('{{ $agent['address'] ?? '' }}')"
+                <button wire:click="install(@js($agent['address'] ?? ''))"
                         wire:loading.attr="disabled"
                         wire:target="install"
                         class="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
