@@ -63,7 +63,7 @@
                     "name": "Is FleetQ open source?",
                     "acceptedAnswer": {
                         "@@type": "Answer",
-                        "text": "Yes. The community edition is fully open source under the MIT license. You can self-host it on your own infrastructure. A managed cloud edition is also available with additional features like team management and billing."
+                        "text": "Yes. The community edition is fully open source under the AGPL-3.0 license. You can self-host it on your own infrastructure. A managed cloud edition is also available with additional features like team management and billing."
                     }
                 },
                 {

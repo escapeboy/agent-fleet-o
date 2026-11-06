@@ -201,7 +201,7 @@
     {{-- CTA --}}
     <x-landing.cta
         heading="Build your first {{ $uc['title_short'] }} workflow today"
-        subtext="FleetQ is open source, MIT licensed, and runs on your infrastructure. Start free with no credit card."
+        subtext="FleetQ is open source, AGPL-3.0 licensed, and runs on your infrastructure. Start free with no credit card."
         ctaLabel="Get started free"
         ctaHref="{{ route('register') }}"
         secondaryLabel="View all use cases"

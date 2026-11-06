@@ -8,7 +8,7 @@
         ],
         [
             'question' => 'Is FleetQ open source?',
-            'answer' => 'Yes. FleetQ is fully open source under the MIT license. Self-host it on your own infrastructure with complete control over your data, models, and configuration.',
+            'answer' => 'Yes. FleetQ is fully open source under the AGPL-3.0 license. Self-host it on your own infrastructure with complete control over your data, models, and configuration.',
         ],
         [
             'question' => 'What AI providers are supported?',

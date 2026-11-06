@@ -1,6 +1,6 @@
 @props([
     'heading'       => 'Ready to Put Your AI Agents to Work?',
-    'subtext'       => 'Free and open source. MIT licensed. No cloud subscription required.',
+    'subtext'       => 'Free and open source. AGPL-3.0 licensed. No cloud subscription required.',
     'ctaLabel'      => 'Get Started Free',
     'ctaHref'       => null,
     'secondaryLabel' => 'View on GitHub',
