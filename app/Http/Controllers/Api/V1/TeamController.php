@@ -156,7 +156,11 @@ class TeamController extends Controller
     }
 
     /**
+     * Optional non-team abilities: `sentry-fixes` and `automation` (a higher
+     * per-minute API rate limit). Both require a team owner or admin.
+     *
      * @response 201 {"data": {"token": "3|plaintext...", "name": "my-token"}}
+     * @response 403 {"message": "Only team owners and admins can issue a token with the automation ability."}
      * @response 422 {"message": "Validation error.", "errors": {"name": ["The name field is required."]}}
      */
     public function createToken(Request $request): JsonResponse
@@ -167,13 +171,23 @@ class TeamController extends Controller
         ]);
 
         // Force team-scoped ability — reject wildcard or foreign-team abilities.
-        // `sentry-fixes` is the only non-team ability a token may opt into: it
-        // grants access to the external Sentry fix worker queue.
+        // The only non-team abilities a token may opt into: `sentry-fixes`
+        // grants access to the external Sentry fix worker queue, and
+        // `automation` gives the token a higher per-minute API rate limit.
         $teamAbility = 'team:'.$request->user()->current_team_id;
         $requested = $request->input('abilities', [$teamAbility]);
 
-        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility, 'sentry-fixes'])) {
+        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility, 'sentry-fixes', 'automation'])) {
             abort(422, 'Token abilities must be limited to the current team.');
+        }
+
+        if (in_array('automation', $requested, true)) {
+            $team = $request->user()->currentTeam;
+            abort_unless(
+                $team !== null && $team->memberRole($request->user())?->canManageTeam(),
+                403,
+                'Only team owners and admins can issue a token with the automation ability.',
+            );
         }
 
         if (in_array('sentry-fixes', $requested, true)) {
