@@ -16,8 +16,9 @@ class LandingFooterLicenseTest extends TestCase
         $response = $this->get('/terms');
 
         $response->assertOk();
-        $response->assertSee('AGPL-3.0', false);
-        $response->assertSee('href="'.self::LICENSE_URL.'"', false);
+        $response->assertSee('target="_blank">AGPL-3.0 License</a>', false);
+        $response->assertSee('Community Edition licensed under <a href="'.self::LICENSE_URL.'"', false);
+        $response->assertDontSee('<span class="text-sm text-gray-500">MIT License</span>', false);
     }
 
     public function test_terms_page_names_agpl_for_community_edition(): void
@@ -29,7 +30,7 @@ class LandingFooterLicenseTest extends TestCase
         $response->assertOk();
         $response->assertSee('GNU Affero General Public License');
         $response->assertSee('AGPL-3.0');
-        $response->assertDontSee('MIT License');
+        $this->assertDoesNotMatchRegularExpression('/\bMIT\s+licen[sc]e/i', $response->getContent());
     }
 
     public function test_no_public_view_claims_mit_licence(): void
