@@ -5,6 +5,9 @@
             {{ session('message') }}
         </div>
     @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
 
     {{-- Header --}}
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
