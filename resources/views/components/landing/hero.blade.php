@@ -25,7 +25,7 @@
             {{-- Badge --}}
             <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
                  class="transition duration-500 ease-out">
-                {!! $badge ?? '<span class="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700"><i class="fa-brands fa-github text-xs"></i>Open Source &mdash; MIT License</span>' !!}
+                {!! $badge ?? '<span class="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700"><i class="fa-brands fa-github text-xs"></i>Open Source &mdash; AGPL-3.0 License</span>' !!}
             </div>
 
             <h1 :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
