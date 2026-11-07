@@ -72,6 +72,61 @@ class ProfilingSampleRateTest extends TestCase
         }
     }
 
+    /**
+     * `config:cache` boots the app in the console (so applyTo() runs with
+     * runningInConsole = true), then var_export()s config->all() to disk.
+     * Web requests and workers then start from that cached array.
+     */
+    private function cachedConfigAfterConsoleBoot(array $sentry): array
+    {
+        $build = new Repository(['sentry' => $sentry]);
+        ProfilingSampleRate::applyTo($build, true);
+
+        return $build->all();
+    }
+
+    public function test_web_request_keeps_configured_rate_after_config_cache(): void
+    {
+        $cached = $this->cachedConfigAfterConsoleBoot([
+            'profiles_sample_rate' => 1.0,
+            'console_profiles_sample_rate' => 0.0,
+        ]);
+
+        $web = new Repository($cached);
+        ProfilingSampleRate::applyTo($web, false);
+
+        $this->assertSame(1.0, $web->get('sentry.profiles_sample_rate'));
+        $this->assertArrayNotHasKey('console_profiles_sample_rate', $web->get('sentry'));
+    }
+
+    public function test_worker_uses_console_rate_after_config_cache(): void
+    {
+        $cached = $this->cachedConfigAfterConsoleBoot([
+            'profiles_sample_rate' => 1.0,
+            'console_profiles_sample_rate' => 0.05,
+        ]);
+
+        $worker = new Repository($cached);
+        ProfilingSampleRate::applyTo($worker, true);
+
+        $this->assertSame(0.05, $worker->get('sentry.profiles_sample_rate'));
+    }
+
+    public function test_apply_to_is_idempotent_across_contexts(): void
+    {
+        $config = new Repository(['sentry' => [
+            'profiles_sample_rate' => 0.25,
+            'console_profiles_sample_rate' => 0.0,
+        ]]);
+
+        ProfilingSampleRate::applyTo($config, true);
+        ProfilingSampleRate::applyTo($config, true);
+        $this->assertSame(0.0, $config->get('sentry.profiles_sample_rate'));
+
+        ProfilingSampleRate::applyTo($config, false);
+        $this->assertSame(0.25, $config->get('sentry.profiles_sample_rate'));
+    }
+
     public function test_apply_to_is_a_no_op_without_sentry_config(): void
     {
         $config = new Repository([]);

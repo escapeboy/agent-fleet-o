@@ -44,6 +44,9 @@ final class ObservabilityServiceProvider extends ServiceProvider
         // Sentry profiling off there unless SENTRY_CONSOLE_PROFILES_SAMPLE_RATE
         // says otherwise. Must run in register(), before Sentry's lazily-built
         // hub reads sentry.* (same ordering the HubInterface note below relies on).
+        // `config:cache` also runs this (it is a console command); applyTo()
+        // keeps the original rates in a separate key so the cached config still
+        // gives web requests their configured rate.
         ProfilingSampleRate::applyTo($this->app->make('config'), $this->app->runningInConsole());
 
         $this->mergeConfigFrom(__DIR__.'/../../config/observability.php', 'observability');

@@ -17,17 +17,33 @@ use Illuminate\Contracts\Config\Repository;
  * SENTRY_CONSOLE_PROFILES_SAMPLE_RATE). HTTP requests keep the configured rate.
  *
  * This runs at runtime (ObservabilityServiceProvider::register) instead of in
- * config/sentry.php on purpose: `artisan config:cache` executes in the console,
- * so a runningInConsole() check inside the config file would bake the console
- * rate into the cached config and disable profiling for web requests too.
+ * config/sentry.php because the config file has no reliable way to know which
+ * process will read it.
+ *
+ * `artisan config:cache` is itself a console command: it boots the app (so
+ * applyTo() runs with runningInConsole = true) and then writes the whole,
+ * already rewritten config to disk. To keep web requests profiling after
+ * that, applyTo() never derives the rate from the value it may have
+ * overwritten earlier. On first run it copies both configured rates into a
+ * separate top-level config key (SOURCE_KEY) and always resolves from that
+ * copy. The copy is cached along with everything else, so a web request
+ * reading a cached config still finds the original HTTP rate, and a worker
+ * still finds the console rate.
  */
 final class ProfilingSampleRate
 {
     /**
-     * App-only key. It must be removed before Sentry builds its client: the
-     * SDK's options resolver rejects option names it does not know.
+     * App-only key inside `sentry`. It must be removed before Sentry builds
+     * its client: the SDK's options resolver rejects option names it does not
+     * know.
      */
     public const CONSOLE_KEY = 'console_profiles_sample_rate';
+
+    /**
+     * Top-level config key holding the rates as configured, before any
+     * rewrite. Kept outside `sentry` so it never reaches the Sentry SDK.
+     */
+    public const SOURCE_KEY = 'sentry_profiling_source';
 
     public static function resolve(?float $configured, ?float $consoleRate, bool $runningInConsole): ?float
     {
@@ -46,8 +62,18 @@ final class ProfilingSampleRate
             return;
         }
 
-        $configured = $sentry['profiles_sample_rate'] ?? null;
-        $consoleRate = $sentry[self::CONSOLE_KEY] ?? null;
+        $source = $config->get(self::SOURCE_KEY);
+
+        if (! is_array($source)) {
+            $source = [
+                'profiles_sample_rate' => $sentry['profiles_sample_rate'] ?? null,
+                self::CONSOLE_KEY => $sentry[self::CONSOLE_KEY] ?? null,
+            ];
+            $config->set(self::SOURCE_KEY, $source);
+        }
+
+        $configured = $source['profiles_sample_rate'] ?? null;
+        $consoleRate = $source[self::CONSOLE_KEY] ?? null;
 
         unset($sentry[self::CONSOLE_KEY]);
 
