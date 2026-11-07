@@ -87,7 +87,7 @@ class MarketplaceSeeder extends Seeder
                 'readme' => "## Code Review Skill\n\nAnalyzes pull requests and code changes for:\n- Security vulnerabilities (OWASP Top 10)\n- Performance bottlenecks\n- Code style and maintainability\n- Best practices compliance\n\n### Usage\nAttach to any agent and provide code or a diff as input.",
                 'category' => 'development',
                 'tags' => ['code-review', 'security', 'quality', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
                 'execution_profile' => ['avg_tokens' => 4000, 'avg_duration_ms' => 8000],
             ],
             [
@@ -97,7 +97,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Root cause analysis for bugs, errors, and stack traces. Explains the issue, identifies the source, and suggests fixes with code examples.',
                 'category' => 'development',
                 'tags' => ['debugging', 'errors', 'troubleshooting', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
                 'execution_profile' => ['avg_tokens' => 3500, 'avg_duration_ms' => 7000],
             ],
             [
@@ -107,7 +107,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Generate comprehensive test suites from code or specifications. PHPUnit, Jest, Pytest, and more. Covers happy paths, edge cases, and error scenarios.',
                 'category' => 'development',
                 'tags' => ['testing', 'tdd', 'automation', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
                 'execution_profile' => ['avg_tokens' => 5000, 'avg_duration_ms' => 10000],
             ],
             [
@@ -117,7 +117,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Intelligent code refactoring suggestions with before/after comparisons. Improves readability, reduces complexity, and applies design patterns.',
                 'category' => 'development',
                 'tags' => ['refactoring', 'clean-code', 'patterns', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -126,7 +126,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Analyze code and infrastructure for performance bottlenecks. Database query optimization, caching strategies, and load analysis.',
                 'category' => 'development',
                 'tags' => ['performance', 'optimization', 'database', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -135,7 +135,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Comprehensive security analysis: OWASP Top 10, dependency vulnerabilities, auth flows, input validation, and encryption practices.',
                 'category' => 'development',
                 'tags' => ['security', 'owasp', 'audit', 'compliance'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -144,7 +144,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Design RESTful APIs with OpenAPI specs, endpoint planning, versioning strategy, auth patterns, and pagination design.',
                 'category' => 'development',
                 'tags' => ['api', 'rest', 'openapi', 'architecture'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -153,7 +153,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Schema design, normalization, indexing strategies, migration planning. Supports PostgreSQL, MySQL, SQLite, and MongoDB.',
                 'category' => 'development',
                 'tags' => ['database', 'schema', 'sql', 'architecture'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -162,7 +162,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Optimize slow SQL queries with EXPLAIN analysis, index suggestions, query rewriting, and partitioning strategies.',
                 'category' => 'development',
                 'tags' => ['sql', 'performance', 'database', 'optimization'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -171,7 +171,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Evaluate system architecture for scalability, reliability, and maintainability. Microservices, monoliths, event-driven, and CQRS patterns.',
                 'category' => 'development',
                 'tags' => ['architecture', 'scalability', 'patterns', 'engineering'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
 
             // ─── Skills: Content & Marketing ──────────────────────────────
@@ -182,7 +182,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Generate blog posts, articles, product descriptions, and technical documentation. SEO-optimized with customizable tone and style.',
                 'category' => 'content',
                 'tags' => ['writing', 'blog', 'seo', 'content'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -191,7 +191,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Craft high-converting email campaigns, drip sequences, and transactional emails. A/B test subject lines and optimize for deliverability.',
                 'category' => 'content',
                 'tags' => ['email', 'copywriting', 'marketing', 'conversion'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -200,7 +200,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Create engaging social media posts for Twitter/X, LinkedIn, Instagram, and Facebook. Platform-specific formatting and hashtag optimization.',
                 'category' => 'content',
                 'tags' => ['social-media', 'marketing', 'engagement', 'content'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -209,7 +209,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Comprehensive SEO analysis: meta tags, content structure, keyword density, internal linking, and technical SEO recommendations.',
                 'category' => 'content',
                 'tags' => ['seo', 'audit', 'marketing', 'optimization'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
 
             // ─── Skills: Research & Analysis ──────────────────────────────
@@ -220,7 +220,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Deep research on any topic with structured summaries, source citations, and confidence levels. Multi-hop reasoning for complex questions.',
                 'category' => 'research',
                 'tags' => ['research', 'analysis', 'summarization', 'knowledge'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -229,7 +229,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Analyze datasets, generate insights, create visualizations, and build reports. CSV, JSON, and SQL data sources supported.',
                 'category' => 'research',
                 'tags' => ['data', 'analytics', 'visualization', 'reporting'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -238,7 +238,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Competitive analysis, market sizing, trend identification, and SWOT analysis. Structured reports with actionable recommendations.',
                 'category' => 'research',
                 'tags' => ['market', 'competitive', 'strategy', 'business'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -247,7 +247,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Translate text between 100+ languages with context awareness, tone preservation, and domain-specific terminology.',
                 'category' => 'content',
                 'tags' => ['translation', 'i18n', 'localization', 'multilingual'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
 
             // ─── Skills: Operations ───────────────────────────────────────
@@ -258,7 +258,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Generate test plans, edge cases, and acceptance criteria from user stories or requirements. Manual and automated test strategies.',
                 'category' => 'development',
                 'tags' => ['qa', 'testing', 'quality', 'automation'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -267,7 +267,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Structured incident triage, root cause analysis, and post-mortem generation. Integrates with PagerDuty, Sentry, and Datadog alerts.',
                 'category' => 'operations',
                 'tags' => ['incident', 'sre', 'monitoring', 'devops'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -276,7 +276,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Create deployment checklists, rollback plans, and migration strategies. Blue-green, canary, and rolling deployment patterns.',
                 'category' => 'operations',
                 'tags' => ['deployment', 'ci-cd', 'devops', 'release'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
             [
                 'type' => 'skill',
@@ -285,7 +285,7 @@ class MarketplaceSeeder extends Seeder
                 'description' => 'Break complex goals into actionable task lists with dependencies, estimates, and priority. Supports Agile, Kanban, and waterfall methodologies.',
                 'category' => 'operations',
                 'tags' => ['planning', 'project-management', 'agile', 'tasks'],
-                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'safe'],
+                'configuration_snapshot' => ['type' => 'llm', 'risk_level' => 'low'],
             ],
 
             // ─── Agents ───────────────────────────────────────────────────
