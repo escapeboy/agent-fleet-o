@@ -49,7 +49,7 @@ Most agent frameworks give you a Python notebook. FleetQ gives you a **productio
 - 🔒 **Production-grade** — tenant isolation, encrypted credential vault, HMAC webhooks, SSRF guards, circuit breakers, audit trail.
 - 📊 **OpenTelemetry observability** — structured error codes (gRPC-canonical), deadline propagation, distributed tracing. Jaeger UI one-command away. Per-team OTLP collector endpoints for BYO observability.
 - 📈 **Live team graph** — Cytoscape.js force-directed visualization of agents, humans, and crews. Real-time updates via Laravel Reverb WebSockets.
-- 🏠 **Self-host or cloud** — MIT-friendly AGPLv3 license, runs on Docker Compose, or use [FleetQ Cloud](https://fleetq.net).
+- 🏠 **Self-host or cloud** — AGPLv3 license, runs on Docker Compose, or use [FleetQ Cloud](https://fleetq.net).
 
 ## Key Concepts
 
