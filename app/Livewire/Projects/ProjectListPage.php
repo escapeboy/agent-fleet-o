@@ -10,6 +10,7 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Livewire\Concerns\HasAssistantSelection;
 use Illuminate\Support\Facades\Gate;
+use InvalidArgumentException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -67,8 +68,11 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
-        session()->flash('message', "Project \"{$project->title}\" paused.");
+
+        $this->runTransition(
+            fn () => app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard'),
+            "Project \"{$project->title}\" paused.",
+        );
     }
 
     public function resume(string $projectId): void
@@ -76,8 +80,31 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(ResumeProjectAction::class)->execute($project);
-        session()->flash('message', "Project \"{$project->title}\" resumed.");
+
+        if ($project->status !== ProjectStatus::Paused) {
+            session()->flash('error', "Cannot resume project in {$project->status->value} state.");
+
+            return;
+        }
+
+        $this->runTransition(
+            fn () => app(ResumeProjectAction::class)->execute($project),
+            "Project \"{$project->title}\" resumed.",
+        );
+    }
+
+    /**
+     * Run a lifecycle action, turning a rejected transition (stale page, double click)
+     * into an error flash instead of an exception.
+     */
+    private function runTransition(callable $transition, string $successMessage): void
+    {
+        try {
+            $transition();
+            session()->flash('message', $successMessage);
+        } catch (InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function archive(string $projectId): void

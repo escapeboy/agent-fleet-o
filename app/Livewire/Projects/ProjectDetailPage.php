@@ -20,8 +20,10 @@ use App\Domain\Project\Models\ProjectRun;
 use App\Domain\Project\Models\ProjectSnapshot;
 use App\Domain\Project\Services\ProjectHealthEvaluator;
 use App\Domain\Tool\Models\Tool;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -50,18 +52,42 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
-        $this->project->refresh();
-        session()->flash('message', 'Project paused.');
+        $this->runTransition(
+            fn () => app(PauseProjectAction::class)->execute($this->project, 'Manually paused'),
+            'Project paused.',
+        );
     }
 
     public function resume(): void
     {
         Gate::authorize('edit-content');
 
-        app(ResumeProjectAction::class)->execute($this->project);
+        if ($this->project->status !== ProjectStatus::Paused) {
+            session()->flash('error', "Cannot resume project in {$this->project->status->value} state.");
+
+            return;
+        }
+
+        $this->runTransition(
+            fn () => app(ResumeProjectAction::class)->execute($this->project),
+            'Project resumed.',
+        );
+    }
+
+    /**
+     * Run a lifecycle action, turning a rejected transition (stale page, double click)
+     * into an error flash instead of an exception.
+     */
+    private function runTransition(callable $transition, string $successMessage): void
+    {
+        try {
+            $transition();
+            session()->flash('message', $successMessage);
+        } catch (InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+        }
+
         $this->project->refresh();
-        session()->flash('message', 'Project resumed.');
     }
 
     public function archive(): void
@@ -77,14 +103,27 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        if ($this->project->status !== ProjectStatus::Draft) {
+        $currentStatus = DB::transaction(function (): ProjectStatus {
+            $project = Project::withoutGlobalScopes()->lockForUpdate()->findOrFail($this->project->id);
+            $status = $project->status;
+
+            if ($status === ProjectStatus::Draft) {
+                $project->update([
+                    'status' => ProjectStatus::Active,
+                    'started_at' => now(),
+                ]);
+            }
+
+            return $status;
+        });
+
+        $this->project->refresh();
+
+        if ($currentStatus !== ProjectStatus::Draft) {
+            session()->flash('error', "Project can only be activated from draft (current status: {$currentStatus->label()}).");
+
             return;
         }
-
-        $this->project->update([
-            'status' => ProjectStatus::Active,
-            'started_at' => now(),
-        ]);
 
         // One-shot projects always trigger immediately on activation
         // Continuous projects trigger if schedule has run_immediately
@@ -102,9 +141,10 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        app(RestartProjectAction::class)->execute($this->project);
-        $this->project->refresh();
-        session()->flash('message', 'Project restarted from scratch. New run triggered.');
+        $this->runTransition(
+            fn () => app(RestartProjectAction::class)->execute($this->project),
+            'Project restarted from scratch. New run triggered.',
+        );
     }
 
     public function triggerRun(): void

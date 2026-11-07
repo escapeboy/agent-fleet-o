@@ -5,6 +5,9 @@
             {{ session('message') }}
         </div>
     @endif
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
 
     {{-- Toolbar --}}
     <form class="mb-6 flex flex-wrap items-center gap-4" onsubmit="return false" toolname="search_projects" tooldescription="Filter projects by status, type, and search query">
