@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ApiCatalogController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\AuthMdController;
+use App\Http\Controllers\ComparisonsController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
@@ -382,6 +383,10 @@ Route::view('/terms', 'legal.terms')->name('legal.terms');
 // Use cases pages (public, SEO)
 Route::view('/use-cases', 'use-cases.index')->name('use-cases.index');
 Route::get('/use-cases/{slug}', UseCasesController::class)->name('use-cases.show');
+
+// Comparison pages (public, SEO)
+Route::view('/compare', 'compare.index')->name('compare.index');
+Route::get('/compare/{slug}', ComparisonsController::class)->name('compare.show');
 
 // Public marketplace storefront (Blade + Alpine.js, no auth)
 Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {
