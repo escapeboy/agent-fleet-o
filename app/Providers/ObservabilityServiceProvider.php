@@ -11,6 +11,7 @@ use App\Infrastructure\Observability\Health\HealthCheckRegistry;
 use App\Infrastructure\Observability\Prometheus\MetricEmitter;
 use App\Infrastructure\Observability\Prometheus\PrometheusRegistry;
 use App\Infrastructure\Observability\Prometheus\TopNTeamLabeller;
+use App\Infrastructure\Sentry\ProfilingSampleRate;
 use App\Infrastructure\Telemetry\Sentry\ErrorCaptured;
 use App\Infrastructure\Telemetry\Sentry\FingerprintResolver;
 use App\Infrastructure\Telemetry\Sentry\SentryContext;
@@ -39,6 +40,12 @@ final class ObservabilityServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Queue workers, Horizon and the scheduler are console processes; turn
+        // Sentry profiling off there unless SENTRY_CONSOLE_PROFILES_SAMPLE_RATE
+        // says otherwise. Must run in register(), before Sentry's lazily-built
+        // hub reads sentry.* (same ordering the HubInterface note below relies on).
+        ProfilingSampleRate::applyTo($this->app->make('config'), $this->app->runningInConsole());
+
         $this->mergeConfigFrom(__DIR__.'/../../config/observability.php', 'observability');
 
         $this->app->singleton(SentryContext::class, fn () => new SentryContext);
