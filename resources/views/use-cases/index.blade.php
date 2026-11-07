@@ -128,6 +128,11 @@
                     </a>
                 @endforeach
             </div>
+
+            <p class="mt-10 text-center text-sm text-gray-500">
+                Weighing FleetQ against other tools?
+                <a href="{{ route('compare.index') }}" class="font-medium text-primary-600 hover:text-primary-700">Compare FleetQ with LangGraph, CrewAI and n8n</a>
+            </p>
         </div>
     </section>
 

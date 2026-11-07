@@ -47,6 +47,7 @@
                 <ul class="mt-4 space-y-3">
                     {{ $resourceLinks ?? '' }}
                     <li><a href="{{ url('/docs/api') }}" class="text-sm transition hover:text-white">API Docs</a></li>
+                    <li><a href="{{ route('compare.index') }}" class="text-sm transition hover:text-white">Compare</a></li>
                     <li><a href="https://github.com/escapeboy/agent-fleet-o/blob/main/CHANGELOG.md" class="text-sm transition hover:text-white" rel="noopener noreferrer" target="_blank">Changelog</a></li>
                     <li><a href="#faq" class="text-sm transition hover:text-white">FAQ</a></li>
                 </ul>
