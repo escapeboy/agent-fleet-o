@@ -170,7 +170,7 @@
     {{-- CTA --}}
     <x-landing.cta
         heading="Ready to ship your first automated workflow?"
-        subtext="Deploy in minutes on your own server. MIT licensed. No vendor lock-in."
+        subtext="Deploy in minutes on your own server. AGPL-3.0 licensed. No vendor lock-in."
         ctaLabel="Get started free"
         ctaHref="{{ route('register') }}"
         secondaryLabel="Read the docs"

@@ -74,7 +74,7 @@
                     @endif
                     <li><a href="{{ route('legal.terms') }}" class="text-sm transition hover:text-white">Terms of Service</a></li>
                     {{ $legalLinks ?? '' }}
-                    <li><span class="text-sm text-gray-500">MIT License</span></li>
+                    <li><a href="https://github.com/escapeboy/agent-fleet-o/blob/main/LICENSE" class="text-sm transition hover:text-white" rel="noopener noreferrer" target="_blank">AGPL-3.0 License</a></li>
                 </ul>
             </div>
         </div>
@@ -91,7 +91,7 @@
                     <a href="https://github.com/escapeboy/agent-fleet-o" class="text-gray-400 transition hover:text-white" rel="noopener noreferrer" target="_blank" aria-label="GitHub">
                         <i class="fa-brands fa-github text-lg"></i>
                     </a>
-                    <p class="text-sm">&copy; {{ date('Y') }} FleetQ. MIT License.</p>
+                    <p class="text-sm">&copy; {{ date('Y') }} FleetQ. Community Edition licensed under <a href="https://github.com/escapeboy/agent-fleet-o/blob/main/LICENSE" class="underline underline-offset-2 transition hover:text-white" rel="noopener noreferrer" target="_blank">AGPL-3.0</a>.</p>
                 </div>
             </div>
         </div>
