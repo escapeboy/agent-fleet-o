@@ -22,6 +22,7 @@ use App\Domain\Project\Services\ProjectHealthEvaluator;
 use App\Domain\Tool\Models\Tool;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -50,7 +51,16 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
+        try {
+            app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
+        } catch (InvalidArgumentException $e) {
+            // Status changed between render and click (stale page, double click).
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project paused.');
     }
@@ -59,7 +69,25 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        app(ResumeProjectAction::class)->execute($this->project);
+        $this->project->refresh();
+
+        // Resume is only offered for paused projects; the enum alone would let a draft slip through.
+        if ($this->project->status !== ProjectStatus::Paused) {
+            session()->flash('error', "Cannot resume project in {$this->project->status->value} state.");
+
+            return;
+        }
+
+        try {
+            app(ResumeProjectAction::class)->execute($this->project);
+        } catch (InvalidArgumentException $e) {
+            // Status changed between render and click (stale page, double click).
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project resumed.');
     }
@@ -78,6 +106,9 @@ class ProjectDetailPage extends Component
         Gate::authorize('edit-content');
 
         if ($this->project->status !== ProjectStatus::Draft) {
+            $this->project->refresh();
+            session()->flash('error', "Project can only be activated from draft (current status: {$this->project->status->label()}).");
+
             return;
         }
 
@@ -102,7 +133,16 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
-        app(RestartProjectAction::class)->execute($this->project);
+        try {
+            app(RestartProjectAction::class)->execute($this->project);
+        } catch (InvalidArgumentException $e) {
+            // Status changed between render and click (stale page, double click).
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project restarted from scratch. New run triggered.');
     }

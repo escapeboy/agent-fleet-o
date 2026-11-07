@@ -10,6 +10,7 @@ use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
 use App\Livewire\Concerns\HasAssistantSelection;
 use Illuminate\Support\Facades\Gate;
+use InvalidArgumentException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -67,7 +68,16 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+
+        try {
+            app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+        } catch (InvalidArgumentException $e) {
+            // Status changed between render and click (stale page, double click).
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" paused.");
     }
 
@@ -76,7 +86,23 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(ResumeProjectAction::class)->execute($project);
+
+        // Resume is only offered for paused projects; the enum alone would let a draft slip through.
+        if ($project->status !== ProjectStatus::Paused) {
+            session()->flash('error', "Cannot resume project in {$project->status->value} state.");
+
+            return;
+        }
+
+        try {
+            app(ResumeProjectAction::class)->execute($project);
+        } catch (InvalidArgumentException $e) {
+            // Status changed between render and click (stale page, double click).
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" resumed.");
     }
 
