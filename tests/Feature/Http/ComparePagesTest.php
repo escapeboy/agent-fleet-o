@@ -71,6 +71,8 @@ class ComparePagesTest extends TestCase
     public function test_unknown_compare_slug_returns_404(): void
     {
         $this->get('/compare/zapier')->assertNotFound();
+        // 'checked_on' is a scalar config key, not a page.
+        $this->get('/compare/checked_on')->assertNotFound();
     }
 
     #[DataProvider('slugProvider')]

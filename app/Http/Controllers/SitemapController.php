@@ -85,11 +85,9 @@ class SitemapController extends Controller
      */
     private function comparisonUrls(): array
     {
-        return collect(config('comparisons', []))
-            ->except('checked_on')
-            ->filter(fn ($entry) => is_array($entry))
+        return collect(ComparisonsController::pages())
             ->keys()
-            ->map(fn ($slug) => url('/compare/'.$slug))
+            ->map(fn (string $slug): string => route('compare.show', $slug))
             ->values()
             ->all();
     }

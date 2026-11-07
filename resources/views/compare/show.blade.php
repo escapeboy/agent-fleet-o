@@ -1,7 +1,7 @@
 <x-layouts.public
-    :title="$c['meta_title']"
-    :description="$c['meta_description']"
-    :keywords="$c['keywords']"
+    :title="$comparison['meta_title']"
+    :description="$comparison['meta_description']"
+    :keywords="$comparison['keywords']"
 >
     <x-slot:head>
         @php
@@ -9,7 +9,7 @@
             [
                 '@context'   => 'https://schema.org',
                 '@type'      => 'FAQPage',
-                'mainEntity' => collect($c['faqs'])->map(fn($f) => [
+                'mainEntity' => collect($comparison['faqs'])->map(fn($f) => [
                     '@type'          => 'Question',
                     'name'           => $f['question'],
                     'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['answer']],
@@ -20,7 +20,7 @@
                 '@type'       => 'BreadcrumbList',
                 'itemListElement' => [
                     ['@type' => 'ListItem', 'position' => 1, 'name' => 'Compare', 'item' => route('compare.index')],
-                    ['@type' => 'ListItem', 'position' => 2, 'name' => 'FleetQ vs '.$c['tool_name'], 'item' => url()->current()],
+                    ['@type' => 'ListItem', 'position' => 2, 'name' => 'FleetQ vs '.$comparison['tool_name'], 'item' => url()->current()],
                 ],
             ],
         ];
@@ -38,14 +38,14 @@
             <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
                 <a href="{{ route('compare.index') }}" class="hover:text-primary-600 transition-colors">Compare</a>
                 <i class="fa-solid fa-chevron-right text-base flex-shrink-0"></i>
-                <span class="text-gray-900 font-medium truncate">FleetQ vs {{ $c['tool_name'] }}</span>
+                <span class="text-gray-900 font-medium truncate">FleetQ vs {{ $comparison['tool_name'] }}</span>
             </nav>
 
             <div class="max-w-3xl">
                 <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl mb-6">
-                    {{ $c['h1'] }}
+                    {{ $comparison['h1'] }}
                 </h1>
-                @foreach ($c['intro'] as $paragraph)
+                @foreach ($comparison['intro'] as $paragraph)
                     <p class="text-lg text-gray-600 leading-relaxed mb-4">{{ $paragraph }}</p>
                 @endforeach
             </div>
@@ -58,12 +58,12 @@
             <h2 class="text-xl font-bold text-gray-900 mb-6">The short answer</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-base font-semibold text-gray-900 mb-2">When {{ $c['tool_name'] }} is the better fit</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">{{ $c['short_answer']['pick_tool'] }}</p>
+                    <h3 class="text-base font-semibold text-gray-900 mb-2">When {{ $comparison['tool_name'] }} is the better fit</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">{{ $comparison['short_answer']['pick_tool'] }}</p>
                 </div>
                 <div class="rounded-2xl border border-primary-200 bg-primary-50 p-6 shadow-sm">
                     <h3 class="text-base font-semibold text-gray-900 mb-2">When FleetQ is the better fit</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">{{ $c['short_answer']['pick_fleetq'] }}</p>
+                    <p class="text-sm text-gray-600 leading-relaxed">{{ $comparison['short_answer']['pick_fleetq'] }}</p>
                 </div>
             </div>
         </div>
@@ -72,18 +72,18 @@
     {{-- Comparison table --}}
     <section class="py-12 bg-gray-50">
         <div class="mx-auto max-w-5xl px-6 lg:px-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-6">FleetQ vs {{ $c['tool_name'] }} at a glance</h2>
+            <h2 class="text-xl font-bold text-gray-900 mb-6">FleetQ vs {{ $comparison['tool_name'] }} at a glance</h2>
             <div class="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-5 py-3 text-left font-semibold text-gray-900"><span class="sr-only">Feature</span></th>
                             <th scope="col" class="px-5 py-3 text-left font-semibold text-gray-900">FleetQ</th>
-                            <th scope="col" class="px-5 py-3 text-left font-semibold text-gray-900">{{ $c['tool_name'] }}</th>
+                            <th scope="col" class="px-5 py-3 text-left font-semibold text-gray-900">{{ $comparison['tool_name'] }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach ($c['table'] as $row)
+                        @foreach ($comparison['table'] as $row)
                             <tr>
                                 <th scope="row" class="px-5 py-3 text-left font-medium text-gray-900 align-top">{{ $row['label'] }}</th>
                                 <td class="px-5 py-3 text-gray-700 align-top">{{ $row['fleetq'] }}</td>
@@ -98,12 +98,12 @@
     </section>
 
     {{-- Using both together --}}
-    @if (! empty($c['together']))
+    @if (! empty($comparison['together']))
         <section class="py-12 bg-white border-b border-gray-100">
             <div class="mx-auto max-w-5xl px-6 lg:px-8">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Using FleetQ and {{ $c['tool_name'] }} together</h2>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Using FleetQ and {{ $comparison['tool_name'] }} together</h2>
                 <div class="max-w-3xl space-y-4">
-                    @foreach ($c['together'] as $paragraph)
+                    @foreach ($comparison['together'] as $paragraph)
                         <p class="text-gray-600 leading-relaxed">{{ $paragraph }}</p>
                     @endforeach
                 </div>
@@ -112,7 +112,7 @@
     @endif
 
     {{-- Body sections --}}
-    @foreach ($c['sections'] as $section)
+    @foreach ($comparison['sections'] as $section)
         <section class="py-12 {{ $loop->even ? 'bg-gray-50' : 'bg-white' }} border-b border-gray-100">
             <div class="mx-auto max-w-5xl px-6 lg:px-8">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">{{ $section['heading'] }}</h2>
@@ -140,7 +140,7 @@
     <section class="py-12 bg-gray-50 border-t border-gray-100">
         <div class="mx-auto max-w-5xl px-6 lg:px-8">
             <h2 class="text-xl font-bold text-gray-900 mb-2">Frequently Asked Questions</h2>
-            <x-use-cases.faq-section :faqs="$c['faqs']" />
+            <x-use-cases.faq-section :faqs="$comparison['faqs']" />
         </div>
     </section>
 

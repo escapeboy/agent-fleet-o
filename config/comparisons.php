@@ -25,12 +25,12 @@ $fleetqTable = [
     'Pricing model' => 'Community Edition free; Cloud free to start, with paid tiers',
 ];
 
-$table = fn () => collect($fleetqTable)
-    ->map(fn (string $fleetq, string $label) => ['label' => $label, 'fleetq' => $fleetq, 'tool' => 'See their docs'])
+$table = collect($fleetqTable)
+    ->map(fn (string $fleetq, string $label): array => ['label' => $label, 'fleetq' => $fleetq, 'tool' => 'See their docs'])
     ->values()
     ->all();
 
-$sharedSections = fn (string $tool) => [
+$sharedSections = fn (string $tool): array => [
     [
         'heading' => 'What FleetQ adds around your agents',
         'paragraphs' => [
@@ -73,7 +73,7 @@ return [
             'pick_tool' => 'Pick LangGraph if your team wants to write agent logic in code and fine-tune every step of the graph. It has a larger ecosystem and community, and comes from a more mature project family.',
             'pick_fleetq' => 'Pick FleetQ if you need a self-hosted place to run, approve, budget and audit agents across a team, with a UI, a REST API and an MCP server instead of only a library.',
         ],
-        'table' => $table(),
+        'table' => $table,
         'together' => null,
         'sections' => $sharedSections('LangGraph'),
         'faqs' => [
@@ -106,7 +106,7 @@ return [
             'pick_tool' => 'Pick CrewAI if your team works in Python and wants to define crews in code. It has a larger ecosystem and community, and more mature tutorials and examples.',
             'pick_fleetq' => 'Pick FleetQ if you need a self-hosted place to run, approve, budget and audit agent crews across a team, with a UI, a REST API and an MCP server instead of only a library.',
         ],
-        'table' => $table(),
+        'table' => $table,
         'together' => null,
         'sections' => $sharedSections('CrewAI'),
         'faqs' => [
@@ -139,7 +139,7 @@ return [
             'pick_tool' => 'Pick n8n if most of your work is connecting apps and moving data, with AI as one step among many. It has a larger integration ecosystem and community, and is the more mature automation product.',
             'pick_fleetq' => 'Pick FleetQ if AI agents are the core of the work and you need a self-hosted place to run, approve, budget and audit them, with a UI, a REST API and an MCP server.',
         ],
-        'table' => $table(),
+        'table' => $table,
         'together' => null,
         'sections' => $sharedSections('n8n'),
         'faqs' => [

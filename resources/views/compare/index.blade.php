@@ -1,3 +1,6 @@
+@php
+    $comparisons = \App\Http\Controllers\ComparisonsController::pages();
+@endphp
 <x-layouts.public
     title="Compare FleetQ with LangGraph, CrewAI and n8n"
     description="Honest comparisons of FleetQ, the open-source AI agent control plane, with LangGraph, CrewAI and n8n. See where each tool fits best."
@@ -5,15 +8,14 @@
 >
     <x-slot:head>
         @php
-        $comparisons = collect(config('comparisons'))->except('checked_on')->filter(fn ($c) => is_array($c));
         $jsonLd = [
             '@context' => 'https://schema.org',
             '@type'    => 'CollectionPage',
             'name'     => 'Compare FleetQ',
             'url'      => route('compare.index'),
-            'hasPart'  => $comparisons->map(fn ($c, $slug) => [
+            'hasPart'  => collect($comparisons)->map(fn (array $comparison, string $slug) => [
                 '@type' => 'WebPage',
-                'name'  => $c['meta_title'],
+                'name'  => $comparison['meta_title'],
                 'url'   => route('compare.show', $slug),
             ])->values()->all(),
         ];
@@ -38,11 +40,11 @@
     <section class="py-12 bg-white">
         <div class="mx-auto max-w-5xl px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                @foreach ($comparisons as $slug => $c)
+                @foreach ($comparisons as $slug => $comparison)
                     <a href="{{ route('compare.show', $slug) }}"
                        class="group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 ease-out">
-                        <span class="text-base font-semibold text-gray-900 mb-2">FleetQ vs {{ $c['tool_name'] }}</span>
-                        <p class="text-sm text-gray-600 leading-relaxed flex-1 mb-4">{{ $c['meta_description'] }}</p>
+                        <span class="text-base font-semibold text-gray-900 mb-2">FleetQ vs {{ $comparison['tool_name'] }}</span>
+                        <p class="text-sm text-gray-600 leading-relaxed flex-1 mb-4">{{ $comparison['meta_description'] }}</p>
                         <span class="flex items-center gap-1 text-xs font-medium text-primary-600 group-hover:gap-2 transition-all">
                             Read the comparison
                             <i class="fa-solid fa-arrow-right text-xs"></i>

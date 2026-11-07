@@ -13,13 +13,27 @@ class ComparisonsController
 {
     public function __invoke(string $slug): View
     {
-        $c = config("comparisons.{$slug}");
-        abort_if(! is_array($c), 404);
+        $comparison = self::pages()[$slug] ?? null;
+        abort_if($comparison === null, 404);
 
         return view('compare.show', [
             'slug' => $slug,
-            'c' => $c,
+            'comparison' => $comparison,
             'checkedOn' => config('comparisons.checked_on'),
         ]);
+    }
+
+    /**
+     * Comparison pages keyed by slug, without the shared 'checked_on' date.
+     * Single source for the route, the /compare index and the sitemap.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function pages(): array
+    {
+        return collect(config('comparisons', []))
+            ->except('checked_on')
+            ->filter(fn (mixed $entry): bool => is_array($entry))
+            ->all();
     }
 }

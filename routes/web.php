@@ -386,9 +386,7 @@ Route::get('/use-cases/{slug}', UseCasesController::class)->name('use-cases.show
 
 // Comparison pages (public, SEO)
 Route::view('/compare', 'compare.index')->name('compare.index');
-Route::get('/compare/{slug}', ComparisonsController::class)
-    ->whereIn('slug', ['langgraph', 'crewai', 'n8n'])
-    ->name('compare.show');
+Route::get('/compare/{slug}', ComparisonsController::class)->name('compare.show');
 
 // Public marketplace storefront (Blade + Alpine.js, no auth)
 Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {
