@@ -5,6 +5,7 @@ use App\Domain\Signal\Jobs\RefreshExpiringWebhooksJob;
 use App\Infrastructure\AI\Jobs\ComputeProviderRankingJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -122,8 +123,10 @@ Schedule::command('queue:prune-failed --hours=720')->dailyAt('04:15');
 // Version update check
 Schedule::command('system:check-updates')->hourly()->runInBackground();
 
-// Pre-generate OpenAPI spec so /docs/api.json is served from a static file
-Schedule::command('scramble:export --path=public/api.json')->weeklyOn(1, '03:30');
+// Pre-generate OpenAPI spec to storage/app/openapi/api.json so /docs/api.json is served from a static file
+Schedule::command('scramble:export --path='.storage_path('app/openapi/api.json'))
+    ->weeklyOn(1, '03:30')
+    ->before(fn () => File::ensureDirectoryExists(storage_path('app/openapi')));
 
 // Boruna Audit Console — nightly bundle integrity verification
 if (config('boruna_audit.enabled', false)) {
