@@ -27,6 +27,9 @@
                 <p class="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
                     Browse community-built AI skills, agents, and workflows. Install with one click.
                 </p>
+                <p class="mt-3 text-sm text-gray-500">
+                    <a href="{{ route('templates.index') }}" class="font-medium text-primary-600 hover:text-primary-700">Or start from a built-in agent template</a>
+                </p>
             </div>
 
             {{-- Search & Filters --}}

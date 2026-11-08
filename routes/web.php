@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentCardController;
 use App\Http\Controllers\AgentSkillsController;
+use App\Http\Controllers\AgentTemplatesPageController;
 use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ApiCatalogController;
 use App\Http\Controllers\ArtifactPreviewController;
@@ -383,6 +384,12 @@ Route::view('/terms', 'legal.terms')->name('legal.terms');
 // Use cases pages (public, SEO)
 Route::view('/use-cases', 'use-cases.index')->name('use-cases.index');
 Route::get('/use-cases/{slug}', UseCasesController::class)->name('use-cases.show');
+
+// Public agent template gallery (no auth, SEO)
+Route::get('/templates', [AgentTemplatesPageController::class, 'index'])->name('templates.index');
+Route::get('/templates/{slug}', [AgentTemplatesPageController::class, 'show'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('templates.show');
 
 // Comparison pages (public, SEO)
 Route::view('/compare', 'compare.index')->name('compare.index');
