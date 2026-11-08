@@ -37,6 +37,7 @@
                     <li><a href="#features" class="text-sm transition hover:text-white">Features</a></li>
                     {{ $productLinks ?? '' }}
                     <li><a href="{{ route('marketplace.index') }}" class="text-sm transition hover:text-white">Marketplace</a></li>
+                    <li><a href="{{ route('compare.index') }}" class="text-sm transition hover:text-white">Compare</a></li>
                     <li><a href="#how-it-works" class="text-sm transition hover:text-white">How It Works</a></li>
                 </ul>
             </div>
