@@ -69,6 +69,9 @@
                     <a href="{{ route('marketplace.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
                         Browse Marketplace
                     </a>
+                    <a href="{{ route('templates.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+                        Browse Agent Templates
+                    </a>
                 </div>
             </div>
         </div>

@@ -41,6 +41,7 @@ class SitemapController extends Controller
         $urls = collect($this->routeUrls())
             ->merge($this->docsUrls())
             ->merge($this->comparisonUrls())
+            ->merge($this->templateUrls())
             ->unique()
             ->sort()
             ->values();
@@ -91,6 +92,20 @@ class SitemapController extends Controller
             ->map(fn ($slug) => url('/compare/'.$slug))
             ->values()
             ->all();
+    }
+
+    /**
+     * The parameterised /templates/{slug} route is skipped by routeUrls(), so
+     * its pages are listed from the config they are rendered from.
+     *
+     * @return list<string>
+     */
+    private function templateUrls(): array
+    {
+        return array_map(
+            fn (string $slug) => url('/templates/'.$slug),
+            AgentTemplatesPageController::slugs(),
+        );
     }
 
     private function isPublicPage(RoutingRoute $route): bool
