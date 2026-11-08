@@ -34,6 +34,12 @@ return [
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#profiles_sample_rate
     'profiles_sample_rate' => env('SENTRY_PROFILES_SAMPLE_RATE') === null ? null : (float) env('SENTRY_PROFILES_SAMPLE_RATE'),
 
+    // Replaces profiles_sample_rate in console processes (queue workers, Horizon,
+    // scheduler). Not a Sentry SDK option: ObservabilityServiceProvider applies it
+    // at runtime and removes the key before Sentry reads this config.
+    // @see App\Infrastructure\Sentry\ProfilingSampleRate
+    'console_profiles_sample_rate' => env('SENTRY_CONSOLE_PROFILES_SAMPLE_RATE') === null ? 0.0 : (float) env('SENTRY_CONSOLE_PROFILES_SAMPLE_RATE'),
+
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#enable_logs
     'enable_logs' => env('SENTRY_ENABLE_LOGS', false),
 
