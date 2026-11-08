@@ -221,9 +221,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Observed: with this call in boot() instead, GET /docs/api.json on a fresh
-        // process returned a live-generated spec and ignored the stored file.
-        // OpenApiSpecRouteTest covers this.
+        // Keep this in register(): when called from boot(), the first boot in a
+        // process answers GET /docs/api.json with a live-generated spec and ignores
+        // the stored file, which OpenApiSpecRouteTest's first-boot test catches.
         Scramble::ignoreDefaultRoutes();
 
         // 'mcp.team_id' is bound per-request by McpTeamBinding middleware (HTTP MCP)
@@ -893,32 +893,13 @@ class AppServiceProvider extends ServiceProvider
         // Serve the OpenAPI JSON spec from a pre-generated file when available.
         // The scheduler's weekly `scramble:export` writes storage/app/openapi/api.json.
         // Order: that file, then a legacy public/api.json if one is still present,
-        // then live generation when neither file can be used. A legacy file exported
-        // for a loopback host is skipped: it came from a developer machine, and its
-        // server and OAuth URLs would send API clients to their own localhost.
+        // then live generation when neither file can be used.
         Scramble::registerUiRoute(path: 'docs/api');
         \Illuminate\Support\Facades\Route::get('docs/api.json', function (Generator $generator) {
-            $legacy = public_path('api.json');
-
-            foreach ([storage_path('app/openapi/api.json'), $legacy] as $cached) {
-                if (! is_file($cached) || ! is_readable($cached)) {
-                    continue;
+            foreach ([storage_path('app/openapi/api.json'), public_path('api.json')] as $cached) {
+                if (is_file($cached) && is_readable($cached)) {
+                    return response(file_get_contents($cached), 200, ['Content-Type' => 'application/json']);
                 }
-
-                $spec = file_get_contents($cached);
-
-                if ($cached === $legacy) {
-                    $serverHosts = array_map(
-                        fn ($server) => parse_url($server['url'] ?? '', PHP_URL_HOST),
-                        (array) (json_decode($spec, true)['servers'] ?? []),
-                    );
-
-                    if (array_intersect($serverHosts, ['localhost', '127.0.0.1', '[::1]', '0.0.0.0']) !== []) {
-                        continue;
-                    }
-                }
-
-                return response($spec, 200, ['Content-Type' => 'application/json']);
             }
             $config = Scramble::getGeneratorConfig('default');
 

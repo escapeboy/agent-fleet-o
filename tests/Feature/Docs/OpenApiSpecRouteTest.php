@@ -7,7 +7,6 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\TestCase;
@@ -66,49 +65,6 @@ class OpenApiSpecRouteTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/json');
         $this->assertSame('public-sentinel', $response->json('info.title'));
-    }
-
-    public function test_public_file_exported_for_a_real_host_is_still_served(): void
-    {
-        $this->useSandboxPaths();
-        $this->writeSpec(public_path('api.json'), 'public-sentinel', 'https://api.example.test/api');
-
-        $response = $this->get('/docs/api.json');
-
-        $response->assertOk();
-        $this->assertSame('public-sentinel', $response->json('info.title'));
-    }
-
-    /**
-     * A public/api.json exported on a developer machine must never be published:
-     * its server and OAuth URLs would send API clients to their own loopback.
-     */
-    #[DataProvider('loopbackServerUrls')]
-    public function test_public_file_exported_for_loopback_host_is_not_served(string $serverUrl): void
-    {
-        $this->useSandboxPaths();
-        $this->writeSpec(public_path('api.json'), 'public-sentinel', $serverUrl);
-
-        $response = $this->get('/docs/api.json');
-
-        $response->assertOk();
-        $response->assertHeader('Content-Type', 'application/json');
-        $this->assertNotSame('public-sentinel', $response->json('info.title'));
-        $this->assertArrayHasKey('openapi', $response->json());
-        $this->assertNotEmpty($response->json('paths'));
-    }
-
-    /**
-     * @return array<string, array{string}>
-     */
-    public static function loopbackServerUrls(): array
-    {
-        return [
-            'localhost' => ['http://localhost:8088/api'],
-            'ipv4 loopback' => ['http://127.0.0.1:8000/api'],
-            'ipv6 loopback' => ['http://[::1]:8000/api'],
-            'unspecified address' => ['http://0.0.0.0:8000/api'],
-        ];
     }
 
     public function test_generates_live_when_no_file_exists(): void
@@ -222,15 +178,9 @@ class OpenApiSpecRouteTest extends TestCase
         $this->app->useStoragePath($this->sandbox.'/storage');
     }
 
-    private function writeSpec(string $path, string $title, ?string $serverUrl = null): void
+    private function writeSpec(string $path, string $title): void
     {
-        $spec = ['openapi' => '3.1.0', 'info' => ['title' => $title]];
-
-        if ($serverUrl !== null) {
-            $spec['servers'] = [['url' => $serverUrl]];
-        }
-
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, json_encode($spec));
+        File::put($path, json_encode(['openapi' => '3.1.0', 'info' => ['title' => $title]]));
     }
 }
