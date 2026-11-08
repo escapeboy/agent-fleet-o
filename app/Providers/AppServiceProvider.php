@@ -221,8 +221,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Must run before Scramble's provider boots, otherwise its default
-        // docs routes replace the docs/api.json route registered in boot().
+        // Observed: with this call in boot() instead, GET /docs/api.json on a fresh
+        // process returned a live-generated spec and ignored the stored file.
+        // OpenApiSpecRouteTest covers this.
         Scramble::ignoreDefaultRoutes();
 
         // 'mcp.team_id' is bound per-request by McpTeamBinding middleware (HTTP MCP)

@@ -103,6 +103,17 @@ class OpenApiSpecRouteTest extends TestCase
         $this->assertSame('stored-sentinel', $response->json('info.title'));
     }
 
+    /**
+     * The docs UI route must survive Scramble's default routes being turned off
+     * during register(), which only a fresh process exercises.
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function test_docs_ui_route_responds_on_first_boot_of_a_process(): void
+    {
+        $this->get('/docs/api')->assertOk();
+    }
+
     public function test_scheduler_exports_spec_to_storage_path(): void
     {
         $event = $this->scheduledExportEvent();
