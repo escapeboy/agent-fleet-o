@@ -4,7 +4,11 @@ namespace Tests\Feature\Docs;
 
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\TestCase;
 
 /**
@@ -82,7 +86,65 @@ class OpenApiSpecRouteTest extends TestCase
         }
     }
 
+    /**
+     * Scramble keeps its "ignore default routes" flag in a static property, so
+     * only a fresh process shows what happens on the first boot.
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function test_application_route_serves_stored_spec_on_first_boot_of_a_process(): void
+    {
+        $this->useSandboxPaths();
+        $this->writeSpec(storage_path('app/openapi/api.json'), 'stored-sentinel');
+
+        $response = $this->get('/docs/api.json');
+
+        $response->assertOk();
+        $this->assertSame('stored-sentinel', $response->json('info.title'));
+    }
+
     public function test_scheduler_exports_spec_to_storage_path(): void
+    {
+        $event = $this->scheduledExportEvent();
+
+        $this->assertStringContainsString(storage_path('app/openapi/api.json'), $event->command);
+        $this->assertStringNotContainsString('public/api.json', $event->command);
+    }
+
+    /**
+     * Runs the real scheduled event's before() hook and artisan command. Only the
+     * storage root differs, so nothing is written to the real storage directory.
+     */
+    public function test_scheduled_export_writes_a_servable_spec_when_directory_is_missing(): void
+    {
+        $event = $this->scheduledExportEvent();
+        $scheduledPath = storage_path('app/openapi/api.json');
+
+        $this->useSandboxPaths();
+        $target = storage_path('app/openapi/api.json');
+        $this->assertDirectoryDoesNotExist(dirname($target));
+
+        $event->callBeforeCallbacks($this->app);
+        $this->assertDirectoryExists(dirname($target));
+
+        $arguments = Str::after($event->command, 'scramble:export');
+        $exitCode = Artisan::call('scramble:export'.str_replace($scheduledPath, $target, $arguments));
+
+        $this->assertSame(0, $exitCode, Artisan::output());
+        $this->assertFileExists($target);
+        $this->assertFileDoesNotExist(public_path('api.json'));
+
+        $spec = json_decode((string) file_get_contents($target), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('openapi', $spec);
+        $this->assertNotEmpty($spec['paths']);
+
+        $response = $this->get('/docs/api.json');
+
+        $response->assertOk();
+        $this->assertSame($spec, $response->json());
+    }
+
+    private function scheduledExportEvent(): Event
     {
         $events = array_values(array_filter(
             $this->app->make(Schedule::class)->events(),
@@ -90,8 +152,8 @@ class OpenApiSpecRouteTest extends TestCase
         ));
 
         $this->assertCount(1, $events);
-        $this->assertStringContainsString(storage_path('app/openapi/api.json'), $events[0]->command);
-        $this->assertStringNotContainsString('public/api.json', $events[0]->command);
+
+        return $events[0];
     }
 
     private function useSandboxPaths(): void

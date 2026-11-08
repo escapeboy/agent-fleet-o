@@ -891,8 +891,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Serve the OpenAPI JSON spec from a pre-generated file when available.
         // The scheduler's weekly `scramble:export` writes storage/app/openapi/api.json.
-        // Order: that file, then the legacy public/api.json (existing deploys still
-        // export there), then live generation when neither file exists yet.
+        // Order: that file, then a legacy public/api.json if one is still present,
+        // then live generation when neither file exists yet.
         Scramble::registerUiRoute(path: 'docs/api');
         \Illuminate\Support\Facades\Route::get('docs/api.json', function (Generator $generator) {
             foreach ([storage_path('app/openapi/api.json'), public_path('api.json')] as $cached) {
