@@ -156,7 +156,11 @@ class TeamController extends Controller
     }
 
     /**
+     * Optional non-team abilities (owners/admins only): `sentry-fixes` and
+     * `automation` (higher per-minute API rate limit).
+     *
      * @response 201 {"data": {"token": "3|plaintext...", "name": "my-token"}}
+     * @response 403 {"message": "Only team owners and admins can issue a token with the automation ability.", "error": "forbidden"}
      * @response 422 {"message": "Validation error.", "errors": {"name": ["The name field is required."]}}
      */
     public function createToken(Request $request): JsonResponse
@@ -167,21 +171,25 @@ class TeamController extends Controller
         ]);
 
         // Force team-scoped ability — reject wildcard or foreign-team abilities.
-        // `sentry-fixes` is the only non-team ability a token may opt into: it
-        // grants access to the external Sentry fix worker queue.
+        // Only two non-team abilities may be opted into, both by owners/admins:
+        // `sentry-fixes` grants access to the external Sentry fix worker queue,
+        // `automation` gives the token the higher per-minute 'api' rate limit.
         $teamAbility = 'team:'.$request->user()->current_team_id;
         $requested = $request->input('abilities', [$teamAbility]);
+        $privileged = ['sentry-fixes', 'automation'];
 
-        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility, 'sentry-fixes'])) {
+        if (in_array('*', $requested, true) || array_diff($requested, [$teamAbility, ...$privileged])) {
             abort(422, 'Token abilities must be limited to the current team.');
         }
 
-        if (in_array('sentry-fixes', $requested, true)) {
+        $requestedPrivileged = array_values(array_intersect($privileged, $requested));
+
+        if ($requestedPrivileged !== []) {
             $team = $request->user()->currentTeam;
             abort_unless(
                 $team !== null && $team->memberRole($request->user())?->canManageTeam(),
                 403,
-                'Only team owners and admins can issue a token with the sentry-fixes ability.',
+                'Only team owners and admins can issue a token with the '.implode(' or ', $requestedPrivileged).' ability.',
             );
         }
 
