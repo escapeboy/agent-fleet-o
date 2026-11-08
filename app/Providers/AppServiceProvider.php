@@ -207,6 +207,7 @@ use Laravel\Pennant\Events\FeatureUpdated;
 use Laravel\Pennant\Feature;
 use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Reverb\Events\MessageReceived;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Laravel\Sentinel\Http\Middleware\SentinelMiddleware;
 use Livewire\Livewire;
@@ -845,7 +846,19 @@ class AppServiceProvider extends ServiceProvider
                 return Limit::perMinute(10)->by($request->ip());
             }
 
-            return Limit::perMinute(60)->by($user->currentAccessToken()->id ?? $user->id);
+            $token = $user->currentAccessToken();
+
+            // Only a persisted Sanctum token that explicitly lists 'automation'
+            // gets the higher limit. tokenCan() is not used because it also
+            // matches the '*' wildcard; session (transient) and Passport tokens
+            // are not PersonalAccessToken instances and keep the normal limit.
+            if ($token instanceof PersonalAccessToken && in_array('automation', (array) $token->abilities, true)) {
+                return Limit::perMinute(max(1, (int) config('api.automation_rate_limit_per_minute', 240)))
+                    ->by('automation:'.$token->id);
+            }
+
+            return Limit::perMinute(max(1, (int) config('api.rate_limit_per_minute', 60)))
+                ->by($token->id ?? $user->id);
         });
 
         // Scramble API documentation — only document /api/v1 routes

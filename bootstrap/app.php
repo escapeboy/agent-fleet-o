@@ -154,7 +154,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 $response['errors'] = $e->errors();
             }
 
-            return response()->json($response, $status);
+            // Keep the exception's own headers (e.g. Retry-After / X-RateLimit-* on 429).
+            return response()->json($response, $status, $e instanceof HttpExceptionInterface ? $e->getHeaders() : []);
         });
     })->create();
 
