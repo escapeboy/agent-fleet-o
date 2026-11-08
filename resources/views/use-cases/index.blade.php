@@ -137,6 +137,7 @@
             <div class="mx-auto max-w-2xl text-center mb-12">
                 <h2 class="text-2xl font-bold text-gray-900 mb-3">One Platform, Any Workflow</h2>
                 <p class="text-gray-500 text-base">FleetQ gives you the building blocks to automate any repeatable business process with AI agents — without writing infrastructure code.</p>
+                <p class="mt-3 text-sm text-gray-500">Weighing other tools? <a href="{{ route('compare.index') }}" class="font-medium text-primary-600 hover:text-primary-700">See how FleetQ compares to LangGraph, CrewAI and n8n</a>.</p>
             </div>
             <div
                 x-data="{ shown: false }"

@@ -40,6 +40,7 @@ class SitemapController extends Controller
     {
         $urls = collect($this->routeUrls())
             ->merge($this->docsUrls())
+            ->merge($this->comparisonUrls())
             ->unique()
             ->sort()
             ->values();
@@ -72,6 +73,22 @@ class SitemapController extends Controller
         return collect(DocsController::PAGES)
             ->filter(fn (string $slug) => view()->exists('docs.'.$slug))
             ->map(fn (string $slug) => url('/docs/'.$slug))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The parameterised /compare/{slug} route is skipped by routeUrls(), so
+     * its pages are listed from the config they are rendered from.
+     *
+     * @return list<string>
+     */
+    private function comparisonUrls(): array
+    {
+        return collect((array) config('comparisons', []))
+            ->filter(fn ($page, $slug) => $slug !== 'checked_on' && is_array($page))
+            ->keys()
+            ->map(fn ($slug) => url('/compare/'.$slug))
             ->values()
             ->all();
     }
