@@ -221,6 +221,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Keep this in register(): when called from boot(), the first boot in a
+        // process answers GET /docs/api.json with a live-generated spec and ignores
+        // the stored file, which OpenApiSpecRouteTest's first-boot test catches.
+        Scramble::ignoreDefaultRoutes();
+
         // 'mcp.team_id' is bound per-request by McpTeamBinding middleware (HTTP MCP)
         // or BootstrapsMcpAuth trait (stdio MCP). Outside MCP context the binding
         // is intentionally absent so callers fall back to auth()->user()->current_team_id
@@ -886,15 +891,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Serve the OpenAPI JSON spec from a pre-generated file when available.
-        // The file is written by `php artisan scramble:export --path=public/api.json`
-        // which runs on every deploy and weekly via the scheduler.
-        // Falls back to live generation when the file doesn't exist yet.
-        Scramble::ignoreDefaultRoutes();
+        // The scheduler's weekly `scramble:export` writes storage/app/openapi/api.json.
+        // Order: that file, then a legacy public/api.json if one is still present,
+        // then live generation when neither file can be used.
         Scramble::registerUiRoute(path: 'docs/api');
         \Illuminate\Support\Facades\Route::get('docs/api.json', function (Generator $generator) {
-            $cached = public_path('api.json');
-            if (file_exists($cached)) {
-                return response(file_get_contents($cached), 200, ['Content-Type' => 'application/json']);
+            foreach ([storage_path('app/openapi/api.json'), public_path('api.json')] as $cached) {
+                if (is_file($cached) && is_readable($cached)) {
+                    return response(file_get_contents($cached), 200, ['Content-Type' => 'application/json']);
+                }
             }
             $config = Scramble::getGeneratorConfig('default');
 
