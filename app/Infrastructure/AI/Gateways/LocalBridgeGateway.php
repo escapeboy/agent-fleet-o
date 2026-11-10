@@ -11,6 +11,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
 use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
+use App\Infrastructure\AI\Support\BridgeLlmModelGuard;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
 use App\Infrastructure\Bridge\Events\BridgeAgentRequest;
 use Illuminate\Support\Facades\Log;
@@ -38,6 +39,8 @@ class LocalBridgeGateway implements AiGatewayInterface
             return $this->httpGateway->complete($request);
         }
 
+        $this->guardBridgeLlmModel($connection, $request);
+
         return $this->routeRequest($connection, $request);
     }
 
@@ -49,7 +52,16 @@ class LocalBridgeGateway implements AiGatewayInterface
             return $this->httpGateway->stream($request, $onChunk);
         }
 
+        $this->guardBridgeLlmModel($connection, $request);
+
         return $this->routeRequest($connection, $request, $onChunk);
+    }
+
+    private function guardBridgeLlmModel(BridgeConnection $connection, AiRequestDTO $request): void
+    {
+        if ($request->provider === 'bridge_llm') {
+            (new BridgeLlmModelGuard)->assertModelAvailable($connection, $request->model);
+        }
     }
 
     public function estimateCost(AiRequestDTO $request): int

@@ -11,6 +11,7 @@ use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
 use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
+use App\Infrastructure\AI\Support\BridgeLlmModelGuard;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -48,7 +49,12 @@ class HttpBridgeGateway implements AiGatewayInterface
         $requestId = Str::uuid()->toString();
 
         $connection = $this->requireActiveConnection($request->teamId, $request);
-        $url = rtrim($connection->endpoint_url, '/').'/execute';
+
+        if ($request->provider === 'bridge_llm') {
+            (new BridgeLlmModelGuard)->assertModelAvailable($connection, $request->model);
+        }
+
+        $url =rtrim($connection->endpoint_url, '/').'/execute';
         $payload = $this->buildPayload($requestId, $request, $connection);
         $headers = $this->authHeaders($connection);
 
