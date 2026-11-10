@@ -85,6 +85,10 @@
                         Agent risk profiles & auto-disable
                     </li>
                 </ul>
+                <a href="{{ route('use-cases.human-approval-budgets') }}" class="mt-5 inline-flex items-center gap-1 text-sm font-medium text-green-700 hover:text-green-800">
+                    How approvals and budget limits work in production
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
             </div>
 
             {{-- Scale --}}

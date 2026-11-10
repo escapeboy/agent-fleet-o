@@ -383,6 +383,7 @@ Route::view('/terms', 'legal.terms')->name('legal.terms');
 
 // Use cases pages (public, SEO)
 Route::view('/use-cases', 'use-cases.index')->name('use-cases.index');
+Route::view('/use-cases/human-approval-and-budgets-for-ai-agents', 'use-cases.human-approval-and-budgets')->name('use-cases.human-approval-budgets');
 Route::get('/use-cases/{slug}', UseCasesController::class)->name('use-cases.show');
 
 // Public agent template gallery (no auth, SEO)

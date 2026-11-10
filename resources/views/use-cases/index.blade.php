@@ -15,7 +15,11 @@
                 '@type' => 'WebPage',
                 'name'  => $uc['heading'],
                 'url'   => route('use-cases.show', $slug),
-            ])->values()->all(),
+            ])->values()->prepend([
+                '@type' => 'WebPage',
+                'name'  => 'Human approval and budget limits for AI agents',
+                'url'   => route('use-cases.human-approval-budgets'),
+            ])->all(),
         ];
         @endphp
         <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}</script>
@@ -82,6 +86,23 @@
         <div class="mx-auto max-w-7xl px-6 lg:px-8">
             <h2 class="text-2xl font-bold text-gray-900 text-center mb-3">Browse Use Cases by Function</h2>
             <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Each use case comes with a ready-made workflow you can deploy, customize, or use as a starting point.</p>
+
+            <a
+                href="{{ route('use-cases.human-approval-budgets') }}"
+                class="group mb-5 flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-gray-200 border-t-2 border-t-green-400 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 ease-out"
+            >
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-green-50 flex-shrink-0">
+                    <i class="fa-solid fa-shield-halved text-lg text-green-600"></i>
+                </span>
+                <div class="flex-1">
+                    <span class="block text-sm font-semibold text-gray-900">Human approval and budget limits for AI agents</span>
+                    <span class="block mt-1 text-xs text-gray-600 leading-relaxed">Put spending caps, approval gates and an audit trail around agents before they run in production.</span>
+                </div>
+                <span class="flex items-center gap-1 text-xs font-medium text-green-700 group-hover:gap-2 transition-all">
+                    Read the guide
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </span>
+            </a>
 
             <div
                 x-data="{ shown: false }"
