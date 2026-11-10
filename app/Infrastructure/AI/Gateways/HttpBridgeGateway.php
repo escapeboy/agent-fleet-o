@@ -54,7 +54,7 @@ class HttpBridgeGateway implements AiGatewayInterface
             (new BridgeLlmModelGuard)->assertModelAvailable($connection, $request->model);
         }
 
-        $url =rtrim($connection->endpoint_url, '/').'/execute';
+        $url = rtrim($connection->endpoint_url, '/').'/execute';
         $payload = $this->buildPayload($requestId, $request, $connection);
         $headers = $this->authHeaders($connection);
 
