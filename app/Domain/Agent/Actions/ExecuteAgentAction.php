@@ -1348,9 +1348,6 @@ class ExecuteAgentAction
     }
 
     /**
-     * @return array{execution: AgentExecution, output: null}
-     */
-    /**
      * Return an error message when the agent's resolved provider runs through
      * FleetQ Bridge, it has no fallback chain, and the team has no active
      * bridge connection (connected or within the reconnect grace period).
@@ -1386,6 +1383,9 @@ class ExecuteAgentAction
         return BridgeNotConnectedException::notConnected()->getMessage();
     }
 
+    /**
+     * @return array{execution: AgentExecution, output: null}
+     */
     private function failExecution(
         Agent $agent,
         string $teamId,
