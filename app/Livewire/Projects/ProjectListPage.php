@@ -94,8 +94,11 @@ class ProjectListPage extends Component
         $project = Project::findOrFail($projectId);
 
         try {
-            if ($project->status !== ProjectStatus::Paused) {
-                throw new \InvalidArgumentException("Cannot resume project in {$project->status->value} state.");
+            // Raw attribute: static analysis types the enum-cast status as string.
+            $status = (string) $project->getRawOriginal('status');
+
+            if ($status !== ProjectStatus::Paused->value) {
+                throw new \InvalidArgumentException("Cannot resume project in {$status} state.");
             }
 
             app(ResumeProjectAction::class)->execute($project);

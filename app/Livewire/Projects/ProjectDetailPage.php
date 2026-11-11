@@ -97,9 +97,20 @@ class ProjectDetailPage extends Component
      */
     private function ensurePaused(Project $project): void
     {
-        if ($project->status !== ProjectStatus::Paused) {
-            throw new \InvalidArgumentException("Cannot resume project in {$project->status->value} state.");
+        $status = self::rawStatus($project);
+
+        if ($status !== ProjectStatus::Paused->value) {
+            throw new \InvalidArgumentException("Cannot resume project in {$status} state.");
         }
+    }
+
+    /**
+     * The stored status value, read from the raw attributes so static
+     * analysis sees a plain string rather than the enum cast.
+     */
+    private static function rawStatus(Project $project): string
+    {
+        return (string) $project->getRawOriginal('status');
     }
 
     public function archive(): void
@@ -118,7 +129,9 @@ class ProjectDetailPage extends Component
         $this->project->refresh();
 
         if ($this->project->status !== ProjectStatus::Draft) {
-            session()->flash('error', "Project can only be activated from draft (current status: {$this->project->status->label()}).");
+            $status = self::rawStatus($this->project);
+            $label = ProjectStatus::tryFrom($status)?->label() ?? $status;
+            session()->flash('error', "Project can only be activated from draft (current status: {$label}).");
 
             return;
         }
