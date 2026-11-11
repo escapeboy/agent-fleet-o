@@ -1357,7 +1357,13 @@ class ExecuteAgentAction
      */
     private function guardBridgeAvailability(Agent $agent, string $teamId): ?string
     {
-        $provider = $this->providerResolver->resolve(agent: $agent, team: Team::find($teamId))['provider'];
+        try {
+            $provider = $this->providerResolver->resolve(agent: $agent, team: Team::find($teamId))['provider'];
+        } catch (\Throwable) {
+            // Resolution errors (model allowlist, data classification, ...) are
+            // surfaced by the normal execution path, which stores a failed run.
+            return null;
+        }
 
         if (! BridgeNotConnectedException::usesBridge($provider)) {
             return null;

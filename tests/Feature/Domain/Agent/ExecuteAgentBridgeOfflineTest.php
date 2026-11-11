@@ -121,6 +121,32 @@ class ExecuteAgentBridgeOfflineTest extends TestCase
         );
     }
 
+    public function test_provider_resolution_error_still_returns_failed_execution(): void
+    {
+        $this->gateway->shouldNotReceive('complete');
+        $this->gateway->shouldNotReceive('stream');
+        $this->gateway->shouldReceive('estimateCost')->andReturn(0)->byDefault();
+
+        $this->team->update(['allowed_models' => ['anthropic/claude-sonnet-4-5']]);
+
+        $agent = Agent::factory()->create([
+            'team_id' => $this->team->id,
+            'provider' => 'openai',
+            'model' => 'gpt-4o',
+            'config' => [],
+        ]);
+
+        $result = $this->runAgent($agent);
+
+        $this->assertNull($result['output']);
+        $this->assertSame('failed', $result['execution']->status);
+        $this->assertNotEmpty($result['execution']->error_message);
+        $this->assertNotSame(
+            BridgeNotConnectedException::notConnected()->getMessage(),
+            $result['execution']->error_message,
+        );
+    }
+
     public function test_bridge_agent_with_active_connection_is_not_refused(): void
     {
         $this->stubGatewayResponse();
