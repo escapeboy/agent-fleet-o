@@ -103,6 +103,51 @@ class BridgeConnection extends Model
         return count(array_filter($this->llmEndpoints(), fn ($ep) => $ep['online'] ?? false));
     }
 
+    /**
+     * Model ids reported by this connection's online LLM endpoints, each listed once,
+     * in the order they first appear.
+     *
+     * @return list<string>
+     */
+    public function onlineLlmModels(): array
+    {
+        $models = [];
+
+        foreach ($this->llmEndpoints() as $ep) {
+            if (! ($ep['online'] ?? false) || ! is_array($ep['models'] ?? null)) {
+                continue;
+            }
+
+            foreach ($ep['models'] as $model) {
+                if (is_string($model) && $model !== '' && ! in_array($model, $models, true)) {
+                    $models[] = $model;
+                }
+            }
+        }
+
+        return $models;
+    }
+
+    /**
+     * Whether any online LLM endpoint reports no model list (missing, non-array or empty).
+     * Such endpoints may serve any model, so a model check cannot be trusted.
+     */
+    public function hasOnlineLlmEndpointWithoutModels(): bool
+    {
+        foreach ($this->llmEndpoints() as $ep) {
+            if (! ($ep['online'] ?? false)) {
+                continue;
+            }
+
+            $models = $ep['models'] ?? null;
+            if (! is_array($models) || $models === []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function foundAgentCount(): int
     {
         return count(array_filter($this->agents(), fn ($a) => $a['found'] ?? false));
