@@ -572,6 +572,8 @@ class ProviderResolver
                     }
                     if (! $hasActiveBridge) {
                         unset($providers[$key]);
+                    } elseif ($key === 'bridge_llm') {
+                        $providers[$key]['models'] = $this->activeBridgeLlmModels();
                     }
                 }
 
@@ -781,6 +783,34 @@ class ProviderResolver
             'gemini-2.5-flash' => 'Aider — Gemini 2.5 Flash',
         ],
     ];
+
+    /**
+     * Get models for the bridge_llm provider: the models reported by online LLM
+     * endpoints across all active bridge connections, each listed once.
+     *
+     * @return array<string, array{label: string, input_cost: int, output_cost: int}>
+     */
+    private function activeBridgeLlmModels(): array
+    {
+        try {
+            $connections = BridgeConnection::active()
+                ->orderByDesc('priority')
+                ->orderByDesc('connected_at')
+                ->get();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $models = [];
+
+        foreach ($connections as $connection) {
+            foreach ($connection->onlineLlmModels() as $modelId) {
+                $models[$modelId] ??= ['label' => $modelId, 'input_cost' => 0, 'output_cost' => 0];
+            }
+        }
+
+        return $models;
+    }
 
     /**
      * Get models for the bridge_agent provider from the active BridgeConnection.
