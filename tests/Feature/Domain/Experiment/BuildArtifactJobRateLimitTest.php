@@ -171,31 +171,22 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $this->assertNull($task->error);
     }
 
-    public function test_job_does_not_run_a_task_skipped_while_it_waited(): void
+    public function test_gateway_internal_rate_limit_still_marks_task_failed_and_rethrows(): void
     {
-        $gw = Mockery::mock(AiGatewayInterface::class);
-        $gw->shouldNotReceive('complete');
-        $this->app->instance(AiGatewayInterface::class, $gw);
-
-        $task = $this->makeTask();
-        $task->update(['status' => ExperimentTaskStatus::Skipped]);
-
-        $this->runJob($task)->assertNotReleased();
-
-        $this->assertSame(ExperimentTaskStatus::Skipped, $task->refresh()->status);
-    }
-
-    public function test_gateway_internal_rate_limit_releases_with_default_backoff(): void
-    {
+        // The app's own limiter is out of scope: it keeps the generic failure path.
         $this->bindGatewayThrowing(new RateLimitExceededException('Rate limit exceeded for provider anthropic. Retry after 12s.'));
         $task = $this->makeTask();
 
-        $job = $this->runJob($task);
+        $job = (new BuildArtifactJob($task->experiment_id, $task->id, $task->team_id))->withFakeQueueInteractions();
 
-        $job->assertReleased();
-        $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
-        $this->assertLessThanOrEqual(35, $job->job->releaseDelay);
-        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+        try {
+            $job->handle();
+            $this->fail('expected RateLimitExceededException to propagate');
+        } catch (RateLimitExceededException) {
+        }
+
+        $job->assertNotReleased();
+        $this->assertSame(ExperimentTaskStatus::Failed, $task->refresh()->status);
     }
 
     public function test_rate_limit_after_a_failed_attempt_clears_stale_completion_fields(): void
@@ -215,17 +206,6 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $this->assertSame(ExperimentTaskStatus::Pending, $task->status);
         $this->assertNull($task->completed_at);
         $this->assertNull($task->duration_ms);
-    }
-
-    public function test_failed_does_not_overwrite_a_skipped_task(): void
-    {
-        $task = $this->makeTask();
-        $task->update(['status' => ExperimentTaskStatus::Skipped]);
-
-        (new BuildArtifactJob($task->experiment_id, $task->id, $task->team_id))
-            ->failed(new \RuntimeException('attempted too many times'));
-
-        $this->assertSame(ExperimentTaskStatus::Skipped, $task->refresh()->status);
     }
 
     public function test_non_rate_limit_exception_still_marks_task_failed_and_rethrows(): void
