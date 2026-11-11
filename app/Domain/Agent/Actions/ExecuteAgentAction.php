@@ -1348,9 +1348,6 @@ class ExecuteAgentAction
     }
 
     /**
-     * @return array{execution: AgentExecution, output: null}
-     */
-    /**
      * Returns an error message when the agent resolves to a bridge provider,
      * has no fallback chain, and the team has no active bridge connection.
      */
@@ -1378,6 +1375,9 @@ class ExecuteAgentAction
         return BridgeNotConnectedException::notConnected()->getMessage();
     }
 
+    /**
+     * @return array{execution: AgentExecution, output: null}
+     */
     private function failExecution(
         Agent $agent,
         string $teamId,
