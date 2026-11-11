@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Domain\Experiment;
 
+use App\Domain\Experiment\Enums\ExperimentStatus;
 use App\Domain\Experiment\Enums\ExperimentTaskStatus;
+use App\Domain\Experiment\Enums\StageStatus;
+use App\Domain\Experiment\Enums\StageType;
 use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Experiment\Models\ExperimentStage;
 use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\Experiment\Pipeline\BuildArtifactJob;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -85,7 +91,7 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $this->assertLessThanOrEqual(11, $job->job->releaseDelay);
 
         $task->refresh();
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->status);
         $this->assertNull($task->started_at);
         $this->assertNull($task->completed_at);
         $this->assertStringContainsString('Rate limited', (string) $task->error);
@@ -101,7 +107,7 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $job->assertReleased();
         $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
         $this->assertLessThanOrEqual(35, $job->job->releaseDelay);
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->refresh()->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
     }
 
     public function test_huge_retry_after_is_capped(): void
@@ -114,7 +120,68 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $job->assertReleased();
         $this->assertGreaterThanOrEqual(301, $job->job->releaseDelay);
         $this->assertLessThanOrEqual(305, $job->job->releaseDelay);
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->refresh()->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+    }
+
+    public function test_recover_stuck_does_not_fail_rate_limited_task_and_retry_completes_it(): void
+    {
+        $this->bindGatewayThrowing(PrismRateLimitedException::make([], 300));
+        $task = $this->makeTask();
+        Experiment::withoutGlobalScopes()->whereKey($task->experiment_id)
+            ->update(['status' => ExperimentStatus::Building]);
+        $stage = ExperimentStage::factory()->create([
+            'team_id' => $this->team->id,
+            'experiment_id' => $task->experiment_id,
+            'stage' => StageType::Building,
+            'iteration' => 0,
+            'status' => StageStatus::Running,
+            'started_at' => now()->subMinutes(15),
+            'output_snapshot' => [],
+        ]);
+
+        $this->runJob($task)->assertReleased();
+
+        // A long build stage: the task was created well before the recovery cutoff.
+        ExperimentTask::withoutGlobalScopes()->whereKey($task->id)
+            ->update(['created_at' => now()->subMinutes(15)]);
+
+        $this->artisan('tasks:recover-stuck')->assertSuccessful();
+
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+        $this->assertSame(StageStatus::Running, $stage->refresh()->status);
+        $this->assertSame(ExperimentStatus::Building, Experiment::withoutGlobalScopes()->find($task->experiment_id)->status);
+
+        // The released job runs again and the provider answers this time.
+        $gw = Mockery::mock(AiGatewayInterface::class);
+        $gw->shouldReceive('complete')->andReturn(new AiResponseDTO(
+            content: '{"content":"hello","metadata":{}}',
+            parsedOutput: ['content' => 'hello', 'metadata' => []],
+            usage: new AiUsageDTO(promptTokens: 1, completionTokens: 1, costCredits: 0),
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            latencyMs: 1,
+        ));
+        $this->app->instance(AiGatewayInterface::class, $gw);
+
+        $this->runJob($task)->assertNotReleased();
+
+        $task->refresh();
+        $this->assertSame(ExperimentTaskStatus::Completed, $task->status);
+        $this->assertNull($task->error);
+    }
+
+    public function test_job_does_not_run_a_task_skipped_while_it_waited(): void
+    {
+        $gw = Mockery::mock(AiGatewayInterface::class);
+        $gw->shouldNotReceive('complete');
+        $this->app->instance(AiGatewayInterface::class, $gw);
+
+        $task = $this->makeTask();
+        $task->update(['status' => ExperimentTaskStatus::Skipped]);
+
+        $this->runJob($task)->assertNotReleased();
+
+        $this->assertSame(ExperimentTaskStatus::Skipped, $task->refresh()->status);
     }
 
     public function test_non_rate_limit_exception_still_marks_task_failed_and_rethrows(): void

@@ -75,7 +75,8 @@ class BuildArtifactJob implements ShouldQueue
         }
 
         $task = ExperimentTask::withoutGlobalScopes()->find($this->taskId);
-        if (! $task || $task->status === ExperimentTaskStatus::Completed) {
+        // Skipped: the stage was resolved/aborted while this job waited in the queue.
+        if (! $task || in_array($task->status, [ExperimentTaskStatus::Completed, ExperimentTaskStatus::Skipped], true)) {
             return;
         }
 
@@ -203,15 +204,19 @@ class BuildArtifactJob implements ShouldQueue
                 ],
                 'duration_ms' => $durationMs,
                 'completed_at' => now(),
+                'error' => null,
             ]);
         } catch (PrismRateLimitedException $e) {
-            // Provider rate limit is transient: requeue after the provider's
+            // Provider rate limit is transient: release after the provider's
             // retry-after instead of failing. Returning (not re-throwing) keeps
-            // it out of maxExceptions; retryUntil() remains the backstop.
+            // it out of maxExceptions; retryUntil() + failed() remain the backstop.
+            // The task goes back to Pending (not Queued): tasks:recover-stuck
+            // fails Queued tasks by created_at age, which would fail a task
+            // whose job is still waiting to retry.
             $delay = $this->rateLimitDelay($e);
 
             $task->update([
-                'status' => ExperimentTaskStatus::Queued,
+                'status' => ExperimentTaskStatus::Pending,
                 'started_at' => null,
                 'error' => "Rate limited by provider; retrying in {$delay}s",
             ]);
