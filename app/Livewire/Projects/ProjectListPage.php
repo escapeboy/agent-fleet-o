@@ -67,7 +67,17 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+
+        // The status may have changed between render and click (stale page,
+        // double click): show a friendly error instead of a 500.
+        try {
+            app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" paused.");
     }
 
@@ -76,7 +86,25 @@ class ProjectListPage extends Component
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(ResumeProjectAction::class)->execute($project);
+
+        // Resume only applies to paused projects (the list only offers it
+        // there); the status may also have changed since render.
+        $status = $project->getAttribute('status');
+        if ($status !== ProjectStatus::Paused) {
+            $value = $status instanceof ProjectStatus ? $status->value : (string) $status;
+            session()->flash('error', "Cannot resume project in {$value} state.");
+
+            return;
+        }
+
+        try {
+            app(ResumeProjectAction::class)->execute($project);
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" resumed.");
     }
 
