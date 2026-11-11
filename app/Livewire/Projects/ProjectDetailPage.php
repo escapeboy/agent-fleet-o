@@ -46,12 +46,14 @@ class ProjectDetailPage extends Component
         return app(ProjectHealthEvaluator::class)->evaluate($this->project);
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function pause(): void
     {
         Gate::authorize('edit-content');
 
-        // The status may have changed between render and click (stale page,
-        // double click): show a friendly error instead of a 500.
         try {
             app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
         } catch (\InvalidArgumentException $e) {
@@ -65,12 +67,14 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'Project paused.');
     }
 
+    /**
+     * Resume only applies to paused projects; anything else (including a
+     * status change since render) is flashed as an error.
+     */
     public function resume(): void
     {
         Gate::authorize('edit-content');
 
-        // The status may have changed between render and click (stale page,
-        // double click): show a friendly error instead of a 500.
         try {
             $this->project->refresh();
             $this->ensurePaused($this->project);
@@ -93,12 +97,8 @@ class ProjectDetailPage extends Component
      */
     private function ensurePaused(Project $project): void
     {
-        $status = $project->getAttribute('status');
-
-        if ($status !== ProjectStatus::Paused) {
-            $value = $status instanceof ProjectStatus ? $status->value : (string) $status;
-
-            throw new \InvalidArgumentException("Cannot resume project in {$value} state.");
+        if ($project->status !== ProjectStatus::Paused) {
+            throw new \InvalidArgumentException("Cannot resume project in {$project->status->value} state.");
         }
     }
 
@@ -118,9 +118,7 @@ class ProjectDetailPage extends Component
         $this->project->refresh();
 
         if ($this->project->status !== ProjectStatus::Draft) {
-            $status = $this->project->getAttribute('status');
-            $label = $status instanceof ProjectStatus ? $status->label() : (string) $status;
-            session()->flash('error', "Project can only be activated from draft (current status: {$label}).");
+            session()->flash('error', "Project can only be activated from draft (current status: {$this->project->status->label()}).");
 
             return;
         }
@@ -142,12 +140,14 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'Project activated!');
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function restart(): void
     {
         Gate::authorize('edit-content');
 
-        // The status may have changed between render and click (stale page,
-        // double click): show a friendly error instead of a 500.
         try {
             $this->project->refresh();
             app(RestartProjectAction::class)->execute($this->project);

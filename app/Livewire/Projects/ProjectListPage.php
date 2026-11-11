@@ -62,14 +62,16 @@ class ProjectListPage extends Component
         $this->resetPage();
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function pause(string $projectId): void
     {
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
 
-        // The status may have changed between render and click (stale page,
-        // double click): show a friendly error instead of a 500.
         try {
             app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
         } catch (\InvalidArgumentException $e) {
@@ -81,23 +83,21 @@ class ProjectListPage extends Component
         session()->flash('message', "Project \"{$project->title}\" paused.");
     }
 
+    /**
+     * Resume only applies to paused projects; anything else (including a
+     * status change since render) is flashed as an error.
+     */
     public function resume(string $projectId): void
     {
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
 
-        // Resume only applies to paused projects (the list only offers it
-        // there); the status may also have changed since render.
-        $status = $project->getAttribute('status');
-        if ($status !== ProjectStatus::Paused) {
-            $value = $status instanceof ProjectStatus ? $status->value : (string) $status;
-            session()->flash('error', "Cannot resume project in {$value} state.");
-
-            return;
-        }
-
         try {
+            if ($project->status !== ProjectStatus::Paused) {
+                throw new \InvalidArgumentException("Cannot resume project in {$project->status->value} state.");
+            }
+
             app(ResumeProjectAction::class)->execute($project);
         } catch (\InvalidArgumentException $e) {
             session()->flash('error', $e->getMessage());
