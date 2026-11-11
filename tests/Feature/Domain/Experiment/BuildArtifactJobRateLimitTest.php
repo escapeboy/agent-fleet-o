@@ -14,6 +14,7 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -180,6 +181,49 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $task->update(['status' => ExperimentTaskStatus::Skipped]);
 
         $this->runJob($task)->assertNotReleased();
+
+        $this->assertSame(ExperimentTaskStatus::Skipped, $task->refresh()->status);
+    }
+
+    public function test_gateway_internal_rate_limit_releases_with_default_backoff(): void
+    {
+        $this->bindGatewayThrowing(new RateLimitExceededException('Rate limit exceeded for provider anthropic. Retry after 12s.'));
+        $task = $this->makeTask();
+
+        $job = $this->runJob($task);
+
+        $job->assertReleased();
+        $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
+        $this->assertLessThanOrEqual(35, $job->job->releaseDelay);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+    }
+
+    public function test_rate_limit_after_a_failed_attempt_clears_stale_completion_fields(): void
+    {
+        $this->bindGatewayThrowing(PrismRateLimitedException::make([], 6));
+        $task = $this->makeTask();
+        $task->update([
+            'status' => ExperimentTaskStatus::Failed,
+            'error' => 'boom',
+            'duration_ms' => 1234,
+            'completed_at' => now(),
+        ]);
+
+        $this->runJob($task)->assertReleased();
+
+        $task->refresh();
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->status);
+        $this->assertNull($task->completed_at);
+        $this->assertNull($task->duration_ms);
+    }
+
+    public function test_failed_does_not_overwrite_a_skipped_task(): void
+    {
+        $task = $this->makeTask();
+        $task->update(['status' => ExperimentTaskStatus::Skipped]);
+
+        (new BuildArtifactJob($task->experiment_id, $task->id, $task->team_id))
+            ->failed(new \RuntimeException('attempted too many times'));
 
         $this->assertSame(ExperimentTaskStatus::Skipped, $task->refresh()->status);
     }

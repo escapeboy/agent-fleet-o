@@ -11,6 +11,7 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -206,10 +207,11 @@ class BuildArtifactJob implements ShouldQueue
                 'completed_at' => now(),
                 'error' => null,
             ]);
-        } catch (PrismRateLimitedException $e) {
-            // Provider rate limit is transient: release after the provider's
-            // retry-after instead of failing. Returning (not re-throwing) keeps
-            // it out of maxExceptions; retryUntil() + failed() remain the backstop.
+        } catch (PrismRateLimitedException|RateLimitExceededException $e) {
+            // Rate limits (provider 429 or the gateway's own per-provider limiter)
+            // are transient: release after the retry-after instead of failing.
+            // Returning (not re-throwing) keeps it out of maxExceptions;
+            // retryUntil() + failed() remain the backstop.
             // The task goes back to Pending (not Queued): tasks:recover-stuck
             // fails Queued tasks by created_at age, which would fail a task
             // whose job is still waiting to retry.
@@ -218,7 +220,9 @@ class BuildArtifactJob implements ShouldQueue
             $task->update([
                 'status' => ExperimentTaskStatus::Pending,
                 'started_at' => null,
-                'error' => "Rate limited by provider; retrying in {$delay}s",
+                'completed_at' => null,
+                'duration_ms' => null,
+                'error' => "Rate limited; retrying in {$delay}s",
             ]);
 
             Log::warning('BuildArtifactJob: Provider rate limited, releasing', [
@@ -259,7 +263,7 @@ class BuildArtifactJob implements ShouldQueue
     public function failed(?\Throwable $exception): void
     {
         $task = ExperimentTask::withoutGlobalScopes()->find($this->taskId);
-        if (! $task || $task->status === ExperimentTaskStatus::Completed || $task->status === ExperimentTaskStatus::Failed) {
+        if (! $task || in_array($task->status, [ExperimentTaskStatus::Completed, ExperimentTaskStatus::Failed, ExperimentTaskStatus::Skipped], true)) {
             return;
         }
 
@@ -280,11 +284,11 @@ class BuildArtifactJob implements ShouldQueue
      * Seconds to wait before retrying a rate-limited call: the provider's
      * retry-after (or the default backoff), capped, plus a small random spread.
      */
-    private function rateLimitDelay(PrismRateLimitedException $e): int
+    private function rateLimitDelay(PrismRateLimitedException|RateLimitExceededException $e): int
     {
-        $retryAfter = $e->retryAfter;
+        $retryAfter = $e instanceof PrismRateLimitedException ? (int) $e->retryAfter : 0;
 
-        $base = ($retryAfter !== null && $retryAfter > 0) ? $retryAfter : $this->backoff;
+        $base = $retryAfter > 0 ? $retryAfter : $this->backoff;
 
         return min($base, self::RATE_LIMIT_MAX_DELAY) + random_int(1, 5);
     }
