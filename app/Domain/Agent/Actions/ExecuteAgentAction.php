@@ -34,6 +34,7 @@ use App\Domain\Agent\Services\ToolRecoveryOrchestrator;
 use App\Domain\Agent\Services\WorkspaceContractWriter;
 use App\Domain\Approval\Enums\ApprovalStatus;
 use App\Domain\Approval\Models\ApprovalRequest;
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Credential\Actions\ResolveProjectCredentialsAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -52,6 +53,7 @@ use App\Domain\Tool\Services\BashSidecarClient;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
+use App\Infrastructure\AI\Exceptions\BridgeNotConnectedException;
 use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Infrastructure\AI\Services\PhoenixTraceContext;
 use App\Infrastructure\AI\Services\ProviderResolver;
@@ -245,6 +247,12 @@ class ExecuteAgentAction
 
         if (! $agent->hasBudgetRemaining()) {
             return $this->failExecution($agent, $teamId, $experimentId, $input, 'Agent budget cap reached');
+        }
+
+        // Refuse bridge-backed runs up front when no bridge is connected.
+        $bridgeError = $this->guardBridgeAvailability($agent, $teamId);
+        if ($bridgeError !== null) {
+            return $this->failExecution($agent, $teamId, $experimentId, $input, $bridgeError);
         }
 
         // Plugin hook: allow plugins to inspect/mutate context or cancel execution
@@ -1342,6 +1350,34 @@ class ExecuteAgentAction
     /**
      * @return array{execution: AgentExecution, output: null}
      */
+    /**
+     * Returns an error message when the agent resolves to a bridge provider,
+     * has no fallback chain, and the team has no active bridge connection.
+     */
+    private function guardBridgeAvailability(Agent $agent, string $teamId): ?string
+    {
+        $provider = (string) ($this->providerResolver->resolve(agent: $agent, team: Team::find($teamId))['provider'] ?? '');
+
+        if (! BridgeNotConnectedException::usesBridge($provider)) {
+            return null;
+        }
+
+        if (! empty($agent->config['fallback_chain'] ?? null)) {
+            return null;
+        }
+
+        if (app(BridgeRouter::class)->activeConnections($teamId)->isNotEmpty()) {
+            return null;
+        }
+
+        Log::info('ExecuteAgentAction: refused run, FleetQ Bridge not connected', [
+            'agent_id' => $agent->id,
+            'team_id' => $teamId,
+        ]);
+
+        return BridgeNotConnectedException::notConnected()->getMessage();
+    }
+
     private function failExecution(
         Agent $agent,
         string $teamId,

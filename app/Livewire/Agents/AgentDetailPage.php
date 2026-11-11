@@ -30,7 +30,9 @@ use App\Domain\Tool\Enums\ApprovalTimeoutAction;
 use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
+use App\Infrastructure\AI\Exceptions\BridgeNotConnectedException;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Support\LlmDefaults;
 use Cron\CronExpression;
@@ -873,6 +875,8 @@ class AgentDetailPage extends Component
         $resolver = app(ProviderResolver::class);
         $team = auth()->user()->currentTeam;
         $resolvedProvider = $resolver->resolveWithSource(agent: $this->agent, team: $team);
+        $bridgeOffline = BridgeNotConnectedException::usesBridge((string) ($resolvedProvider['provider'] ?? ''))
+            && app(BridgeRouter::class)->activeConnections($this->agent->team_id)->isEmpty();
         $providers = $resolver->availableProviders($team);
 
         // Append team's custom endpoints as selectable providers
@@ -962,6 +966,8 @@ class AgentDetailPage extends Component
             'revisions' => $revisions,
             'runtimeState' => $runtimeState,
             'resolvedProvider' => $resolvedProvider,
+            'bridgeOffline' => $bridgeOffline,
+            'bridgeDownloadUrl' => BridgeNotConnectedException::DOWNLOAD_URL,
             'avgSteps' => (float) $avgSteps,
             'availableGitRepositories' => $availableGitRepositories,
             'availableKnowledgeBases' => $availableKnowledgeBases,
