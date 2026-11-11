@@ -26,6 +26,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Prism\Prism\Exceptions\PrismRateLimitedException;
 
 class BuildArtifactJob implements ShouldQueue
 {
@@ -38,6 +39,9 @@ class BuildArtifactJob implements ShouldQueue
     public int $timeout = 960;
 
     public int $backoff = 30;
+
+    /** Upper bound (seconds) for a provider retry-after before jitter. */
+    private const RATE_LIMIT_MAX_DELAY = 300;
 
     public function __construct(
         public readonly string $experimentId,
@@ -200,6 +204,27 @@ class BuildArtifactJob implements ShouldQueue
                 'duration_ms' => $durationMs,
                 'completed_at' => now(),
             ]);
+        } catch (PrismRateLimitedException $e) {
+            // Provider rate limit is transient: requeue after the provider's
+            // retry-after instead of failing. Returning (not re-throwing) keeps
+            // it out of maxExceptions; retryUntil() remains the backstop.
+            $delay = $this->rateLimitDelay($e);
+
+            $task->update([
+                'status' => ExperimentTaskStatus::Queued,
+                'started_at' => null,
+                'error' => "Rate limited by provider; retrying in {$delay}s",
+            ]);
+
+            Log::warning('BuildArtifactJob: Provider rate limited, releasing', [
+                'task_id' => $this->taskId,
+                'experiment_id' => $this->experimentId,
+                'delay' => $delay,
+            ]);
+
+            $this->release($delay);
+
+            return;
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
@@ -244,6 +269,19 @@ class BuildArtifactJob implements ShouldQueue
             'experiment_id' => $this->experimentId,
             'error' => $exception?->getMessage(),
         ]);
+    }
+
+    /**
+     * Seconds to wait before retrying a rate-limited call: the provider's
+     * retry-after (or the default backoff), capped, plus a small random spread.
+     */
+    private function rateLimitDelay(PrismRateLimitedException $e): int
+    {
+        $retryAfter = $e->retryAfter;
+
+        $base = ($retryAfter !== null && $retryAfter > 0) ? $retryAfter : $this->backoff;
+
+        return min($base, self::RATE_LIMIT_MAX_DELAY) + random_int(1, 5);
     }
 
     /**
