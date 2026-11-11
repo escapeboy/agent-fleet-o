@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Projects;
 
+use App\Domain\Project\Actions\TriggerProjectRunAction;
 use App\Domain\Project\Enums\ProjectStatus;
 use App\Domain\Project\Enums\ProjectType;
 use App\Domain\Project\Models\Project;
@@ -125,6 +126,76 @@ class ProjectTransitionGuardTest extends TestCase
             ->assertSee('Project paused.');
 
         $this->assertSame(ProjectStatus::Paused, $project->fresh()->status);
+    }
+
+    public function test_detail_resume_on_paused_project_still_works(): void
+    {
+        $project = $this->makeProject(ProjectStatus::Paused);
+
+        Livewire::test(ProjectDetailPage::class, ['project' => $project])
+            ->call('resume')
+            ->assertSee('Project resumed.')
+            ->assertDontSee('Cannot resume project');
+
+        $this->assertSame(ProjectStatus::Active, $project->fresh()->status);
+    }
+
+    public function test_list_resume_on_paused_project_still_works(): void
+    {
+        $project = $this->makeProject(ProjectStatus::Paused);
+
+        Livewire::test(ProjectListPage::class)
+            ->call('resume', $project->id)
+            ->assertSee('resumed.')
+            ->assertDontSee('Cannot resume project');
+
+        $this->assertSame(ProjectStatus::Active, $project->fresh()->status);
+    }
+
+    public function test_list_pause_on_active_project_still_works(): void
+    {
+        $project = $this->makeProject(ProjectStatus::Active);
+
+        Livewire::test(ProjectListPage::class)
+            ->call('pause', $project->id)
+            ->assertSee('paused.')
+            ->assertDontSee('Cannot pause project');
+
+        $this->assertSame(ProjectStatus::Paused, $project->fresh()->status);
+    }
+
+    public function test_detail_restart_on_completed_project_still_works(): void
+    {
+        $this->mock(TriggerProjectRunAction::class)
+            ->shouldReceive('execute')
+            ->once()
+            ->andReturn(new ProjectRun);
+
+        $project = $this->makeProject(ProjectStatus::Completed);
+
+        Livewire::test(ProjectDetailPage::class, ['project' => $project])
+            ->call('restart')
+            ->assertSee('Project restarted from scratch. New run triggered.')
+            ->assertDontSee('Cannot restart a project');
+
+        $this->assertSame(ProjectStatus::Active, $project->fresh()->status);
+    }
+
+    public function test_detail_activate_on_draft_project_still_works(): void
+    {
+        $this->mock(TriggerProjectRunAction::class)
+            ->shouldReceive('execute')
+            ->once()
+            ->andReturn(new ProjectRun);
+
+        $project = $this->makeProject(ProjectStatus::Draft);
+
+        Livewire::test(ProjectDetailPage::class, ['project' => $project])
+            ->call('activate')
+            ->assertSee('Project activated!')
+            ->assertDontSee('can only be activated from draft');
+
+        $this->assertSame(ProjectStatus::Active, $project->fresh()->status);
     }
 
     public function test_detail_page_hides_actions_not_allowed_for_status(): void
