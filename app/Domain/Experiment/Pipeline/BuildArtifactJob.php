@@ -208,13 +208,15 @@ class BuildArtifactJob implements ShouldQueue
                 'completed_at' => now(),
             ]);
         } catch (PrismRateLimitedException $e) {
-            // Rate limits are temporary: put the task back in the queue and retry
+            // Rate limits are temporary: put the task back to waiting and retry
             // after the provider's retry-after, without counting towards maxExceptions.
             // retryUntil() remains the backstop and failed() marks the task Failed.
+            // Pending (not Queued): tasks:recover-stuck fails Queued tasks older than
+            // its timeout, which would cut the retry window short.
             $delay = $this->rateLimitDelay($e);
 
             $task->update([
-                'status' => ExperimentTaskStatus::Queued,
+                'status' => ExperimentTaskStatus::Pending,
                 'started_at' => null,
                 'completed_at' => null,
                 'error' => "Rate limited by provider; retrying in {$delay}s",

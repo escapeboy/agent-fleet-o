@@ -88,7 +88,7 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $this->assertLessThanOrEqual(6 + BuildArtifactJob::RATE_LIMIT_MAX_JITTER, $job->job->releaseDelay);
 
         $task->refresh();
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->status);
         $this->assertNull($task->started_at);
         $this->assertNull($task->completed_at);
         $this->assertStringContainsString('Rate limited', (string) $task->error);
@@ -104,7 +104,7 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $this->assertTrue($job->job->isReleased());
         $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
         $this->assertLessThanOrEqual(30 + BuildArtifactJob::RATE_LIMIT_MAX_JITTER, $job->job->releaseDelay);
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->refresh()->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
     }
 
     public function test_huge_retry_after_is_capped(): void
@@ -119,7 +119,25 @@ class BuildArtifactJobRateLimitTest extends TestCase
             BuildArtifactJob::RATE_LIMIT_MAX_DELAY + BuildArtifactJob::RATE_LIMIT_MAX_JITTER,
             $job->job->releaseDelay,
         );
-        $this->assertSame(ExperimentTaskStatus::Queued, $task->refresh()->status);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+    }
+
+    public function test_stuck_task_cleanup_does_not_fail_a_rate_limited_task_waiting_to_retry(): void
+    {
+        $this->bindGatewayThrowing(PrismRateLimitedException::make([], 6));
+        $task = $this->makeTask();
+        // Later artifacts in the sequential chain are routinely older than the cleanup timeout.
+        $task->forceFill(['created_at' => now()->subMinutes(30)])->save();
+
+        $job = $this->runJob($task);
+        $this->assertTrue($job->job->isReleased());
+
+        $this->artisan('tasks:recover-stuck')->assertExitCode(0);
+
+        $task->refresh();
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->status);
+        $this->assertNull($task->completed_at);
+        $this->assertStringContainsString('Rate limited', (string) $task->error);
     }
 
     public function test_non_rate_limit_exception_still_marks_task_failed_and_rethrows(): void
