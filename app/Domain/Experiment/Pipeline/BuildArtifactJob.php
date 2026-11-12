@@ -11,7 +11,6 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
-use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -209,7 +208,7 @@ class BuildArtifactJob implements ShouldQueue
                 'completed_at' => now(),
                 'error' => null,
             ]);
-        } catch (PrismRateLimitedException|RateLimitExceededException $e) {
+        } catch (PrismRateLimitedException $e) {
             // Rate limits are temporary: put the task back to waiting and retry
             // after the provider's retry-after, without counting towards maxExceptions.
             // retryUntil() remains the backstop and failed() marks the task Failed.
@@ -286,9 +285,9 @@ class BuildArtifactJob implements ShouldQueue
      * Seconds to wait before retrying a rate-limited call: the provider's
      * retry-after (default backoff when missing), capped, plus a small jitter.
      */
-    private function rateLimitDelay(PrismRateLimitedException|RateLimitExceededException $e): int
+    private function rateLimitDelay(PrismRateLimitedException $e): int
     {
-        $retryAfter = $e instanceof PrismRateLimitedException ? ($e->retryAfter ?? 0) : 0;
+        $retryAfter = $e->retryAfter ?? 0;
         $base = $retryAfter > 0 ? $retryAfter : $this->backoff;
 
         return min($base, self::RATE_LIMIT_MAX_DELAY) + random_int(1, self::RATE_LIMIT_MAX_JITTER);

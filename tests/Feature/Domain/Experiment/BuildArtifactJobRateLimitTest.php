@@ -10,7 +10,6 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
-use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -123,19 +122,6 @@ class BuildArtifactJobRateLimitTest extends TestCase
             BuildArtifactJob::RATE_LIMIT_MAX_DELAY + BuildArtifactJob::RATE_LIMIT_MAX_JITTER,
             $job->job->releaseDelay,
         );
-        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
-    }
-
-    public function test_gateway_rate_limit_exceeded_releases_with_default_backoff(): void
-    {
-        $this->bindGatewayThrowing(new RateLimitExceededException('Rate limit exceeded for provider anthropic. Retry after 12s.'));
-        $task = $this->makeTask();
-
-        $job = $this->runJob($task);
-
-        $this->assertTrue($job->job->isReleased());
-        $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
-        $this->assertLessThanOrEqual(30 + BuildArtifactJob::RATE_LIMIT_MAX_JITTER, $job->job->releaseDelay);
         $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
     }
 
