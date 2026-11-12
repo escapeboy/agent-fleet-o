@@ -46,22 +46,71 @@ class ProjectDetailPage extends Component
         return app(ProjectHealthEvaluator::class)->evaluate($this->project);
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function pause(): void
     {
         Gate::authorize('edit-content');
 
-        app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
+        try {
+            app(PauseProjectAction::class)->execute($this->project, 'Manually paused');
+        } catch (\InvalidArgumentException $e) {
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project paused.');
     }
 
+    /**
+     * Resume only applies to paused projects; anything else (including a
+     * status change since render) is flashed as an error.
+     */
     public function resume(): void
     {
         Gate::authorize('edit-content');
 
-        app(ResumeProjectAction::class)->execute($this->project);
+        try {
+            $this->project->refresh();
+            $this->ensurePaused($this->project);
+            app(ResumeProjectAction::class)->execute($this->project);
+        } catch (\InvalidArgumentException $e) {
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project resumed.');
+    }
+
+    /**
+     * Resume only applies to paused projects (the UI only offers it there).
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function ensurePaused(Project $project): void
+    {
+        $status = self::rawStatus($project);
+
+        if ($status !== ProjectStatus::Paused->value) {
+            throw new \InvalidArgumentException("Cannot resume project in {$status} state.");
+        }
+    }
+
+    /**
+     * The stored status value, read from the raw attributes so static
+     * analysis sees a plain string rather than the enum cast.
+     */
+    private static function rawStatus(Project $project): string
+    {
+        return (string) $project->getRawOriginal('status');
     }
 
     public function archive(): void
@@ -77,7 +126,13 @@ class ProjectDetailPage extends Component
     {
         Gate::authorize('edit-content');
 
+        $this->project->refresh();
+
         if ($this->project->status !== ProjectStatus::Draft) {
+            $status = self::rawStatus($this->project);
+            $label = ProjectStatus::tryFrom($status)?->label() ?? $status;
+            session()->flash('error', "Project can only be activated from draft (current status: {$label}).");
+
             return;
         }
 
@@ -98,11 +153,24 @@ class ProjectDetailPage extends Component
         session()->flash('message', 'Project activated!');
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function restart(): void
     {
         Gate::authorize('edit-content');
 
-        app(RestartProjectAction::class)->execute($this->project);
+        try {
+            $this->project->refresh();
+            app(RestartProjectAction::class)->execute($this->project);
+        } catch (\InvalidArgumentException $e) {
+            $this->project->refresh();
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         $this->project->refresh();
         session()->flash('message', 'Project restarted from scratch. New run triggered.');
     }

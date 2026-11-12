@@ -62,21 +62,52 @@ class ProjectListPage extends Component
         $this->resetPage();
     }
 
+    /**
+     * The status may have changed between render and click (stale page,
+     * double click), so invalid transitions are flashed as an error.
+     */
     public function pause(string $projectId): void
     {
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+
+        try {
+            app(PauseProjectAction::class)->execute($project, 'Manually paused from dashboard');
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" paused.");
     }
 
+    /**
+     * Resume only applies to paused projects; anything else (including a
+     * status change since render) is flashed as an error.
+     */
     public function resume(string $projectId): void
     {
         Gate::authorize('edit-content');
 
         $project = Project::findOrFail($projectId);
-        app(ResumeProjectAction::class)->execute($project);
+
+        try {
+            // Raw attribute: static analysis types the enum-cast status as string.
+            $status = (string) $project->getRawOriginal('status');
+
+            if ($status !== ProjectStatus::Paused->value) {
+                throw new \InvalidArgumentException("Cannot resume project in {$status} state.");
+            }
+
+            app(ResumeProjectAction::class)->execute($project);
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
+
         session()->flash('message', "Project \"{$project->title}\" resumed.");
     }
 

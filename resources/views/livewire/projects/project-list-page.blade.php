@@ -1,5 +1,8 @@
 <div>
     {{-- Flash message --}}
+    @if(session()->has('error'))
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
     @if(session()->has('message'))
         <div class="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
             {{ session('message') }}

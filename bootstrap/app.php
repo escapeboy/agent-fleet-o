@@ -12,6 +12,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SentryContextWebMiddleware;
 use App\Http\Middleware\SetCurrentTeam;
 use App\Http\Middleware\SetPostgresRlsContext;
+use App\Infrastructure\AI\Exceptions\BridgeNotConnectedException;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -96,9 +97,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // OAuthServerException: legit 401 to unauthenticated MCP probers.
         // VpsLocalAgentException::concurrencyCapReached: business-as-usual
         // throttling — FallbackAiGateway routes to the next provider.
+        // BridgeNotConnectedException: a missing bridge is a user setup state, not a defect.
         $exceptions->dontReport([
             OAuthServerException::class,
             VpsLocalAgentException::class,
+            BridgeNotConnectedException::class,
             CommandNotFoundException::class,
         ]);
 

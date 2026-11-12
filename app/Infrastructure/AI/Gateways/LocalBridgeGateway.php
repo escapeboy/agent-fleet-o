@@ -10,6 +10,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\BridgeExecutionException;
+use App\Infrastructure\AI\Exceptions\BridgeNotConnectedException;
 use App\Infrastructure\AI\Exceptions\BridgeTimeoutException;
 use App\Infrastructure\AI\Support\BridgeLlmModelGuard;
 use App\Infrastructure\Bridge\BridgeRequestRegistry;
@@ -114,10 +115,7 @@ class LocalBridgeGateway implements AiGatewayInterface
         $connection = $connections->first();
 
         if (! $connection) {
-            throw new RuntimeException(
-                'FleetQ Bridge is not connected. '
-                .'Download and start the bridge daemon: https://github.com/escapeboy/fleetq-bridge',
-            );
+            throw BridgeNotConnectedException::notConnected();
         }
 
         // If best connection is recently-disconnected, wait for reconnect
@@ -149,11 +147,7 @@ class LocalBridgeGateway implements AiGatewayInterface
                 }
             }
 
-            throw new RuntimeException(
-                'FleetQ Bridge disconnected and did not reconnect within '
-                .(self::RECONNECT_RETRIES * self::RECONNECT_WAIT_SECONDS).'s. '
-                .'Check your bridge daemon and network connectivity.',
-            );
+            throw BridgeNotConnectedException::reconnectTimeout(self::RECONNECT_RETRIES * self::RECONNECT_WAIT_SECONDS);
         }
 
         return $connection;
