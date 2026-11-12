@@ -8,6 +8,9 @@ use App\Domain\Experiment\Models\ExperimentTask;
 use App\Domain\Experiment\Pipeline\BuildArtifactJob;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\Contracts\AiGatewayInterface;
+use App\Infrastructure\AI\DTOs\AiResponseDTO;
+use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\RateLimitExceededException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -115,11 +118,49 @@ class BuildArtifactJobRateLimitTest extends TestCase
         $job = $this->runJob($task);
 
         $this->assertTrue($job->job->isReleased());
+        $this->assertGreaterThanOrEqual(BuildArtifactJob::RATE_LIMIT_MAX_DELAY + 1, $job->job->releaseDelay);
         $this->assertLessThanOrEqual(
             BuildArtifactJob::RATE_LIMIT_MAX_DELAY + BuildArtifactJob::RATE_LIMIT_MAX_JITTER,
             $job->job->releaseDelay,
         );
         $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+    }
+
+    public function test_gateway_rate_limit_exceeded_releases_with_default_backoff(): void
+    {
+        $this->bindGatewayThrowing(new RateLimitExceededException('Rate limit exceeded for provider anthropic. Retry after 12s.'));
+        $task = $this->makeTask();
+
+        $job = $this->runJob($task);
+
+        $this->assertTrue($job->job->isReleased());
+        $this->assertGreaterThanOrEqual(31, $job->job->releaseDelay);
+        $this->assertLessThanOrEqual(30 + BuildArtifactJob::RATE_LIMIT_MAX_JITTER, $job->job->releaseDelay);
+        $this->assertSame(ExperimentTaskStatus::Pending, $task->refresh()->status);
+    }
+
+    public function test_successful_retry_clears_rate_limit_error(): void
+    {
+        $task = $this->makeTask();
+        $task->update(['error' => 'Rate limited by provider; retrying in 7s']);
+
+        $gw = Mockery::mock(AiGatewayInterface::class);
+        $gw->shouldReceive('complete')->andReturn(new AiResponseDTO(
+            content: '{"content":"Hello","metadata":{}}',
+            parsedOutput: ['content' => 'Hello', 'metadata' => []],
+            usage: new AiUsageDTO(promptTokens: 10, completionTokens: 5, costCredits: 0),
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            latencyMs: 100,
+        ));
+        $this->app->instance(AiGatewayInterface::class, $gw);
+
+        $job = $this->runJob($task);
+
+        $this->assertFalse($job->job->isReleased());
+        $task->refresh();
+        $this->assertSame(ExperimentTaskStatus::Completed, $task->status);
+        $this->assertNull($task->error);
     }
 
     public function test_stuck_task_cleanup_does_not_fail_a_rate_limited_task_waiting_to_retry(): void
