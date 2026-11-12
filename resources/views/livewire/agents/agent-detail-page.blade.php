@@ -6,6 +6,22 @@
         </div>
     @endif
 
+    {{-- Bridge offline warning: agent runs through FleetQ Bridge but no bridge is connected --}}
+    @if($bridgeOffline)
+        <div class="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <i class="fa-solid fa-plug-circle-exclamation text-lg shrink-0 text-amber-600"></i>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-amber-800">FleetQ Bridge offline</p>
+                <p class="text-xs text-amber-700">
+                    This agent uses a local model through the bridge, and runs will be refused until a bridge is connected.
+                    <a href="{{ $bridgeDownloadUrl }}" target="_blank" rel="noopener" class="font-medium underline">Download the bridge</a>
+                    ·
+                    <a href="{{ route('team.settings') }}" class="font-medium underline">Check status in Team Settings</a>
+                </p>
+            </div>
+        </div>
+    @endif
+
     {{-- Tool loop warning badge: shown when recent executions average >= warning threshold --}}
     @if($avgSteps >= config('agent.tool_loop.warning_threshold', 8))
         <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">

@@ -21,6 +21,7 @@ use App\Domain\AgentChatProtocol\Actions\PublishAgentManifestAction;
 use App\Domain\AgentChatProtocol\Actions\RevokeAgentManifestAction;
 use App\Domain\AgentChatProtocol\Actions\RotateAgentChatSecretAction;
 use App\Domain\AgentChatProtocol\Enums\AgentChatVisibility;
+use App\Domain\Bridge\Services\BridgeRouter;
 use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\GitRepository\Models\GitRepository;
 use App\Domain\Knowledge\Models\KnowledgeBase;
@@ -31,6 +32,7 @@ use App\Domain\Tool\Enums\ToolApprovalMode;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Models\ToolSearchLog;
 use App\Infrastructure\AI\Enums\ReasoningEffort;
+use App\Infrastructure\AI\Exceptions\BridgeNotConnectedException;
 use App\Infrastructure\AI\Services\ProviderResolver;
 use App\Support\LlmDefaults;
 use Cron\CronExpression;
@@ -925,6 +927,10 @@ class AgentDetailPage extends Component
             ->avg('llm_steps_count') ?? 0;
 
         $teamId = auth()->user()->current_team_id;
+
+        $bridgeOffline = BridgeNotConnectedException::usesBridge($resolvedProvider['provider'])
+            && app(BridgeRouter::class)->activeConnections((string) $teamId)->isEmpty();
+
         $availableGitRepositories = GitRepository::where('team_id', $teamId)
             ->where('status', 'active')
             ->orderBy('name')
@@ -967,6 +973,8 @@ class AgentDetailPage extends Component
             'availableKnowledgeBases' => $availableKnowledgeBases,
             'hooks' => $hooks,
             'recentToolSearches' => $recentToolSearches,
+            'bridgeOffline' => $bridgeOffline,
+            'bridgeDownloadUrl' => BridgeNotConnectedException::DOWNLOAD_URL,
         ])->layout('layouts.app', ['header' => $this->agent->name]);
     }
 }
