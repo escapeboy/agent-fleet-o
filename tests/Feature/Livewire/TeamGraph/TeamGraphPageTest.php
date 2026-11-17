@@ -3,8 +3,11 @@
 namespace Tests\Feature\Livewire\TeamGraph;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Models\AgentExecution;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewMemberRole;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Shared\Models\Team;
 use App\Livewire\TeamGraph\TeamGraphPage;
@@ -121,6 +124,60 @@ class TeamGraphPageTest extends TestCase
             ->call('openDrawer', 'agent:'.$agent->id)
             ->assertSet('selectedNodeId', 'agent:'.$agent->id)
             ->assertSet('drawerLabel', 'Active Agent');
+    }
+
+    public function test_open_drawer_lists_crew_executions_with_enum_status(): void
+    {
+        $coordinator = Agent::factory()->create(['team_id' => $this->team->id]);
+        $qa = Agent::factory()->create(['team_id' => $this->team->id]);
+        $crew = Crew::factory()->create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->user->id,
+            'coordinator_agent_id' => $coordinator->id,
+            'qa_agent_id' => $qa->id,
+            'name' => 'Drawer Crew',
+        ]);
+
+        foreach ([CrewExecutionStatus::Completed, CrewExecutionStatus::Failed] as $status) {
+            CrewExecution::create([
+                'team_id' => $this->team->id,
+                'crew_id' => $crew->id,
+                'goal' => 'Goal '.$status->value,
+                'status' => $status,
+                'config_snapshot' => [],
+            ]);
+        }
+
+        $component = Livewire::test(TeamGraphPage::class)
+            ->call('openDrawer', 'crew:'.$crew->id)
+            ->assertSet('drawerLabel', 'Drawer Crew');
+
+        $statuses = collect($component->get('drawerActivity'))->pluck('status')->sort()->values()->all();
+        $this->assertSame(['completed', 'failed'], $statuses);
+    }
+
+    public function test_open_drawer_lists_agent_executions_with_status(): void
+    {
+        $agent = Agent::factory()->create([
+            'team_id' => $this->team->id,
+            'name' => 'Busy Agent',
+        ]);
+        AgentExecution::create([
+            'agent_id' => $agent->id,
+            'team_id' => $this->team->id,
+            'status' => 'completed',
+            'input' => ['task' => 'Help me'],
+            'output' => ['result' => 'Done'],
+            'duration_ms' => 100,
+            'cost_credits' => 0,
+        ]);
+
+        $component = Livewire::test(TeamGraphPage::class)
+            ->call('openDrawer', 'agent:'.$agent->id);
+
+        $activity = $component->get('drawerActivity');
+        $this->assertCount(1, $activity);
+        $this->assertSame('completed', $activity[0]['status']);
     }
 
     public function test_close_drawer_clears_state(): void

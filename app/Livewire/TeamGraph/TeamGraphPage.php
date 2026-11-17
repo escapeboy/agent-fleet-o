@@ -11,6 +11,8 @@ use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Models\User;
 use Livewire\Component;
 
+use function Illuminate\Support\enum_value;
+
 class TeamGraphPage extends Component
 {
     /** @var array<string, mixed> */
@@ -60,7 +62,7 @@ class TeamGraphPage extends Component
         foreach ($execs as $exec) {
             $input = is_array($exec->input ?? null) ? $exec->input : [];
             $task = $input['task'] ?? $input['content'] ?? $input['query'] ?? null;
-            $status = (string) ($exec->status ?? 'unknown');
+            $status = $this->statusLabel($exec->status);
             $items[] = [
                 'id' => 'exec:'.$exec->id,
                 'kind' => 'agent.executed',
@@ -81,7 +83,7 @@ class TeamGraphPage extends Component
                 'actor_id' => $t->experiment_id,
                 'actor_kind' => 'experiment',
                 'actor_label' => $t->experiment?->title ?: 'Experiment',
-                'summary' => "{$t->from_state} → {$t->to_state}",
+                'summary' => $this->statusLabel($t->from_state, '').' → '.$this->statusLabel($t->to_state, ''),
                 'at' => optional($t->created_at)->toIso8601String(),
             ];
         }
@@ -109,7 +111,7 @@ class TeamGraphPage extends Component
                 ->get(['id', 'status', 'updated_at', 'duration_ms', 'cost_credits'])
                 ->map(fn ($e) => [
                     'id' => $e->id,
-                    'status' => (string) $e->status,
+                    'status' => $this->statusLabel($e->status),
                     'at' => optional($e->updated_at)->diffForHumans(),
                     'duration_ms' => $e->duration_ms,
                     'cost_credits' => $e->cost_credits,
@@ -127,7 +129,7 @@ class TeamGraphPage extends Component
                     ->get(['id', 'status', 'created_at'])
                     ->map(fn ($e) => [
                         'id' => $e->id,
-                        'status' => (string) $e->status,
+                        'status' => $this->statusLabel($e->status),
                         'at' => optional($e->created_at)->diffForHumans(),
                     ])->all()
                 : [];
@@ -152,6 +154,14 @@ class TeamGraphPage extends Component
         $this->selectedNodeId = null;
         $this->drawerLabel = null;
         $this->drawerActivity = [];
+    }
+
+    /**
+     * Turn an enum-cast or scalar status/state attribute into a display string.
+     */
+    private function statusLabel(mixed $value, string $default = 'unknown'): string
+    {
+        return (string) enum_value($value, $default);
     }
 
     private function buildGraph(): void
