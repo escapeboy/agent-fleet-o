@@ -123,6 +123,56 @@ class AnalyticsConsentTest extends TestCase
     }
 
     #[DataProvider('layouts')]
+    public function test_advertising_consent_is_separate_opt_in_and_only_it_grants_the_ad_signals(string $layout): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => 'AW-123456789']);
+
+        $html = $this->fetch($layout);
+
+        // Defaults stay denied, and the only place ad signals are granted is setAds(), driven by the ads choice.
+        $this->assertStringContainsString("gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied'", $html);
+        $this->assertSame(1, substr_count($html, '{ad_storage: v, ad_user_data: v, ad_personalization: v}'));
+        $this->assertStringContainsString("var v = ads ? 'granted' : 'denied';", $html);
+        $this->assertStringNotContainsString("ad_storage: 'granted'", $html);
+        // Analytics accept alone: the checkbox is read, not assumed (accept && box.checked), so it stays denied.
+        $this->assertStringContainsString('var ads = accept && !!adsBox() && adsBox().checked;', $html);
+        $this->assertStringContainsString('save(accept, ads);', $html);
+        // The stored choice carries the ads flag; a record without it counts as ads denied.
+        $this->assertStringContainsString('ads: ADS && r.ads === true', $html);
+        // Reject and withdrawal deny the ad signals and delete the _gcl_ cookies.
+        $this->assertStringContainsString('if (ADS) { setAds(false); }', $html);
+        $this->assertStringContainsString("n.indexOf('_gcl_') === 0", $html);
+        // The ads choice is a checkbox that is never pre-ticked, inside the banner.
+        $this->assertStringContainsString('data-cookie-ads', $html);
+        $this->assertSame(1, preg_match('#<input type="checkbox" data-cookie-ads[^>]*>#', $html, $box));
+        $this->assertStringNotContainsString('checked', $box[0]);
+        // gtag.js loading is unchanged: still only inside grant().
+        $this->assertSame(1, substr_count($html, 'googletagmanager.com/gtag/js'));
+        $this->assertTrue(strpos($html, 'function grant(') < strpos($html, 'googletagmanager.com/gtag/js'));
+    }
+
+    #[DataProvider('layouts')]
+    public function test_no_advertising_choice_without_an_ads_id(string $layout): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => null]);
+
+        $html = $this->fetch($layout);
+
+        $this->assertStringNotContainsString('<input type="checkbox" data-cookie-ads', $html);
+        $this->assertStringContainsString('ADS = false', $html);
+    }
+
+    public function test_policies_describe_the_advertising_choice_only_when_ads_is_configured(): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => 'AW-123456789']);
+        $this->get(route('legal.cookies'))->assertOk()->assertSee('_gcl_au', false)->assertSee('Advertising', false)->assertDontSee('does not use any advertising or targeting cookies', false);
+        $this->get(route('legal.privacy'))->assertOk()->assertSee('separate Advertising choice', false);
+
+        config(['services.google_ads.id' => null]);
+        $this->get(route('legal.cookies'))->assertOk()->assertDontSee('<code>_gcl_au</code>', false)->assertSee('use any advertising or targeting cookies', false);
+    }
+
+    #[DataProvider('layouts')]
     public function test_banner_is_a_labelled_region_with_equal_buttons_and_the_truthful_text(string $layout): void
     {
         config(['services.google_analytics.id' => self::ID]);

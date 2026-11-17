@@ -2,7 +2,9 @@
      injected after the visitor clicks Accept, so no Google host is contacted before that, and
      nothing happens on Reject. Withdrawal (the "Cookie settings" link reopens the banner) sets
      ga-disable-<ID> and deletes the _ga cookies. The choice is kept in localStorage with a version
-     and a timestamp. Renders nothing when GOOGLE_ANALYTICS_ID is unset. Pairs with
+     and a timestamp. When GOOGLE_ADS_ID is set the banner also has a separate, unticked Advertising
+     choice: only that one grants ad_storage, ad_user_data and ad_personalization (Accept without it
+     keeps them denied), and withdrawing it denies them again and deletes the _gcl_ cookies. Renders nothing when GOOGLE_ANALYTICS_ID is unset. Pairs with
      <x-analytics.banner /> (early in <body>) and <x-analytics.settings-link />. --}}
 @php($gaId = (string) config('services.google_analytics.id'))
 @php($adsId = (string) config('services.google_ads.id'))
@@ -12,30 +14,38 @@
         function gtag(){dataLayer.push(arguments);}
         gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', wait_for_update: 500});
         (function () {
-            var ID = @json($gaId), KEY = 'cookie_consent', YEAR = 365 * 24 * 60 * 60 * 1000, loaded = false;
+            var ID = @json($gaId), ADS = @json($adsId !== ''), KEY = 'cookie_consent', YEAR = 365 * 24 * 60 * 60 * 1000, loaded = false;
             window['ga-disable-' + ID] = true;
             function saved() {
                 try {
                     var r = JSON.parse(localStorage.getItem(KEY));
-                    if (r && r.v === 1 && typeof r.analytics === 'boolean' && Date.now() - Date.parse(r.at) < YEAR) { return r.analytics; }
+                    if (r && r.v === 1 && typeof r.analytics === 'boolean' && Date.now() - Date.parse(r.at) < YEAR) { return {analytics: r.analytics, ads: ADS && r.ads === true}; }
                 } catch (e) {}
                 return null;
             }
-            function save(analytics) {
-                try { localStorage.setItem(KEY, JSON.stringify({analytics: analytics, v: 1, at: new Date().toISOString()})); } catch (e) {}
+            function save(analytics, ads) {
+                try { localStorage.setItem(KEY, JSON.stringify({analytics: analytics, ads: ads, v: 1, at: new Date().toISOString()})); } catch (e) {}
             }
-            function clearCookies() {
+            function clearCookies(isOurs) {
                 var parts = location.hostname.split('.'), domains = [''];
                 for (var i = 0; i < parts.length - 1; i++) { domains.push('; domain=' + parts.slice(i).join('.')); }
                 document.cookie.split(';').map(function (c) { return c.split('=')[0].trim(); })
-                    .filter(function (n) { return n === '_ga' || n.indexOf('_ga_') === 0; })
+                    .filter(isOurs)
                     .forEach(function (n) {
                         domains.forEach(function (d) { document.cookie = n + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + d; });
                     });
             }
-            function grant() {
+            function isGa(n) { return n === '_ga' || n.indexOf('_ga_') === 0; }
+            function isAds(n) { return n === '_gcl_au' || n.indexOf('_gcl_') === 0; }
+            function setAds(ads) {
+                var v = ads ? 'granted' : 'denied';
+                gtag('consent', 'update', {ad_storage: v, ad_user_data: v, ad_personalization: v});
+                if (!ads) { clearCookies(isAds); }
+            }
+            function grant(ads) {
                 window['ga-disable-' + ID] = false;
                 gtag('consent', 'update', {analytics_storage: 'granted'});
+                if (ADS) { setAds(ads); }
                 if (loaded) { return; }
                 loaded = true;
                 gtag('js', new Date());
@@ -51,25 +61,31 @@
             function revoke() {
                 window['ga-disable-' + ID] = true;
                 if (loaded) { gtag('consent', 'update', {analytics_storage: 'denied'}); }
-                clearCookies();
+                clearCookies(isGa);
+                if (ADS) { setAds(false); }
             }
             function banner() { return document.querySelector('[data-cookie-banner]'); }
-            if (saved() === true) { grant(); }
+            function adsBox() { return document.querySelector('[data-cookie-ads]'); }
+            var choice = saved();
+            if (choice && choice.analytics) { grant(choice.ads); }
             document.addEventListener('DOMContentLoaded', function () {
-                if (saved() === null && banner()) { banner().hidden = false; }
+                if (choice === null && banner()) { banner().hidden = false; }
             });
             document.addEventListener('click', function (e) {
                 var t = e.target.closest ? e.target.closest('[data-cookie-choice], [data-cookie-settings]') : null, b = banner();
                 if (!t || !b) { return; }
                 if (t.hasAttribute('data-cookie-settings')) {
+                    var c = saved(), box = adsBox();
+                    if (box) { box.checked = !!(c && c.analytics && c.ads); }
                     b.hidden = false;
                     var first = b.querySelector('button');
                     if (first) { first.focus(); }
                     return;
                 }
                 var accept = t.getAttribute('data-cookie-choice') === 'accept';
-                save(accept);
-                if (accept) { grant(); } else { revoke(); }
+                var ads = accept && !!adsBox() && adsBox().checked;
+                save(accept, ads);
+                if (accept) { grant(ads); } else { revoke(); }
                 b.hidden = true;
             });
         })();

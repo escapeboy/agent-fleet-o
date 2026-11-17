@@ -1,6 +1,7 @@
 {{-- Cookie banner for the GA4 tag (see <x-analytics.head />). Put it early in <body>. Hidden until the
      head script finds no valid stored choice, or the "Cookie settings" link reopens it. Accept and
-     Reject share one class string, so size, weight and colour are identical; nothing is pre-ticked. --}}
+     Reject share one class string, so size, weight and colour are identical; nothing is pre-ticked
+     (the optional Advertising checkbox only exists when GOOGLE_ADS_ID is set). --}}
 @if(config('services.google_analytics.id'))
     @php($choiceClass = 'min-h-11 flex-1 rounded-lg border-2 border-gray-900 bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600')
     <div data-cookie-banner role="region" aria-label="Cookie notice" hidden
@@ -12,6 +13,12 @@
             &middot;
             <a href="{{ route('legal.cookies') }}" class="underline" target="_blank" rel="noopener">Cookie policy</a>
         </p>
+        @if(config('services.google_ads.id'))
+            <label class="mb-3 flex items-start gap-2">
+                <input type="checkbox" data-cookie-ads class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-900">
+                <span>Advertising (optional): also allow Google Ads conversion measurement, which can set advertising cookies such as <code>_gcl_au</code>. Off unless you tick it, and it only applies if you press Accept.</span>
+            </label>
+        @endif
         <div class="flex gap-3">
             <button type="button" data-cookie-choice="accept" class="{{ $choiceClass }}">Accept</button>
             <button type="button" data-cookie-choice="reject" class="{{ $choiceClass }}">Reject</button>
