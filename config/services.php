@@ -48,6 +48,11 @@ return [
         'id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
+    // Google Ads tag (AW-...). Loaded inside the same consent gate as GA4; unset = nothing rendered.
+    'google_ads' => [
+        'id' => env('GOOGLE_ADS_ID'),
+    ],
+
     'sentry' => [
         'dsn' => env('SENTRY_LARAVEL_DSN'),
     ],

@@ -67,21 +67,24 @@ class SecurityHeaders
         // but the policy has to let it through then. Added only where a GA id is configured.
         $ga = config('services.google_analytics.id') ? ' https://www.googletagmanager.com' : '';
         $gaBeacon = config('services.google_analytics.id') ? ' https://*.google-analytics.com https://*.analytics.google.com' : '';
+        // Google Ads tag (config('services.google_ads.id')): script, and pings to the Google Ads hosts.
+        $adsScript = config('services.google_ads.id') ? ' https://www.googleadservices.com' : '';
+        $adsBeacon = config('services.google_ads.id') ? ' https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net' : '';
 
         $directives = [
             'default-src' => "'self'",
             // 'unsafe-inline' required for Blade-injected Alpine.js bootstrapping.
             // 'unsafe-eval' required for Alpine.js v3 / Livewire 4 expression evaluation.
-            'script-src' => "'self' 'unsafe-inline' 'unsafe-eval' {$viteOrigin} https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://plausible.io https://unpkg.com{$ga}",
+            'script-src' => "'self' 'unsafe-inline' 'unsafe-eval' {$viteOrigin} https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://plausible.io https://unpkg.com{$ga}{$adsScript}",
             // Inline styles are required for Tailwind JIT utilities applied via Alpine.
             'style-src' => "'self' 'unsafe-inline' {$viteOrigin} https://fonts.bunny.net https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net",
             // Restrict images to known origins; drop the open https: wildcard.
-            'img-src' => "'self' data: blob: https://avatars.githubusercontent.com https://secure.gravatar.com{$ga}{$gaBeacon}",
+            'img-src' => "'self' data: blob: https://avatars.githubusercontent.com https://secure.gravatar.com{$ga}{$gaBeacon}{$adsBeacon}",
             // Fonts: self + Vite HMR (Font Awesome webfonts in dev) + data: (base64 inline)
             // + Bunny CDN (Inter font CSS + woff2) + Cloudflare CDN (Font Awesome bundled by GrapesJS).
             'font-src' => "'self' data: {$viteOrigin} https://fonts.bunny.net https://cdnjs.cloudflare.com",
             // XHR/fetch/WS: self + Vite HMR (HTTP + WS) + Reverb (dev WS) + Stripe + Plausible + unpkg.
-            'connect-src' => "'self' {$viteOrigin} {$wsOrigins} wss: https://api.stripe.com https://plausible.io https://unpkg.com{$ga}{$gaBeacon}",
+            'connect-src' => "'self' {$viteOrigin} {$wsOrigins} wss: https://api.stripe.com https://plausible.io https://unpkg.com{$ga}{$gaBeacon}{$adsBeacon}",
             // Stripe payment iframes
             'frame-src' => "'self' https://js.stripe.com https://hooks.stripe.com",
             // CRITICAL for PWA: allow service workers from same origin

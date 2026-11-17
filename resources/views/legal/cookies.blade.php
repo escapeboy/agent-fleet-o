@@ -59,7 +59,11 @@
             </table>
 
             <h3>3.4 Advertising / Targeting Cookies</h3>
-            <p>FleetQ does <strong>not</strong> use any advertising or targeting cookies.</p>
+            @if(config('services.google_ads.id'))
+                <p>Google Ads conversion measurement (cookies such as <code>_gcl_au</code>) is set only if you tick <strong>Advertising</strong> in the cookie banner and click <strong>Accept</strong>. The box is off by default, and Accept without it, or Reject, sets no advertising cookies and keeps Google's ad storage, ad user data and ad personalisation signals denied. To withdraw, open &ldquo;Cookie settings&rdquo; and click Reject, or click Accept with Advertising unticked: the signals are denied again and the <code>_gcl_</code> cookies are deleted.</p>
+            @else
+                <p>FleetQ does <strong>not</strong> use any advertising or targeting cookies.</p>
+            @endif
 
             <h2>4. Third-Party Cookies</h2>
             <table>
@@ -70,6 +74,9 @@
                     <tr><td>Plausible Analytics</td><td>Usage analytics</td><td>No (cookieless)</td><td><a href="https://plausible.io/privacy" rel="noopener noreferrer" target="_blank">plausible.io/privacy</a></td></tr>
                     @if(config('services.google_analytics.id'))
                         <tr><td>Google Analytics 4</td><td>Usage analytics (only after you accept)</td><td>Yes, after Accept: <code>_ga</code>, <code>_ga_&lt;ID&gt;</code></td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">policies.google.com/privacy</a></td></tr>
+                    @endif
+                    @if(config('services.google_ads.id'))
+                        <tr><td>Google Ads</td><td>Ad conversion measurement (only with your Advertising choice)</td><td>Yes, only if you tick Advertising and Accept: <code>_gcl_au</code></td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">policies.google.com/privacy</a></td></tr>
                     @endif
                     <tr><td>Stripe</td><td>Payment processing</td><td>Yes (on payment pages only)</td><td><a href="https://stripe.com/privacy" rel="noopener noreferrer" target="_blank">stripe.com/privacy</a></td></tr>
                 </tbody>
