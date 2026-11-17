@@ -11,6 +11,8 @@ use App\Domain\Experiment\Models\ExperimentStateTransition;
 use App\Models\User;
 use Livewire\Component;
 
+use function Illuminate\Support\enum_value;
+
 class TeamGraphPage extends Component
 {
     /** @var array<string, mixed> */
@@ -60,7 +62,7 @@ class TeamGraphPage extends Component
         foreach ($execs as $exec) {
             $input = is_array($exec->input ?? null) ? $exec->input : [];
             $task = $input['task'] ?? $input['content'] ?? $input['query'] ?? null;
-            $status = $this->statusLabel($exec->status ?? null);
+            $status = $this->statusLabel($exec->status);
             $items[] = [
                 'id' => 'exec:'.$exec->id,
                 'kind' => 'agent.executed',
@@ -159,19 +161,7 @@ class TeamGraphPage extends Component
      */
     private function statusLabel(mixed $value, string $default = 'unknown'): string
     {
-        if ($value instanceof \BackedEnum) {
-            return (string) $value->value;
-        }
-
-        if ($value instanceof \UnitEnum) {
-            return $value->name;
-        }
-
-        if ($value === null) {
-            return $default;
-        }
-
-        return (string) $value;
+        return (string) enum_value($value, $default);
     }
 
     private function buildGraph(): void
