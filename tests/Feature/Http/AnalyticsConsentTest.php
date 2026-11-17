@@ -86,6 +86,43 @@ class AnalyticsConsentTest extends TestCase
     }
 
     #[DataProvider('layouts')]
+    public function test_google_ads_config_sits_next_to_ga4_inside_grant_only_when_configured(string $layout): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => 'AW-123456789']);
+
+        $html = $this->fetch($layout);
+
+        $this->assertSame(1, substr_count($html, "gtag('config', \"AW-123456789\");"));
+        $this->assertTrue(strpos($html, 'function grant()') < strpos($html, 'AW-123456789'));
+        $this->assertTrue(strpos($html, 'AW-123456789') < strpos($html, 'function revoke()'));
+        $this->assertStringNotContainsString("'conversion'", $html);
+        $this->assertStringNotContainsString("ad_storage: 'granted'", $html);
+    }
+
+    #[DataProvider('layouts')]
+    public function test_no_google_ads_call_without_an_ads_id(string $layout): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => null]);
+
+        $this->assertStringNotContainsString('AW-', $this->fetch($layout));
+    }
+
+    public function test_csp_and_policies_mention_google_ads_only_when_an_ads_id_is_configured(): void
+    {
+        config(['services.google_analytics.id' => self::ID, 'services.google_ads.id' => null]);
+        $this->assertStringNotContainsString('googleadservices', (string) $this->get(route('legal.privacy'))->headers->get('Content-Security-Policy'));
+        $this->get(route('legal.privacy'))->assertDontSee('Google Ads');
+
+        config(['services.google_ads.id' => 'AW-123456789']);
+        $csp = (string) $this->get(route('legal.privacy'))->headers->get('Content-Security-Policy');
+        foreach (['https://www.googleadservices.com', 'https://www.google.com', 'https://googleads.g.doubleclick.net'] as $host) {
+            $this->assertStringContainsString($host, $csp);
+        }
+        $this->get(route('legal.privacy'))->assertSee('Google Ads', false);
+        $this->get(route('legal.cookies'))->assertSee('Google Ads', false);
+    }
+
+    #[DataProvider('layouts')]
     public function test_banner_is_a_labelled_region_with_equal_buttons_and_the_truthful_text(string $layout): void
     {
         config(['services.google_analytics.id' => self::ID]);

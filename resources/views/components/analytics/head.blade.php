@@ -5,6 +5,7 @@
      and a timestamp. Renders nothing when GOOGLE_ANALYTICS_ID is unset. Pairs with
      <x-analytics.banner /> (early in <body>) and <x-analytics.settings-link />. --}}
 @php($gaId = (string) config('services.google_analytics.id'))
+@php($adsId = (string) config('services.google_ads.id'))
 @if($gaId !== '')
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -39,6 +40,9 @@
                 loaded = true;
                 gtag('js', new Date());
                 gtag('config', ID, {page_location: location.origin + location.pathname, page_referrer: document.referrer ? new URL(document.referrer).origin + '/' : ''});
+                @if($adsId !== '')
+                gtag('config', @json($adsId));
+                @endif
                 var s = document.createElement('script');
                 s.async = true;
                 s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ID);

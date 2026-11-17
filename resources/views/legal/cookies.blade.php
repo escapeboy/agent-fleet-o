@@ -71,6 +71,9 @@
                     @if(config('services.google_analytics.id'))
                         <tr><td>Google Analytics 4</td><td>Usage analytics (only after you accept)</td><td>Yes, after Accept: <code>_ga</code>, <code>_ga_&lt;ID&gt;</code></td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">policies.google.com/privacy</a></td></tr>
                     @endif
+                    @if(config('services.google_ads.id'))
+                        <tr><td>Google Ads</td><td>Ad conversion measurement (only after you accept)</td><td>Loaded together with Google Analytics after Accept; may set Google cookies</td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">policies.google.com/privacy</a></td></tr>
+                    @endif
                     <tr><td>Stripe</td><td>Payment processing</td><td>Yes (on payment pages only)</td><td><a href="https://stripe.com/privacy" rel="noopener noreferrer" target="_blank">stripe.com/privacy</a></td></tr>
                 </tbody>
             </table>

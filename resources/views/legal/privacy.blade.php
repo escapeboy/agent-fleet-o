@@ -88,6 +88,9 @@
                     @if(config('services.google_analytics.id'))
                         <tr><td>Google Analytics 4 (Google Ireland Ltd.)</td><td>Usage analytics, loaded only after you accept analytics cookies</td><td>Consent (Art. 6(1)(a)); withdraw via &ldquo;Cookie settings&rdquo;</td></tr>
                     @endif
+                    @if(config('services.google_ads.id'))
+                        <tr><td>Google Ads (Google Ireland Ltd.)</td><td>Ad conversion measurement, loaded only after you accept analytics cookies</td><td>Consent (Art. 6(1)(a)); withdraw via &ldquo;Cookie settings&rdquo;</td></tr>
+                    @endif
                 </tbody>
             </table>
             <p>We do <strong>NOT</strong> sell your personal data.</p>
