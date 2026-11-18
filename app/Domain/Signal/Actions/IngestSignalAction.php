@@ -15,6 +15,7 @@ use App\Domain\Signal\Jobs\ScoreSignalRelevanceJob;
 use App\Domain\Signal\Models\Signal;
 use App\Domain\Signal\Services\CodeOwnershipResolver;
 use App\Domain\Signal\Services\ConnectorBindingGate;
+use App\Domain\Signal\Support\PayloadSanitizer;
 use App\Domain\Trigger\Jobs\EvaluateTriggerRulesJob;
 use App\Models\Blacklist;
 use Illuminate\Http\UploadedFile;
@@ -48,6 +49,14 @@ class IngestSignalAction
         ?string $teamId = null,
         array $senderHints = [],
     ): ?Signal {
+        // Strip NUL characters and invalid UTF-8 before anything is hashed, looked up or stored:
+        // the database rejects NUL and json_encode() returns false for invalid UTF-8.
+        $payload = PayloadSanitizer::clean($payload);
+        $tags = PayloadSanitizer::clean($tags);
+        $sourceIdentifier = PayloadSanitizer::cleanString($sourceIdentifier);
+        $sourceNativeId = PayloadSanitizer::cleanString($sourceNativeId);
+        $senderHints = PayloadSanitizer::clean($senderHints);
+
         // ConnectorBinding gate: reject or hold signals from unapproved senders on gated channels.
         if (in_array($sourceType, self::GATED_CHANNELS, true) && $teamId !== null && $sourceIdentifier !== '') {
             $gateStatus = app(ConnectorBindingGate::class)->check(
@@ -120,8 +129,8 @@ class IngestSignalAction
 
             return null;
         }
-        $payload = $ingesting->payload;
-        $tags = $ingesting->tags;
+        $payload = PayloadSanitizer::clean($ingesting->payload);
+        $tags = PayloadSanitizer::clean($ingesting->tags);
 
         // Resolve cross-channel contact identity for gated channels with known senders.
         $contactIdentityId = null;

@@ -5,6 +5,7 @@ use App\Http\Controllers\AgentSkillsController;
 use App\Http\Controllers\AgentTemplatesPageController;
 use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ApiCatalogController;
+use App\Http\Controllers\ApprovalChatLinkController;
 use App\Http\Controllers\ArtifactPreviewController;
 use App\Http\Controllers\AuthMdController;
 use App\Http\Controllers\ComparisonsController;
@@ -548,6 +549,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/metrics/time-horizon', TimeHorizonPage::class)->name('metrics.time-horizon');
 
     Route::get('/approvals', ApprovalInboxPage::class)->name('approvals.index');
+    // Signed Approve / Reject links posted to the team's Slack / Telegram channel.
+    Route::get('/approvals/{approval}/chat/{decision}', [ApprovalChatLinkController::class, 'show'])
+        ->middleware(['signed', 'throttle:30,1'])
+        ->name('approvals.chat-link.show');
+    Route::post('/approvals/{approval}/chat/{decision}', [ApprovalChatLinkController::class, 'decide'])
+        ->middleware(['signed', 'throttle:30,1'])
+        ->name('approvals.chat-link.decide');
     Route::get('/evaluation', EvaluationPage::class)->name('evaluation.index');
     Route::get('/evaluation/compare', EvaluationCompareRunsPage::class)->name('evaluation.compare');
     Route::get('/evaluation/drift', DriftSignalsPage::class)->name('evaluation.drift');

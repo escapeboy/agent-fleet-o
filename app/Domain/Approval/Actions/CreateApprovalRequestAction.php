@@ -4,6 +4,7 @@ namespace App\Domain\Approval\Actions;
 
 use App\Domain\Approval\Enums\ApprovalMode;
 use App\Domain\Approval\Enums\ApprovalStatus;
+use App\Domain\Approval\Jobs\SendApprovalChatLinksJob;
 use App\Domain\Approval\Jobs\SummarizeApprovalJob;
 use App\Domain\Approval\Models\ApprovalRequest;
 use App\Domain\Experiment\Models\Experiment;
@@ -52,6 +53,12 @@ class CreateApprovalRequestAction
         // off the request path. Failure inside the job never blocks approval.
         if (($team?->settings['approval_ai_summary'] ?? false) === true) {
             SummarizeApprovalJob::dispatch($approval->id);
+        }
+
+        // Opt-in per team: post the approval to the team's own Slack/Telegram
+        // channel with signed Approve/Reject links. Never blocks approval.
+        if (($team?->settings['approval_chat_links'] ?? false) === true) {
+            SendApprovalChatLinksJob::dispatch($approval->id);
         }
 
         return $approval;
