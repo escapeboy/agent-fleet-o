@@ -33,6 +33,13 @@ final class BeforeSendFilter
 {
     public static function filter(Event $event, ?EventHint $hint = null): ?Event
     {
+        $kept = self::drop($event, $hint);
+
+        return $kept === null ? null : SentryScrubber::beforeSend($kept, $hint);
+    }
+
+    private static function drop(Event $event, ?EventHint $hint): ?Event
+    {
         if ($hint === null || $hint->exception === null) {
             return $event;
         }
