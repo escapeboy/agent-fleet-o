@@ -158,6 +158,11 @@ Schedule::command('sentry:watchdog')
     ->twiceDaily(9, 18)
     ->withoutOverlapping(60);
 
+// One digest per team for the runs above (the jobs take up to 10 min each on the experiments queue)
+Schedule::command('sentry:watchdog-digest')
+    ->twiceDailyAt(9, 18, 40)
+    ->withoutOverlapping(30);
+
 // Recover Sentry fix tasks whose external worker lease expired
 Schedule::command('sentry-fix-tasks:reap')
     ->everyFifteenMinutes()
