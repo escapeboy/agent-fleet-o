@@ -35,39 +35,82 @@ class SentryWatchdogNotificationsTest extends TestCase
         config(['sentry_watchdog.digest_email' => 'watchdog@example.test']);
     }
 
-    public function test_tc30_digest_is_emailed_with_run_counts(): void
+    public function test_tc30_one_digest_for_all_projects_with_news(): void
     {
         Mail::fake();
 
         $team = Team::factory()->create();
-        $integration = Integration::factory()->create([
-            'team_id' => $team->id,
-            'driver' => 'sentry',
-            'name' => 'Sentry fleetq',
-        ]);
+        $busy = $this->finishedRun($team, 'Sentry fleetq', triaged: 7, prs: 3, critical: 1, summary: 'Two new NPEs.');
+        $other = $this->finishedRun($team, 'Sentry localz', triaged: 2);
+        $quiet = $this->finishedRun($team, 'Sentry utro');
 
-        $run = SentryWatchdogRun::create([
+        $result = app(SendSentryWatchdogDigestAction::class)->execute($team->id, collect([$busy, $other, $quiet]));
+
+        $this->assertTrue($result);
+        Mail::assertSent(SentryWatchdogMail::class, 1);
+        Mail::assertSent(SentryWatchdogMail::class, function (SentryWatchdogMail $mail) {
+            return $mail->hasTo('watchdog@example.test')
+                && str_contains($mail->htmlBody, '2 of 3 projects with news')
+                && str_contains($mail->htmlBody, 'Sentry fleetq')
+                && str_contains($mail->htmlBody, 'Triaged: 7')
+                && str_contains($mail->htmlBody, 'Critical: 1')
+                && str_contains($mail->htmlBody, 'Sentry localz')
+                && ! str_contains($mail->htmlBody, 'Sentry utro')
+                && str_contains($mail->htmlBody, 'No new issues: 1 projects.');
+        });
+        $this->assertSame(3, SentryWatchdogRun::withoutGlobalScopes()->whereNotNull('digest_sent_at')->count());
+    }
+
+    public function test_no_message_when_no_project_has_news(): void
+    {
+        Mail::fake();
+
+        $team = Team::factory()->create();
+        $runs = collect([$this->finishedRun($team, 'Sentry a'), $this->finishedRun($team, 'Sentry b')]);
+
+        $this->assertFalse(app(SendSentryWatchdogDigestAction::class)->execute($team->id, $runs));
+        Mail::assertNothingSent();
+        $this->assertSame(2, SentryWatchdogRun::withoutGlobalScopes()->whereNotNull('digest_sent_at')->count());
+    }
+
+    public function test_digest_command_sends_one_message_per_team_and_skips_sent_or_running_runs(): void
+    {
+        Mail::fake();
+
+        $team = Team::factory()->create();
+        $this->finishedRun($team, 'Sentry a', triaged: 1);
+        $this->finishedRun($team, 'Sentry b', triaged: 4);
+        $old = $this->finishedRun($team, 'Sentry old', triaged: 9);
+        $old->update(['digest_sent_at' => now()->subDay()]);
+        $running = $this->finishedRun($team, 'Sentry running', triaged: 5);
+        $running->update(['finished_at' => null]);
+
+        $this->artisan('sentry:watchdog-digest')->assertSuccessful();
+
+        Mail::assertSent(SentryWatchdogMail::class, 1);
+        Mail::assertSent(SentryWatchdogMail::class, fn (SentryWatchdogMail $mail) => str_contains($mail->htmlBody, '2 of 2 projects')
+            && ! str_contains($mail->htmlBody, 'Sentry old') && ! str_contains($mail->htmlBody, 'Sentry running'));
+        $this->assertNull($running->fresh()->digest_sent_at);
+
+        $this->artisan('sentry:watchdog-digest')->assertSuccessful();
+        Mail::assertSent(SentryWatchdogMail::class, 1); // nothing new: no second message
+    }
+
+    private function finishedRun(Team $team, string $name, int $triaged = 0, int $prs = 0, int $critical = 0, ?string $summary = null): SentryWatchdogRun
+    {
+        $integration = Integration::factory()->create(['team_id' => $team->id, 'driver' => 'sentry', 'name' => $name]);
+
+        return SentryWatchdogRun::create([
             'integration_id' => $integration->id,
             'team_id' => $team->id,
             'started_at' => now(),
             'finished_at' => now(),
-            'signals_triaged' => 7,
-            'prs_opened' => 3,
-            'investigate_only' => 2,
-            'critical_count' => 1,
-            'digest_summary' => 'Two new NPEs in checkout flow.',
+            'signals_triaged' => $triaged,
+            'prs_opened' => $prs,
+            'investigate_only' => 0,
+            'critical_count' => $critical,
+            'digest_summary' => $summary,
         ]);
-
-        $result = app(SendSentryWatchdogDigestAction::class)->execute($run);
-
-        $this->assertTrue($result);
-        Mail::assertSent(SentryWatchdogMail::class, function (SentryWatchdogMail $mail) {
-            return $mail->hasTo('watchdog@example.test')
-                && str_contains($mail->subjectLine, 'Sentry fleetq')
-                && str_contains($mail->htmlBody, 'Triaged: 7')
-                && str_contains($mail->htmlBody, 'PRs opened: 3')
-                && str_contains($mail->htmlBody, 'Critical: 1');
-        });
     }
 
     public function test_tc31_critical_alert_is_deduplicated_per_signal(): void
@@ -114,9 +157,10 @@ class SentryWatchdogNotificationsTest extends TestCase
             'digest_summary' => 'One NPE.',
         ]);
 
-        $result = app(SendSentryWatchdogDigestAction::class)->execute($run);
+        $result = app(SendSentryWatchdogDigestAction::class)->execute($team->id, collect([$run]));
 
         $this->assertTrue($result);
+        Http::assertSentCount(1);
         Http::assertSent(fn ($request) => str_contains($request->url(), 'api.telegram.org')
             && str_contains((string) $request['text'], 'Triaged: 4'));
     }

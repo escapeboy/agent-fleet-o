@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property int $investigate_only
  * @property int $critical_count
  * @property string|null $digest_summary
+ * @property Carbon|null $digest_sent_at
  */
 class SentryWatchdogRun extends Model
 {
@@ -40,6 +41,7 @@ class SentryWatchdogRun extends Model
         'investigate_only',
         'critical_count',
         'digest_summary',
+        'digest_sent_at',
     ];
 
     protected function casts(): array
@@ -47,6 +49,7 @@ class SentryWatchdogRun extends Model
         return [
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'digest_sent_at' => 'datetime',
             'signals_triaged' => 'integer',
             'prs_opened' => 'integer',
             'investigate_only' => 'integer',

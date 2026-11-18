@@ -98,7 +98,7 @@ class RunSentryWatchdogTest extends TestCase
         $this->runJob($integration->id);
 
         $this->assertSame(0, $triageCalls, 'No signals → triage never invoked.');
-        $this->assertSame(1, $digestCalls, 'Digest still fires for an empty run.');
+        $this->assertSame(0, $digestCalls, 'The job sends nothing: sentry:watchdog-digest sends one digest per team.');
 
         $run = SentryWatchdogRun::withoutGlobalScopes()
             ->where('integration_id', $integration->id)

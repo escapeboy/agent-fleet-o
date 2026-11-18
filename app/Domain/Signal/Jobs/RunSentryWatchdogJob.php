@@ -3,7 +3,6 @@
 namespace App\Domain\Signal\Jobs;
 
 use App\Domain\Integration\Models\Integration;
-use App\Domain\Signal\Actions\SendSentryWatchdogDigestAction;
 use App\Domain\Signal\Actions\TriageSentryIssueAction;
 use App\Domain\Signal\Enums\SentryTriageOutcome;
 use App\Domain\Signal\Enums\SignalStatus;
@@ -20,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Batch processor for one Sentry project: triages every Sentry-sourced Signal
- * ingested since the previous run, then sends the digest. Dispatched 2x/day by
+ * ingested since the previous run and records the run; sentry:watchdog-digest sends the digest. Dispatched 2x/day by
  * the sentry:watchdog command.
  */
 class RunSentryWatchdogJob implements ShouldQueue
@@ -48,7 +47,7 @@ class RunSentryWatchdogJob implements ShouldQueue
         return [(new WithoutOverlapping($this->integrationId))->expireAfter(900)->dontRelease()];
     }
 
-    public function handle(TriageSentryIssueAction $triage, SendSentryWatchdogDigestAction $digest): void
+    public function handle(TriageSentryIssueAction $triage): void
     {
         $integration = Integration::withoutGlobalScopes()->find($this->integrationId);
         if ($integration === null) {
@@ -189,8 +188,8 @@ class RunSentryWatchdogJob implements ShouldQueue
             'digest_summary' => mb_substr($this->composeDigestSummary($criticalLines, $lines), 0, 3000),
         ]);
 
-        $run->refresh();
-        $digest->execute($run);
+        // No message here: one job runs per Sentry project, and one message per project twice a day was
+        // 40 Telegram messages a day for 20 projects. sentry:watchdog-digest sends one per team.
     }
 
     /**
