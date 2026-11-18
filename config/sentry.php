@@ -1,6 +1,7 @@
 <?php
 
 use App\Infrastructure\Sentry\BeforeSendFilter;
+use App\Infrastructure\Sentry\SentryScrubber;
 
 /**
  * Sentry Laravel SDK configuration file.
@@ -47,7 +48,7 @@ return [
     'logs_channel_level' => env('SENTRY_LOG_LEVEL', env('SENTRY_LOGS_LEVEL', env('LOG_LEVEL', 'debug'))),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#send_default_pii
-    'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
+    'send_default_pii' => false,
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
     // 'ignore_exceptions' => [],
@@ -62,7 +63,13 @@ return [
      *
      * Implementation in App\Infrastructure\Sentry\BeforeSendFilter::filter.
      */
+    // Never attach request bodies: the SDK's legacy collector sends up to 10 KB whatever send_default_pii says.
+    'max_request_body_size' => 'never',
+
+    // Noise filter first, then the allowlist scrub (method + URL path, no query/headers/cookies/body/breadcrumbs/extra,
+    // no frame vars). Transactions are kept (tracing is on) but get the same request scrub.
     'before_send' => [BeforeSendFilter::class, 'filter'],
+    'before_send_transaction' => [SentryScrubber::class, 'beforeSendTransaction'],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions
     'ignore_transactions' => [
@@ -79,7 +86,7 @@ return [
         'cache' => env('SENTRY_BREADCRUMBS_CACHE_ENABLED', true),
 
         // Capture Livewire components like routes as breadcrumbs
-        'livewire' => env('SENTRY_BREADCRUMBS_LIVEWIRE_ENABLED', true),
+        'livewire' => env('SENTRY_BREADCRUMBS_LIVEWIRE_ENABLED', false),
 
         // Capture SQL queries as breadcrumbs
         'sql_queries' => env('SENTRY_BREADCRUMBS_SQL_QUERIES_ENABLED', true),
@@ -94,7 +101,7 @@ return [
         'command_info' => env('SENTRY_BREADCRUMBS_COMMAND_JOBS_ENABLED', true),
 
         // Capture HTTP client request information as breadcrumbs
-        'http_client_requests' => env('SENTRY_BREADCRUMBS_HTTP_CLIENT_REQUESTS_ENABLED', true),
+        'http_client_requests' => env('SENTRY_BREADCRUMBS_HTTP_CLIENT_REQUESTS_ENABLED', false),
 
         // Capture send notifications as breadcrumbs
         'notifications' => env('SENTRY_BREADCRUMBS_NOTIFICATIONS_ENABLED', true),
@@ -127,7 +134,7 @@ return [
         'livewire' => env('SENTRY_TRACE_LIVEWIRE_ENABLED', true),
 
         // Capture HTTP client requests as spans
-        'http_client_requests' => env('SENTRY_TRACE_HTTP_CLIENT_REQUESTS_ENABLED', true),
+        'http_client_requests' => env('SENTRY_TRACE_HTTP_CLIENT_REQUESTS_ENABLED', false),
 
         // Capture Laravel cache events (hits, writes etc.) as spans
         'cache' => env('SENTRY_TRACE_CACHE_ENABLED', true),
