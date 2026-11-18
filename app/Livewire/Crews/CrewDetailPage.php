@@ -310,7 +310,8 @@ class CrewDetailPage extends Component
 
             $branchCosts[$key] = ($branchCosts[$key] ?? 0) + (int) $task->cost_credits;
 
-            $isRunning = $task->status === CrewTaskStatus::Running;
+            // Larastan types the column as string, but the model casts it to the enum.
+            $isRunning = $task->getAttribute('status') === CrewTaskStatus::Running;
             if ($isRunning || ! ($branchRunning[$key] ?? false)) {
                 $branchTasks[$key] = (string) $task->title;
                 $branchRunning[$key] = $isRunning;
@@ -341,6 +342,8 @@ class CrewDetailPage extends Component
         $members = $this->crew->members()->with('agent')->orderBy('sort_order')->get();
         $executions = $this->crew->executions()->with(['taskExecutions', 'artifacts'])->latest()->limit(20)->get();
         $activeAgentIds = $this->resolveActiveAgentIds();
+        // Crew::executions() carries no generic annotation, so narrow explicitly for static analysis.
+        $latestExecution = $executions->first();
 
         return view('livewire.crews.crew-detail-page', [
             'agents' => $agents,
@@ -349,7 +352,7 @@ class CrewDetailPage extends Component
             'processTypes' => CrewProcessType::cases(),
             'activeAgentIds' => $activeAgentIds,
             'hasActiveExecution' => count($activeAgentIds) > 0,
-            'orgChartSummary' => $this->resolveOrgChartSummary($executions->first()),
+            'orgChartSummary' => $this->resolveOrgChartSummary($latestExecution instanceof CrewExecution ? $latestExecution : null),
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }
