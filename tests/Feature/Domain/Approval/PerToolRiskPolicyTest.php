@@ -136,6 +136,38 @@ class PerToolRiskPolicyTest extends TestCase
         $this->assertSame(1, ActionProposal::count());
     }
 
+    public function test_tools_only_policy_leaves_tiers_on_auto(): void
+    {
+        $this->setPolicy(['tools' => ['list_agents' => 'ask']]);
+
+        $tools = $this->wrapTools([
+            $this->fakeTool('list_agents', 'list-ok'),
+            $this->fakeTool('delete_agent', 'delete-ok'),
+        ]);
+
+        $this->assertStringContainsString('proposed for human review', $this->invokeFirst($tools, 'list_agents'));
+        $this->assertSame('delete-ok', $this->invokeFirst($tools, 'delete_agent'));
+        $this->assertSame(1, ActionProposal::count());
+    }
+
+    public function test_tools_only_policy_keeps_legacy_slow_mode(): void
+    {
+        $this->team->update(['settings' => [
+            'slow_mode_enabled' => true,
+            'action_proposal_policy' => ['tools' => ['list_agents' => 'reject']],
+        ]]);
+        $this->user->refresh();
+
+        $tools = $this->wrapTools([
+            $this->fakeTool('list_agents', 'list-ok'),
+            $this->fakeTool('delete_agent', 'delete-ok'),
+        ]);
+
+        $this->assertStringContainsString('per-tool rule', $this->invokeFirst($tools, 'list_agents'));
+        $this->assertStringContainsString('proposed for human review', $this->invokeFirst($tools, 'delete_agent'));
+        $this->assertSame('high', ActionProposal::first()->risk_level);
+    }
+
     /**
      * @param  array<string, mixed>  $policy
      */

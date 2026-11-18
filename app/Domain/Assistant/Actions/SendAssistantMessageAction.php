@@ -690,14 +690,13 @@ class SendAssistantMessageAction
     }
 
     /**
-     * When the team has slow_mode enabled, intercept destructive-tier tool calls
-     * and create an ActionProposal instead of executing. The agent receives a
+     * Apply the team's approval policy to each tool: 'ask' creates an
+     * ActionProposal instead of executing, 'reject' refuses the call, 'auto'
+     * passes the tool through untouched. On 'ask' the agent receives a
      * placeholder string so it can continue the conversation while the human
      * reviews the proposal in the Approval Inbox.
      *
-     * Tier classification reuses AssistantToolRegistry::toolTier(). Tools that
-     * are not in the destructive tier pass through untouched. When slow_mode is
-     * off this method is a no-op.
+     * Tier classification reuses AssistantToolRegistry::toolTier().
      *
      * Precedence per tool: a per-tool rule in
      * `settings.action_proposal_policy.tools` wins (including an explicit
@@ -783,9 +782,11 @@ class SendAssistantMessageAction
     }
 
     /**
-     * Resolve the per-tier action policy for a team. Reads
-     * `settings.action_proposal_policy` if present; falls back to the
-     * legacy `slow_mode_enabled` boolean (true → high='ask').
+     * Resolve the per-tier action policy for a team. Reads the low/medium/high
+     * keys of `settings.action_proposal_policy` when at least one is set
+     * (missing tiers default to 'auto'); otherwise falls back to the legacy
+     * `slow_mode_enabled` boolean (true → high='ask'), so a policy holding
+     * only per-tool rules does not switch slow mode off.
      *
      * Per-tool rules (`action_proposal_policy.tools`) are resolved separately
      * by resolveToolPolicyOverrides() and take precedence over these tiers.
@@ -801,14 +802,16 @@ class SendAssistantMessageAction
         }
 
         $explicit = $team->settings['action_proposal_policy'] ?? null;
-        if (is_array($explicit)) {
+        $tiers = is_array($explicit) ? array_intersect_key($explicit, $defaults) : [];
+        if ($tiers !== []) {
             $allowed = ['auto', 'ask', 'reject'];
 
-            return [
-                'low' => in_array($explicit['low'] ?? 'auto', $allowed, true) ? $explicit['low'] : 'auto',
-                'medium' => in_array($explicit['medium'] ?? 'auto', $allowed, true) ? $explicit['medium'] : 'auto',
-                'high' => in_array($explicit['high'] ?? 'auto', $allowed, true) ? $explicit['high'] : 'auto',
-            ];
+            foreach ($defaults as $tier => $fallback) {
+                $value = $tiers[$tier] ?? $fallback;
+                $defaults[$tier] = in_array($value, $allowed, true) ? $value : $fallback;
+            }
+
+            return $defaults;
         }
 
         // Legacy fallback: slow_mode_enabled=true → high='ask'.
