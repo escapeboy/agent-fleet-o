@@ -194,15 +194,21 @@ class CrewDetailOrgChartTest extends TestCase
         return $execution;
     }
 
-    private function makeTask(CrewExecution $execution, string $agentId, string $title, int $cost, int $sortOrder): CrewTaskExecution
-    {
+    private function makeTask(
+        CrewExecution $execution,
+        string $agentId,
+        string $title,
+        int $cost,
+        int $sortOrder,
+        CrewTaskStatus $status = CrewTaskStatus::Validated,
+    ): CrewTaskExecution {
         return CrewTaskExecution::create([
             'team_id' => $this->team->id,
             'crew_execution_id' => $execution->id,
             'agent_id' => $agentId,
             'title' => $title,
             'description' => 'Test',
-            'status' => CrewTaskStatus::Validated,
+            'status' => $status,
             'cost_credits' => $cost,
             'sort_order' => $sortOrder,
         ]);
@@ -271,6 +277,34 @@ class CrewDetailOrgChartTest extends TestCase
         Livewire::test(CrewDetailPage::class, ['crew' => $crew])
             ->assertSeeHtml('data-test="org-chart-total-cost">Run total: 100 credits')
             ->assertSeeHtml('data-test="org-chart-coordination-cost">Coordination + QA: 58 credits');
+    }
+
+    public function test_coordinator_self_tasks_stay_in_coordination_cost(): void
+    {
+        $crew = $this->makeCrew(workerCount: 1);
+        $workerId = (string) $crew->workerMembers()->value('agent_id');
+        $execution = $this->makeExecution($crew, 'Launch pricing page', 100, 5);
+
+        $this->makeTask($execution, $workerId, 'Draft copy', 30, 0);
+        $this->makeTask($execution, (string) $crew->coordinator_agent_id, 'Self task', 25, 1);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertSeeHtml('data-test="org-chart-worker-cost">30 credits')
+            ->assertSeeHtml('data-test="org-chart-coordination-cost">Coordination + QA: 70 credits');
+    }
+
+    public function test_running_task_wins_over_later_task_for_worker_branch(): void
+    {
+        $crew = $this->makeCrew(workerCount: 1);
+        $workerId = (string) $crew->workerMembers()->value('agent_id');
+        $execution = $this->makeExecution($crew, 'Launch pricing page', 10, 5);
+
+        $this->makeTask($execution, $workerId, 'Currently running', 5, 0, CrewTaskStatus::Running);
+        $this->makeTask($execution, $workerId, 'Queued later', 0, 1, CrewTaskStatus::Pending);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertSeeHtml('data-test="org-chart-worker-task">Currently running')
+            ->assertDontSeeHtml('data-test="org-chart-worker-task">Queued later');
     }
 
     public function test_it_shows_no_goal_block_when_crew_has_no_executions(): void

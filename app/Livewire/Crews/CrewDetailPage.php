@@ -13,6 +13,7 @@ use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -276,13 +277,14 @@ class CrewDetailPage extends Component
      * Summarise the crew's latest execution for the org chart: goal, run total,
      * per-branch spend and current task. Read-only.
      *
+     * Reuses the already-loaded latest execution (with its sort_order-ordered
+     * taskExecutions) instead of re-querying on every render/poll.
+     *
+     * @param  Collection<int, CrewMember>  $members
      * @return array{goal: ?string, totalCost: ?int, coordinationCost: ?int, branchCosts: array<string, int>, branchTasks: array<string, string>}
      */
-    private function resolveOrgChartSummary(): array
+    private function resolveOrgChartSummary(?CrewExecution $latest, Collection $members): array
     {
-        /** @var CrewExecution|null $latest */
-        $latest = $this->crew->executions()->latest()->first();
-
         if (! $latest) {
             return [
                 'goal' => null,
@@ -293,7 +295,7 @@ class CrewDetailPage extends Component
             ];
         }
 
-        $tasks = $latest->taskExecutions()->orderBy('sort_order')->get();
+        $tasks = $latest->taskExecutions;
 
         $branchCosts = [];
         $branchTasks = [];
@@ -319,10 +321,20 @@ class CrewDetailPage extends Component
 
         $totalCost = (int) $latest->total_cost_credits;
 
+        // Only spend shown on a worker tile is subtracted, so coordinator "self" tasks,
+        // QA work and tasks of agents no longer on the crew stay in "Coordination + QA"
+        // and the tiles add up to the run total.
+        $workerKeys = $members
+            ->filter(fn (CrewMember $m) => $m->agent_id !== $this->crew->coordinator_agent_id
+                && $m->agent_id !== $this->crew->qa_agent_id)
+            ->map(fn (CrewMember $m) => (string) ($m->agent_id ?? $m->external_agent_id))
+            ->all();
+        $workerSpend = array_sum(array_intersect_key($branchCosts, array_flip($workerKeys)));
+
         return [
             'goal' => (string) $latest->goal,
             'totalCost' => $totalCost,
-            'coordinationCost' => max(0, $totalCost - array_sum($branchCosts)),
+            'coordinationCost' => max(0, $totalCost - $workerSpend),
             'branchCosts' => $branchCosts,
             'branchTasks' => $branchTasks,
         ];
@@ -342,7 +354,7 @@ class CrewDetailPage extends Component
             'processTypes' => CrewProcessType::cases(),
             'activeAgentIds' => $activeAgentIds,
             'hasActiveExecution' => count($activeAgentIds) > 0,
-            'orgChartSummary' => $this->resolveOrgChartSummary(),
+            'orgChartSummary' => $this->resolveOrgChartSummary($executions->first(), $members),
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }
