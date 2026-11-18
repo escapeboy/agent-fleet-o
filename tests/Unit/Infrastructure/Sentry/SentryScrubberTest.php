@@ -8,6 +8,7 @@ use RuntimeException;
 use Sentry\Breadcrumb;
 use Sentry\ClientBuilder;
 use Sentry\Event;
+use Sentry\EventHint;
 use Sentry\Transport\Result;
 use Sentry\Transport\ResultStatus;
 use Sentry\Transport\TransportInterface;
@@ -125,7 +126,7 @@ class SentryScrubberTest extends TestCase
 
     public function test_noise_filter_still_drops_and_kept_events_are_scrubbed(): void
     {
-        $dropped = BeforeSendFilter::filter(Event::createEvent(), \Sentry\EventHint::fromArray(['exception' => new RuntimeException('Webhook delivery failed')]));
+        $dropped = BeforeSendFilter::filter(Event::createEvent(), EventHint::fromArray(['exception' => new RuntimeException('Webhook delivery failed')]));
         $this->assertNull($dropped);
 
         $kept = BeforeSendFilter::filter($this->leakyEvent(), null);
