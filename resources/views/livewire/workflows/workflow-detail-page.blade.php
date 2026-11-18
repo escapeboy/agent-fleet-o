@@ -284,6 +284,70 @@
                     </div>
                 </dl>
             </div>
+
+            {{-- Expose as MCP tool (workflow gateway) --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-4">
+                <div class="mb-3 flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-gray-900">Expose as MCP tool</h3>
+                    @if($workflow->mcp_exposed)
+                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Enabled</span>
+                    @else
+                        <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">Disabled</span>
+                    @endif
+                </div>
+
+                @if($workflow->mcp_exposed && $workflow->mcp_tool_name)
+                    <dl class="mb-3 space-y-2 text-sm">
+                        <div class="flex justify-between gap-2">
+                            <dt class="text-gray-500">Tool name</dt>
+                            <dd class="font-mono text-gray-700">{{ $workflow->mcp_tool_name }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <dt class="text-gray-500">Endpoint</dt>
+                            <dd class="break-all font-mono text-gray-700">{{ url('/mcp/full') }}</dd>
+                        </div>
+                    </dl>
+                @endif
+
+                <form wire:submit="enableMcpGateway" class="space-y-3">
+                    <div>
+                        <label for="mcpToolName" class="block text-xs font-medium text-gray-700">Tool name</label>
+                        <input id="mcpToolName" type="text" wire:model="mcpToolName"
+                               class="mt-1 block w-full rounded-lg border-gray-300 font-mono text-sm focus:border-primary-500 focus:ring-primary-500"
+                               placeholder="weekly_report">
+                        @error('mcpToolName')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="mcpExecutionMode" class="block text-xs font-medium text-gray-700">Mode</label>
+                        <select id="mcpExecutionMode" wire:model="mcpExecutionMode"
+                                class="mt-1 block w-full rounded-lg border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                            <option value="async">Async (returns a run ID)</option>
+                            <option value="sync">Sync (waits for the result)</option>
+                        </select>
+                        @error('mcpExecutionMode')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit"
+                                class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+                            {{ $workflow->mcp_exposed ? 'Update' : 'Enable' }}
+                        </button>
+                        @if($workflow->mcp_exposed)
+                            <button type="button" wire:click="disableMcpGateway"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Disable
+                            </button>
+                        @endif
+                    </div>
+                </form>
+
+                <p class="mt-3 text-xs text-gray-500">
+                    The tool appears on the full MCP endpoint and the local stdio server, not on the compact <code>/mcp</code> endpoint. Connected clients need to reconnect to see it.
+                </p>
+            </div>
         </div>
     </div>
 

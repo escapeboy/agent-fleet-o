@@ -2,7 +2,7 @@
 
 namespace App\Mcp\Servers;
 
-use App\Domain\Workflow\Models\Workflow;
+use App\Domain\Workflow\Actions\ListMcpGatewayWorkflowsAction;
 use App\Mcp\Concerns\BootstrapsMcpAuth;
 use App\Mcp\Concerns\SupportsDualProtocolFormat;
 use App\Mcp\Resources\AgentMonitorResource;
@@ -823,11 +823,11 @@ class AgentFleetServer extends Server
 
         // Dynamically register each MCP-exposed workflow as a named gateway tool.
         // ServerContext supports both class-string and Tool instances.
+        // Only the calling team's workflows are registered, so clients never see
+        // other teams' workflow names or descriptions.
         try {
-            $exposed = Workflow::withoutGlobalScopes()
-                ->where('mcp_exposed', true)
-                ->whereNotNull('mcp_tool_name')
-                ->get();
+            $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
+            $exposed = app(ListMcpGatewayWorkflowsAction::class)->execute($teamId ? (string) $teamId : null);
 
             foreach ($exposed as $workflow) {
                 $this->tools[] = app(WorkflowGatewayTool::class, ['workflow' => $workflow]);
