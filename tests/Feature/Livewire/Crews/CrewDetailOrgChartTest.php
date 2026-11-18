@@ -217,11 +217,37 @@ class CrewDetailOrgChartTest extends TestCase
             ->assertSeeHtml('data-test="org-chart-worker-task"')
             ->assertSee('Polish copy')
             ->assertSeeHtmlInOrder([
-                'data-test="org-chart-worker-cost"',
-                '42 credits',
-                'data-test="org-chart-worker-cost"',
-                '0 credits',
+                'data-test="org-chart-worker-cost">42 credits<',
+                'data-test="org-chart-worker-cost">0 credits<',
             ]);
+    }
+
+    public function test_it_prefers_running_task_over_later_pending_task_for_worker_branch(): void
+    {
+        $crew = $this->makeCrew(workerCount: 1);
+        $workerId = (string) $crew->workerMembers()->value('agent_id');
+        $execution = $this->makeExecution($crew, 'Launch pricing page', 10, '2026-02-01 10:00:00');
+        $this->makeTask($execution, $workerId, 'Running draft', 3, 0)
+            ->update(['status' => CrewTaskStatus::Running]);
+        $this->makeTask($execution, $workerId, 'Queued polish', 0, 1)
+            ->update(['status' => CrewTaskStatus::Pending]);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertSee('Running draft')
+            ->assertDontSee('Queued polish');
+    }
+
+    public function test_coordinator_self_assigned_task_counts_as_coordination_cost(): void
+    {
+        $crew = $this->makeCrew(workerCount: 1);
+        $workerId = (string) $crew->workerMembers()->value('agent_id');
+        $execution = $this->makeExecution($crew, 'Launch pricing page', 100, '2026-02-01 10:00:00');
+        $this->makeTask($execution, (string) $crew->coordinator_agent_id, 'Coordinator research', 25, 0);
+        $this->makeTask($execution, $workerId, 'Draft copy', 30, 1);
+
+        Livewire::test(CrewDetailPage::class, ['crew' => $crew])
+            ->assertSeeHtml('data-test="org-chart-worker-cost">30 credits<')
+            ->assertSeeHtml('Coordination + QA: 70 credits');
     }
 
     public function test_it_ignores_tasks_from_older_executions_in_branch_spend(): void
@@ -234,7 +260,7 @@ class CrewDetailOrgChartTest extends TestCase
         $this->makeTask($latest, $workerId, 'New task', 7, 0);
 
         Livewire::test(CrewDetailPage::class, ['crew' => $crew])
-            ->assertSeeHtmlInOrder(['data-test="org-chart-worker-cost"', '7 credits'])
+            ->assertSeeHtml('data-test="org-chart-worker-cost">7 credits<')
             ->assertDontSee('500 credits')
             ->assertDontSee('507 credits')
             ->assertDontSee('Old task');

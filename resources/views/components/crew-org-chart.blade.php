@@ -81,10 +81,11 @@
                     <div class="text-sm text-gray-400">External agent</div>
                 @endif
                 @if($hasRun)
-                    @if(isset($branchTasks[$branchKey($worker)]))
-                        <div class="mt-1 text-xs text-gray-700" data-test="org-chart-worker-task">{{ Str::limit($branchTasks[$branchKey($worker)], 60) }}</div>
+                    @php $workerKey = $branchKey($worker); @endphp
+                    @if(isset($branchTasks[$workerKey]))
+                        <div class="mt-1 text-xs text-gray-700" data-test="org-chart-worker-task">{{ Str::limit($branchTasks[$workerKey], 60) }}</div>
                     @endif
-                    <div class="text-xs text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$branchKey($worker)] ?? 0 }} credits</div>
+                    <div class="text-xs text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$workerKey] ?? 0 }} credits</div>
                 @endif
             </div>
         @endforeach
@@ -189,11 +190,12 @@
                                 <div class="mt-0.5 text-sm text-gray-400">External</div>
                             @endif
                             @if($hasRun)
-                                @if(isset($branchTasks[$branchKey($worker)]))
+                                @php $workerKey = $branchKey($worker); @endphp
+                                @if(isset($branchTasks[$workerKey]))
                                     <div class="mt-1 max-w-full truncate text-[11px] text-gray-700" data-test="org-chart-worker-task"
-                                         title="{{ $branchTasks[$branchKey($worker)] }}">{{ Str::limit($branchTasks[$branchKey($worker)], 60) }}</div>
+                                         title="{{ $branchTasks[$workerKey] }}">{{ Str::limit($branchTasks[$workerKey], 60) }}</div>
                                 @endif
-                                <div class="max-w-full truncate text-[11px] text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$branchKey($worker)] ?? 0 }} credits</div>
+                                <div class="max-w-full truncate text-[11px] text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$workerKey] ?? 0 }} credits</div>
                             @endif
                         </div>
                     </div>

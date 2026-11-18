@@ -279,11 +279,9 @@ class CrewDetailPage extends Component
      *
      * @return array{goal: ?string, totalCost: ?int, coordinationCost: ?int, branchCosts: array<string, int>, branchTasks: array<string, string>}
      */
-    private function resolveOrgChartSummary(): array
+    private function resolveOrgChartSummary(?CrewExecution $latest): array
     {
-        $latest = $this->crew->executions()->latest()->first();
-
-        if (! $latest instanceof CrewExecution) {
+        if ($latest === null) {
             return [
                 'goal' => null,
                 'totalCost' => null,
@@ -297,13 +295,13 @@ class CrewDetailPage extends Component
         $branchCosts = [];
         /** @var array<string, string> $branchTasks */
         $branchTasks = [];
-        /** @var array<string, int> $branchTaskOrder */
-        $branchTaskOrder = [];
         /** @var array<string, bool> $branchRunning */
         $branchRunning = [];
 
+        // The relation is ordered by sort_order, so a later task always supersedes an
+        // earlier one — unless the earlier one is running and the later one is not.
         /** @var CrewTaskExecution $task */
-        foreach ($latest->taskExecutions()->get() as $task) {
+        foreach ($latest->taskExecutions as $task) {
             $key = $task->agent_id ?? $task->external_agent_id;
             if ($key === null) {
                 continue;
@@ -312,28 +310,26 @@ class CrewDetailPage extends Component
 
             $branchCosts[$key] = ($branchCosts[$key] ?? 0) + (int) $task->cost_credits;
 
-            // Prefer the running task; otherwise the one with the highest sort_order.
-            $isRunning = $task->getRawOriginal('status') === CrewTaskStatus::Running->value;
-            $order = (int) $task->sort_order;
-            $currentRunning = $branchRunning[$key] ?? false;
-
-            $replace = ! isset($branchTaskOrder[$key])
-                || ($isRunning && ! $currentRunning)
-                || ($isRunning === $currentRunning && $order >= $branchTaskOrder[$key]);
-
-            if ($replace) {
+            $isRunning = $task->status === CrewTaskStatus::Running;
+            if ($isRunning || ! ($branchRunning[$key] ?? false)) {
                 $branchTasks[$key] = (string) $task->title;
-                $branchTaskOrder[$key] = $order;
                 $branchRunning[$key] = $isRunning;
             }
         }
 
         $totalCost = (int) $latest->total_cost_credits;
 
+        // Tasks the coordinator assigned to itself (or to QA) are coordination spend,
+        // not a worker branch — keep them in the remainder shown on the coordinator.
+        $workerSpend = array_sum(array_diff_key(
+            $branchCosts,
+            array_flip(array_filter([(string) $this->crew->coordinator_agent_id, (string) $this->crew->qa_agent_id])),
+        ));
+
         return [
             'goal' => (string) $latest->goal !== '' ? (string) $latest->goal : null,
             'totalCost' => $totalCost,
-            'coordinationCost' => max(0, $totalCost - array_sum($branchCosts)),
+            'coordinationCost' => max(0, $totalCost - $workerSpend),
             'branchCosts' => $branchCosts,
             'branchTasks' => $branchTasks,
         ];
@@ -353,7 +349,7 @@ class CrewDetailPage extends Component
             'processTypes' => CrewProcessType::cases(),
             'activeAgentIds' => $activeAgentIds,
             'hasActiveExecution' => count($activeAgentIds) > 0,
-            'orgChartSummary' => $this->resolveOrgChartSummary(),
+            'orgChartSummary' => $this->resolveOrgChartSummary($executions->first()),
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }
