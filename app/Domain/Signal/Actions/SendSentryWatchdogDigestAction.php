@@ -33,7 +33,7 @@ class SendSentryWatchdogDigestAction
         $sent = false;
         if ($active->isNotEmpty()) {
             $sections = $active->sortByDesc('critical_count')->map(function (SentryWatchdogRun $run) {
-                $section = '<b>'.e($run->integration?->name ?? $run->integration_id).'</b> — '
+                $section = '<b>'.e($run->integration->name ?? $run->integration_id).'</b> — '
                     .'Triaged: '.$run->signals_triaged
                     .' · PRs opened: '.$run->prs_opened
                     .' · Investigate-only: '.$run->investigate_only
