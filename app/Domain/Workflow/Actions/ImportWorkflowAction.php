@@ -10,6 +10,7 @@ use App\Domain\Workflow\Enums\WorkflowStatus;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Services\FlowiseFlowConverter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -23,8 +24,10 @@ class ImportWorkflowAction
      *
      * Supports both v1 (flat) and v2 (envelope) formats.
      * Auto-detects YAML if $content string is provided instead of $data array.
+     * Flowise exports (Agentflow V2 or legacy chatflow JSON) are auto-detected and
+     * converted; anything that could not be converted is listed in conversion_warnings.
      *
-     * @return array{workflow: Workflow, unresolved_references: array, checksum_valid: bool|null}
+     * @return array{workflow: Workflow, unresolved_references: array, checksum_valid: bool|null, conversion_warnings: list<string>}
      *
      * @throws \InvalidArgumentException
      */
@@ -37,6 +40,14 @@ class ImportWorkflowAction
         // Parse string content (JSON or YAML)
         if (is_string($data)) {
             $data = $this->parseContent($data);
+        }
+
+        // Flowise export (Agentflow V2 or legacy chatflow) — convert to a v1 envelope.
+        $conversionWarnings = [];
+        if (FlowiseFlowConverter::detects($data)) {
+            $converted = (new FlowiseFlowConverter)->convert($data, $nameOverride ?? 'Imported Flowise flow');
+            $data = $converted['envelope'];
+            $conversionWarnings = $converted['warnings'];
         }
 
         // Detect v2 envelope vs v1 flat format
@@ -129,6 +140,7 @@ class ImportWorkflowAction
             'workflow' => $workflow,
             'unresolved_references' => $resolvedRefs['unresolved'],
             'checksum_valid' => $checksumValid,
+            'conversion_warnings' => $conversionWarnings,
         ];
     }
 

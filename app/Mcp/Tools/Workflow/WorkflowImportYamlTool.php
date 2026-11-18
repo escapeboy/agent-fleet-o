@@ -20,7 +20,7 @@ class WorkflowImportYamlTool extends Tool
 {
     protected string $name = 'workflow_import_yaml';
 
-    protected string $description = 'Import a workflow from a YAML or JSON envelope (as produced by workflow_export_yaml). Returns the new workflow id, checksum-validity flag, and any unresolved agent/skill/crew references.';
+    protected string $description = 'Import a workflow from a YAML or JSON envelope (as produced by workflow_export_yaml). Flowise chatflow/agentflow JSON exports are also accepted and converted into a draft workflow. Returns the new workflow id, checksum-validity flag, any unresolved agent/skill/crew references, and conversion_warnings for Flowise parts that need manual follow-up.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -61,6 +61,7 @@ class WorkflowImportYamlTool extends Tool
             'workflow_id' => $result['workflow']->id,
             'unresolved_references' => $result['unresolved_references'],
             'checksum_valid' => $result['checksum_valid'],
+            'conversion_warnings' => $result['conversion_warnings'],
         ]));
     }
 }

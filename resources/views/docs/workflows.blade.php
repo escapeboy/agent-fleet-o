@@ -365,6 +365,89 @@
         node, re-run the evaluation, and compare deltas side-by-side.
     </p>
 
+    {{-- Flowise migration --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Migrating from Flowise</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        You can import a Flowise flow as a <strong>draft</strong> FleetQ workflow. In Flowise, open the chatflow or
+        agentflow, use <strong>Export</strong> from the settings menu, and save the JSON file. Both Agentflow V2
+        exports and legacy chatflow exports are detected automatically. Import the file in one of three ways:
+    </p>
+
+    <x-docs.code lang="bash">
+# REST API: multipart upload with the export in the "file" field
+POST /api/v1/workflows/import
+
+# Artisan
+php artisan workflow:import flow.json
+
+# MCP tool: workflow_import_yaml
+{ "yaml_content": "FLOW_JSON_CONTENTS", "name_override": "Support bot" }</x-docs.code>
+
+    <p class="mt-2 text-sm text-gray-600">
+        Every import returns <code class="rounded bg-gray-100 px-1 text-xs">conversion_warnings</code>: a list of the
+        parts that could not be converted and need manual follow-up.
+    </p>
+
+    <div class="mt-4 overflow-hidden rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="py-3 pl-4 pr-6 text-left font-semibold text-gray-700">Flowise node</th>
+                    <th class="py-3 pr-4 text-left font-semibold text-gray-700">FleetQ node</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Start</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">start</code> (added automatically if missing; an <code class="rounded bg-gray-100 px-1">end</code> node is always added)</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">LLM, Agent</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">llm</code> with system prompt, prompt template and model (OpenAI, Anthropic and Google models are mapped)</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">HTTP</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">http_request</code></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Retriever</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">knowledge_retrieval</code></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Human Input</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">human_task</code></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Direct Reply</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">template_transform</code></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Condition, Condition Agent</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">conditional</code> (one edge per Flowise output; the last one is the default)</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Sticky Note</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">annotation</code></td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Legacy chatflow</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600"><code class="rounded bg-gray-100 px-1">start → llm → end</code>, using the chat model and prompt template</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 pl-4 pr-6 font-mono text-xs font-medium text-gray-900">Anything else</td>
+                    <td class="py-2.5 pr-4 text-xs text-gray-600">A placeholder <code class="rounded bg-gray-100 px-1">template_transform</code> labelled "TODO (Flowise: …)" that keeps the original inputs</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <x-docs.callout type="info">
+        After importing, review the draft before activating it: re-enter <strong>conditions</strong> on the outgoing
+        edges of condition nodes, re-attach <strong>tools</strong> to agents, choose a <strong>knowledge base</strong>
+        for retriever nodes, check Flowise <strong>variable placeholders</strong> (they are copied unchanged), and set
+        up <strong>credentials</strong> for models and HTTP calls. Memory, vector stores and document loaders are not imported.
+    </x-docs.callout>
+
     {{-- Cost estimation --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Estimating cost before you run</h2>
     <p class="mt-2 text-sm text-gray-600">
