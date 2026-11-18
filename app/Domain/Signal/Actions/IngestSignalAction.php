@@ -55,6 +55,7 @@ class IngestSignalAction
         $tags = PayloadSanitizer::clean($tags);
         $sourceIdentifier = PayloadSanitizer::cleanString($sourceIdentifier);
         $sourceNativeId = PayloadSanitizer::cleanString($sourceNativeId);
+        $senderHints = PayloadSanitizer::clean($senderHints);
 
         // ConnectorBinding gate: reject or hold signals from unapproved senders on gated channels.
         if (in_array($sourceType, self::GATED_CHANNELS, true) && $teamId !== null && $sourceIdentifier !== '') {

@@ -4,6 +4,7 @@ namespace Tests\Feature\Domain\Signal;
 
 use App\Domain\Shared\Models\Team;
 use App\Domain\Signal\Actions\IngestSignalAction;
+use App\Domain\Signal\Models\ConnectorBinding;
 use App\Domain\Signal\Models\Signal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -96,6 +97,29 @@ class IngestSignalNullByteTest extends TestCase
         $this->assertNotNull($second);
         $this->assertSame($first->id, $second->id);
         $this->assertSame(1, Signal::where('team_id', $team->id)->count());
+    }
+
+    public function test_sender_hints_with_nul_are_cleaned_before_binding_is_stored(): void
+    {
+        $team = Team::factory()->create();
+
+        $signal = app(IngestSignalAction::class)->execute(
+            sourceType: 'telegram',
+            sourceIdentifier: '12345',
+            payload: ['text' => 'hi'],
+            teamId: $team->id,
+            senderHints: ['name' => "Jo\0hn", 'email' => "jo\0hn@example.com"],
+        );
+
+        $this->assertNull($signal);
+
+        $binding = ConnectorBinding::withoutGlobalScopes()
+            ->where('team_id', $team->id)
+            ->where('external_id', '12345')
+            ->firstOrFail();
+
+        $this->assertSame('John', $binding->external_name);
+        $this->assertSame('john@example.com', $binding->metadata['email']);
     }
 
     public function test_invalid_utf8_payloads_do_not_collide(): void
