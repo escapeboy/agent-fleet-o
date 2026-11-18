@@ -11,7 +11,9 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
+use App\Domain\Crew\Models\CrewTaskExecution;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
@@ -271,6 +273,72 @@ class CrewDetailPage extends Component
             ->all();
     }
 
+    /**
+     * Summarise the crew's latest execution for the org chart: goal, run total,
+     * per-branch (worker) task + spend, and the coordination+QA remainder.
+     *
+     * @return array{goal: ?string, totalCost: ?int, coordinationCost: ?int, branchCosts: array<string, int>, branchTasks: array<string, string>}
+     */
+    private function resolveOrgChartSummary(): array
+    {
+        $latest = $this->crew->executions()->latest()->first();
+
+        if (! $latest instanceof CrewExecution) {
+            return [
+                'goal' => null,
+                'totalCost' => null,
+                'coordinationCost' => null,
+                'branchCosts' => [],
+                'branchTasks' => [],
+            ];
+        }
+
+        /** @var array<string, int> $branchCosts */
+        $branchCosts = [];
+        /** @var array<string, string> $branchTasks */
+        $branchTasks = [];
+        /** @var array<string, int> $branchTaskOrder */
+        $branchTaskOrder = [];
+        /** @var array<string, bool> $branchRunning */
+        $branchRunning = [];
+
+        /** @var CrewTaskExecution $task */
+        foreach ($latest->taskExecutions()->get() as $task) {
+            $key = $task->agent_id ?? $task->external_agent_id;
+            if ($key === null) {
+                continue;
+            }
+            $key = (string) $key;
+
+            $branchCosts[$key] = ($branchCosts[$key] ?? 0) + (int) $task->cost_credits;
+
+            // Prefer the running task; otherwise the one with the highest sort_order.
+            $isRunning = $task->getRawOriginal('status') === CrewTaskStatus::Running->value;
+            $order = (int) $task->sort_order;
+            $currentRunning = $branchRunning[$key] ?? false;
+
+            $replace = ! isset($branchTaskOrder[$key])
+                || ($isRunning && ! $currentRunning)
+                || ($isRunning === $currentRunning && $order >= $branchTaskOrder[$key]);
+
+            if ($replace) {
+                $branchTasks[$key] = (string) $task->title;
+                $branchTaskOrder[$key] = $order;
+                $branchRunning[$key] = $isRunning;
+            }
+        }
+
+        $totalCost = (int) $latest->total_cost_credits;
+
+        return [
+            'goal' => (string) $latest->goal !== '' ? (string) $latest->goal : null,
+            'totalCost' => $totalCost,
+            'coordinationCost' => max(0, $totalCost - array_sum($branchCosts)),
+            'branchCosts' => $branchCosts,
+            'branchTasks' => $branchTasks,
+        ];
+    }
+
     public function render()
     {
         $agents = Agent::where('status', AgentStatus::Active)->orderBy('name')->get();
@@ -285,6 +353,7 @@ class CrewDetailPage extends Component
             'processTypes' => CrewProcessType::cases(),
             'activeAgentIds' => $activeAgentIds,
             'hasActiveExecution' => count($activeAgentIds) > 0,
+            'orgChartSummary' => $this->resolveOrgChartSummary(),
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }
