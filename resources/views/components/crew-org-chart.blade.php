@@ -2,9 +2,17 @@
     'crew',
     'members' => collect(),
     'activeAgentIds' => [],
+    'summary' => null,
 ])
 
 @php
+    $runGoal = $summary['goal'] ?? null;
+    $runTotalCost = $summary['totalCost'] ?? null;
+    $runCoordinationCost = $summary['coordinationCost'] ?? null;
+    $branchCosts = $summary['branchCosts'] ?? [];
+    $branchTasks = $summary['branchTasks'] ?? [];
+    $hasRun = $runTotalCost !== null;
+    $branchKey = fn ($m) => (string) ($m->agent_id ?? $m->external_agent_id);
     $coordinator = $crew->coordinator;
     $qa = $crew->qaAgent;
     $workers = $members->filter(fn ($m) => $m->agent_id !== ($coordinator?->id) && $m->agent_id !== ($qa?->id));
@@ -24,6 +32,17 @@
         <span class="text-xs text-gray-400">{{ $crew->agentCount() }} {{ Str::plural('agent', $crew->agentCount()) }}</span>
     </div>
 
+    @if($summary !== null)
+        @if($runGoal)
+            <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3" data-test="org-chart-goal">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Latest run goal</div>
+                <p class="mt-0.5 text-sm text-gray-800">{{ Str::limit($runGoal, 160) }}</p>
+            </div>
+        @elseif(! $hasRun)
+            <p class="mb-4 text-xs italic text-gray-400" data-test="org-chart-no-runs">No runs yet</p>
+        @endif
+    @endif
+
     {{-- Mobile fallback (<md): plain stacked list --}}
     <div class="space-y-3 md:hidden">
         @if($coordinator)
@@ -32,6 +51,10 @@
                 <a href="{{ route('agents.show', $coordinator) }}"
                    class="font-medium text-primary-700 hover:text-primary-800">{{ $coordinator->name }}</a>
                 <div class="text-xs text-gray-500">{{ $coordinator->role ?? 'No role' }}</div>
+                @if($hasRun)
+                    <div class="mt-1 text-xs text-gray-600" data-test="org-chart-total-cost">Run total: {{ $runTotalCost }} credits</div>
+                    <div class="text-xs text-gray-600" data-test="org-chart-coordination-cost">Coordination + QA: {{ $runCoordinationCost }} credits</div>
+                @endif
             </div>
         @endif
         @if($qa)
@@ -57,6 +80,13 @@
                 @else
                     <div class="text-sm text-gray-400">External agent</div>
                 @endif
+                @if($hasRun)
+                    @php $workerKey = $branchKey($worker); @endphp
+                    @if(isset($branchTasks[$workerKey]))
+                        <div class="mt-1 text-xs text-gray-700" data-test="org-chart-worker-task">{{ Str::limit($branchTasks[$workerKey], 60) }}</div>
+                    @endif
+                    <div class="text-xs text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$workerKey] ?? 0 }} credits</div>
+                @endif
             </div>
         @endforeach
     </div>
@@ -77,6 +107,10 @@
                 </a>
                 <div class="max-w-full truncate text-[11px] text-gray-500">{{ $coordinator->role ?? 'No role' }}</div>
                 <div class="mt-1 max-w-full truncate text-[10px] text-gray-400">{{ $coordinator->provider }}/{{ $coordinator->model }}</div>
+                @if($hasRun)
+                    <div class="mt-1 max-w-full truncate text-[11px] text-gray-600" data-test="org-chart-total-cost">Run total: {{ $runTotalCost }} credits</div>
+                    <div class="max-w-full truncate text-[11px] text-gray-600" data-test="org-chart-coordination-cost">Coordination + QA: {{ $runCoordinationCost }} credits</div>
+                @endif
             </div>
         @else
             <div class="{{ $tileBase }} border-dashed border-gray-300 text-gray-400" data-test="org-chart-coordinator-missing">
@@ -154,6 +188,14 @@
                                 <div class="mt-1 max-w-full truncate text-[10px] text-gray-400">{{ $worker->agent->provider }}/{{ $worker->agent->model }}</div>
                             @else
                                 <div class="mt-0.5 text-sm text-gray-400">External</div>
+                            @endif
+                            @if($hasRun)
+                                @php $workerKey = $branchKey($worker); @endphp
+                                @if(isset($branchTasks[$workerKey]))
+                                    <div class="mt-1 max-w-full truncate text-[11px] text-gray-700" data-test="org-chart-worker-task"
+                                         title="{{ $branchTasks[$workerKey] }}">{{ Str::limit($branchTasks[$workerKey], 60) }}</div>
+                                @endif
+                                <div class="max-w-full truncate text-[11px] text-gray-500" data-test="org-chart-worker-cost">{{ $branchCosts[$workerKey] ?? 0 }} credits</div>
                             @endif
                         </div>
                     </div>

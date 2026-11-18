@@ -690,14 +690,21 @@ class SendAssistantMessageAction
     }
 
     /**
-     * When the team has slow_mode enabled, intercept destructive-tier tool calls
-     * and create an ActionProposal instead of executing. The agent receives a
+     * Apply the team's approval policy to each tool: 'ask' creates an
+     * ActionProposal instead of executing, 'reject' refuses the call, 'auto'
+     * passes the tool through untouched. On 'ask' the agent receives a
      * placeholder string so it can continue the conversation while the human
      * reviews the proposal in the Approval Inbox.
      *
-     * Tier classification reuses AssistantToolRegistry::toolTier(). Tools that
-     * are not in the destructive tier pass through untouched. When slow_mode is
-     * off this method is a no-op.
+     * Tier classification reuses AssistantToolRegistry::toolTier().
+     *
+     * Precedence per tool: a per-tool rule in
+     * `settings.action_proposal_policy.tools` wins (including an explicit
+     * 'auto'), then the risk-tier rule (low/medium/high), then the legacy
+     * `slow_mode_enabled` flag (only when no action_proposal_policy is
+     * set, see resolveActionPolicy()). Proposals held by a per-tool rule carry
+     * `payload.rule = 'tool'`. With every tier on 'auto' and no per-tool
+     * rules this method is a no-op.
      *
      * @param  array<PrismToolObject>  $tools
      * @return array<PrismToolObject>
@@ -706,8 +713,9 @@ class SendAssistantMessageAction
     {
         $team = $user->currentTeam;
         $policy = $this->resolveActionPolicy($team);
+        $overrides = $this->resolveToolPolicyOverrides($team);
 
-        if ($policy['low'] === 'auto' && $policy['medium'] === 'auto' && $policy['high'] === 'auto') {
+        if ($policy['low'] === 'auto' && $policy['medium'] === 'auto' && $policy['high'] === 'auto' && $overrides === []) {
             return $tools;
         }
 
@@ -716,20 +724,25 @@ class SendAssistantMessageAction
         $createProposal = $this->createActionProposal;
         $conversationId = $conversation?->id;
 
-        return array_map(function (PrismToolObject $tool) use ($policy, $createProposal, $teamId, $userId, $conversation, $conversationId) {
+        return array_map(function (PrismToolObject $tool) use ($policy, $overrides, $createProposal, $teamId, $userId, $conversation, $conversationId) {
             $toolName = $tool->name();
             $risk = $this->mapTierToRisk(AssistantToolRegistry::toolTier($toolName));
-            $action = $policy[$risk] ?? 'auto';
+            $byTool = array_key_exists($toolName, $overrides);
+            $action = $byTool ? $overrides[$toolName] : ($policy[$risk] ?? 'auto');
 
             if ($action === 'auto') {
                 return $tool;
             }
 
             $clone = clone $tool;
-            $clone->using(function () use ($action, $toolName, $risk, $createProposal, $teamId, $userId, $conversation, $conversationId) {
+            $clone->using(function () use ($action, $byTool, $toolName, $risk, $createProposal, $teamId, $userId, $conversation, $conversationId) {
                 $positionalArgs = func_get_args();
 
                 if ($action === 'reject') {
+                    if ($byTool) {
+                        return "⛔ Action refused by team policy. A per-tool rule blocks '{$toolName}' for this team. Contact a team owner to change the rule or pick another tool.";
+                    }
+
                     return "⛔ Action refused by team policy. The {$risk}-risk tool '{$toolName}' is blocked for this team. Contact a team owner to relax the policy or pick a non-blocked alternative.";
                 }
 
@@ -743,6 +756,9 @@ class SendAssistantMessageAction
                     'tool' => $toolName,
                     'positional_args' => $positionalArgs,
                 ];
+                if ($byTool) {
+                    $payload['rule'] = 'tool';
+                }
                 if ($conversationId) {
                     $payload['conversation_id'] = $conversationId;
                 }
@@ -767,9 +783,14 @@ class SendAssistantMessageAction
     }
 
     /**
-     * Resolve the per-tier action policy for a team. Reads
-     * `settings.action_proposal_policy` if present; falls back to the
-     * legacy `slow_mode_enabled` boolean (true → high='ask').
+     * Resolve the per-tier action policy for a team. When
+     * `settings.action_proposal_policy` is an array its low/medium/high keys
+     * are used (missing or invalid tiers default to 'auto') and the legacy
+     * `slow_mode_enabled` flag is ignored, matching the integration and git
+     * gates; otherwise slow_mode_enabled=true → high='ask'.
+     *
+     * Per-tool rules (`action_proposal_policy.tools`) are resolved separately
+     * by resolveToolPolicyOverrides() and take precedence over these tiers.
      *
      * @return array{low: 'auto'|'ask'|'reject', medium: 'auto'|'ask'|'reject', high: 'auto'|'ask'|'reject'}
      */
@@ -785,11 +806,12 @@ class SendAssistantMessageAction
         if (is_array($explicit)) {
             $allowed = ['auto', 'ask', 'reject'];
 
-            return [
-                'low' => in_array($explicit['low'] ?? 'auto', $allowed, true) ? $explicit['low'] : 'auto',
-                'medium' => in_array($explicit['medium'] ?? 'auto', $allowed, true) ? $explicit['medium'] : 'auto',
-                'high' => in_array($explicit['high'] ?? 'auto', $allowed, true) ? $explicit['high'] : 'auto',
-            ];
+            foreach ($defaults as $tier => $fallback) {
+                $value = $explicit[$tier] ?? $fallback;
+                $defaults[$tier] = in_array($value, $allowed, true) ? $value : $fallback;
+            }
+
+            return $defaults;
         }
 
         // Legacy fallback: slow_mode_enabled=true → high='ask'.
@@ -798,6 +820,36 @@ class SendAssistantMessageAction
         }
 
         return $defaults;
+    }
+
+    /**
+     * Resolve per-tool rules from `settings.action_proposal_policy.tools`
+     * (`{"<tool_name>": "auto|ask|reject"}`). Entries with an empty or
+     * non-string key, or a value outside auto/ask/reject, are ignored. A
+     * missing or non-array `tools` value yields no rules.
+     *
+     * @return array<string, 'auto'|'ask'|'reject'>
+     */
+    private function resolveToolPolicyOverrides(?Team $team): array
+    {
+        if (! $team) {
+            return [];
+        }
+
+        $policy = $team->settings['action_proposal_policy'] ?? null;
+        $tools = is_array($policy) ? ($policy['tools'] ?? null) : null;
+        if (! is_array($tools)) {
+            return [];
+        }
+
+        $overrides = [];
+        foreach ($tools as $name => $value) {
+            if (is_string($name) && $name !== '' && in_array($value, ['auto', 'ask', 'reject'], true)) {
+                $overrides[$name] = $value;
+            }
+        }
+
+        return $overrides;
     }
 
     private function mapTierToRisk(string $tier): string
