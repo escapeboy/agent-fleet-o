@@ -45,7 +45,7 @@ class ImportWorkflowAction
         // Flowise export (Agentflow V2 or legacy chatflow) — convert to a v1 envelope.
         $conversionWarnings = [];
         if (FlowiseFlowConverter::detects($data)) {
-            $converted = (new FlowiseFlowConverter)->convert($data, $nameOverride ?? 'Imported Flowise flow');
+            $converted = (new FlowiseFlowConverter)->convert($data, $nameOverride);
             $data = $converted['envelope'];
             $conversionWarnings = $converted['warnings'];
         }

@@ -121,6 +121,7 @@ class FlowiseFlowConverter
     {
         $nodes = [];
         $types = [];
+        $labels = [];
         $hasStart = false;
 
         foreach ($flowiseNodes as $index => $fNode) {
@@ -129,6 +130,7 @@ class FlowiseFlowConverter
             $node['order'] = $index + 1;
             $nodes[] = $node;
             $types[$id] = $node['type'];
+            $labels[$id] = $node['label'];
             if ($node['type'] === 'start') {
                 $hasStart = true;
             }
@@ -162,12 +164,21 @@ class FlowiseFlowConverter
                 });
             }
 
+            if ($types[$source] === 'human_task'
+                && count(array_unique(array_column($targets, 'handle'))) > 1) {
+                $this->warnings[] = "Human input '{$labels[$source]}': its proceed/reject branches were imported as plain edges and would both run; add a condition on the response in FleetQ.";
+            }
+
             $last = count($targets) - 1;
             foreach ($targets as $i => $t) {
+                // Label by the Flowise output index so unconnected outputs don't shift the numbering.
+                $outputIndex = $this->handleIndex($t['handle']);
                 $edges[] = [
                     'source_node_id' => (string) $source,
                     'target_node_id' => $t['target'],
-                    'label' => $isConditional ? 'Flowise output '.($i + 1) : null,
+                    'label' => $isConditional
+                        ? 'Flowise output '.($outputIndex === PHP_INT_MAX ? $i + 1 : $outputIndex + 1)
+                        : null,
                     'is_default' => $isConditional && $i === $last,
                     'sort_order' => $i,
                 ];
@@ -270,12 +281,22 @@ class FlowiseFlowConverter
                 $type = 'http_request';
                 $config = [
                     'method' => strtoupper(is_string($inputs['method'] ?? null) ? $inputs['method'] : 'GET'),
-                    'url' => is_string($inputs['url'] ?? null) ? $inputs['url'] : '',
+                    'url' => $this->urlWithQuery(
+                        is_string($inputs['url'] ?? null) ? $inputs['url'] : '',
+                        $this->headers($inputs['queryParams'] ?? []),
+                    ),
                     'headers' => $this->headers($inputs['headers'] ?? []),
                 ];
                 $body = $inputs['body'] ?? null;
                 if (is_array($body)) {
-                    $body = (string) json_encode($body);
+                    // Form bodies are exported as a list of {key, value} pairs.
+                    $fields = array_is_list($body) ? $this->headers($body) : $body;
+                    if (($inputs['bodyType'] ?? null) === 'xWwwFormUrlencoded') {
+                        $body = http_build_query($fields);
+                        $config['headers']['Content-Type'] ??= 'application/x-www-form-urlencoded';
+                    } else {
+                        $body = (string) json_encode($fields);
+                    }
                 }
                 if (is_string($body) && $body !== '') {
                     $config['body'] = $body;
@@ -356,6 +377,7 @@ class FlowiseFlowConverter
     {
         $modelNode = null;
         $promptNode = null;
+        $chainNode = null;
         $skipped = [];
 
         foreach ($flowiseNodes as $fNode) {
@@ -373,6 +395,8 @@ class FlowiseFlowConverter
                 continue;
             }
             if ($category === 'Chains') {
+                $chainNode ??= $fNode;
+
                 continue;
             }
 
@@ -391,6 +415,18 @@ class FlowiseFlowConverter
             } else {
                 $userMessage = $inputs['template'] ?? null;
             }
+        }
+
+        // Conversation chains carry their system prompt on the chain node itself.
+        $chainSystem = $chainNode !== null ? ($this->inputs($chainNode)['systemMessagePrompt'] ?? null) : null;
+        if ($messages === [] && is_string($chainSystem) && $chainSystem !== '') {
+            $messages[] = ['role' => 'system', 'content' => $chainSystem];
+        }
+
+        // Legacy chatflows use LangChain {var} placeholders, which FleetQ does not interpolate.
+        $texts = array_merge(array_column($messages, 'content'), [is_string($userMessage) ? $userMessage : '']);
+        if (preg_match('/(?<!\{)\{\w+\}(?!\})/', implode("\n", $texts)) === 1) {
+            $this->warnings[] = 'Prompts contain Flowise {variable} placeholders; they were copied unchanged and must be rewritten as FleetQ {{...}} context keys.';
         }
 
         $modelInputs = $modelNode !== null ? $this->inputs($modelNode) : [];
@@ -447,6 +483,9 @@ class FlowiseFlowConverter
             $config['prompt_template'] = $userMessage;
         } elseif ($other !== []) {
             $config['prompt_template'] = implode("\n\n", $other);
+        } else {
+            // Flowise implicitly sends the chat input here; FleetQ would send an empty user prompt.
+            $this->warnings[] = "LLM '{$label}': no user message was found; set a prompt template in FleetQ.";
         }
 
         $providerName = is_string($provider) ? $provider : '';
@@ -488,6 +527,26 @@ class FlowiseFlowConverter
         }
 
         return $result;
+    }
+
+    /**
+     * Append Flowise query parameters to the URL. Values holding {{...}} placeholders are kept
+     * verbatim so FleetQ can still interpolate them.
+     *
+     * @param  array<string, string>  $params
+     */
+    private function urlWithQuery(string $url, array $params): string
+    {
+        if ($params === []) {
+            return $url;
+        }
+
+        $pairs = [];
+        foreach ($params as $key => $value) {
+            $pairs[] = rawurlencode((string) $key).'='.(str_contains($value, '{{') ? $value : rawurlencode($value));
+        }
+
+        return $url.(str_contains($url, '?') ? '&' : '?').implode('&', $pairs);
     }
 
     /**

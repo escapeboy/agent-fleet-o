@@ -251,6 +251,65 @@ class FlowiseFlowConverterTest extends TestCase
 
         $warnings = implode("\n", $result['warnings']);
         $this->assertStringContainsString('Buffer Memory', $warnings);
+        $this->assertStringContainsString('{variable}', $warnings);
+    }
+
+    public function test_conversation_chain_system_prompt_is_kept_and_missing_user_message_is_warned(): void
+    {
+        $result = (new FlowiseFlowConverter)->convert([
+            'nodes' => [
+                ['id' => 'm', 'data' => ['name' => 'chatOpenAI', 'category' => 'Chat Models', 'inputs' => ['modelName' => 'gpt-4o']]],
+                ['id' => 'c', 'data' => ['name' => 'conversationChain', 'category' => 'Chains', 'inputs' => ['systemMessagePrompt' => 'You are helpful.']]],
+            ],
+            'edges' => [],
+        ]);
+
+        $llm = $result['envelope']['nodes'][1];
+        $this->assertSame('You are helpful.', $llm['config']['system_prompt']);
+        $this->assertArrayNotHasKey('prompt_template', $llm['config']);
+        $this->assertStringContainsString('no user message', implode("\n", $result['warnings']));
+    }
+
+    public function test_http_query_params_form_bodies_condition_gaps_and_human_branches(): void
+    {
+        $result = (new FlowiseFlowConverter)->convert([
+            'nodes' => [
+                ['id' => 's', 'data' => ['name' => 'startAgentflow', 'inputs' => []]],
+                ['id' => 'h', 'data' => ['name' => 'httpAgentflow', 'label' => 'Call', 'inputs' => [
+                    'method' => 'POST',
+                    'url' => 'https://example.com/hook',
+                    'queryParams' => [['key' => 'q', 'value' => 'a b'], ['key' => 'v', 'value' => '{{question}}']],
+                    'bodyType' => 'xWwwFormUrlencoded',
+                    'body' => [['key' => 'name', 'value' => 'x']],
+                ]]],
+                ['id' => 'c', 'data' => ['name' => 'conditionAgentflow', 'label' => 'Check', 'inputs' => []]],
+                ['id' => 'x', 'data' => ['name' => 'directReplyAgentflow', 'inputs' => []]],
+                ['id' => 'y', 'data' => ['name' => 'directReplyAgentflow', 'inputs' => []]],
+                ['id' => 'u', 'data' => ['name' => 'humanInputAgentflow', 'label' => 'Approve', 'inputs' => []]],
+            ],
+            'edges' => [
+                ['source' => 's', 'target' => 'h'],
+                ['source' => 'h', 'target' => 'c'],
+                ['source' => 'c', 'target' => 'x', 'sourceHandle' => 'c-output-1'],
+                ['source' => 'c', 'target' => 'u', 'sourceHandle' => 'c-output-2'],
+                ['source' => 'u', 'target' => 'x', 'sourceHandle' => 'u-output-0'],
+                ['source' => 'u', 'target' => 'y', 'sourceHandle' => 'u-output-1'],
+            ],
+        ]);
+        $envelope = $result['envelope'];
+
+        $http = $this->nodeById($envelope, 'h');
+        $this->assertSame('https://example.com/hook?q=a%20b&v={{question}}', $http['config']['url']);
+        $this->assertSame('name=x', $http['config']['body']);
+        $this->assertSame('application/x-www-form-urlencoded', $http['config']['headers']['Content-Type']);
+
+        $labels = array_values(array_map(
+            fn ($e) => $e['label'],
+            array_filter($envelope['edges'], fn ($e) => $e['source_node_id'] === 'c'),
+        ));
+        $this->assertSame(['Flowise output 2', 'Flowise output 3'], $labels);
+
+        $this->assertStringContainsString("Human input 'Approve'", implode("\n", $result['warnings']));
     }
 
     public function test_rejects_more_than_500_nodes(): void
