@@ -7,7 +7,16 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use App\Infrastructure\AI\Middleware\ContextCompaction;
+use App\Infrastructure\AI\Middleware\IdempotencyCheck;
+use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
+use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
 use App\Infrastructure\AI\Middleware\PiiRedaction;
+use App\Infrastructure\AI\Middleware\SafetyClassifier;
+use App\Infrastructure\AI\Middleware\SchemaValidation;
+use App\Infrastructure\AI\Middleware\SemanticCache;
+use App\Infrastructure\AI\Middleware\SteeringInjection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -141,6 +150,31 @@ class PiiRedactionMiddlewareTest extends TestCase
         }
 
         $this->assertSame(0, AuditEntry::withoutGlobalScopes()->where('event', 'ai.pii_redacted')->count());
+    }
+
+    public function test_runs_before_semantic_cache_so_embeddings_never_see_raw_pii(): void
+    {
+        $gateway = $this->app->make(PrismAiGateway::class);
+        $property = new \ReflectionProperty(PrismAiGateway::class, 'middleware');
+        /** @var list<object> $stack */
+        $stack = $property->getValue($gateway);
+        $classes = array_map(fn (object $m): string => $m::class, $stack);
+
+        $pii = array_search(PiiRedaction::class, $classes, true);
+        $this->assertIsInt($pii);
+
+        // The first list entry runs first (the gateway wraps the list with array_reverse).
+        foreach ([SemanticCache::class, ContextCompaction::class, SchemaValidation::class, SafetyClassifier::class, LangfuseExportMiddleware::class, PhoenixExportMiddleware::class] as $later) {
+            $index = array_search($later, $classes, true);
+            $this->assertIsInt($index, $later);
+            $this->assertLessThan($index, $pii, "PiiRedaction must run before {$later}");
+        }
+
+        foreach ([IdempotencyCheck::class, SteeringInjection::class] as $earlier) {
+            $index = array_search($earlier, $classes, true);
+            $this->assertIsInt($index, $earlier);
+            $this->assertGreaterThan($index, $pii, "PiiRedaction must run after {$earlier}");
+        }
     }
 
     public function test_no_audit_entry_when_nothing_to_mask(): void

@@ -93,12 +93,14 @@ class AiServiceProvider extends ServiceProvider
                 // cache key (we want the steering-influenced response, not a stale cached one)
                 // but BEFORE SemanticCache for the same reason.
                 $app->make(SteeringInjection::class),
-                $app->make(SemanticCache::class),
                 // Per-team PII masking (opt-in). After IdempotencyCheck, so prompts that differ
-                // only in PII keep distinct idempotency keys; after SemanticCache, so the local
-                // cache still keys on the real prompt. Before ContextCompaction, SchemaValidation,
-                // SafetyClassifier and the Langfuse/Phoenix export, so they only see masked text.
+                // only in PII keep distinct idempotency keys; after SteeringInjection, so injected
+                // steering text is masked too. BEFORE SemanticCache, because the cache sends the
+                // prompt to a cloud embeddings API — it must only ever see masked text. Also before
+                // ContextCompaction, SchemaValidation, SafetyClassifier and the Langfuse/Phoenix
+                // export, so they only see masked text.
                 $app->make(PiiRedaction::class),
+                $app->make(SemanticCache::class),
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
                 // Gateway-level safety net — inspects request input and response output
