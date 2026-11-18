@@ -11,6 +11,7 @@ use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewStatus;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
@@ -271,6 +272,62 @@ class CrewDetailPage extends Component
             ->all();
     }
 
+    /**
+     * Summarise the crew's latest execution for the org chart: goal, run total,
+     * per-branch spend and current task. Read-only.
+     *
+     * @return array{goal: ?string, totalCost: ?int, coordinationCost: ?int, branchCosts: array<string, int>, branchTasks: array<string, string>}
+     */
+    private function resolveOrgChartSummary(): array
+    {
+        /** @var CrewExecution|null $latest */
+        $latest = $this->crew->executions()->latest()->first();
+
+        if (! $latest) {
+            return [
+                'goal' => null,
+                'totalCost' => null,
+                'coordinationCost' => null,
+                'branchCosts' => [],
+                'branchTasks' => [],
+            ];
+        }
+
+        $tasks = $latest->taskExecutions()->orderBy('sort_order')->get();
+
+        $branchCosts = [];
+        $branchTasks = [];
+        $branchTaskIsRunning = [];
+
+        foreach ($tasks as $task) {
+            $key = $task->agent_id ?? $task->external_agent_id;
+            if ($key === null) {
+                continue;
+            }
+            $key = (string) $key;
+
+            $branchCosts[$key] = ($branchCosts[$key] ?? 0) + (int) $task->cost_credits;
+
+            // status is cast to CrewTaskStatus; the model PHPDoc still types it as string.
+            $isRunning = $task->getAttribute('status') === CrewTaskStatus::Running;
+            // Running task wins; otherwise the highest sort_order (last in this ordered loop).
+            if ($isRunning || ! ($branchTaskIsRunning[$key] ?? false)) {
+                $branchTasks[$key] = (string) $task->title;
+                $branchTaskIsRunning[$key] = $isRunning;
+            }
+        }
+
+        $totalCost = (int) $latest->total_cost_credits;
+
+        return [
+            'goal' => (string) $latest->goal,
+            'totalCost' => $totalCost,
+            'coordinationCost' => max(0, $totalCost - array_sum($branchCosts)),
+            'branchCosts' => $branchCosts,
+            'branchTasks' => $branchTasks,
+        ];
+    }
+
     public function render()
     {
         $agents = Agent::where('status', AgentStatus::Active)->orderBy('name')->get();
@@ -285,6 +342,7 @@ class CrewDetailPage extends Component
             'processTypes' => CrewProcessType::cases(),
             'activeAgentIds' => $activeAgentIds,
             'hasActiveExecution' => count($activeAgentIds) > 0,
+            'orgChartSummary' => $this->resolveOrgChartSummary(),
         ])->layout('layouts.app', ['header' => $this->crew->name]);
     }
 }
