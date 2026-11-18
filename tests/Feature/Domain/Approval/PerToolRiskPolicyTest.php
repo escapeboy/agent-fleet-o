@@ -150,7 +150,7 @@ class PerToolRiskPolicyTest extends TestCase
         $this->assertSame(1, ActionProposal::count());
     }
 
-    public function test_tools_only_policy_keeps_legacy_slow_mode(): void
+    public function test_tools_only_policy_overrides_legacy_slow_mode_like_other_gates(): void
     {
         $this->team->update(['settings' => [
             'slow_mode_enabled' => true,
@@ -164,8 +164,22 @@ class PerToolRiskPolicyTest extends TestCase
         ]);
 
         $this->assertStringContainsString('per-tool rule', $this->invokeFirst($tools, 'list_agents'));
-        $this->assertStringContainsString('proposed for human review', $this->invokeFirst($tools, 'delete_agent'));
-        $this->assertSame('high', ActionProposal::first()->risk_level);
+        $this->assertSame('delete-ok', $this->invokeFirst($tools, 'delete_agent'));
+        $this->assertSame(0, ActionProposal::count());
+    }
+
+    public function test_empty_policy_with_slow_mode_keeps_all_tiers_auto(): void
+    {
+        $this->team->update(['settings' => [
+            'slow_mode_enabled' => true,
+            'action_proposal_policy' => [],
+        ]]);
+        $this->user->refresh();
+
+        $tools = $this->wrapTools([$this->fakeTool('delete_agent', 'delete-ok')]);
+
+        $this->assertSame('delete-ok', $this->invokeFirst($tools, 'delete_agent'));
+        $this->assertSame(0, ActionProposal::count());
     }
 
     /**

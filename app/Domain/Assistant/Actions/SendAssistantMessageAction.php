@@ -701,7 +701,8 @@ class SendAssistantMessageAction
      * Precedence per tool: a per-tool rule in
      * `settings.action_proposal_policy.tools` wins (including an explicit
      * 'auto'), then the risk-tier rule (low/medium/high), then the legacy
-     * `slow_mode_enabled` flag. Proposals held by a per-tool rule carry
+     * `slow_mode_enabled` flag (only when no action_proposal_policy is
+     * set, see resolveActionPolicy()). Proposals held by a per-tool rule carry
      * `payload.rule = 'tool'`. With every tier on 'auto' and no per-tool
      * rules this method is a no-op.
      *
@@ -782,11 +783,11 @@ class SendAssistantMessageAction
     }
 
     /**
-     * Resolve the per-tier action policy for a team. Reads the low/medium/high
-     * keys of `settings.action_proposal_policy` when at least one is set
-     * (missing tiers default to 'auto'); otherwise falls back to the legacy
-     * `slow_mode_enabled` boolean (true → high='ask'), so a policy holding
-     * only per-tool rules does not switch slow mode off.
+     * Resolve the per-tier action policy for a team. When
+     * `settings.action_proposal_policy` is an array its low/medium/high keys
+     * are used (missing or invalid tiers default to 'auto') and the legacy
+     * `slow_mode_enabled` flag is ignored, matching the integration and git
+     * gates; otherwise slow_mode_enabled=true → high='ask'.
      *
      * Per-tool rules (`action_proposal_policy.tools`) are resolved separately
      * by resolveToolPolicyOverrides() and take precedence over these tiers.
@@ -802,12 +803,11 @@ class SendAssistantMessageAction
         }
 
         $explicit = $team->settings['action_proposal_policy'] ?? null;
-        $tiers = is_array($explicit) ? array_intersect_key($explicit, $defaults) : [];
-        if ($tiers !== []) {
+        if (is_array($explicit)) {
             $allowed = ['auto', 'ask', 'reject'];
 
             foreach ($defaults as $tier => $fallback) {
-                $value = $tiers[$tier] ?? $fallback;
+                $value = $explicit[$tier] ?? $fallback;
                 $defaults[$tier] = in_array($value, $allowed, true) ? $value : $fallback;
             }
 
