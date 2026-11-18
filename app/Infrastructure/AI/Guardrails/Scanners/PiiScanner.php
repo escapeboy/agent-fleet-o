@@ -52,6 +52,81 @@ class PiiScanner implements ScannerInterface
         return null;
     }
 
+    /**
+     * Replace emails, IBANs and Luhn-valid card numbers with numbered
+     * placeholders ([EMAIL_1], [IBAN_1], [CARD_1]). Numbering is per distinct
+     * value and shared across all given texts, so the same value maps to the
+     * same placeholder everywhere. Counts are distinct values per type.
+     *
+     * @param  array<int, string>  $texts
+     * @return array{texts: list<string>, counts: array{email: int, iban: int, card: int}}
+     */
+    public function redactAll(array $texts): array
+    {
+        $texts = array_values($texts);
+
+        /** @var array{email: array<string, string>, iban: array<string, string>, card: array<string, string>} $maps */
+        $maps = ['email' => [], 'iban' => [], 'card' => []];
+
+        $placeholder = function (string $type, string $key) use (&$maps): string {
+            if (! isset($maps[$type][$key])) {
+                $maps[$type][$key] = '['.strtoupper($type).'_'.(count($maps[$type]) + 1).']';
+            }
+
+            return $maps[$type][$key];
+        };
+
+        foreach ($texts as $i => $text) {
+            $texts[$i] = $this->replace(self::EMAIL, $text, fn (string $match): string => $placeholder('email', $match));
+        }
+
+        foreach ($texts as $i => $text) {
+            $texts[$i] = $this->replace(self::IBAN, $text, fn (string $match): string => $placeholder('iban', $match));
+        }
+
+        foreach ($texts as $i => $text) {
+            $texts[$i] = $this->replace(self::CARD_CANDIDATE, $text, function (string $match) use ($placeholder): string {
+                $digits = preg_replace('/\D/', '', $match) ?? '';
+
+                if (strlen($digits) < 13 || strlen($digits) > 19 || ! $this->luhnValid($digits)) {
+                    return $match;
+                }
+
+                // The candidate pattern can swallow a trailing separator; keep it in the text.
+                $trimmed = rtrim($match, ' -');
+
+                return $placeholder('card', $digits).substr($match, strlen($trimmed));
+            });
+        }
+
+        return [
+            'texts' => $texts,
+            'counts' => [
+                'email' => count($maps['email']),
+                'iban' => count($maps['iban']),
+                'card' => count($maps['card']),
+            ],
+        ];
+    }
+
+    /**
+     * @param  callable(string): string  $replacer
+     */
+    private function replace(string $pattern, string $text, callable $replacer): string
+    {
+        if ($text === '') {
+            return $text;
+        }
+
+        $result = preg_replace_callback($pattern, fn (array $m): string => $replacer($m[0]), $text);
+
+        if ($result === null) {
+            throw new \RuntimeException('PII redaction failed: regex error '.preg_last_error());
+        }
+
+        return $result;
+    }
+
     private function luhnValid(string $digits): bool
     {
         $sum = 0;

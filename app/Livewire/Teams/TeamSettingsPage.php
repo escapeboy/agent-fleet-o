@@ -147,6 +147,9 @@ class TeamSettingsPage extends Component
 
     public string $observabilityServiceName = '';
 
+    // Data privacy — mask PII before cloud provider calls
+    public bool $piiRedactionEnabled = false;
+
     // Sprint 18 — last probe outcome surfaced as a badge
     public ?string $lastProbeAt = null;
 
@@ -211,6 +214,7 @@ class TeamSettingsPage extends Component
         $this->maxSessionDurationMinutes = (int) ($settings['max_session_duration_minutes'] ?? 0);
         $this->teamSpendCapDaily = isset($settings['spend_cap_daily_credits']) ? (string) $settings['spend_cap_daily_credits'] : '';
         $this->teamSpendCapMonthly = isset($settings['spend_cap_monthly_credits']) ? (string) $settings['spend_cap_monthly_credits'] : '';
+        $this->piiRedactionEnabled = (bool) ($settings['pii_redaction_enabled'] ?? config('ai_safety.pii_redaction.default', false));
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -283,6 +287,18 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Format & brand guide saved.');
+    }
+
+    public function savePrivacySettings(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['pii_redaction_enabled'] = $this->piiRedactionEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Data privacy settings saved.');
     }
 
     public function saveLlmDefaults(): void

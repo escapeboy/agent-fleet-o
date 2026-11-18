@@ -157,6 +157,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | PII Masking Before Cloud Provider Calls
+    |--------------------------------------------------------------------------
+    |
+    | The PiiRedaction gateway middleware replaces emails, IBANs and Luhn-valid
+    | card numbers in the system and user prompts with numbered placeholders
+    | ([EMAIL_1], [IBAN_1], [CARD_1]) before the provider call. Only per-type
+    | counts are written to the audit log (ai.pii_redacted), never the values.
+    |
+    | Per-team switch: teams.settings['pii_redaction_enabled'] (bool). 'default'
+    | applies when a team has not set it. Skipped for the 'local' provider and
+    | for providers flagged local, http_local (self-hosted) or bridge in
+    | config/llm_providers.php. Responses are not un-masked, and tool results
+    | inside the tool loop are not masked.
+    |
+    */
+    'pii_redaction' => [
+        'default' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Redact Secrets Before Persist
     |--------------------------------------------------------------------------
     |
