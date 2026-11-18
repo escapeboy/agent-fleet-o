@@ -152,7 +152,7 @@ class PiiRedactionMiddlewareTest extends TestCase
         $this->assertSame(0, AuditEntry::withoutGlobalScopes()->where('event', 'ai.pii_redacted')->count());
     }
 
-    public function test_runs_before_semantic_cache_so_embeddings_never_see_raw_pii(): void
+    public function test_runs_after_semantic_cache_and_before_later_middleware(): void
     {
         $gateway = $this->app->make(PrismAiGateway::class);
         $property = new \ReflectionProperty(PrismAiGateway::class, 'middleware');
@@ -164,13 +164,13 @@ class PiiRedactionMiddlewareTest extends TestCase
         $this->assertIsInt($pii);
 
         // The first list entry runs first (the gateway wraps the list with array_reverse).
-        foreach ([SemanticCache::class, ContextCompaction::class, SchemaValidation::class, SafetyClassifier::class, LangfuseExportMiddleware::class, PhoenixExportMiddleware::class] as $later) {
+        foreach ([ContextCompaction::class, SchemaValidation::class, SafetyClassifier::class, LangfuseExportMiddleware::class, PhoenixExportMiddleware::class] as $later) {
             $index = array_search($later, $classes, true);
             $this->assertIsInt($index, $later);
             $this->assertLessThan($index, $pii, "PiiRedaction must run before {$later}");
         }
 
-        foreach ([IdempotencyCheck::class, SteeringInjection::class] as $earlier) {
+        foreach ([IdempotencyCheck::class, SteeringInjection::class, SemanticCache::class] as $earlier) {
             $index = array_search($earlier, $classes, true);
             $this->assertIsInt($index, $earlier);
             $this->assertGreaterThan($index, $pii, "PiiRedaction must run after {$earlier}");

@@ -656,7 +656,8 @@
             Emails, IBANs and card numbers in prompts are replaced by placeholders such as [EMAIL_1] before
             calls to cloud AI providers. Local, self-hosted and Bridge models are skipped. The model's answers
             will contain the placeholders, not the original values. Tool results inside a tool loop are not masked,
-            and IBANs are only recognised when written without spaces.
+            and IBANs are only recognised when written without spaces. If the semantic cache is also on, it
+            computes its embeddings from the unmasked prompt.
         </p>
         <div class="flex items-center gap-4">
             <x-form-checkbox wire:model="piiRedactionEnabled" label="Mask personal data before sending to cloud AI providers" />
