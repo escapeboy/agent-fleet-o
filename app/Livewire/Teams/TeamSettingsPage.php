@@ -124,6 +124,11 @@ class TeamSettingsPage extends Component
     // Session TTL
     public int $maxSessionDurationMinutes = 0;
 
+    // Team-wide AI spend limit (credits; empty = no limit)
+    public string $teamSpendCapDaily = '';
+
+    public string $teamSpendCapMonthly = '';
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -204,6 +209,8 @@ class TeamSettingsPage extends Component
         $this->experimentTtlMinutes = (int) ($settings['experiment_ttl_minutes'] ?? config('experiments.default_ttl_minutes', 120));
         $this->allowedModelsInput = implode("\n", $team->allowed_models ?? []);
         $this->maxSessionDurationMinutes = (int) ($settings['max_session_duration_minutes'] ?? 0);
+        $this->teamSpendCapDaily = isset($settings['spend_cap_daily_credits']) ? (string) $settings['spend_cap_daily_credits'] : '';
+        $this->teamSpendCapMonthly = isset($settings['spend_cap_monthly_credits']) ? (string) $settings['spend_cap_monthly_credits'] : '';
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -558,6 +565,38 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Session TTL saved.');
+    }
+
+    public function saveTeamSpendCap(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $values = [];
+        foreach (['teamSpendCapDaily', 'teamSpendCapMonthly'] as $property) {
+            $raw = trim($this->{$property});
+
+            if ($raw === '') {
+                $values[$property] = null;
+
+                continue;
+            }
+
+            if (! ctype_digit($raw) || (int) $raw < 1 || (int) $raw > 10_000_000) {
+                $this->addError($property, 'Enter a whole number of credits from 1 to 10,000,000, or leave empty for no limit.');
+
+                return;
+            }
+
+            $values[$property] = (int) $raw;
+        }
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['spend_cap_daily_credits'] = $values['teamSpendCapDaily'];
+        $settings['spend_cap_monthly_credits'] = $values['teamSpendCapMonthly'];
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Team spend limit saved.');
     }
 
     public function saveCreditsLimits(): void

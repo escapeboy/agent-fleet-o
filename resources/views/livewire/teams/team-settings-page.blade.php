@@ -1183,6 +1183,36 @@
         </button>
     </div>
 
+    {{-- Team spend limit --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Team spend limit</h2>
+        <p class="mb-4 text-sm text-gray-500">Credits per day / per calendar month across all agents, crews and the assistant. Empty = no limit. Owners are warned at 80%; AI calls stop at 100%.</p>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <x-form-input
+                wire:model="teamSpendCapDaily"
+                label="Daily limit (credits)"
+                type="number"
+                min="1"
+                max="10000000"
+                hint="Empty = no daily limit."
+            />
+
+            <x-form-input
+                wire:model="teamSpendCapMonthly"
+                label="Monthly limit (credits)"
+                type="number"
+                min="1"
+                max="10000000"
+                hint="Empty = no monthly limit."
+            />
+        </div>
+
+        <button wire:click="saveTeamSpendCap" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save Spend Limit
+        </button>
+    </div>
+
     {{-- Widget Public Key --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-base font-semibold text-gray-900">Widget Public Key</h2>

@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Middleware;
 
 use App\Domain\Budget\Actions\EnforceMaxCreditsPerCallAction;
+use App\Domain\Budget\Actions\EnforceTeamSpendCapAction;
 use App\Domain\Budget\Actions\ReserveBudgetAction;
 use App\Domain\Budget\Actions\SettleBudgetAction;
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
@@ -19,10 +20,22 @@ class BudgetEnforcement implements AiMiddlewareInterface
         private readonly ReserveBudgetAction $reserveBudget,
         private readonly SettleBudgetAction $settleBudget,
         private readonly EnforceMaxCreditsPerCallAction $enforceMaxCap,
+        private readonly EnforceTeamSpendCapAction $enforceTeamCap,
     ) {}
 
     public function handle(AiRequestDTO $request, Closure $next): AiResponseDTO
     {
+        $estimatedCost = $this->costCalculator->estimateCost(
+            provider: $request->provider,
+            model: $request->model,
+            maxTokens: $request->maxTokens,
+        );
+
+        // Team-wide daily/monthly spend limit applies to every call, with or without a user.
+        if (($request->teamId ?? '') !== '') {
+            $this->enforceTeamCap->execute($request->teamId, $estimatedCost);
+        }
+
         if (! $request->userId) {
             return $next($request);
         }
@@ -35,12 +48,6 @@ class BudgetEnforcement implements AiMiddlewareInterface
             maxOutputTokens: $request->maxTokens,
             agentId: $request->agentId,
             perRequestCap: $request->maxCostCredits,
-        );
-
-        $estimatedCost = $this->costCalculator->estimateCost(
-            provider: $request->provider,
-            model: $request->model,
-            maxTokens: $request->maxTokens,
         );
 
         $reservation = $this->reserveBudget->execute(
