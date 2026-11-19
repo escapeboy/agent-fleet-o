@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Job containers default to sh; the steps rely on bash (brace expansion). Same shell the host jobs use.
+defaults:
+  run:
+    shell: bash -e {0}
+
 jobs:
   # ─────────────────────────────────────────
   # Job 1: Code Quality (fast, no DB needed)
@@ -18,10 +23,19 @@ jobs:
     # Pull requests from forks never run on the self-hosted runner.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Code Quality
-    runs-on: self-hosted
+    runs-on: [self-hosted, ci]
+    container: shivammathur/node:2404@sha256:e701c38cc9f7168fa46c70c7dcce292249cbf6fd5a15b742b418918fd4306838
 
     steps:
       - uses: actions/checkout@v4
+
+      # PHP comes from setup-php inside the job container, never from the host.
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, pgsql, pdo_pgsql, redis, bcmath, pcntl, zip, gd, sockets, exif, gmp
+          coverage: pcov
+          tools: composer:v2
 
       - name: Verify PHP 8.4
         run: |
@@ -45,6 +59,11 @@ jobs:
       - name: PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=2G
 
+      # Steps in the container run as root; hand the checkout back to the runner user (uid 1000).
+      - name: Hand the workspace back
+        if: always()
+        run: chown -R 1000:1000 "$GITHUB_WORKSPACE"
+
   # ─────────────────────────────────────────
   # Job 2: Test Suite (SQLite in-memory)
   # ─────────────────────────────────────────
@@ -52,8 +71,14 @@ jobs:
     # Pull requests from forks never run on the self-hosted runner.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Tests
-    runs-on: self-hosted
+    runs-on: [self-hosted, ci]
+    container: shivammathur/node:2404@sha256:e701c38cc9f7168fa46c70c7dcce292249cbf6fd5a15b742b418918fd4306838
     needs: quality
+
+    # Redis for the tests lives on the job network (host `redis`); nothing is published on the host.
+    services:
+      redis:
+        image: redis:7-alpine
 
     env:
       APP_ENV: testing
@@ -62,16 +87,23 @@ jobs:
       CACHE_STORE: array
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: array
-      # Self-hosted runner has Redis bound to 127.0.0.1 (no docker-compose hostname).
-      REDIS_HOST: 127.0.0.1
+      REDIS_HOST: redis
       REDIS_PORT: 6379
-      # ext-intl not available on runner; force English locale formatting in Cashier.
+      # ext-intl is not installed; force English locale formatting in Cashier.
       CASHIER_CURRENCY_LOCALE: en
       # Webclaw container only exists in docker-compose; tests must not call it.
       WEBCLAW_URL: http://127.0.0.1:65535
 
     steps:
       - uses: actions/checkout@v4
+
+      # PHP comes from setup-php inside the job container, never from the host.
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, pgsql, pdo_pgsql, redis, bcmath, pcntl, zip, gd, sockets, exif, gmp
+          coverage: pcov
+          tools: composer:v2
 
       - name: Verify PHP 8.4
         run: |
@@ -112,6 +144,11 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit
 
+      # Steps in the container run as root; hand the checkout back to the runner user (uid 1000).
+      - name: Hand the workspace back
+        if: always()
+        run: chown -R 1000:1000 "$GITHUB_WORKSPACE"
+
   # ─────────────────────────────────────────
   # Job 3: Frontend Build Verification
   # ─────────────────────────────────────────
@@ -119,7 +156,7 @@ jobs:
     # Pull requests from forks never run on the self-hosted runner.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Build Assets
-    runs-on: self-hosted
+    runs-on: [self-hosted, ci]
 
     steps:
       - uses: actions/checkout@v4
