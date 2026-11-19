@@ -47,6 +47,8 @@
         <main class="min-w-0 flex-1 px-6 py-10 sm:px-10 lg:py-12">
             <div class="mx-auto max-w-3xl">
                 {{ $slot }}
+
+                <x-docs.next-step />
             </div>
         </main>
     </div>

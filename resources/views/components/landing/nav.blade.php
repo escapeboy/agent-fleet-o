@@ -28,10 +28,12 @@
                 </a>
             @else
                 <a href="{{ route('login') }}" class="rounded text-sm font-semibold text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500">Log in</a>
+                @if(Route::has('register'))
                 <a href="{{ route('register') }}"
                    class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                     {{ $ctaLabel ?? 'Start Free' }}
                 </a>
+                @endif
             @endauth
         </div>
 
@@ -78,9 +80,11 @@
                 <a href="{{ route('login') }}" class="block rounded-lg border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     Log in
                 </a>
+                @if(Route::has('register'))
                 <a href="{{ route('register') }}" class="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-primary-700">
                     {{ $ctaLabel ?? 'Start Free' }}
                 </a>
+                @endif
             @endauth
         </div>
     </div>
