@@ -11,7 +11,7 @@
                     Browse agent templates
                 </a>
             @endif
-            @if(Route::has('register') && ! auth()->check())
+            @if(Route::has('register'))
                 <a href="{{ route('register') }}"
                    data-analytics-event="cta_click" data-analytics-label="sign_up"
                    class="rounded-lg border border-primary-600 bg-white px-4 py-2 text-center text-sm font-semibold text-primary-600 transition hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
