@@ -98,6 +98,16 @@
                         <a href="{{ route('use-cases.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                             All use cases
                         </a>
+                        @if (! empty($uc['docs_page']))
+                            <a href="{{ route('docs.show', $uc['docs_page']) }}" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                                Read the setup guide
+                            </a>
+                        @endif
+                        @if (! empty($uc['self_host']))
+                            <a href="https://github.com/escapeboy/agent-fleet-o" class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                                Self-host from GitHub
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>
