@@ -7,7 +7,11 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Gateways\PrismAiGateway;
+use App\Infrastructure\AI\Middleware\ContextCompaction;
+use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\PiiRedaction;
+use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -151,6 +155,30 @@ class PiiRedactionMiddlewareTest extends TestCase
 
         $this->assertSame('nothing here', $received->userPrompt);
         $this->assertSame(0, AuditEntry::where('event', 'ai.pii_redacted')->count());
+    }
+
+    public function test_runs_after_idempotency_and_before_semantic_cache_in_gateway(): void
+    {
+        $gateway = $this->app->make(PrismAiGateway::class);
+        $property = new \ReflectionProperty(PrismAiGateway::class, 'middleware');
+
+        /** @var list<object> $middleware */
+        $middleware = $property->getValue($gateway);
+        $classes = array_map(fn (object $m): string => $m::class, $middleware);
+
+        $pii = array_search(PiiRedaction::class, $classes, true);
+        $idempotency = array_search(IdempotencyCheck::class, $classes, true);
+        $semanticCache = array_search(SemanticCache::class, $classes, true);
+        $compaction = array_search(ContextCompaction::class, $classes, true);
+
+        $this->assertIsInt($pii);
+        $this->assertIsInt($idempotency);
+        $this->assertIsInt($semanticCache);
+        $this->assertIsInt($compaction);
+        $this->assertGreaterThan($idempotency, $pii);
+        // SemanticCache sends the prompt to a cloud embedding API, so it must see masked text.
+        $this->assertLessThan($semanticCache, $pii);
+        $this->assertLessThan($compaction, $pii);
     }
 
     public function test_audit_failure_does_not_block_the_call(): void

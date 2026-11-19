@@ -654,7 +654,9 @@
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Data Privacy</h2>
         <p class="mb-4 text-sm text-gray-500">
             When on, emails, IBANs and card numbers in prompts are replaced by placeholders such as [EMAIL_1]
-            before a call to a cloud AI provider. Local, self-hosted and Bridge models are skipped.
+            before a call to a cloud AI provider, and before the semantic cache creates an embedding of the prompt.
+            Local, self-hosted and Bridge models are skipped; if the semantic cache is on, their prompts are still
+            embedded unmasked by the configured embedding provider.
             The model's answers will contain the placeholders, not the original values.
             Tool results inside a tool loop are not masked.
         </p>

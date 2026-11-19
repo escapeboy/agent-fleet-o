@@ -180,6 +180,11 @@ return [
     | Each masked call writes an audit entry (ai.pii_redacted) with counts
     | per type only.
     |
+    | The middleware runs before SemanticCache, so the cache embeds and stores
+    | only masked text. For skipped (local/self-hosted/Bridge) providers the
+    | prompt is not masked, so SemanticCache, when enabled, still sends it
+    | unmasked to the configured embedding provider.
+    |
     | Per-team switch: teams.settings['pii_redaction_enabled'] = true|false.
     | 'default' applies when the team has not set the key.
     |
