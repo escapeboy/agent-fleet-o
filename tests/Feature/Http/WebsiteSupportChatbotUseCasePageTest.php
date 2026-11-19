@@ -62,8 +62,20 @@ class WebsiteSupportChatbotUseCasePageTest extends TestCase
         $this->assertStringContainsString('sitemaps', $text);
         $this->assertStringContainsString('websites', $text);
         $this->assertStringContainsString('answer cache', $text);
-        $this->assertStringContainsString('before the bot learns', $text);
+        $this->assertStringContainsString('approval inbox', $text);
         $this->assertStringContainsString('pending-review queue', $text);
+    }
+
+    public function test_page_does_not_claim_an_unbuilt_learning_loop(): void
+    {
+        // Corrections are only captured as pending-review learning entries;
+        // no code accepts them or feeds them back into answers.
+        $text = strtolower(self::decode(strip_tags($this->html())));
+
+        $this->assertStringNotContainsString('bot learns', $text);
+        $this->assertStringNotContainsString('accepted corrections', $text);
+        $this->assertStringNotContainsString('accepts or rejects', $text);
+        $this->assertStringNotContainsString('100%', $text);
     }
 
     public function test_page_has_signup_self_host_and_docs_links(): void
