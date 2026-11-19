@@ -14,6 +14,7 @@ use App\Http\Controllers\EmailTemplatePreviewController;
 use App\Http\Controllers\IntegrationOAuthController;
 use App\Http\Controllers\LlmsTxtController;
 use App\Http\Controllers\MarketplacePageController;
+use App\Http\Controllers\McpToolCatalogController;
 use App\Http\Controllers\PrometheusMetricsController;
 use App\Http\Controllers\PublicExperimentController;
 use App\Http\Controllers\PublicReleaseController;
@@ -398,6 +399,9 @@ Route::view('/compare', 'compare.index')->name('compare.index');
 Route::get('/compare/{slug}', ComparisonsController::class)
     ->whereIn('slug', ['langgraph', 'crewai', 'n8n'])
     ->name('compare.show');
+
+// Public MCP tool catalog (SEO)
+Route::get('/mcp-tools', McpToolCatalogController::class)->name('mcp-tools.index');
 
 // Public marketplace storefront (Blade + Alpine.js, no auth)
 Route::controller(MarketplacePageController::class)->prefix('marketplace')->name('marketplace.')->group(function () {

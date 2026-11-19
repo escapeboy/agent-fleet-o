@@ -11,6 +11,11 @@
     </p>
 
     <p class="mt-3 text-gray-600">
+        <a href="{{ route('mcp-tools.index') }}" class="font-medium text-primary-600 hover:text-primary-700">Browse the full list of MCP tools</a>
+        with a short description of each one.
+    </p>
+
+    <p class="mt-3 text-gray-600">
         <strong>Scenario:</strong> <em>A developer connects Claude Code to FleetQ via MCP and types:
         "Create an experiment that monitors Hacker News for mentions of our product and summarises the
         top 5 posts every morning." Claude calls the <code>agent_create</code>, <code>skill_create</code>,
