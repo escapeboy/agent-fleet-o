@@ -167,4 +167,24 @@ return [
     */
     'redact_before_persist' => (bool) env('REDACT_BEFORE_PERSIST_ENABLED', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | PII Masking Before Cloud Provider Calls
+    |--------------------------------------------------------------------------
+    |
+    | The PiiRedaction gateway middleware replaces emails, IBANs and Luhn-valid
+    | card numbers in the system and user prompts with numbered placeholders
+    | ([EMAIL_1], [IBAN_1], [CARD_1]) before a cloud provider call.
+    |
+    | Per-team switch: teams.settings['pii_redaction_enabled']. 'default' is
+    | used when a team has not set it. Skipped for local CLI agents
+    | (llm_providers.*.local), self-hosted HTTP providers (*.http_local) and
+    | Bridge providers (*.bridge). The audit entry (ai.pii_redacted) holds
+    | only counts per type, never the values.
+    |
+    */
+    'pii_redaction' => [
+        'default' => false,
+    ],
+
 ];
