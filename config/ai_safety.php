@@ -167,4 +167,25 @@ return [
     */
     'redact_before_persist' => (bool) env('REDACT_BEFORE_PERSIST_ENABLED', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | PII Redaction Before Cloud Provider Calls
+    |--------------------------------------------------------------------------
+    |
+    | PiiRedaction middleware replaces emails, IBANs and Luhn-valid card
+    | numbers in the system and user prompts with numbered placeholders
+    | ([EMAIL_1], [IBAN_1], [CARD_1]) before the call reaches a cloud provider.
+    | Skipped for local CLI agents ('local'), self-hosted HTTP providers
+    | ('http_local') and Bridge providers ('bridge') in llm_providers config.
+    | Each masked call writes an audit entry (ai.pii_redacted) with counts
+    | per type only.
+    |
+    | Per-team switch: teams.settings['pii_redaction_enabled'] = true|false.
+    | 'default' applies when the team has not set the key.
+    |
+    */
+    'pii_redaction' => [
+        'default' => false,
+    ],
+
 ];

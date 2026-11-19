@@ -649,6 +649,23 @@
     </div>
     @endif
 
+    {{-- Data Privacy --}}
+    <div class="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 class="mb-1 text-lg font-semibold text-gray-900">Data Privacy</h2>
+        <p class="mb-4 text-sm text-gray-500">
+            When on, emails, IBANs and card numbers in prompts are replaced by placeholders such as [EMAIL_1]
+            before a call to a cloud AI provider. Local, self-hosted and Bridge models are skipped.
+            The model's answers will contain the placeholders, not the original values.
+            Tool results inside a tool loop are not masked.
+        </p>
+        <div class="flex items-center gap-4">
+            <x-form-checkbox wire:model="piiRedactionEnabled" label="Mask personal data before sending to cloud AI providers" />
+        </div>
+        <button wire:click="savePrivacySettings" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            Save
+        </button>
+    </div>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     {{-- FleetQ Bridge --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">

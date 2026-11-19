@@ -71,6 +71,9 @@ class TeamSettingsPage extends Component
     // Chatbot feature toggle
     public bool $chatbotEnabled = false;
 
+    // Data privacy — mask PII before cloud provider calls
+    public bool $piiRedactionEnabled = false;
+
     // Approval settings
     public int $approvalTimeoutHours = 48;
 
@@ -182,6 +185,7 @@ class TeamSettingsPage extends Component
         $this->mediaAnalysisEnabled = (bool) ($settings['media_analysis_enabled'] ?? GlobalSetting::get('media_analysis_enabled', false));
         $this->approvalTimeoutHours = (int) ($settings['approval_timeout_hours'] ?? GlobalSetting::get('approval_timeout_hours', 48));
         $this->chatbotEnabled = (bool) ($settings['chatbot_enabled'] ?? false);
+        $this->piiRedactionEnabled = (bool) ($settings['pii_redaction_enabled'] ?? config('ai_safety.pii_redaction.default', false));
         $this->formatGuide = (string) ($settings['format_guide'] ?? '');
 
         // Billing & limits — only meaningful in cloud builds (columns may not exist in community).
@@ -468,6 +472,18 @@ class TeamSettingsPage extends Component
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Chatbot settings saved.');
+    }
+
+    public function savePrivacySettings(): void
+    {
+        $this->authorize('manage-team', auth()->user()->currentTeam);
+
+        $team = auth()->user()->currentTeam;
+        $settings = $team->settings ?? [];
+        $settings['pii_redaction_enabled'] = $this->piiRedactionEnabled;
+        $team->update(['settings' => $settings]);
+
+        session()->flash('message', 'Data privacy settings saved.');
     }
 
     /**
