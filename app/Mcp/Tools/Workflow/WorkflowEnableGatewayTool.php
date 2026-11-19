@@ -2,9 +2,11 @@
 
 namespace App\Mcp\Tools\Workflow;
 
+use App\Domain\Workflow\Actions\EnableWorkflowMcpGatewayAction;
 use App\Domain\Workflow\Models\Workflow;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -56,22 +58,17 @@ class WorkflowEnableGatewayTool extends Tool
             return $this->notFoundError('workflow');
         }
 
-        // Check tool_name uniqueness across all teams
         $toolName = $validated['tool_name'];
-        $conflict = Workflow::withoutGlobalScopes()
-            ->where('mcp_tool_name', $toolName)
-            ->where('id', '!=', $workflow->id)
-            ->exists();
 
-        if ($conflict) {
-            return $this->failedPreconditionError("The tool name '{$toolName}' is already in use by another workflow. Choose a different name.");
+        try {
+            app(EnableWorkflowMcpGatewayAction::class)->execute(
+                $workflow,
+                $toolName,
+                $validated['mcp_execution_mode'] ?? 'async',
+            );
+        } catch (ValidationException $e) {
+            return $this->failedPreconditionError(collect($e->errors())->flatten()->first() ?? 'Invalid gateway settings.');
         }
-
-        $workflow->update([
-            'mcp_exposed' => true,
-            'mcp_tool_name' => $toolName,
-            'mcp_execution_mode' => $validated['mcp_execution_mode'] ?? 'async',
-        ]);
 
         return Response::text(json_encode([
             'success' => true,

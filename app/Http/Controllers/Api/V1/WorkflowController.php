@@ -239,9 +239,10 @@ class WorkflowController extends Controller
     }
 
     /**
-     * Import a workflow from a JSON or YAML file.
+     * Import a workflow from a JSON or YAML file. Flowise chatflow/agentflow JSON exports are
+     * converted automatically; steps that need manual follow-up are listed in conversion_warnings.
      *
-     * @response 201 {"workflow_id": "...", "unresolved_references": [], "checksum_valid": true}
+     * @response 201 {"workflow_id": "...", "unresolved_references": [], "checksum_valid": true, "conversion_warnings": []}
      */
     public function import(Request $request, ImportWorkflowAction $action): JsonResponse
     {
@@ -269,6 +270,7 @@ class WorkflowController extends Controller
             'status' => 'draft',
             'checksum_valid' => $result['checksum_valid'],
             'unresolved_references' => $result['unresolved_references'],
+            'conversion_warnings' => $result['conversion_warnings'],
             'data' => new WorkflowResource($workflow->load(['nodes', 'edges'])),
         ], 201);
     }

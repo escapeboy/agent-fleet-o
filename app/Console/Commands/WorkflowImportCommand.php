@@ -10,7 +10,7 @@ class WorkflowImportCommand extends Command
 {
     protected $signature = 'workflow:import {file} {--team=}';
 
-    protected $description = 'Import a workflow from a JSON or YAML file';
+    protected $description = 'Import a workflow from a JSON or YAML file (FleetQ export or Flowise chatflow/agentflow export)';
 
     public function handle(ImportWorkflowAction $action): int
     {
@@ -77,6 +77,10 @@ class WorkflowImportCommand extends Command
             foreach ($result['unresolved_references'] as $ref) {
                 $this->warn("  - {$ref['type']}: {$ref['name']}");
             }
+        }
+
+        foreach ($result['conversion_warnings'] as $warning) {
+            $this->warn($warning);
         }
 
         return self::SUCCESS;
