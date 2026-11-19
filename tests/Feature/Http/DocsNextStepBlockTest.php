@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http;
 
+use App\Models\User;
 use Illuminate\Routing\RouteCollection;
 use Illuminate\Routing\Router;
 use Illuminate\Routing\UrlGenerator;
@@ -43,6 +44,18 @@ class DocsNextStepBlockTest extends TestCase
     public function test_docs_page_renders_without_register_route(): void
     {
         $this->removeRoute('register');
+
+        $html = view('docs.agents')->render();
+
+        $this->assertStringContainsString('data-docs-next-step', $html);
+        $this->assertStringNotContainsString('data-analytics-label="sign_up"', $html);
+        $this->assertStringContainsString('data-analytics-label="browse_templates"', $html);
+        $this->assertStringContainsString('data-analytics-label="self_host_github"', $html);
+    }
+
+    public function test_docs_page_hides_sign_up_for_authenticated_users(): void
+    {
+        $this->be(User::factory()->make());
 
         $html = view('docs.agents')->render();
 
