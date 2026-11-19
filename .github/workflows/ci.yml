@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Job containers default to sh; the steps rely on bash (brace expansion). Same shell the host jobs use.
+defaults:
+  run:
+    shell: bash -e {0}
+
 jobs:
   # ─────────────────────────────────────────
   # Job 1: Code Quality (fast, no DB needed)
