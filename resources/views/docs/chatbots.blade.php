@@ -17,6 +17,10 @@
         Corrections made via learning entries automatically improve future responses.</em>
     </p>
 
+    <p class="mt-3 text-gray-600">
+        See the <a href="{{ route('use-cases.show', 'website-support-chatbot') }}" class="text-primary-600 hover:underline">website support chatbot use case</a> for the end-to-end flow.
+    </p>
+
     {{-- Overview --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Overview</h2>
     <div class="mt-4 grid gap-3 sm:grid-cols-3">
