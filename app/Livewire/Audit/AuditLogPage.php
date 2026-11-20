@@ -3,6 +3,7 @@
 namespace App\Livewire\Audit;
 
 use App\Domain\Audit\Models\AuditEntry;
+use App\Domain\Audit\Services\AuditLogQuery;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -17,6 +18,12 @@ class AuditLogPage extends Component
 
     #[Url]
     public string $eventFilter = '';
+
+    #[Url]
+    public string $from = '';
+
+    #[Url]
+    public string $to = '';
 
     public ?string $expandedEntryId = null;
 
@@ -38,6 +45,16 @@ class AuditLogPage extends Component
         $this->resetPage();
     }
 
+    public function updatedFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedTo(): void
+    {
+        $this->resetPage();
+    }
+
     public function toggleEntry(string $entryId): void
     {
         $this->expandedEntryId = $this->expandedEntryId === $entryId ? null : $entryId;
@@ -45,18 +62,7 @@ class AuditLogPage extends Component
 
     public function render()
     {
-        $query = AuditEntry::with('user')->latest('created_at');
-
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->where('event', 'ilike', "%{$this->search}%")
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'ilike', "%{$this->search}%"));
-            });
-        }
-
-        if ($this->eventFilter) {
-            $query->where('event', 'like', "{$this->eventFilter}.%");
-        }
+        $query = AuditLogQuery::build($this->search, $this->eventFilter, $this->from, $this->to);
 
         $eventTypes = AuditEntry::selectRaw("split_part(event, '.', 1) as category")
             ->distinct()
