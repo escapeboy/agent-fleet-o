@@ -29,6 +29,12 @@ class SitemapController extends Controller
         'webauthn', 'account', 'authorize', 'continue', 'end-session',
     ];
 
+    /**
+     * Public pages whose first segment would otherwise match a denied
+     * `segment-*` prefix (e.g. /mcp-tools vs the `mcp` machine surface).
+     */
+    private const ALLOW_URIS = ['mcp-tools'];
+
     /** Paths that exist publicly but must not be indexed. */
     private const DENY_PATTERNS = [
         'login', 'register', 'logout', 'password', 'forgot', 'reset',
@@ -129,6 +135,10 @@ class SitemapController extends Controller
         // (api.json, llms.txt, sitemap.xml, livewire.js) — never a page.
         if (str_contains(basename($uri), '.')) {
             return false;
+        }
+
+        if (in_array($uri, self::ALLOW_URIS, true)) {
+            return ! $this->requiresAuth($route);
         }
 
         $firstSegment = explode('/', $uri)[0];
