@@ -17,6 +17,11 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 Generate
             </button>
+            @if($workflowId)
+            <button wire:click="$set('showVersionsPanel', !$showVersionsPanel)" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Versions
+            </button>
+            @endif
             <button @click="$wire.save()" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Save Draft
             </button>
@@ -43,6 +48,30 @@
         </div>
         @if(count($generateErrors) > 0)
             <div class="mt-2 text-xs text-red-600">{{ implode('; ', $generateErrors) }}</div>
+        @endif
+    </div>
+    @endif
+
+    {{-- Version History Panel --}}
+    @if($showVersionsPanel)
+    <div class="mx-4 mt-2 max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white p-4">
+        <h3 class="mb-2 text-sm font-semibold text-gray-800">Version History</h3>
+        @if($versions->isEmpty())
+            <p class="text-xs text-gray-500">No earlier versions yet. Versions are saved when an active workflow's graph changes.</p>
+        @else
+            <ul class="divide-y divide-gray-100">
+                @foreach($versions as $version)
+                    <li wire:key="workflow-version-{{ $version->id }}" class="flex items-center gap-3 py-2 text-sm">
+                        <span class="font-medium text-gray-900">v{{ $version->version }}</span>
+                        <span class="text-xs text-gray-500">{{ $version->created_at?->format('Y-m-d H:i') }}</span>
+                        <span class="text-xs text-gray-500">{{ $version->createdBy?->name ?? 'system' }}</span>
+                        <span class="text-xs text-gray-500">{{ $version->nodeCount() }} nodes · {{ $version->edgeCount() }} edges</span>
+                        <button wire:click="restoreVersion('{{ $version->id }}')" wire:confirm="Restore v{{ $version->version }}? The current graph is kept as a version and the restored graph becomes the newest version." class="ml-auto rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            Restore this version
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
         @endif
     </div>
     @endif
