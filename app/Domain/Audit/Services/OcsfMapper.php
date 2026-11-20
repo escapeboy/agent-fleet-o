@@ -2,6 +2,10 @@
 
 namespace App\Domain\Audit\Services;
 
+use App\Domain\Audit\Models\AuditEntry;
+use App\Models\User;
+use Illuminate\Support\Carbon;
+
 /**
  * Maps internal audit event strings to OCSF (Open Cybersecurity Schema Framework) class
  * and severity identifiers for structured security event categorisation.
@@ -45,6 +49,73 @@ class OcsfMapper
             'class_uid' => self::baseClassUid($event),
             'severity_id' => self::baseSeverityId($event),
         ];
+    }
+
+    /**
+     * Build an OCSF-shaped record for an audit entry (used by the JSON Lines export).
+     *
+     * @return array<string, mixed>
+     */
+    public static function toRecord(AuditEntry $entry): array
+    {
+        $event = (string) $entry->event;
+        $classified = self::classify($event);
+        $classUid = $entry->ocsf_class_uid ?? $classified['class_uid'];
+        $severityId = $entry->ocsf_severity_id ?? $classified['severity_id'];
+
+        $record = [
+            'class_uid' => $classUid,
+            'category_uid' => intdiv($classUid, 1000),
+            'severity_id' => $severityId,
+            'type_uid' => $classUid * 100 + 99,
+            'activity_id' => 99,
+            'activity_name' => $event,
+            'time' => self::epochMs($entry->getAttribute('created_at')),
+            'metadata' => [
+                'version' => '1.1.0',
+                'uid' => $entry->id,
+                'product' => [
+                    'name' => 'FleetQ',
+                    'vendor_name' => 'FleetQ',
+                ],
+            ],
+        ];
+
+        $user = $entry->user;
+        if ($user instanceof User) {
+            $record['actor'] = [
+                'user' => [
+                    'uid' => $user->id,
+                    'name' => $user->name,
+                ],
+            ];
+        }
+
+        if ($entry->ip_address) {
+            $record['src_endpoint'] = ['ip' => $entry->ip_address];
+        }
+
+        $record['unmapped'] = [
+            'properties' => $entry->properties,
+            'subject_type' => $entry->subject_type,
+            'subject_id' => $entry->subject_id,
+            'triggered_by' => $entry->triggered_by,
+        ];
+
+        return $record;
+    }
+
+    private static function epochMs(mixed $value): ?int
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return (int) Carbon::instance($value)->getTimestampMs();
+        }
+
+        if (is_string($value) && $value !== '') {
+            return (int) Carbon::parse($value)->getTimestampMs();
+        }
+
+        return null;
     }
 
     /**
