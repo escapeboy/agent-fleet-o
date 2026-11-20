@@ -2,10 +2,12 @@
 
 namespace App\Domain\Workflow\Actions;
 
+use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Events\WorkflowSaved;
 use App\Domain\Workflow\Models\Workflow;
 use App\Domain\Workflow\Models\WorkflowEdge;
 use App\Domain\Workflow\Models\WorkflowNode;
+use App\Domain\Workflow\Models\WorkflowVersion;
 use Illuminate\Support\Facades\DB;
 
 class UpdateWorkflowAction
@@ -78,6 +80,10 @@ class UpdateWorkflowAction
 
             // If graph is being updated and workflow is active, bump version
             if ($nodes !== null && $workflow->isActive()) {
+                // Keep an immutable copy of the graph being replaced.
+                $snapshot = $this->snapshotGraph($workflow);
+                $changes['snapshot_version'] = $snapshot->version;
+
                 $workflow->version = $workflow->version + 1;
                 $changes['version'] = $workflow->version;
             }
@@ -104,6 +110,58 @@ class UpdateWorkflowAction
         WorkflowSaved::dispatch($workflow);
 
         return $workflow;
+    }
+
+    /**
+     * Store the workflow's current graph under its current version number,
+     * in the shape replaceGraph() accepts so it can be restored verbatim.
+     */
+    private function snapshotGraph(Workflow $workflow): WorkflowVersion
+    {
+        $nodes = WorkflowNode::query()
+            ->where('workflow_id', $workflow->id)
+            ->orderBy('order')
+            ->get()
+            ->map(fn (WorkflowNode $node) => [
+                'id' => $node->id,
+                'type' => $this->nodeTypeValue($node->getAttribute('type')),
+                'label' => $node->label,
+                'agent_id' => $node->agent_id,
+                'skill_id' => $node->skill_id,
+                'crew_id' => $node->crew_id,
+                'sub_workflow_id' => $node->sub_workflow_id,
+                'config' => $node->config ?? [],
+                'position_x' => $node->position_x,
+                'position_y' => $node->position_y,
+                'order' => $node->order,
+            ])->values()->all();
+
+        $edges = WorkflowEdge::query()
+            ->where('workflow_id', $workflow->id)
+            ->get()
+            ->map(fn (WorkflowEdge $edge) => [
+                'source_node_id' => $edge->source_node_id,
+                'target_node_id' => $edge->target_node_id,
+                'condition' => $edge->condition,
+                'label' => $edge->label,
+                'is_default' => $edge->is_default,
+                'sort_order' => $edge->sort_order,
+            ])->values()->all();
+
+        return WorkflowVersion::withoutGlobalScopes()->firstOrCreate(
+            ['workflow_id' => $workflow->id, 'version' => $workflow->version],
+            [
+                'team_id' => $workflow->team_id,
+                'graph' => ['nodes' => $nodes, 'edges' => $edges],
+                'created_by' => auth()->id(),
+                'created_at' => now(),
+            ],
+        );
+    }
+
+    private function nodeTypeValue(mixed $type): mixed
+    {
+        return $type instanceof WorkflowNodeType ? $type->value : $type;
     }
 
     private function replaceGraph(Workflow $workflow, array $nodes, array $edges): void

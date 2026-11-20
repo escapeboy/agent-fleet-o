@@ -74,6 +74,16 @@ class Workflow extends Model
         return $this->hasMany(WorkflowEdge::class);
     }
 
+    /**
+     * Graph snapshots, newest version first.
+     *
+     * @return HasMany<WorkflowVersion, $this>
+     */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(WorkflowVersion::class)->orderByDesc('version');
+    }
+
     public function experiments(): HasMany
     {
         return $this->hasMany(Experiment::class);
