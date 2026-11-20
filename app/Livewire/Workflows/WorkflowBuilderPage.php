@@ -11,10 +11,12 @@ use App\Domain\Skill\Models\Skill;
 use App\Domain\Workflow\Actions\CreateWorkflowAction;
 use App\Domain\Workflow\Actions\EstimateWorkflowCostAction;
 use App\Domain\Workflow\Actions\GenerateWorkflowFromPromptAction;
+use App\Domain\Workflow\Actions\RestoreWorkflowVersionAction;
 use App\Domain\Workflow\Actions\UpdateWorkflowAction;
 use App\Domain\Workflow\Actions\ValidateWorkflowGraphAction;
 use App\Domain\Workflow\Enums\WorkflowNodeType;
 use App\Domain\Workflow\Models\Workflow;
+use App\Domain\Workflow\Models\WorkflowVersion;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -72,6 +74,9 @@ class WorkflowBuilderPage extends Component
     public bool $isGenerating = false;
 
     public array $generateErrors = [];
+
+    // Version history
+    public bool $showVersionsPanel = false;
 
     public function mount(?Workflow $workflow = null): void
     {
@@ -473,13 +478,45 @@ class WorkflowBuilderPage extends Component
         $this->redirect(route('workflows.edit', $result['workflow']), navigate: true);
     }
 
+    public function restoreVersion(string $versionId): void
+    {
+        Gate::authorize('edit-content');
+
+        if (! $this->workflowId) {
+            return;
+        }
+
+        try {
+            $workflow = Workflow::findOrFail($this->workflowId);
+
+            $restored = app(RestoreWorkflowVersionAction::class)->execute($workflow, $versionId);
+
+            session()->flash('success', "Restored as version {$restored->version}.");
+
+            // Reload the page so the canvas picks up the restored graph.
+            $this->redirect(route('workflows.edit', $workflow), navigate: true);
+        } catch (\Throwable $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
     public function render()
     {
         $this->resolveExecutionState();
 
+        $versions = $this->workflowId
+            ? WorkflowVersion::query()
+                ->where('workflow_id', $this->workflowId)
+                ->with('createdBy')
+                ->orderByDesc('version')
+                ->limit(50)
+                ->get()
+            : collect();
+
         return view('livewire.workflows.workflow-builder-page', [
             'nodeTypes' => WorkflowNodeType::cases(),
             'availableWorkflows' => $this->availableWorkflows,
+            'versions' => $versions,
         ])->layout('layouts.app', ['header' => $this->workflowId ? 'Edit Workflow' : 'Create Workflow']);
     }
 }
