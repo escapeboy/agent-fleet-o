@@ -3,9 +3,9 @@
         ->filter(fn ($page, $slug) => $slug !== 'checked_on' && is_array($page));
 @endphp
 <x-layouts.public
-    title="FleetQ Compared: LangGraph, CrewAI and n8n Alternatives"
-    description="How FleetQ, a self-hosted control plane for AI agents, compares to LangGraph, CrewAI and n8n. Honest notes on where each tool fits best."
-    keywords="langgraph alternative, crewai alternative, n8n alternative, ai agent platform comparison, fleetq comparison"
+    title="FleetQ Compared: LangGraph, CrewAI, n8n and Dify Alternatives"
+    description="How FleetQ, a self-hosted control plane for AI agents, compares to LangGraph, CrewAI, n8n and Dify. Honest notes on where each tool fits best."
+    keywords="langgraph alternative, crewai alternative, n8n alternative, dify alternative, ai agent platform comparison, fleetq comparison"
 >
     <x-slot:head>
         @php
@@ -41,7 +41,7 @@
     {{-- Comparison grid --}}
     <section class="py-12 bg-white">
         <div class="mx-auto max-w-5xl px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 @foreach ($comparisons as $slug => $c)
                     <a href="{{ route('compare.show', $slug) }}" class="group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg transition-all">
                         <span class="text-sm font-semibold text-gray-900 mb-2">FleetQ vs {{ $c['tool_name'] }}</span>

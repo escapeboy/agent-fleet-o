@@ -13,7 +13,7 @@ class ComparePagesTest extends TestCase
 {
     // No RefreshDatabase — every page under test is a pure render.
 
-    private const SLUGS = ['langgraph', 'crewai', 'n8n'];
+    private const SLUGS = ['langgraph', 'crewai', 'n8n', 'dify'];
 
     /**
      * @return array<string, array{string}>
@@ -24,10 +24,11 @@ class ComparePagesTest extends TestCase
             'langgraph' => ['langgraph'],
             'crewai' => ['crewai'],
             'n8n' => ['n8n'],
+            'dify' => ['dify'],
         ];
     }
 
-    public function test_compare_index_returns_200_and_links_all_three_pages(): void
+    public function test_compare_index_returns_200_and_links_all_pages(): void
     {
         $response = $this->get('/compare');
 
@@ -35,6 +36,22 @@ class ComparePagesTest extends TestCase
         foreach (self::SLUGS as $slug) {
             $response->assertSee('href="'.url('/compare/'.$slug).'"', false);
         }
+        $response->assertSee('Dify');
+    }
+
+    public function test_dify_page_renders_h1_and_names_where_dify_fits(): void
+    {
+        $h1 = config('comparisons.dify.h1');
+        $this->assertIsString($h1);
+
+        $response = $this->get('/compare/dify');
+        $response->assertOk();
+
+        $this->assertMatchesRegularExpression(
+            '#<h1[^>]*>\s*'.preg_quote(e($h1), '#').'\s*</h1>#',
+            $response->getContent(),
+        );
+        $response->assertSee('When Dify is the better fit');
     }
 
     #[DataProvider('slugProvider')]
