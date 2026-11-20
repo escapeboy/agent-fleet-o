@@ -201,4 +201,59 @@ return [
         ],
     ],
 
+    'dify' => [
+        'tool_name' => 'Dify',
+        'meta_title' => 'FleetQ vs Dify: a self-hosted Dify alternative',
+        'meta_description' => 'FleetQ vs Dify: compare an AI agent control plane with approvals, budget limits, audit trail and an MCP server to a visual AI app builder.',
+        'keywords' => 'dify alternative, dify vs fleetq, fleetq vs dify, self-hosted dify, ai agent governance',
+        'h1' => 'FleetQ vs Dify: governing agents in production or building AI apps',
+        'intro' => [
+            'Dify is a platform for building AI apps in a visual, no-code builder, with knowledge bases that let an app answer from your own documents. FleetQ is a self-hosted control plane for running AI agents in production: every run gets an approval inbox, a budget, an audit trail and access through an MCP server.',
+            'If you are looking for a Dify alternative, it helps to know which job you want done first. This page explains where each tool fits, so you can decide whether you need one, the other, or both.',
+        ],
+        'short_answer' => [
+            'pick_tool' => 'Pick Dify if you want a visual, no-code builder for AI apps with built-in document retrieval through knowledge bases, so you can ship a chatbot or assistant over your own content quickly.',
+            'pick_fleetq' => 'Pick FleetQ if you need the operational layer around agents: an approval inbox with SLAs, hard budget limits with auto-pause, a full activity log, bring-your-own keys and an MCP server, all self-hosted under AGPL-3.0.',
+        ],
+        'table' => $table(),
+        'together' => null,
+        'sections' => [
+            [
+                'heading' => 'Where they differ',
+                'paragraphs' => [
+                    'An app builder is where you design what an AI app looks like to its users: the prompt, the documents it can draw on and the screen it lives in. A control plane is where you decide who may run an agent, what it may spend, which of its actions need a person to sign off and how you can audit what happened later. FleetQ focuses on the second job.',
+                    'FleetQ still ships its own agents, crews and a visual workflow builder with branching, loops and human tasks, so you can build without writing code. Signals from webhooks, email, RSS and chat tools can start a run, and results go out by email, Slack, Telegram or webhook. Its main value, though, is the governance around each run.',
+                ],
+            ],
+            [
+                'heading' => 'What FleetQ adds for agents in production',
+                'paragraphs' => [
+                    'Risky actions wait in an approval inbox with SLA enforcement and escalation when nobody answers in time. Spend is reserved and settled against a credit ledger with pessimistic locks, so a runaway loop pauses itself instead of draining your provider account, and projects can carry their own budget caps. Every change is written to an activity log that you can search and filter.',
+                    'You bring your own keys for Anthropic, OpenAI and Google, or point agents at local models through Ollama, LM Studio or vLLM. Nothing leaves your servers unless you send it.',
+                    'Agents are also reachable from outside the web UI. The REST API and the built-in MCP server let scripts, IDE assistants and other agents start runs and read results, while the same approval, budget and audit rules apply to every call.',
+                ],
+            ],
+            [
+                'heading' => 'How to choose',
+                'paragraphs' => [
+                    'If your goal is to put an AI app in front of users quickly and let it answer from your documents, an app builder is a good fit. If agents take actions that cost money or touch real systems, and you need reviewers, operators and finance to trust them, a control plane saves you from building that layer yourself. Check the Dify docs for its current features, since this table only lists what we could confirm.',
+                ],
+            ],
+        ],
+        'faqs' => [
+            [
+                'question' => 'Is FleetQ a Dify alternative?',
+                'answer' => 'For running agents in production, yes. FleetQ has agents, crews and a visual workflow builder, built around approvals, budgets and an audit trail. For a no-code app builder with knowledge bases, Dify is the better fit.',
+            ],
+            [
+                'question' => 'Can I self-host FleetQ?',
+                'answer' => 'Yes. The FleetQ Community Edition is AGPL-3.0 licensed and runs on your own servers with Docker Compose, free of charge.',
+            ],
+            [
+                'question' => 'Does FleetQ have an MCP server?',
+                'answer' => 'Yes. FleetQ ships a built-in MCP server over HTTP/SSE and stdio, so MCP clients can create, run and monitor agents and workflows.',
+            ],
+        ],
+    ],
+
 ];
