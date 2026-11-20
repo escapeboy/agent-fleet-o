@@ -19,6 +19,7 @@ use App\Infrastructure\AI\Middleware\EvalGroundedRoutingShadow;
 use App\Infrastructure\AI\Middleware\IdempotencyCheck;
 use App\Infrastructure\AI\Middleware\LangfuseExportMiddleware;
 use App\Infrastructure\AI\Middleware\PhoenixExportMiddleware;
+use App\Infrastructure\AI\Middleware\PiiRedaction;
 use App\Infrastructure\AI\Middleware\RateLimiting;
 use App\Infrastructure\AI\Middleware\SafetyClassifier;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
@@ -93,6 +94,12 @@ class AiServiceProvider extends ServiceProvider
                 // but BEFORE SemanticCache for the same reason.
                 $app->make(SteeringInjection::class),
                 $app->make(SemanticCache::class),
+                // Per-team PII masking (off by default). After IdempotencyCheck so prompts
+                // that differ only in PII keep distinct idempotency keys, and after
+                // SemanticCache so the local cache still keys on the real prompt. Before
+                // ContextCompaction, SchemaValidation, SafetyClassifier and the
+                // Langfuse/Phoenix export so all of them only see masked text.
+                $app->make(PiiRedaction::class),
                 $app->make(ContextCompaction::class),
                 $app->make(SchemaValidation::class),
                 // Gateway-level safety net — inspects request input and response output
