@@ -45,6 +45,43 @@ GET {{ url('/api/v1/audit') }}?event=experiment.transitioned&from=2026-01-01&to=
 # Filter by actor (user ID)
 GET {{ url('/api/v1/audit') }}?actor_id=01jf4a2b-...</x-docs.code>
 
+    {{-- Exporting --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Exporting the audit log</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        Use the <strong>Export</strong> menu on the audit log page to download your team's entries as a file.
+        Two formats are available:
+    </p>
+    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+        <li><strong>CSV</strong>: one row per entry, ready for spreadsheets. Cells that begin with
+            <code class="rounded bg-gray-100 px-1 text-xs">=</code>, <code class="rounded bg-gray-100 px-1 text-xs">+</code>,
+            <code class="rounded bg-gray-100 px-1 text-xs">-</code> or <code class="rounded bg-gray-100 px-1 text-xs">@</code>
+            get a leading apostrophe so they are never run as formulas.</li>
+        <li><strong>JSON Lines (OCSF)</strong>: one JSON object per line, shaped as an
+            OCSF (Open Cybersecurity Schema Framework) event
+            (<code class="rounded bg-gray-100 px-1 text-xs">class_uid</code>, <code class="rounded bg-gray-100 px-1 text-xs">severity_id</code>,
+            <code class="rounded bg-gray-100 px-1 text-xs">time</code>, <code class="rounded bg-gray-100 px-1 text-xs">actor</code>, ...).</li>
+    </ul>
+    <p class="mt-2 text-sm text-gray-600">
+        The export uses the filters currently set on the page: search text, event category and the from/to date range.
+        Only team owners and admins can export, and every export is itself recorded as an
+        <code class="rounded bg-gray-100 px-1 text-xs">audit.exported</code> entry with the format and filters used.
+    </p>
+
+    <x-docs.code lang="bash">
+# Download the OCSF JSON Lines export (same session as the app)
+GET {{ url('/audit/export') }}?format=jsonl&event=experiment&from=2026-01-01&to=2026-01-31
+
+# Ship it to a SIEM: most accept newline-delimited JSON through file or HTTP ingestion
+curl -X POST "$SIEM_INGEST_URL" \
+  -H "Authorization: Bearer $SIEM_TOKEN" \
+  -H "Content-Type: application/x-ndjson" \
+  --data-binary @audit-log-2026-01-31-120000.jsonl</x-docs.code>
+
+    <p class="mt-2 text-sm text-gray-600">
+        For programmatic access, the <code class="rounded bg-gray-100 px-1 text-xs">/api/v1/audit</code> endpoint
+        remains cursor-paginated.
+    </p>
+
     {{-- Retention --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Retention periods</h2>
     <p class="mt-2 text-sm text-gray-600">

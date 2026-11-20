@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AgentManifestController;
 use App\Http\Controllers\ApiCatalogController;
 use App\Http\Controllers\ApprovalChatLinkController;
 use App\Http\Controllers\ArtifactPreviewController;
+use App\Http\Controllers\AuditLogExportController;
 use App\Http\Controllers\AuthMdController;
 use App\Http\Controllers\ComparisonsController;
 use App\Http\Controllers\DocsController;
@@ -568,6 +569,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/evolution', EvolutionListPage::class)->name('evolution.index');
     Route::get('/telegram/bots', TelegramBotsPage::class)->name('telegram.bots');
     Route::get('/health', HealthPage::class)->name('health');
+    Route::get('/audit/export', AuditLogExportController::class)->middleware('throttle:10,1')->name('audit.export');
     Route::get('/audit', AuditLogPage::class)->name('audit');
     Route::get('/compliance/eu-ai-act', EuAiActReportPage::class)->name('compliance.eu-ai-act');
     Route::get('/settings', GlobalSettingsPage::class)->name('settings');

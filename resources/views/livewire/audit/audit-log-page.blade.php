@@ -15,6 +15,28 @@
                 <option value="{{ $type }}">{{ ucfirst($type) }}</option>
             @endforeach
         </x-form-select>
+
+        <x-form-input wire:model.live="from" type="date" aria-label="From date" toolparamdescription="Only include entries on or after this date (YYYY-MM-DD)" />
+        <x-form-input wire:model.live="to" type="date" aria-label="To date" toolparamdescription="Only include entries on or before this date (YYYY-MM-DD)" />
+
+        @php
+            $exportFilters = array_filter(['search' => $search, 'event' => $eventFilter, 'from' => $from, 'to' => $to]);
+        @endphp
+        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+            <button type="button" @click="open = !open"
+                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <i class="fa-solid fa-download text-base text-gray-400"></i>
+                Export
+                <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+            </button>
+            <div x-show="open" x-cloak
+                class="absolute right-0 z-10 mt-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                <a href="{{ route('audit.export', ['format' => 'csv'] + $exportFilters) }}"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">CSV</a>
+                <a href="{{ route('audit.export', ['format' => 'jsonl'] + $exportFilters) }}"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">JSON Lines (OCSF)</a>
+            </div>
+        </div>
     </form>
 
     {{-- Table --}}
