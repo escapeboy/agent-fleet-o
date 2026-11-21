@@ -13,7 +13,7 @@ class ComparePagesTest extends TestCase
 {
     // No RefreshDatabase — every page under test is a pure render.
 
-    private const SLUGS = ['langgraph', 'crewai', 'n8n', 'dify'];
+    private const SLUGS = ['langgraph', 'crewai', 'n8n', 'dify', 'flowise'];
 
     /**
      * @return array<string, array{string}>
@@ -25,7 +25,46 @@ class ComparePagesTest extends TestCase
             'crewai' => ['crewai'],
             'n8n' => ['n8n'],
             'dify' => ['dify'],
+            'flowise' => ['flowise'],
         ];
+    }
+
+    public function test_flowise_page_links_to_flowise_migration_steps(): void
+    {
+        $response = $this->get('/compare/flowise');
+        $response->assertOk();
+
+        $response->assertSee('href="'.route('docs.show', 'workflows').'#migrating-from-flowise"', false);
+        $response->assertSee('Migrating from Flowise');
+    }
+
+    public function test_workflows_docs_has_migrating_from_flowise_anchor(): void
+    {
+        $this->get(route('docs.show', 'workflows'))
+            ->assertOk()
+            ->assertSee('id="migrating-from-flowise"', false);
+    }
+
+    public function test_compare_page_renders_notice_only_when_configured(): void
+    {
+        config(['comparisons.flowise.notice' => 'Test notice text']);
+
+        $html = $this->get('/compare/flowise')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression(
+            '#<div[^>]*data-compare-notice[^>]*>\s*Test notice text\s*</div>#',
+            $html,
+        );
+
+        $this->get('/compare/langgraph')
+            ->assertOk()
+            ->assertDontSee('data-compare-notice', false);
+    }
+
+    public function test_langgraph_page_has_no_migration_section(): void
+    {
+        $this->get('/compare/langgraph')
+            ->assertOk()
+            ->assertDontSee('#migrating-from-flowise', false);
     }
 
     public function test_compare_index_returns_200_and_links_all_pages(): void
