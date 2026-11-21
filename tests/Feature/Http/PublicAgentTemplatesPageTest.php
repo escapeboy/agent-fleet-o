@@ -60,6 +60,37 @@ class PublicAgentTemplatesPageTest extends TestCase
         }
     }
 
+    public function test_business_team_template_pages_render(): void
+    {
+        $slugs = [
+            'support-triage-agent',
+            'support-reply-drafter',
+            'lead-qualifier',
+            'outbound-email-drafter',
+            'meeting-notes-to-crm',
+            'invoice-reviewer',
+        ];
+
+        foreach ($slugs as $slug) {
+            $template = collect(config('agent-templates'))->firstWhere('slug', $slug);
+            $this->assertNotNull($template, "Template '{$slug}' is missing");
+
+            $this->get('/templates/'.$slug)
+                ->assertOk()
+                ->assertSee($template['name'])
+                ->assertSee('Use this template')
+                ->assertSee('href="'.route('agents.create', ['template' => $slug]).'"', false);
+        }
+    }
+
+    public function test_templates_index_shows_support_category(): void
+    {
+        $this->get('/templates')
+            ->assertOk()
+            ->assertSee('<h2 class="text-xl font-bold text-gray-900 mb-5">Support</h2>', false)
+            ->assertSee('href="'.url('/templates/support-triage-agent').'"', false);
+    }
+
     public function test_guest_following_use_this_template_is_sent_to_login(): void
     {
         $this->get(route('agents.create', ['template' => self::SLUG]))->assertRedirect(route('login'));

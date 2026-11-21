@@ -23,7 +23,7 @@ class AgentTemplatesListTool extends Tool
     {
         return [
             'category' => $schema->string()
-                ->description('Filter by category: engineering, content, business, design, research'),
+                ->description('Filter by category: engineering, content, business, design, research, support'),
         ];
     }
 

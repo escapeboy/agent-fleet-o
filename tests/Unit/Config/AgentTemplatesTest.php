@@ -2,10 +2,21 @@
 
 namespace Tests\Unit\Config;
 
+use Database\Seeders\SkillAndAgentSeeder;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class AgentTemplatesTest extends TestCase
 {
+    private const BUSINESS_TEAM_SLUGS = [
+        'support-triage-agent',
+        'support-reply-drafter',
+        'lead-qualifier',
+        'outbound-email-drafter',
+        'meeting-notes-to-crm',
+        'invoice-reviewer',
+    ];
+
     public function test_templates_config_exists_and_is_not_empty(): void
     {
         $templates = config('agent-templates');
@@ -35,7 +46,7 @@ class AgentTemplatesTest extends TestCase
 
     public function test_templates_have_valid_categories(): void
     {
-        $validCategories = ['engineering', 'content', 'business', 'design', 'research'];
+        $validCategories = ['engineering', 'content', 'business', 'design', 'research', 'support'];
 
         foreach (config('agent-templates') as $template) {
             $this->assertContains(
@@ -74,6 +85,51 @@ class AgentTemplatesTest extends TestCase
 
     public function test_contains_expected_template_count(): void
     {
-        $this->assertCount(14, config('agent-templates'));
+        $this->assertCount(20, config('agent-templates'));
+    }
+
+    public function test_business_team_templates_exist(): void
+    {
+        $templates = collect(config('agent-templates'))->keyBy('slug');
+
+        foreach (self::BUSINESS_TEAM_SLUGS as $slug) {
+            $this->assertTrue($templates->has($slug), "Template '{$slug}' is missing");
+        }
+
+        $this->assertSame('support', $templates['support-triage-agent']['category']);
+        $this->assertSame('support', $templates['support-reply-drafter']['category']);
+    }
+
+    public function test_template_skills_exist_in_skill_catalog(): void
+    {
+        $method = new ReflectionMethod(SkillAndAgentSeeder::class, 'skillDefinitions');
+        $method->setAccessible(true);
+
+        /** @var array<int, array{slug: string}> $definitions */
+        $definitions = $method->invoke(new SkillAndAgentSeeder);
+        $catalog = array_column($definitions, 'slug');
+
+        foreach (config('agent-templates') as $template) {
+            foreach ($template['skills'] as $skill) {
+                $this->assertContains(
+                    $skill,
+                    $catalog,
+                    "Template '{$template['slug']}' uses unknown skill '{$skill}'",
+                );
+            }
+        }
+    }
+
+    public function test_business_team_templates_state_approval_and_budget(): void
+    {
+        $templates = collect(config('agent-templates'))->keyBy('slug');
+
+        foreach (self::BUSINESS_TEAM_SLUGS as $slug) {
+            $this->assertTrue($templates->has($slug), "Template '{$slug}' is missing");
+            $text = strtolower($templates[$slug]['goal'].' '.$templates[$slug]['backstory']);
+
+            $this->assertStringContainsString('approval', $text, "Template '{$slug}' does not mention approval");
+            $this->assertStringContainsString('budget', $text, "Template '{$slug}' does not mention a budget");
+        }
     }
 }
