@@ -47,6 +47,9 @@
                 @foreach ($c['intro'] as $paragraph)
                     <p class="text-lg text-gray-600 leading-relaxed mb-4">{{ $paragraph }}</p>
                 @endforeach
+                @if (! empty($c['notice'] ?? null))
+                    <div data-compare-notice role="note" class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{{ $c['notice'] }}</div>
+                @endif
             </div>
         </div>
     </section>
@@ -115,6 +118,20 @@
                 @foreach ($c['together'] as $paragraph)
                     <p class="text-base text-gray-700 leading-relaxed mb-4">{{ $paragraph }}</p>
                 @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if (! empty($c['migration'] ?? null))
+        <section class="py-12 bg-gray-50 border-t border-gray-100">
+            <div class="mx-auto max-w-3xl px-6 lg:px-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">{{ $c['migration']['heading'] }}</h2>
+                @foreach ($c['migration']['paragraphs'] ?? [] as $paragraph)
+                    <p class="text-base text-gray-700 leading-relaxed mb-4">{{ $paragraph }}</p>
+                @endforeach
+                <p class="text-base">
+                    <a href="{{ route('docs.show', 'workflows') }}#migrating-from-flowise" class="font-medium text-primary-600 hover:text-primary-700">Migrating from Flowise: step-by-step import</a>
+                </p>
             </div>
         </section>
     @endif

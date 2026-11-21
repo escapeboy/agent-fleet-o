@@ -256,4 +256,69 @@ return [
         ],
     ],
 
+    'flowise' => [
+        'tool_name' => 'Flowise',
+        'meta_title' => 'FleetQ vs Flowise: a Flowise alternative compared',
+        'meta_description' => 'FleetQ vs Flowise: compare an AI agent control plane with approvals, budget limits, audit trail and an MCP server to a visual LLM flow builder.',
+        'keywords' => 'flowise alternative, flowise vs fleetq, fleetq vs flowise, flowise migration, import flowise flows, self-hosted ai agents',
+        'h1' => 'FleetQ vs Flowise: from visual LLM flows to governed agents',
+        'intro' => [
+            'Flowise is a visual builder where you drag nodes onto a canvas to build chatflows and agentflows on top of large language models. FleetQ is a self-hosted control plane for running AI agents in production: every run gets an approval inbox, a budget, an audit trail and access through an MCP server.',
+            'If you are looking for a Flowise alternative, or you already have flows you want to keep, this page explains where each tool fits and how to bring your existing flows into FleetQ.',
+        ],
+        // Optional dated notice shown under the intro. Left empty on purpose:
+        // the owner sets a dated line here only after checking the Flowise
+        // repository and site on that date.
+        'notice' => null,
+        'short_answer' => [
+            'pick_tool' => 'Pick Flowise if you want a visual canvas to assemble LLM chatflows and agentflows from ready-made nodes, and your main goal is to prototype or ship a chatbot or assistant quickly.',
+            'pick_fleetq' => 'Pick FleetQ if you need the operational layer around agents: an approval inbox with SLAs, hard budget limits with auto-pause, a full activity log, bring-your-own keys and an MCP server, all self-hosted under AGPL-3.0.',
+        ],
+        'table' => $table(),
+        'together' => null,
+        'sections' => [
+            [
+                'heading' => 'Where they differ',
+                'paragraphs' => [
+                    'A flow builder is where you wire up how an LLM app works: which model it calls, which prompt it uses and which documents or tools it can reach. A control plane is where you decide who may run an agent, what it may spend, which of its actions need a person to sign off and how you can audit what happened later. FleetQ focuses on the second job.',
+                    'FleetQ still ships its own agents, crews and a visual workflow builder with branching, loops and human tasks, so you can build without writing code. Signals from webhooks, email, RSS and chat tools can start a run, and results go out by email, Slack, Telegram or webhook.',
+                ],
+            ],
+            [
+                'heading' => 'What FleetQ adds for agents in production',
+                'paragraphs' => [
+                    'Risky actions wait in an approval inbox with SLA enforcement and escalation when nobody answers in time. Spend is reserved and settled against a credit ledger with pessimistic locks, so a runaway loop pauses itself instead of draining your provider account, and projects can carry their own budget caps. Every change is written to an activity log that you can search and filter.',
+                    'You bring your own keys for Anthropic, OpenAI and Google, or point agents at local models through Ollama, LM Studio or vLLM. The REST API and the built-in MCP server let scripts, IDE assistants and other agents start runs and read results, while the same approval, budget and audit rules apply to every call.',
+                ],
+            ],
+            [
+                'heading' => 'How to choose',
+                'paragraphs' => [
+                    'If you want to sketch an LLM app on a canvas and try it out quickly, a flow builder is a good fit. If agents take actions that cost money or touch real systems, and you need reviewers, operators and finance to trust them, a control plane saves you from building that layer yourself. Check the Flowise docs for its current features, since this table only lists what we could confirm.',
+                ],
+            ],
+        ],
+        'migration' => [
+            'heading' => 'Moving your Flowise flows to FleetQ',
+            'paragraphs' => [
+                'You do not have to rebuild your flows by hand. In Flowise, open the chatflow or agentflow, use Export from the settings menu and save the JSON file. FleetQ detects both Agentflow V2 exports and legacy chatflow exports.',
+                'Import the file through the REST API with POST /api/v1/workflows/import, with php artisan workflow:import, or with the workflow_import_yaml MCP tool. Each import creates a draft workflow and returns conversion_warnings that list the parts you need to finish by hand, such as conditions, tools, knowledge bases and credentials.',
+            ],
+        ],
+        'faqs' => [
+            [
+                'question' => 'Can I import my Flowise flows into FleetQ?',
+                'answer' => 'Yes. Export the chatflow or agentflow as JSON in Flowise and import it through the REST API, the workflow:import Artisan command or the workflow_import_yaml MCP tool. You get a draft workflow plus conversion_warnings for the parts that need manual follow-up.',
+            ],
+            [
+                'question' => 'Can I self-host FleetQ?',
+                'answer' => 'Yes. The FleetQ Community Edition is AGPL-3.0 licensed and runs on your own servers with Docker Compose, free of charge.',
+            ],
+            [
+                'question' => 'Does FleetQ have an MCP server?',
+                'answer' => 'Yes. FleetQ ships a built-in MCP server over HTTP/SSE and stdio, so MCP clients can create, run and monitor agents and workflows.',
+            ],
+        ],
+    ],
+
 ];
