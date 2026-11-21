@@ -1,3 +1,6 @@
+@php
+    $mcpToolCount = app(\App\Mcp\Services\McpToolCatalog::class)->displayCount();
+@endphp
 <x-layouts.public
     title="FleetQ — AI Agent Mission Control"
     description="FleetQ: build AI agents, assemble multi-agent crews, and deploy visual workflows with approval gates and cost controls. Open source."
@@ -95,7 +98,7 @@
                     "name": "What is MCP integration?",
                     "acceptedAnswer": {
                         "@@type": "Answer",
-                        "text": "FleetQ includes a Model Context Protocol (MCP) server with 670+ tools across 60+ domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace."
+                        "text": "FleetQ includes a Model Context Protocol (MCP) server with {{ $mcpToolCount }} tools across 60+ domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace."
                     }
                 },
                 {

@@ -1,3 +1,6 @@
+@php
+    $mcpToolCount = app(\App\Mcp\Services\McpToolCatalog::class)->displayCount();
+@endphp
 <section id="features" class="bg-white py-20 sm:py-28">
     <div class="mx-auto max-w-7xl px-6 lg:px-8">
         <div class="mx-auto max-w-2xl text-center">
@@ -37,7 +40,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <i class="fa-solid fa-check mt-0.5 text-base text-primary-500"></i>
-                        670+ MCP tools for AI agent access
+                        <span><a href="{{ route('mcp-tools.index') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ $mcpToolCount }} MCP tools</a> for AI agent access</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <i class="fa-solid fa-check mt-0.5 text-base text-primary-500"></i>
