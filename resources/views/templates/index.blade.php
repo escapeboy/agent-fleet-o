@@ -1,6 +1,6 @@
 <x-layouts.public
     title="AI Agent Templates | FleetQ"
-    description="Browse ready-made AI agent templates for engineering, content, design, research and business. Use one in FleetQ or self-host for free."
+    description="Browse ready-made AI agent templates for engineering, content, design, research, business and support. Use one in FleetQ or self-host for free."
     keywords="ai agent templates, ai agent examples, prebuilt ai agents, agent roles, open source ai agents"
 >
     <x-slot:head>
