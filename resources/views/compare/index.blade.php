@@ -3,9 +3,9 @@
         ->filter(fn ($page, $slug) => $slug !== 'checked_on' && is_array($page));
 @endphp
 <x-layouts.public
-    title="FleetQ Compared: LangGraph, CrewAI, n8n and Dify Alternatives"
-    description="How FleetQ, a self-hosted control plane for AI agents, compares to LangGraph, CrewAI, n8n and Dify. Honest notes on where each tool fits best."
-    keywords="langgraph alternative, crewai alternative, n8n alternative, dify alternative, ai agent platform comparison, fleetq comparison"
+    title="FleetQ Compared: LangGraph, CrewAI, n8n, Dify, Flowise"
+    description="How FleetQ, a self-hosted AI agent control plane, compares to LangGraph, CrewAI, n8n, Dify and Flowise. Honest notes on where each tool fits."
+    keywords="langgraph alternative, crewai alternative, n8n alternative, dify alternative, flowise alternative, ai agent platform comparison, fleetq comparison"
 >
     <x-slot:head>
         @php

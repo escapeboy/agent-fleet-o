@@ -366,7 +366,7 @@
     </p>
 
     {{-- Flowise migration --}}
-    <h2 class="mt-10 text-xl font-bold text-gray-900">Migrating from Flowise</h2>
+    <h2 id="migrating-from-flowise" class="mt-10 text-xl font-bold text-gray-900">Migrating from Flowise</h2>
     <p class="mt-2 text-sm text-gray-600">
         You can import a Flowise flow as a <strong>draft</strong> FleetQ workflow. In Flowise, open the chatflow or
         agentflow, use <strong>Export</strong> from the settings menu, and save the JSON file. Both Agentflow V2
