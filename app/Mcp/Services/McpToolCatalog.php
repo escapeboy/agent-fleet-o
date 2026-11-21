@@ -41,6 +41,23 @@ class McpToolCatalog
     }
 
     /**
+     * Public marketing figure for the tool count, e.g. "670+".
+     *
+     * Rounded down to the nearest 10 so the "+" stays true as tools are
+     * added; counts below 10 are shown as-is. Reuses the cached groups().
+     */
+    public function displayCount(): string
+    {
+        $total = $this->total();
+
+        if ($total >= 10) {
+            return intdiv($total, 10) * 10 .'+';
+        }
+
+        return (string) $total;
+    }
+
+    /**
      * @return list<array{group: string, slug: string, tools: list<array{name: string, description: string}>}>
      */
     private function build(): array

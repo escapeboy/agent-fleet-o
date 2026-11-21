@@ -1,6 +1,8 @@
 @props(['extraItems' => []])
 
 @php
+    $mcpToolCount = app(\App\Mcp\Services\McpToolCatalog::class)->displayCount();
+
     $baseItems = [
         [
             'question' => 'What is FleetQ?',
@@ -24,7 +26,7 @@
         ],
         [
             'question' => 'What is MCP integration?',
-            'answer' => 'FleetQ includes a Model Context Protocol (MCP) server with 670+ tools across 60+ domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
+            'answer' => 'FleetQ includes a Model Context Protocol (MCP) server with '.$mcpToolCount.' tools across 60+ domains. External AI agents — Claude Code, Codex, Gemini CLI, Kiro, Amp, Cursor, and more — can manage your FleetQ instance directly: creating agents, triggering workflows, checking budgets, and browsing the marketplace.',
         ],
         [
             'question' => 'Is my data secure?',
