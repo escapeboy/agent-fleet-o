@@ -82,6 +82,42 @@ curl -X POST "$SIEM_INGEST_URL" \
         remains cursor-paginated.
     </p>
 
+    {{-- Streaming --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Streaming to a SIEM</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        To receive every new audit entry as it happens, create a webhook endpoint subscribed to the
+        <code class="rounded bg-gray-100 px-1 text-xs">audit.entry.created</code> event, either on the webhooks
+        settings page or through the API. Each delivery carries one entry, as the same OCSF record that the
+        JSON Lines export produces.
+    </p>
+    <p class="mt-2 text-sm text-gray-600">
+        This event is opt-in: endpoints subscribed to <code class="rounded bg-gray-100 px-1 text-xs">*</code>
+        do not receive it. List <code class="rounded bg-gray-100 px-1 text-xs">audit.entry.created</code> by name.
+    </p>
+
+    <x-docs.code lang="bash">
+# Create an endpoint that receives the audit stream
+POST {{ url('/api/v1/webhooks') }}
+{
+  "name": "SIEM",
+  "url": "YOUR_SIEM_INGEST_URL",
+  "events": ["audit.entry.created"],
+  "secret": "your-signing-secret"
+}
+
+# Each delivery body
+{
+  "event": "audit.entry.created",
+  "timestamp": "2026-01-31T12:00:00+00:00",
+  "data": { "class_uid": 3001, "severity_id": 1, "time": 1769860800000, "actor": { ... }, ... }
+}</x-docs.code>
+
+    <p class="mt-2 text-sm text-gray-600">
+        When the endpoint has a secret, each request carries
+        <code class="rounded bg-gray-100 px-1 text-xs">X-Fleetq-Signature: sha256={hex}</code>, an HMAC-SHA256 of the
+        raw request body with that secret. Compute the same HMAC on your side and compare before accepting the event.
+    </p>
+
     {{-- Retention --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Retention periods</h2>
     <p class="mt-2 text-sm text-gray-600">
