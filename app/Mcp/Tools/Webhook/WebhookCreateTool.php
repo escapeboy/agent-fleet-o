@@ -17,7 +17,7 @@ class WebhookCreateTool extends Tool
 {
     protected string $name = 'webhook_create';
 
-    protected string $description = 'Create a webhook endpoint. Events: experiment.completed, experiment.failed, project.run.completed, project.run.failed, approval.pending, budget.warning, agent.session.completed, agent.session.failed, agent.session.cancelled, agent.session.needs_input, or * for all.';
+    protected string $description = 'Create a webhook endpoint. Events: experiment.completed, experiment.failed, project.run.completed, project.run.failed, approval.pending, budget.warning, agent.session.completed, agent.session.failed, agent.session.cancelled, agent.session.needs_input, audit.entry.created (OCSF audit stream for SIEMs), or * for all except audit.entry.created, which must be named explicitly.';
 
     public function schema(JsonSchema $schema): array
     {

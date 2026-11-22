@@ -26,6 +26,7 @@ use App\Domain\Approval\Listeners\DispatchActionProposalExecution;
 use App\Domain\Audit\Listeners\LogExperimentTransition;
 use App\Domain\Audit\Listeners\LogIntegrationExecution;
 use App\Domain\Audit\Listeners\LogSafetyViolation;
+use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Budget\Listeners\PauseOnBudgetExceeded;
 use App\Domain\Chatbot\Contracts\ChatbotFeedbackRecorderInterface;
 use App\Domain\Chatbot\Contracts\ChatbotResponderInterface;
@@ -137,6 +138,7 @@ use App\Domain\Skill\Models\SkillExecution;
 use App\Domain\Tool\Services\McpHandleRegistry;
 use App\Domain\Webhook\Listeners\SendWebhookOnAgentSessionEnded;
 use App\Domain\Webhook\Listeners\SendWebhookOnAgentSessionNeedsInput;
+use App\Domain\Webhook\Listeners\SendWebhookOnAuditEntryCreated;
 use App\Domain\Webhook\Listeners\SendWebhookOnExperimentTransition;
 use App\Domain\Webhook\Listeners\SendWebhookOnProjectRunComplete;
 use App\Domain\Website\Drivers\VercelDeploymentDriver;
@@ -701,6 +703,11 @@ class AppServiceProvider extends ServiceProvider
         // MCP/admin cancel, or from any future path. The model event covers them all.
         AgentSession::updated(function (AgentSession $session): void {
             app(SendWebhookOnAgentSessionEnded::class)->handle($session);
+        });
+
+        // Opt-in SIEM stream: each new team audit entry goes out as audit.entry.created.
+        AuditEntry::created(function (AuditEntry $entry): void {
+            SendWebhookOnAuditEntryCreated::queueFor($entry);
         });
 
         // Sub-experiment orchestration: check parent when child reaches terminal state

@@ -14,6 +14,7 @@ enum WebhookEvent: string
     case AgentSessionFailed = 'agent.session.failed';
     case AgentSessionCancelled = 'agent.session.cancelled';
     case AgentSessionNeedsInput = 'agent.session.needs_input';
+    case AuditEntryCreated = 'audit.entry.created';
 
     public function label(): string
     {
@@ -28,6 +29,16 @@ enum WebhookEvent: string
             self::AgentSessionFailed => 'Agent Session Failed',
             self::AgentSessionCancelled => 'Agent Session Cancelled',
             self::AgentSessionNeedsInput => 'Agent Session Needs Input',
+            self::AuditEntryCreated => 'Audit Entry Created (SIEM stream)',
         };
+    }
+
+    /**
+     * High-volume events that an endpoint must name explicitly; the '*'
+     * wildcard does not include them.
+     */
+    public function requiresExplicitSubscription(): bool
+    {
+        return $this === self::AuditEntryCreated;
     }
 }

@@ -82,6 +82,44 @@ curl -X POST "$SIEM_INGEST_URL" \
         remains cursor-paginated.
     </p>
 
+    {{-- Streaming --}}
+    <h2 class="mt-10 text-xl font-bold text-gray-900">Streaming to a SIEM</h2>
+    <p class="mt-2 text-sm text-gray-600">
+        To send entries as they happen instead of exporting files, create a webhook endpoint subscribed to the
+        <code class="rounded bg-gray-100 px-1 text-xs">audit.entry.created</code> event, either on the webhooks settings page
+        or through the API. Every new entry for your team is then POSTed to that URL as soon as it is written.
+    </p>
+
+    <x-docs.code lang="bash">
+POST {{ url('/api/v1/webhooks') }}
+{
+  "name": "SIEM stream",
+  "url": "https://siem.example.com/ingest",
+  "events": ["audit.entry.created"],
+  "secret": "your-signing-secret"
+}</x-docs.code>
+
+    <p class="mt-2 text-sm text-gray-600">
+        Each delivery has the usual webhook envelope. <code class="rounded bg-gray-100 px-1 text-xs">data</code> is the same
+        OCSF record as one line of the JSON Lines export:
+    </p>
+
+    <x-docs.code lang="json">
+{
+  "event": "audit.entry.created",
+  "timestamp": "2026-01-31T12:00:00+00:00",
+  "data": { "class_uid": 6003, "severity_id": 1, "time": 1769860800000, "activity_name": "agent.created", ... }
+}</x-docs.code>
+
+    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+        <li>Verify each request with the <code class="rounded bg-gray-100 px-1 text-xs">X-Fleetq-Signature: sha256={hex}</code>
+            header: an HMAC-SHA256 of the raw request body using the endpoint's secret.</li>
+        <li>The <code class="rounded bg-gray-100 px-1 text-xs">*</code> wildcard does <strong>not</strong> include this event.
+            Endpoints already subscribed to all events keep receiving only the events they had before; name
+            <code class="rounded bg-gray-100 px-1 text-xs">audit.entry.created</code> explicitly to opt in.</li>
+        <li>Only entries that belong to your team are sent, and only to your team's active endpoints.</li>
+    </ul>
+
     {{-- Retention --}}
     <h2 class="mt-10 text-xl font-bold text-gray-900">Retention periods</h2>
     <p class="mt-2 text-sm text-gray-600">
