@@ -15,7 +15,7 @@ class WebhookManageTool extends CompactTool
     protected string $name = 'webhook_manage';
 
     protected string $description = <<<'TXT'
-Outbound webhook endpoints — URLs the platform POSTs to when subscribed events fire (experiment.completed, signal.ingested, approval.decided, etc.). Each delivery is HMAC-signed with the configured `secret` (header: `X-FleetQ-Signature`). Failed deliveries retry with exponential backoff up to 24h.
+Outbound webhook endpoints — URLs the platform POSTs to when subscribed events fire (experiment.completed, signal.ingested, approval.decided, etc.). Each delivery is HMAC-signed with the configured `secret` (header: `X-FleetQ-Signature`). Failed deliveries retry with exponential backoff up to 24h. `audit.entry.created` streams every team audit entry as an OCSF record (SIEM stream); it is opt-in and not covered by `*`.
 
 Actions:
 - list (read) — all webhooks for the team.

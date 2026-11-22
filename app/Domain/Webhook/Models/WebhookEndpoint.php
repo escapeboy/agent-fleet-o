@@ -3,6 +3,7 @@
 namespace App\Domain\Webhook\Models;
 
 use App\Domain\Shared\Traits\BelongsToTeam;
+use App\Domain\Webhook\Enums\WebhookEvent;
 use App\Infrastructure\Encryption\Casts\TeamEncryptedString;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -45,7 +46,16 @@ class WebhookEndpoint extends Model
     {
         $events = $this->events ?? [];
 
-        return in_array($event, $events) || in_array('*', $events);
+        if (in_array($event, $events)) {
+            return true;
+        }
+
+        // Opt-in events (the audit stream) are never matched by the wildcard.
+        if (WebhookEvent::tryFrom($event)?->requiresExplicitSubscription() === true) {
+            return false;
+        }
+
+        return in_array('*', $events);
     }
 
     public function scopeActive($query)
