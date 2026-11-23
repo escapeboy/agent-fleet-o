@@ -77,6 +77,16 @@ class CrewOrchestrator
                     return;
                 }
 
+                // Paused while the coordinator was planning: keep the plan, stay Paused and
+                // dispatch nothing. Resume continues these tasks without planning again.
+                if ($this->isPaused($execution)) {
+                    Log::info('Crew execution paused during planning; tasks kept for resume', [
+                        'execution_id' => $execution->id,
+                    ]);
+
+                    return;
+                }
+
                 // Phase 2: Transition to executing
                 $execution->update(['status' => CrewExecutionStatus::Executing]);
             }
@@ -174,9 +184,15 @@ class CrewOrchestrator
 
         $tasks = $this->getTasks($execution);
 
-        // Sequential = one at a time: if a task is already in flight, its completion
-        // callback continues the flow.
-        if ($tasks->contains(fn (CrewTaskExecution $t) => in_array($t->getAttribute('status'), [CrewTaskStatus::Assigned, CrewTaskStatus::Running], true))) {
+        // Sequential = one at a time: if a task is already in flight (running, or
+        // finished but still waiting for QA / revision), its callback continues the flow.
+        $inFlight = [
+            CrewTaskStatus::Assigned,
+            CrewTaskStatus::Running,
+            CrewTaskStatus::Completed,
+            CrewTaskStatus::NeedsRevision,
+        ];
+        if ($tasks->contains(fn (CrewTaskExecution $t) => in_array($t->getAttribute('status'), $inFlight, true))) {
             return;
         }
 

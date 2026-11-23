@@ -47,12 +47,18 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
 
     public function middleware(): array
     {
+        // A resume job that finds the original job still running (still planning) is
+        // dropped instead of released: that planner re-reads the status after planning
+        // and dispatches the tasks itself. Releasing would exceed $tries and fail the run.
+        $overlap = new WithoutOverlapping($this->crewExecutionId);
+        $overlap = $this->resume ? $overlap->dontRelease() : $overlap->releaseAfter(600);
+
         return [
             app(SentryContextJobMiddleware::class),
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
-            (new WithoutOverlapping($this->crewExecutionId))->releaseAfter(600),
+            $overlap,
         ];
     }
 
