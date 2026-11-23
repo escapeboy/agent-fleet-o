@@ -28,12 +28,23 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
 
     public int $timeout = 600;
 
+    /** Only overlap releases may retry a resume job; a real exception fails it at once. */
+    public ?int $maxExceptions = null;
+
+    private const RESUME_RELEASE_SECONDS = 30;
+
     public function __construct(
         public readonly string $crewExecutionId,
         public readonly ?string $teamId = null,
         public readonly bool $resume = false,
     ) {
         $this->onQueue('experiments');
+
+        if ($resume) {
+            // Enough 30 s retries to outlast a planning job (timeout 600 s).
+            $this->tries = intdiv($this->timeout, self::RESUME_RELEASE_SECONDS) + 2;
+            $this->maxExceptions = 1;
+        }
     }
 
     public function sentryContext(): array
@@ -47,11 +58,11 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
 
     public function middleware(): array
     {
-        // A resume job that finds the original job still running (still planning) is
-        // dropped instead of released: that planner re-reads the status after planning
-        // and dispatches the tasks itself. Releasing would exceed $tries and fail the run.
-        $overlap = new WithoutOverlapping($this->crewExecutionId);
-        $overlap = $this->resume ? $overlap->dontRelease() : $overlap->releaseAfter(600);
+        // A resume job that finds the original job still running (still planning) waits
+        // and retries (see the constructor's tries) instead of running beside it, so the
+        // goal is never planned twice and the resume is never lost.
+        $overlap = (new WithoutOverlapping($this->crewExecutionId))
+            ->releaseAfter($this->resume ? self::RESUME_RELEASE_SECONDS : 600);
 
         return [
             app(SentryContextJobMiddleware::class),

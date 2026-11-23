@@ -145,9 +145,9 @@ class CrewOrchestrator
 
             match ($processType) {
                 CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
-                // Adversarial pending tasks are dispatched as parallel, like dispatchAdversarial()
-                CrewProcessType::Parallel, CrewProcessType::Adversarial => $this->dispatchParallel($execution, $scope),
-                CrewProcessType::SelfClaim => $this->dispatchSelfClaim($execution, $scope),
+                CrewProcessType::Parallel => $this->dispatchParallel($execution, $scope),
+                CrewProcessType::Adversarial => $this->resumeAdversarial($execution, $scope),
+                CrewProcessType::SelfClaim => $this->resumeSelfClaim($execution, $scope),
                 CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution, $scope),
                 // Never dispatchFanout() here: it creates new tasks
                 CrewProcessType::Fanout => $this->checkParallelProgress($execution),
@@ -168,6 +168,47 @@ class CrewOrchestrator
 
             $this->failExecution($execution, $e->getMessage());
         }
+    }
+
+    /**
+     * Adversarial resume: pending tasks of the current round are dispatched as parallel
+     * (like dispatchAdversarial). If none are pending, the round may have finished while
+     * paused, so advance it (next round or synthesis) instead of synthesizing early.
+     */
+    private function resumeAdversarial(CrewExecution $execution, CrewExecutionScope $scope): void
+    {
+        $scope->assertNotCancelled();
+
+        if ($this->dependencyResolver->resolveReady($this->getTasks($execution))->isNotEmpty()) {
+            $this->dispatchParallel($execution, $scope);
+
+            return;
+        }
+
+        $this->advanceAdversarialRound($execution);
+    }
+
+    /**
+     * Self-Claim resume: re-seed workers on pending tasks. If every task finished while
+     * paused, the completion step skipped by continueSelfClaim() runs now.
+     */
+    private function resumeSelfClaim(CrewExecution $execution, CrewExecutionScope $scope): void
+    {
+        $tasks = $this->getTasks($execution);
+
+        if ($this->dependencyResolver->allTerminal($tasks)) {
+            $scope->assertNotCancelled();
+
+            if ($this->checkConvergenceReached($execution)) {
+                $this->synthesizeAndComplete($execution);
+            } else {
+                $this->failExecution($execution, 'Convergence not met.');
+            }
+
+            return;
+        }
+
+        $this->dispatchSelfClaim($execution, $scope);
     }
 
     /**
@@ -427,6 +468,10 @@ class CrewOrchestrator
         ))->toArray();
 
         if (! empty($jobs)) {
+            // Mark Assigned before queuing (as in dispatchParallel) so a resume does not
+            // queue these tasks a second time while their jobs wait in the queue.
+            $internalTasks->each(fn (CrewTaskExecution $task) => $task->update(['status' => CrewTaskStatus::Assigned]));
+
             Bus::batch($jobs)
                 ->name("crew-fanout:{$execution->id}")
                 ->onQueue('ai-calls')
@@ -532,6 +577,11 @@ class CrewOrchestrator
      */
     private function continueSelfClaim(CrewExecution $execution, CrewTaskExecution $completedTask): void
     {
+        // Paused: claim nothing and do not synthesize; resume() re-seeds or completes.
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         // The agent who just finished claims the next task
         $agent = Agent::withoutGlobalScopes()
             ->where('team_id', $execution->team_id)
@@ -568,6 +618,11 @@ class CrewOrchestrator
      */
     private function advanceAdversarialRound(CrewExecution $execution): void
     {
+        // Paused: no next round and no synthesis; resume() advances the round.
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $config = $execution->config_snapshot;
         $maxRounds = $config['adversarial_rounds'] ?? 2;
 
