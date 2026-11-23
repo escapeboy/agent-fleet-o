@@ -192,6 +192,25 @@ class CrewPauseResumeTest extends TestCase
         Bus::assertBatchCount(1);
     }
 
+    public function test_dispatch_parallel_keeps_status_written_by_fast_job(): void
+    {
+        // No Bus::fake: the batch runs on the sync queue inside dispatch(), like a fast worker.
+        $this->mock(ExecuteAgentAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->andThrow(new \RuntimeException('agent down'));
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Parallel);
+        $task = $this->makeTask($execution, 1, CrewTaskStatus::Pending);
+        $task->update(['attempt_number' => 1, 'max_attempts' => 1]);
+
+        app(CrewOrchestrator::class)->dispatchParallel($execution, new CrewExecutionScope($execution));
+
+        $fresh = $task->fresh();
+        $this->assertNotNull($fresh);
+        $this->assertSame(CrewTaskStatus::Failed, $fresh->status);
+        $this->assertNotNull($fresh->batch_id);
+    }
+
     private function makeExecution(CrewExecutionStatus $status, CrewProcessType $processType): CrewExecution
     {
         return CrewExecution::create([

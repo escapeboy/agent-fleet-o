@@ -240,18 +240,21 @@ class CrewOrchestrator
             teamId: $execution->team_id,
         ))->toArray();
 
+        // Mark the tasks Assigned BEFORE queuing, so a resume does not queue them a
+        // second time while these jobs wait in the queue. Doing it after dispatch could
+        // overwrite a status a fast (or sync) job has already written.
+        $ready->each(fn (CrewTaskExecution $task) => $task->update(['status' => CrewTaskStatus::Assigned]));
+
         $batch = Bus::batch($jobs)
             ->name("crew:{$execution->id}")
             ->onQueue('ai-calls')
             ->allowFailures()
             ->dispatch();
 
-        // Store batch_id on tasks and mark them Assigned, so a resume does not queue
-        // them a second time while these jobs are still waiting in the queue.
-        $ready->each(fn (CrewTaskExecution $task) => $task->update([
-            'batch_id' => $batch->id,
-            'status' => CrewTaskStatus::Assigned,
-        ]));
+        // Store batch_id with a column-only query so the task status written by the jobs is left alone
+        CrewTaskExecution::query()
+            ->whereIn('id', $ready->pluck('id')->all())
+            ->update(['batch_id' => $batch->id]);
     }
 
     /**
