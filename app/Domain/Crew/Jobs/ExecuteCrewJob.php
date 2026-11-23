@@ -31,6 +31,7 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
     public function __construct(
         public readonly string $crewExecutionId,
         public readonly ?string $teamId = null,
+        public readonly bool $resume = false,
     ) {
         $this->onQueue('experiments');
     }
@@ -65,10 +66,13 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
             return;
         }
 
-        if ($execution->status !== CrewExecutionStatus::Planning) {
-            Log::info('Crew execution not in planning state, skipping', [
+        $expected = $this->resume ? CrewExecutionStatus::Executing : CrewExecutionStatus::Planning;
+
+        if ($execution->getAttribute('status') !== $expected) {
+            Log::info('Crew execution not in expected state, skipping', [
                 'id' => $this->crewExecutionId,
                 'status' => $execution->status->value,
+                'expected' => $expected->value,
             ]);
 
             return;
@@ -78,6 +82,12 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
             'metadata.crew_execution_id' => $this->crewExecutionId,
             'metadata.team_id' => $this->teamId,
         ], function () use ($orchestrator, $execution) {
+            if ($this->resume) {
+                $orchestrator->resume($execution);
+
+                return;
+            }
+
             $orchestrator->run($execution);
         });
     }
