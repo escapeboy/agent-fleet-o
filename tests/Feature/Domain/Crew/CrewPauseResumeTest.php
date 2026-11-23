@@ -152,6 +152,46 @@ class CrewPauseResumeTest extends TestCase
         $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
     }
 
+    public function test_resume_plans_execution_paused_during_planning(): void
+    {
+        Bus::fake();
+
+        // Paused while still in Planning: the start job skipped, so no tasks exist yet.
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Sequential);
+
+        $this->mock(DecomposeGoalAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->once()->andReturnUsing(
+                fn (CrewExecution $e) => [$this->makeTask($e, 1, CrewTaskStatus::Pending)],
+            );
+        });
+
+        app(CrewOrchestrator::class)->resume($execution);
+
+        $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
+        $this->assertSame(1, CrewTaskExecution::where('crew_execution_id', $execution->id)->count());
+        Bus::assertDispatchedTimes(ExecuteCrewTaskJob::class, 1);
+    }
+
+    public function test_resume_parallel_does_not_requeue_tasks_still_in_queue(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Parallel);
+        $this->makeTask($execution, 1, CrewTaskStatus::Pending);
+        $this->makeTask($execution, 2, CrewTaskStatus::Pending);
+
+        app(CrewOrchestrator::class)->dispatchParallel($execution, new CrewExecutionScope($execution));
+        Bus::assertBatchCount(1);
+
+        // Paused and resumed before the queued jobs were picked up.
+        $execution->update(['status' => CrewExecutionStatus::Paused]);
+        $execution->update(['status' => CrewExecutionStatus::Executing]);
+
+        app(CrewOrchestrator::class)->resume($execution->fresh() ?? $execution);
+
+        Bus::assertBatchCount(1);
+    }
+
     private function makeExecution(CrewExecutionStatus $status, CrewProcessType $processType): CrewExecution
     {
         return CrewExecution::create([

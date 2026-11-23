@@ -18,6 +18,7 @@ use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
+use App\Domain\Crew\Models\CrewChatMessage;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
@@ -109,13 +110,28 @@ class CrewOrchestrator
      */
     public function resume(CrewExecution $execution): void
     {
+        $snapshot = $execution->getAttribute('config_snapshot');
+        $processType = CrewProcessType::tryFrom(is_array($snapshot) ? (string) ($snapshot['process_type'] ?? '') : '');
+
+        // Paused during Planning: nothing was started yet, so plan and start it now.
+        $started = $processType === CrewProcessType::ChatRoom
+            ? CrewChatMessage::where('crew_execution_id', $execution->id)->exists()
+            : $execution->taskExecutions()->exists();
+
+        if (! $started) {
+            $this->run($execution);
+
+            return;
+        }
+
         try {
             app(DeadlineContext::class)->assertNotExpired();
 
             $scope = new CrewExecutionScope($execution);
 
-            $snapshot = $execution->getAttribute('config_snapshot');
-            $processType = CrewProcessType::from(is_array($snapshot) ? (string) ($snapshot['process_type'] ?? '') : '');
+            if ($processType === null) {
+                throw new \UnexpectedValueException('Unknown crew process type.');
+            }
 
             match ($processType) {
                 CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
@@ -230,8 +246,12 @@ class CrewOrchestrator
             ->allowFailures()
             ->dispatch();
 
-        // Store batch_id on tasks
-        $ready->each(fn (CrewTaskExecution $task) => $task->update(['batch_id' => $batch->id]));
+        // Store batch_id on tasks and mark them Assigned, so a resume does not queue
+        // them a second time while these jobs are still waiting in the queue.
+        $ready->each(fn (CrewTaskExecution $task) => $task->update([
+            'batch_id' => $batch->id,
+            'status' => CrewTaskStatus::Assigned,
+        ]));
     }
 
     /**
