@@ -1,0 +1,377 @@
+<?php
+
+namespace Tests\Feature\Domain\Crew;
+
+use App\Domain\Agent\Actions\ExecuteAgentAction;
+use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Actions\DecomposeGoalAction;
+use App\Domain\Crew\Actions\SynthesizeResultAction;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewMemberRole;
+use App\Domain\Crew\Enums\CrewProcessType;
+use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Jobs\ExecuteCrewJob;
+use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewMember;
+use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Services\CrewExecutionScope;
+use App\Domain\Crew\Services\CrewOrchestrator;
+use App\Domain\Shared\Models\Team;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Bus;
+use Mockery\MockInterface;
+use Tests\TestCase;
+
+class CrewPauseResumeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Team $team;
+
+    private Agent $agent;
+
+    private Crew $crew;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $user = User::factory()->create();
+        $this->team = Team::create([
+            'name' => 'Pause Resume Test Team',
+            'slug' => 'pause-resume-test-'.uniqid(),
+            'owner_id' => $user->id,
+            'settings' => [],
+        ]);
+
+        $this->agent = Agent::factory()->create(['team_id' => $this->team->id]);
+        $this->crew = Crew::factory()->create([
+            'team_id' => $this->team->id,
+            'coordinator_agent_id' => $this->agent->id,
+            'qa_agent_id' => $this->agent->id,
+        ]);
+    }
+
+    public function test_dispatch_sequential_dispatches_no_task_job_when_paused(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::Sequential);
+        $this->makeTask($execution, 1, CrewTaskStatus::Pending);
+        $this->makeTask($execution, 2, CrewTaskStatus::Pending);
+
+        app(CrewOrchestrator::class)->dispatchSequential($execution, new CrewExecutionScope($execution));
+
+        Bus::assertNotDispatched(ExecuteCrewTaskJob::class);
+    }
+
+    public function test_task_validated_while_paused_does_not_dispatch_next_task(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::Sequential);
+        $first = $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+        $second = $this->makeTask($execution, 2, CrewTaskStatus::Pending);
+
+        app(CrewOrchestrator::class)->onTaskValidated($execution, $first);
+
+        Bus::assertNotDispatched(ExecuteCrewTaskJob::class);
+        $this->assertSame(CrewTaskStatus::Pending, $second->fresh()?->status);
+        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
+    }
+
+    public function test_dispatch_parallel_dispatches_no_batch_when_paused(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::Parallel);
+        for ($i = 1; $i <= 3; $i++) {
+            $this->makeTask($execution, $i, CrewTaskStatus::Pending);
+        }
+
+        app(CrewOrchestrator::class)->dispatchParallel($execution, new CrewExecutionScope($execution));
+
+        Bus::assertBatchCount(0);
+    }
+
+    public function test_task_job_does_not_call_agent_when_execution_paused(): void
+    {
+        $this->mock(ExecuteAgentAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::Sequential);
+        $task = $this->makeTask($execution, 1, CrewTaskStatus::Assigned);
+
+        $job = new ExecuteCrewTaskJob(
+            crewExecutionId: $execution->id,
+            taskExecutionId: $task->id,
+            teamId: $this->team->id,
+        );
+        $job->handle(app(ExecuteAgentAction::class));
+
+        $this->assertSame(CrewTaskStatus::Pending, $task->fresh()?->status);
+    }
+
+    public function test_run_does_not_decompose_again_when_tasks_exist(): void
+    {
+        Bus::fake();
+
+        $this->mock(DecomposeGoalAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Planning, CrewProcessType::Sequential);
+        $first = $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+        $second = $this->makeTask($execution, 2, CrewTaskStatus::Pending, [$first->id]);
+
+        app(CrewOrchestrator::class)->run($execution);
+
+        $this->assertSame(2, CrewTaskExecution::where('crew_execution_id', $execution->id)->count());
+        $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
+        Bus::assertDispatchedTimes(ExecuteCrewTaskJob::class, 1);
+        Bus::assertDispatched(ExecuteCrewTaskJob::class, fn (ExecuteCrewTaskJob $job) => $job->taskExecutionId === $second->id);
+    }
+
+    public function test_resume_continues_pending_tasks_without_duplicates(): void
+    {
+        Bus::fake();
+
+        $this->mock(DecomposeGoalAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Sequential);
+        $first = $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+        $second = $this->makeTask($execution, 2, CrewTaskStatus::Pending, [$first->id]);
+
+        app(CrewOrchestrator::class)->resume($execution);
+
+        $this->assertSame(2, CrewTaskExecution::where('crew_execution_id', $execution->id)->count());
+        Bus::assertDispatchedTimes(ExecuteCrewTaskJob::class, 1);
+        Bus::assertDispatched(ExecuteCrewTaskJob::class, fn (ExecuteCrewTaskJob $job) => $job->taskExecutionId === $second->id);
+        $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
+    }
+
+    public function test_resume_plans_execution_paused_during_planning(): void
+    {
+        Bus::fake();
+
+        // Paused while still in Planning: the start job skipped, so no tasks exist yet.
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Sequential);
+
+        $this->mock(DecomposeGoalAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->once()->andReturnUsing(
+                fn (CrewExecution $e) => [$this->makeTask($e, 1, CrewTaskStatus::Pending)],
+            );
+        });
+
+        app(CrewOrchestrator::class)->resume($execution);
+
+        $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
+        $this->assertSame(1, CrewTaskExecution::where('crew_execution_id', $execution->id)->count());
+        Bus::assertDispatchedTimes(ExecuteCrewTaskJob::class, 1);
+    }
+
+    public function test_resume_parallel_does_not_requeue_tasks_still_in_queue(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Parallel);
+        $this->makeTask($execution, 1, CrewTaskStatus::Pending);
+        $this->makeTask($execution, 2, CrewTaskStatus::Pending);
+
+        app(CrewOrchestrator::class)->dispatchParallel($execution, new CrewExecutionScope($execution));
+        Bus::assertBatchCount(1);
+
+        // Paused and resumed before the queued jobs were picked up.
+        $execution->update(['status' => CrewExecutionStatus::Paused]);
+        $execution->update(['status' => CrewExecutionStatus::Executing]);
+
+        app(CrewOrchestrator::class)->resume($execution->fresh() ?? $execution);
+
+        Bus::assertBatchCount(1);
+    }
+
+    public function test_dispatch_parallel_keeps_status_written_by_fast_job(): void
+    {
+        // No Bus::fake: the batch runs on the sync queue inside dispatch(), like a fast worker.
+        $this->mock(ExecuteAgentAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->andThrow(new \RuntimeException('agent down'));
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Parallel);
+        $task = $this->makeTask($execution, 1, CrewTaskStatus::Pending);
+        $task->update(['attempt_number' => 1, 'max_attempts' => 1]);
+
+        app(CrewOrchestrator::class)->dispatchParallel($execution, new CrewExecutionScope($execution));
+
+        $fresh = $task->fresh();
+        $this->assertNotNull($fresh);
+        $this->assertSame(CrewTaskStatus::Failed, $fresh->status);
+        $this->assertNotNull($fresh->batch_id);
+    }
+
+    public function test_dispatch_sequential_waits_for_task_awaiting_qa(): void
+    {
+        Bus::fake();
+
+        // Task 1 finished but its QA job has not run yet; task 2 has no dependencies.
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Sequential);
+        $this->makeTask($execution, 1, CrewTaskStatus::Completed);
+        $this->makeTask($execution, 2, CrewTaskStatus::Pending);
+
+        app(CrewOrchestrator::class)->resume($execution);
+
+        Bus::assertNotDispatched(ExecuteCrewTaskJob::class);
+    }
+
+    public function test_run_keeps_plan_and_stays_paused_when_paused_during_planning(): void
+    {
+        Bus::fake();
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Planning, CrewProcessType::Sequential);
+
+        $this->mock(DecomposeGoalAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->once()->andReturnUsing(function (CrewExecution $e) {
+                $task = $this->makeTask($e, 1, CrewTaskStatus::Pending);
+                // The user pauses while the coordinator is still planning.
+                CrewExecution::whereKey($e->id)->update(['status' => CrewExecutionStatus::Paused]);
+
+                return [$task];
+            });
+        });
+
+        app(CrewOrchestrator::class)->run($execution);
+
+        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
+        $this->assertSame(1, CrewTaskExecution::where('crew_execution_id', $execution->id)->count());
+        Bus::assertNotDispatched(ExecuteCrewTaskJob::class);
+    }
+
+    public function test_resume_job_waits_and_retries_while_planner_runs(): void
+    {
+        $resumeJob = new ExecuteCrewJob('execution-id', $this->team->id, resume: true);
+        $startJob = new ExecuteCrewJob('execution-id', $this->team->id);
+
+        $resumeOverlap = collect($resumeJob->middleware())->first(fn ($m) => $m instanceof WithoutOverlapping);
+        $startOverlap = collect($startJob->middleware())->first(fn ($m) => $m instanceof WithoutOverlapping);
+
+        $this->assertInstanceOf(WithoutOverlapping::class, $resumeOverlap);
+        $this->assertInstanceOf(WithoutOverlapping::class, $startOverlap);
+        // Resume: released (never dropped) every 30 s, with enough tries to outlast a
+        // 600 s planning job; a real exception still fails it at once.
+        $this->assertSame([30, 600], [$resumeOverlap->releaseAfter, $startOverlap->releaseAfter]);
+        $this->assertGreaterThanOrEqual(21, $resumeJob->tries);
+        $this->assertSame([1, null, 1], [$resumeJob->maxExceptions, $startJob->maxExceptions, $startJob->tries]);
+    }
+
+    public function test_fanout_resume_does_not_requeue_tasks_still_in_queue(): void
+    {
+        Bus::fake();
+
+        $second = Agent::factory()->create(['team_id' => $this->team->id]);
+        foreach ([$this->agent, $second] as $i => $worker) {
+            CrewMember::create([
+                'crew_id' => $this->crew->id,
+                'agent_id' => $worker->id,
+                'role' => CrewMemberRole::Worker,
+                'sort_order' => $i,
+                'config' => [],
+            ]);
+        }
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::Fanout);
+        app(CrewOrchestrator::class)->dispatchFanout($execution, new CrewExecutionScope($execution));
+        Bus::assertBatchCount(1);
+
+        // Paused and resumed before any worker picked up its job.
+        $execution->update(['status' => CrewExecutionStatus::Paused]);
+        $execution->update(['status' => CrewExecutionStatus::Executing]);
+
+        app(CrewOrchestrator::class)->resume($execution->fresh() ?? $execution);
+
+        Bus::assertBatchCount(1);
+    }
+
+    public function test_adversarial_round_end_while_paused_does_not_synthesize(): void
+    {
+        Bus::fake();
+        $this->mock(SynthesizeResultAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::Adversarial);
+        $task = $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+
+        app(CrewOrchestrator::class)->onTaskValidated($execution, $task);
+
+        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
+    }
+
+    public function test_self_claim_last_task_while_paused_does_not_synthesize(): void
+    {
+        Bus::fake();
+        $this->mock(SynthesizeResultAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Paused, CrewProcessType::SelfClaim);
+        $task = $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+
+        app(CrewOrchestrator::class)->onTaskValidated($execution, $task);
+
+        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
+        Bus::assertNotDispatched(ExecuteCrewTaskJob::class);
+    }
+
+    public function test_self_claim_resume_completes_when_all_tasks_finished_while_paused(): void
+    {
+        Bus::fake();
+        $this->mock(SynthesizeResultAction::class, function (MockInterface $mock) {
+            $mock->shouldReceive('execute')->once()->andThrow(new \RuntimeException('synthesis reached'));
+        });
+
+        $execution = $this->makeExecution(CrewExecutionStatus::Executing, CrewProcessType::SelfClaim);
+        $this->makeTask($execution, 1, CrewTaskStatus::Validated);
+
+        app(CrewOrchestrator::class)->resume($execution);
+
+        // Synthesis ran (the mock throws, so the run is failed with the synthesis error).
+        $this->assertSame('Synthesis failed: synthesis reached', $execution->fresh()?->error_message);
+    }
+
+    private function makeExecution(CrewExecutionStatus $status, CrewProcessType $processType): CrewExecution
+    {
+        return CrewExecution::create([
+            'team_id' => $this->team->id,
+            'crew_id' => $this->crew->id,
+            'status' => $status,
+            'goal' => 'Test pause and resume',
+            'config_snapshot' => [
+                'process_type' => $processType->value,
+            ],
+            'started_at' => now(),
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $dependsOn
+     */
+    private function makeTask(CrewExecution $execution, int $order, CrewTaskStatus $status, array $dependsOn = []): CrewTaskExecution
+    {
+        return CrewTaskExecution::create([
+            'crew_execution_id' => $execution->id,
+            'agent_id' => $this->agent->id,
+            'title' => "Task {$order}",
+            'description' => "Task {$order} description",
+            'status' => $status,
+            'depends_on' => $dependsOn,
+            'sort_order' => $order,
+        ]);
+    }
+}

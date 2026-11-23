@@ -4,6 +4,7 @@ namespace App\Domain\Crew\Jobs;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
@@ -61,6 +62,27 @@ class ExecuteCrewTaskJob implements ShouldQueue
                 'task_id' => $this->taskExecutionId,
                 'execution_id' => $this->crewExecutionId,
             ]);
+
+            return;
+        }
+
+        // A job queued before a pause must not run a task that already finished.
+        $taskStatus = $taskExecution->getAttribute('status');
+
+        if (in_array($taskStatus, [
+            CrewTaskStatus::Completed,
+            CrewTaskStatus::Validated,
+            CrewTaskStatus::QaFailed,
+            CrewTaskStatus::Skipped,
+        ], true)) {
+            return;
+        }
+
+        // Paused: put the task back to Pending without calling the agent; resume dispatches it again.
+        if ($execution->getAttribute('status') === CrewExecutionStatus::Paused) {
+            if (in_array($taskStatus, [CrewTaskStatus::Assigned, CrewTaskStatus::Pending], true)) {
+                $taskExecution->update(['status' => CrewTaskStatus::Pending]);
+            }
 
             return;
         }

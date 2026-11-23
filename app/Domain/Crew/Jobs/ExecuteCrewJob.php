@@ -28,11 +28,23 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
 
     public int $timeout = 600;
 
+    /** Only overlap releases may retry a resume job; a real exception fails it at once. */
+    public ?int $maxExceptions = null;
+
+    private const RESUME_RELEASE_SECONDS = 30;
+
     public function __construct(
         public readonly string $crewExecutionId,
         public readonly ?string $teamId = null,
+        public readonly bool $resume = false,
     ) {
         $this->onQueue('experiments');
+
+        if ($resume) {
+            // Enough 30 s retries to outlast a planning job (timeout 600 s).
+            $this->tries = intdiv($this->timeout, self::RESUME_RELEASE_SECONDS) + 2;
+            $this->maxExceptions = 1;
+        }
     }
 
     public function sentryContext(): array
@@ -46,12 +58,18 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
 
     public function middleware(): array
     {
+        // A resume job that finds the original job still running (still planning) waits
+        // and retries (see the constructor's tries) instead of running beside it, so the
+        // goal is never planned twice and the resume is never lost.
+        $overlap = (new WithoutOverlapping($this->crewExecutionId))
+            ->releaseAfter($this->resume ? self::RESUME_RELEASE_SECONDS : 600);
+
         return [
             app(SentryContextJobMiddleware::class),
             new CheckKillSwitch,
             new CheckBudgetAvailable,
             new TenantRateLimit('experiments', 30),
-            (new WithoutOverlapping($this->crewExecutionId))->releaseAfter(600),
+            $overlap,
         ];
     }
 
@@ -65,10 +83,13 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
             return;
         }
 
-        if ($execution->status !== CrewExecutionStatus::Planning) {
-            Log::info('Crew execution not in planning state, skipping', [
+        $expected = $this->resume ? CrewExecutionStatus::Executing : CrewExecutionStatus::Planning;
+
+        if ($execution->getAttribute('status') !== $expected) {
+            Log::info('Crew execution not in expected state, skipping', [
                 'id' => $this->crewExecutionId,
                 'status' => $execution->status->value,
+                'expected' => $expected->value,
             ]);
 
             return;
@@ -78,6 +99,12 @@ class ExecuteCrewJob implements HasSentryContext, ShouldQueue
             'metadata.crew_execution_id' => $this->crewExecutionId,
             'metadata.team_id' => $this->teamId,
         ], function () use ($orchestrator, $execution) {
+            if ($this->resume) {
+                $orchestrator->resume($execution);
+
+                return;
+            }
+
             $orchestrator->run($execution);
         });
     }

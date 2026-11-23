@@ -18,6 +18,7 @@ use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Events\CrewExecuted;
 use App\Domain\Crew\Jobs\CoordinatorDecisionJob;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
+use App\Domain\Crew\Models\CrewChatMessage;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Shared\Services\NotificationService;
@@ -62,12 +63,26 @@ class CrewOrchestrator
             // Fanout and ChatRoom manage their own task creation — skip decomposition
             if (in_array($processType, [CrewProcessType::Fanout, CrewProcessType::ChatRoom])) {
                 $execution->update(['status' => CrewExecutionStatus::Executing]);
+            } elseif ($execution->taskExecutions()->exists()) {
+                // Tasks were already planned (e.g. a re-dispatched run): continue them
+                // instead of decomposing the goal again and duplicating the plan.
+                $execution->update(['status' => CrewExecutionStatus::Executing]);
             } else {
                 // Phase 1: Decompose goal
                 $taskExecutions = $this->decomposeGoal->execute($execution);
 
                 if (empty($taskExecutions)) {
                     $this->failExecution($execution, 'Coordinator produced an empty task plan.');
+
+                    return;
+                }
+
+                // Paused while the coordinator was planning: keep the plan, stay Paused and
+                // dispatch nothing. Resume continues these tasks without planning again.
+                if ($this->isPaused($execution)) {
+                    Log::info('Crew execution paused during planning; tasks kept for resume', [
+                        'execution_id' => $execution->id,
+                    ]);
 
                     return;
                 }
@@ -101,6 +116,102 @@ class CrewOrchestrator
     }
 
     /**
+     * Resume a paused execution: continue the existing tasks without re-planning.
+     */
+    public function resume(CrewExecution $execution): void
+    {
+        $snapshot = $execution->getAttribute('config_snapshot');
+        $processType = CrewProcessType::tryFrom(is_array($snapshot) ? (string) ($snapshot['process_type'] ?? '') : '');
+
+        // Paused during Planning: nothing was started yet, so plan and start it now.
+        $started = $processType === CrewProcessType::ChatRoom
+            ? CrewChatMessage::where('crew_execution_id', $execution->id)->exists()
+            : $execution->taskExecutions()->exists();
+
+        if (! $started) {
+            $this->run($execution);
+
+            return;
+        }
+
+        try {
+            app(DeadlineContext::class)->assertNotExpired();
+
+            $scope = new CrewExecutionScope($execution);
+
+            if ($processType === null) {
+                throw new \UnexpectedValueException('Unknown crew process type.');
+            }
+
+            match ($processType) {
+                CrewProcessType::Sequential => $this->dispatchSequential($execution, $scope),
+                CrewProcessType::Parallel => $this->dispatchParallel($execution, $scope),
+                CrewProcessType::Adversarial => $this->resumeAdversarial($execution, $scope),
+                CrewProcessType::SelfClaim => $this->resumeSelfClaim($execution, $scope),
+                CrewProcessType::Hierarchical => $this->dispatchHierarchical($execution, $scope),
+                // Never dispatchFanout() here: it creates new tasks
+                CrewProcessType::Fanout => $this->checkParallelProgress($execution),
+                CrewProcessType::ChatRoom => Log::info('Crew chat room execution resumed; rounds continue on their own', [
+                    'execution_id' => $execution->id,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            Log::error('Crew resume failed', [
+                'execution_id' => $execution->id,
+                'error' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
+            if (isset($scope)) {
+                $scope->dispose();
+            }
+
+            $this->failExecution($execution, $e->getMessage());
+        }
+    }
+
+    /**
+     * Adversarial resume: pending tasks of the current round are dispatched as parallel
+     * (like dispatchAdversarial). If none are pending, the round may have finished while
+     * paused, so advance it (next round or synthesis) instead of synthesizing early.
+     */
+    private function resumeAdversarial(CrewExecution $execution, CrewExecutionScope $scope): void
+    {
+        $scope->assertNotCancelled();
+
+        if ($this->dependencyResolver->resolveReady($this->getTasks($execution))->isNotEmpty()) {
+            $this->dispatchParallel($execution, $scope);
+
+            return;
+        }
+
+        $this->advanceAdversarialRound($execution);
+    }
+
+    /**
+     * Self-Claim resume: re-seed workers on pending tasks. If every task finished while
+     * paused, the completion step skipped by continueSelfClaim() runs now.
+     */
+    private function resumeSelfClaim(CrewExecution $execution, CrewExecutionScope $scope): void
+    {
+        $tasks = $this->getTasks($execution);
+
+        if ($this->dependencyResolver->allTerminal($tasks)) {
+            $scope->assertNotCancelled();
+
+            if ($this->checkConvergenceReached($execution)) {
+                $this->synthesizeAndComplete($execution);
+            } else {
+                $this->failExecution($execution, 'Convergence not met.');
+            }
+
+            return;
+        }
+
+        $this->dispatchSelfClaim($execution, $scope);
+    }
+
+    /**
      * Sequential: dispatch ready tasks one at a time.
      * Called initially and after each task validation.
      */
@@ -108,7 +219,24 @@ class CrewOrchestrator
     {
         $scope->assertNotCancelled();
 
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $tasks = $this->getTasks($execution);
+
+        // Sequential = one at a time: if a task is already in flight (running, or
+        // finished but still waiting for QA / revision), its callback continues the flow.
+        $inFlight = [
+            CrewTaskStatus::Assigned,
+            CrewTaskStatus::Running,
+            CrewTaskStatus::Completed,
+            CrewTaskStatus::NeedsRevision,
+        ];
+        if ($tasks->contains(fn (CrewTaskExecution $t) => in_array($t->getAttribute('status'), $inFlight, true))) {
+            return;
+        }
+
         $ready = $this->dependencyResolver->resolveReady($tasks);
 
         if ($ready->isEmpty()) {
@@ -138,6 +266,10 @@ class CrewOrchestrator
     {
         $scope->assertNotCancelled();
 
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $tasks = $this->getTasks($execution);
         $ready = $this->dependencyResolver->resolveReady($tasks);
 
@@ -165,14 +297,21 @@ class CrewOrchestrator
             teamId: $execution->team_id,
         ))->toArray();
 
+        // Mark the tasks Assigned BEFORE queuing, so a resume does not queue them a
+        // second time while these jobs wait in the queue. Doing it after dispatch could
+        // overwrite a status a fast (or sync) job has already written.
+        $ready->each(fn (CrewTaskExecution $task) => $task->update(['status' => CrewTaskStatus::Assigned]));
+
         $batch = Bus::batch($jobs)
             ->name("crew:{$execution->id}")
             ->onQueue('ai-calls')
             ->allowFailures()
             ->dispatch();
 
-        // Store batch_id on tasks
-        $ready->each(fn (CrewTaskExecution $task) => $task->update(['batch_id' => $batch->id]));
+        // Store batch_id with a column-only query so the task status written by the jobs is left alone
+        CrewTaskExecution::query()
+            ->whereIn('id', $ready->pluck('id')->all())
+            ->update(['batch_id' => $batch->id]);
     }
 
     /**
@@ -329,6 +468,10 @@ class CrewOrchestrator
         ))->toArray();
 
         if (! empty($jobs)) {
+            // Mark Assigned before queuing (as in dispatchParallel) so a resume does not
+            // queue these tasks a second time while their jobs wait in the queue.
+            $internalTasks->each(fn (CrewTaskExecution $task) => $task->update(['status' => CrewTaskStatus::Assigned]));
+
             Bus::batch($jobs)
                 ->name("crew-fanout:{$execution->id}")
                 ->onQueue('ai-calls')
@@ -434,6 +577,11 @@ class CrewOrchestrator
      */
     private function continueSelfClaim(CrewExecution $execution, CrewTaskExecution $completedTask): void
     {
+        // Paused: claim nothing and do not synthesize; resume() re-seeds or completes.
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         // The agent who just finished claims the next task
         $agent = Agent::withoutGlobalScopes()
             ->where('team_id', $execution->team_id)
@@ -470,6 +618,11 @@ class CrewOrchestrator
      */
     private function advanceAdversarialRound(CrewExecution $execution): void
     {
+        // Paused: no next round and no synthesis; resume() advances the round.
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $config = $execution->config_snapshot;
         $maxRounds = $config['adversarial_rounds'] ?? 2;
 
@@ -531,6 +684,10 @@ class CrewOrchestrator
 
     private function dispatchTask(CrewTaskExecution $task, CrewExecution $execution): void
     {
+        // Paused: leave the task Pending; resume() dispatches it later.
+        if ($this->isPaused($execution)) {
+            return;
+        }
         // Iterative skip loop — avoids infinite recursion when consecutive tasks are skipped.
         // Maximum skip iterations prevents runaway loops from malformed skip_conditions.
         $maxSkipIterations = 50;
@@ -639,6 +796,10 @@ class CrewOrchestrator
 
     private function checkParallelProgress(CrewExecution $execution): void
     {
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $tasks = $this->getTasks($execution);
 
         // Check if there are more tasks to dispatch (phase 2 of dependency resolution)
@@ -661,6 +822,10 @@ class CrewOrchestrator
 
     private function checkContinuation(CrewExecution $execution): void
     {
+        if ($this->isPaused($execution)) {
+            return;
+        }
+
         $tasks = $this->getTasks($execution);
 
         if ($this->dependencyResolver->allTerminal($tasks)) {
@@ -824,6 +989,13 @@ class CrewOrchestrator
         }
 
         return array_intersect_key($context, array_flip($contextScope));
+    }
+
+    private function isPaused(CrewExecution $execution): bool
+    {
+        $execution->refresh();
+
+        return $execution->getAttribute('status') === CrewExecutionStatus::Paused;
     }
 
     private function getTasks(CrewExecution $execution): Collection

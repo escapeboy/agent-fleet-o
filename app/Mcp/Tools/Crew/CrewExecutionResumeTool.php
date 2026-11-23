@@ -21,7 +21,7 @@ class CrewExecutionResumeTool extends Tool
 
     protected string $name = 'crew_execution_resume';
 
-    protected string $description = 'Resume a paused crew execution. Resets status to planning and re-dispatches the orchestrator job to continue from pending tasks.';
+    protected string $description = 'Resume a paused crew execution. Sets status to executing and continues the existing pending tasks without re-planning.';
 
     public function schema(JsonSchema $schema): array
     {
@@ -55,15 +55,15 @@ class CrewExecutionResumeTool extends Tool
             return $this->failedPreconditionError("Cannot resume execution in status '{$execution->status->value}'. Only paused executions can be resumed.");
         }
 
-        $execution->update(['status' => CrewExecutionStatus::Planning]);
+        $execution->update(['status' => CrewExecutionStatus::Executing]);
 
-        ExecuteCrewJob::dispatch($execution->id, $execution->team_id);
+        ExecuteCrewJob::dispatch($execution->id, $execution->team_id, resume: true);
 
         return Response::text(json_encode([
             'success' => true,
             'execution_id' => $execution->id,
-            'status' => CrewExecutionStatus::Planning->value,
-            'note' => 'Execution queued for resumption. The orchestrator will continue from pending tasks.',
+            'status' => CrewExecutionStatus::Executing->value,
+            'note' => 'Execution queued for resumption. The orchestrator continues the existing pending tasks without re-planning.',
         ]));
     }
 }
