@@ -63,4 +63,22 @@
             </button>
         </div>
     </form>
+
+    <form wire:submit="importYaml" class="mt-6 space-y-4 rounded-xl border border-gray-200 bg-white p-6">
+        <div>
+            <h3 class="text-sm font-semibold text-gray-900">Or import from YAML</h3>
+            <p class="mt-1 text-xs text-gray-500">Paste a policy document. The policy name and scope above are used when filled in; imported policies start disabled.</p>
+        </div>
+        <textarea wire:model="yamlImport" rows="10"
+            class="block w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs text-gray-700 focus:border-primary-500 focus:ring-primary-500"
+            placeholder="apiVersion: fleetq.io/v1&#10;kind: AgentPolicy&#10;metadata:&#10;  name: Team default&#10;rules:&#10;  risk_ceiling: low"></textarea>
+        @error('yamlImport')
+            <p class="text-xs text-red-600">{{ $message }}</p>
+        @enderror
+        <div class="flex justify-end">
+            <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Import policy
+            </button>
+        </div>
+    </form>
 </div>
