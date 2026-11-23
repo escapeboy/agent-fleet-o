@@ -13,16 +13,40 @@
                 {{ $policy->status->label() }}
             </p>
         </div>
-        <button wire:click="toggleEnabled" type="button"
-            class="rounded-lg px-4 py-2 text-sm font-medium {{ $policy->enabled ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-            {{ $policy->enabled ? 'Enabled' : 'Disabled' }}
-        </button>
+        <div class="flex items-center gap-2">
+            <button wire:click="downloadYaml" type="button"
+                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Download YAML
+            </button>
+            <button wire:click="toggleEnabled" type="button"
+                class="rounded-lg px-4 py-2 text-sm font-medium {{ $policy->enabled ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                {{ $policy->enabled ? 'Enabled' : 'Disabled' }}
+            </button>
+        </div>
     </div>
 
     {{-- Current rules --}}
     <div class="rounded-xl border border-gray-200 bg-white p-6">
         <h3 class="mb-3 text-sm font-semibold text-gray-900">Current rules (v{{ $current?->version ?? 1 }})</h3>
         <pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">{{ json_encode($current?->rules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+    </div>
+
+    {{-- Import YAML --}}
+    <div class="rounded-xl border border-gray-200 bg-white p-6">
+        <h3 class="mb-1 text-sm font-semibold text-gray-900">Import YAML (creates a new version)</h3>
+        <p class="mb-3 text-xs text-gray-500">Paste a policy document. Only the rules are imported; name and enabled state stay as they are.</p>
+        <textarea wire:model="yamlImport" rows="10"
+            class="block w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs text-gray-700 focus:border-primary-500 focus:ring-primary-500"
+            placeholder="apiVersion: fleetq.io/v1&#10;kind: AgentPolicy&#10;rules:&#10;  risk_ceiling: low"></textarea>
+        @error('yamlImport')
+            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+        @enderror
+        <div class="mt-3 flex justify-end">
+            <button wire:click="importYaml" type="button"
+                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                Import
+            </button>
+        </div>
     </div>
 
     {{-- Version history --}}

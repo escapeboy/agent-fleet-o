@@ -4,6 +4,7 @@ namespace App\Livewire\Policies;
 
 use App\Domain\Agent\Actions\CreateAgentPolicyAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Agent\Support\AgentPolicyYamlSerializer;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -36,6 +37,8 @@ class CreatePolicyForm extends Component
 
     public bool $enabled = false;
 
+    public string $yamlImport = '';
+
     public function save()
     {
         Gate::authorize('edit-content');
@@ -62,6 +65,42 @@ class CreatePolicyForm extends Component
         );
 
         session()->flash('status', 'Policy created.');
+
+        return $this->redirectRoute('policies.show', $policy, navigate: true);
+    }
+
+    /**
+     * Create a new policy (version 1) from pasted YAML. The name comes from
+     * the form field when filled, otherwise from metadata.name. Imported
+     * policies always start disabled.
+     */
+    public function importYaml()
+    {
+        Gate::authorize('edit-content');
+
+        $parsed = app(AgentPolicyYamlSerializer::class)->parse($this->yamlImport);
+
+        if (trim($this->name) === '' && $parsed['name'] !== null) {
+            $this->name = $parsed['name'];
+        }
+
+        $this->validate([
+            'name' => 'required|string|min:2|max:200',
+            'agentId' => ['nullable', 'string', Rule::exists('agents', 'id')
+                ->where('team_id', auth()->user()->current_team_id)],
+        ]);
+
+        $policy = app(CreateAgentPolicyAction::class)->execute(
+            teamId: auth()->user()->current_team_id,
+            name: $this->name,
+            agentId: $this->agentId !== '' ? $this->agentId : null,
+            rules: $parsed['rules'],
+            enabled: false,
+            createdBy: auth()->id(),
+            notes: 'Imported from YAML',
+        );
+
+        session()->flash('status', 'Policy imported from YAML (disabled).');
 
         return $this->redirectRoute('policies.show', $policy, navigate: true);
     }
