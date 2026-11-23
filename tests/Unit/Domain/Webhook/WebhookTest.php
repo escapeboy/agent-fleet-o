@@ -12,7 +12,7 @@ class WebhookTest extends TestCase
     {
         $cases = WebhookEvent::cases();
 
-        $this->assertCount(10, $cases);
+        $this->assertCount(11, $cases);
         $this->assertEquals('experiment.completed', WebhookEvent::ExperimentCompleted->value);
         $this->assertEquals('experiment.failed', WebhookEvent::ExperimentFailed->value);
         $this->assertEquals('project.run.completed', WebhookEvent::ProjectRunCompleted->value);
@@ -23,6 +23,7 @@ class WebhookTest extends TestCase
         $this->assertEquals('agent.session.failed', WebhookEvent::AgentSessionFailed->value);
         $this->assertEquals('agent.session.cancelled', WebhookEvent::AgentSessionCancelled->value);
         $this->assertEquals('agent.session.needs_input', WebhookEvent::AgentSessionNeedsInput->value);
+        $this->assertEquals('audit.entry.created', WebhookEvent::AuditEntryCreated->value);
     }
 
     public function test_webhook_event_labels(): void
@@ -33,8 +34,7 @@ class WebhookTest extends TestCase
 
     public function test_subscribes_to_exact_event(): void
     {
-        $endpoint = new WebhookEndpoint;
-        $endpoint->events = ['experiment.completed', 'experiment.failed'];
+        $endpoint = new WebhookEndpoint(['events' => ['experiment.completed', 'experiment.failed']]);
 
         $this->assertTrue($endpoint->subscribesTo('experiment.completed'));
         $this->assertTrue($endpoint->subscribesTo('experiment.failed'));
@@ -43,26 +43,33 @@ class WebhookTest extends TestCase
 
     public function test_subscribes_to_wildcard(): void
     {
-        $endpoint = new WebhookEndpoint;
-        $endpoint->events = ['*'];
+        $endpoint = new WebhookEndpoint(['events' => ['*']]);
 
         $this->assertTrue($endpoint->subscribesTo('experiment.completed'));
         $this->assertTrue($endpoint->subscribesTo('project.run.failed'));
         $this->assertTrue($endpoint->subscribesTo('budget.warning'));
+        $this->assertFalse($endpoint->subscribesTo('audit.entry.created'));
+    }
+
+    public function test_audit_entry_created_needs_explicit_subscription(): void
+    {
+        $endpoint = new WebhookEndpoint(['events' => ['*', 'audit.entry.created']]);
+
+        $this->assertTrue($endpoint->subscribesTo('audit.entry.created'));
+        $this->assertTrue(WebhookEvent::AuditEntryCreated->requiresExplicitSubscription());
+        $this->assertFalse(WebhookEvent::ExperimentCompleted->requiresExplicitSubscription());
     }
 
     public function test_subscribes_to_empty_events(): void
     {
-        $endpoint = new WebhookEndpoint;
-        $endpoint->events = [];
+        $endpoint = new WebhookEndpoint(['events' => []]);
 
         $this->assertFalse($endpoint->subscribesTo('experiment.completed'));
     }
 
     public function test_subscribes_to_null_events(): void
     {
-        $endpoint = new WebhookEndpoint;
-        $endpoint->events = null;
+        $endpoint = new WebhookEndpoint(['events' => null]);
 
         $this->assertFalse($endpoint->subscribesTo('experiment.completed'));
     }
