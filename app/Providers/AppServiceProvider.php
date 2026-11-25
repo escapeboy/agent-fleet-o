@@ -164,6 +164,7 @@ use App\Infrastructure\AI\Middleware\SafetyClassifier;
 use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
+use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
@@ -310,6 +311,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Commit provenance context — scoped so it is flushed between queue jobs/requests
         $this->app->scoped(GitProvenanceContext::class);
+
+        // Crew member tool allowlist for local agents — scoped so it is flushed between queue jobs/requests
+        $this->app->scoped(AgentToolAllowlistContext::class);
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);

@@ -10,6 +10,7 @@ use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
+use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -118,6 +119,7 @@ class ExecuteCrewTaskJob implements ShouldQueue
 
             // Resolve BroodMind-style worker permission policy from this agent's CrewMember config.
             // Reads tool_allowlist, max_steps, and max_credits from the JSONB config column.
+            // tool_allowlist governs both the API tool set and the Claude Code --mcp-config.
             $crewMember = CrewMember::where('crew_id', $execution->crew_id)
                 ->where('agent_id', $agent->id)
                 ->first();
@@ -143,13 +145,21 @@ class ExecuteCrewTaskJob implements ShouldQueue
                 }
             }
 
-            $result = $executeAgent->execute(
-                agent: $agent,
-                input: $input,
-                teamId: $execution->team_id,
-                userId: $execution->crew->user_id ?? $execution->team_id,
-                allowedToolIds: ! empty($allowedToolIds) ? $allowedToolIds : null,
-                maxStepsOverride: $maxSteps,
+            $allowlist = ! empty($allowedToolIds) ? $allowedToolIds : null;
+
+            // The scoped context carries the allowlist to LocalAgentGateway so
+            // Claude Code members get only the allowlisted MCP tools too.
+            $result = app(AgentToolAllowlistContext::class)->with(
+                $agent->id,
+                $allowlist,
+                fn () => $executeAgent->execute(
+                    agent: $agent,
+                    input: $input,
+                    teamId: $execution->team_id,
+                    userId: $execution->crew->user_id ?? $execution->team_id,
+                    allowedToolIds: $allowlist,
+                    maxStepsOverride: $maxSteps,
+                ),
             );
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
