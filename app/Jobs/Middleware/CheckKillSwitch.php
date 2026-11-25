@@ -62,13 +62,9 @@ class CheckKillSwitch
                 return;
             }
 
-            if ($status === CrewExecutionStatus::Paused) {
-                // Not released: resuming a crew re-dispatches ExecuteCrewJob, so a
-                // released job would run twice.
-                Log::info('CheckKillSwitch: Crew execution paused, skipping job', $context);
-
-                return;
-            }
+            // A paused crew execution is not stopped here: each crew job handles it
+            // itself (ExecuteCrewTaskJob puts its task back to Pending so resume
+            // dispatches it again; a queued validation must still record its result).
 
             if ($execution->experiment_id) {
                 $experiment = Experiment::withoutGlobalScopes()->find($execution->experiment_id);

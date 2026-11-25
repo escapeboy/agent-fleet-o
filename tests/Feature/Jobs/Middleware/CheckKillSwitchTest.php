@@ -2,15 +2,27 @@
 
 namespace Tests\Feature\Jobs\Middleware;
 
+use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewProcessType;
+use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Services\CrewExecutionScope;
+use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
+use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Str;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class CheckKillSwitchTest extends TestCase
@@ -145,12 +157,53 @@ class CheckKillSwitchTest extends TestCase
         $this->assertNull($job->releasedWith);
     }
 
-    public function test_skips_without_release_when_crew_execution_is_paused(): void
+    public function test_passes_job_through_when_only_crew_execution_is_paused(): void
     {
         $job = $this->makeCrewJob($this->makeExecution('paused')->id);
 
-        $this->assertFalse($this->runMiddleware($job));
+        $this->assertTrue($this->runMiddleware($job));
         $this->assertNull($job->releasedWith);
+    }
+
+    public function test_paused_crew_task_job_through_middleware_is_requeued_on_resume(): void
+    {
+        $this->mock(ExecuteAgentAction::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('execute');
+        });
+
+        $execution = $this->makeExecution('paused');
+        $execution->update(['config_snapshot' => ['process_type' => CrewProcessType::Sequential->value]]);
+        $task = CrewTaskExecution::create([
+            'crew_execution_id' => $execution->id,
+            'agent_id' => $this->crew->coordinator_agent_id,
+            'title' => 'Task 1',
+            'description' => 'Task 1 description',
+            'status' => CrewTaskStatus::Assigned,
+            'depends_on' => [],
+            'sort_order' => 1,
+        ]);
+
+        $job = new ExecuteCrewTaskJob(
+            crewExecutionId: $execution->id,
+            taskExecutionId: $task->id,
+            teamId: $this->team->id,
+        );
+
+        // Run the job through the same kill-switch and budget middlewares it declares.
+        (new Pipeline(app()))
+            ->send($job)
+            ->through([new CheckKillSwitch, new CheckBudgetAvailable])
+            ->then(fn (ExecuteCrewTaskJob $j) => $j->handle(app(ExecuteAgentAction::class)));
+
+        $this->assertSame(CrewTaskStatus::Pending, $task->fresh()?->status);
+
+        // Resume: the task is Pending again, so the orchestrator dispatches it.
+        Bus::fake();
+        $execution->update(['status' => CrewExecutionStatus::Executing]);
+        $fresh = CrewExecution::withoutGlobalScopes()->findOrFail($execution->id);
+        app(CrewOrchestrator::class)->dispatchSequential($fresh, new CrewExecutionScope($fresh));
+
+        Bus::assertDispatched(ExecuteCrewTaskJob::class, fn (ExecuteCrewTaskJob $j) => $j->taskExecutionId === $task->id);
     }
 
     public function test_runs_executing_crew_job_without_experiment(): void
