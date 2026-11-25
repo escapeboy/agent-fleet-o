@@ -18,6 +18,7 @@ class CrewExecutionResource extends FleetQResource
             'final_output' => $this->final_output,
             'config_snapshot' => $this->config_snapshot,
             'quality_score' => $this->quality_score,
+            'qa_error' => data_get($this->resource, 'error_metadata.qa_error'),
             'coordinator_iterations' => $this->coordinator_iterations,
             'total_cost_credits' => $this->total_cost_credits,
             'duration_ms' => $this->duration_ms,
