@@ -11,6 +11,7 @@ use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
+use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
 use App\Infrastructure\AI\Services\ClaudeCodeMcpConfigBuilder;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
@@ -608,7 +609,11 @@ class LocalAgentGateway implements AiGatewayInterface
      *   - `executeViaBridge()` (forwards in the POST body for the bridge to
      *     materialize on the host where the CLI actually runs)
      *
-     * Returns null when the agent has no attached MCP tools — callers should
+     * When a crew member tool_allowlist is set for the agent in
+     * AgentToolAllowlistContext, only the allowlisted tools are included.
+     *
+     * Returns null when the agent has no attached MCP tools (or none left
+     * after the crew allowlist) — callers should
      * leave the empty default in place so behavior matches the pre-MCP
      * codepath.
      *
@@ -634,6 +639,18 @@ class LocalAgentGateway implements AiGatewayInterface
                 ->where('tools.team_id', $agent->team_id)
                 ->where('tools.status', ToolStatus::Active->value)
                 ->get();
+
+            // Crew member tool_allowlist: keep only the allowlisted tools.
+            $allowed = app(AgentToolAllowlistContext::class)->allowedToolIdsFor($request->agentId);
+            if ($allowed !== null) {
+                $before = $tools->count();
+                $tools = $tools->filter(fn ($t) => in_array($t->id, $allowed, true))->values();
+
+                Log::debug('LocalAgentGateway: crew tool allowlist applied to Claude Code MCP config', [
+                    'agent_id' => $request->agentId,
+                    'removed' => $before - $tools->count(),
+                ]);
+            }
 
             if ($tools->isEmpty()) {
                 return null;
