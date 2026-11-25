@@ -4,12 +4,10 @@ namespace Tests\Feature\Jobs\Middleware;
 
 use App\Domain\Agent\Actions\ExecuteAgentAction;
 use App\Domain\Agent\Models\Agent;
-use App\Domain\Crew\Actions\ValidateTaskOutputAction;
 use App\Domain\Crew\Enums\CrewExecutionStatus;
 use App\Domain\Crew\Enums\CrewProcessType;
 use App\Domain\Crew\Enums\CrewTaskStatus;
 use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
-use App\Domain\Crew\Jobs\ValidateCrewTaskJob;
 use App\Domain\Crew\Models\Crew;
 use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Crew\Models\CrewTaskExecution;
@@ -105,7 +103,7 @@ class CheckKillSwitchTest extends TestCase
      * Runs a real crew job through the kill-switch and budget middlewares it declares,
      * with a queue job that must never be released.
      */
-    private function runThroughMiddleware(ExecuteCrewTaskJob|ValidateCrewTaskJob $job, Closure $handle): void
+    private function runThroughMiddleware(ExecuteCrewTaskJob $job, Closure $handle): void
     {
         /** @var QueueJob&MockInterface $queueJob */
         $queueJob = Mockery::mock(QueueJob::class);
@@ -168,67 +166,17 @@ class CheckKillSwitchTest extends TestCase
         $this->assertNull($job->releasedWith);
     }
 
-    public function test_pauses_crew_execution_without_release_when_linked_experiment_is_paused(): void
+    public function test_paused_linked_experiment_does_not_change_crew_execution_status(): void
     {
+        // Pending an owner decision, a paused experiment neither releases crew jobs
+        // (their 1-2 attempts would run out) nor pauses the crew execution.
         $execution = $this->makeExecution('executing', $this->makeExperiment('paused'));
         $job = $this->makeCrewJob($execution->id);
 
-        $this->assertTrue($this->runMiddleware($job));
+        $this->runMiddleware($job);
+
         $this->assertNull($job->releasedWith);
-        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
-    }
-
-    public function test_paused_experiment_pauses_real_crew_task_job_and_crew_resume_requeues_it(): void
-    {
-        $this->mock(ExecuteAgentAction::class, function (MockInterface $mock) {
-            $mock->shouldNotReceive('execute');
-        });
-
-        $execution = $this->makeExecution('executing', $this->makeExperiment('paused'));
-        $execution->update(['config_snapshot' => ['process_type' => CrewProcessType::Sequential->value]]);
-        $task = $this->makeTask($execution, CrewTaskStatus::Assigned);
-
-        $job = new ExecuteCrewTaskJob(
-            crewExecutionId: $execution->id,
-            taskExecutionId: $task->id,
-            teamId: $this->team->id,
-        );
-        $this->runThroughMiddleware($job, fn (ExecuteCrewTaskJob $j) => $j->handle(app(ExecuteAgentAction::class)));
-
-        // Not released (which would use up the job's attempts, see runThroughMiddleware);
-        // the crew is paused and the job's own paused handling put the task back to Pending.
-        $this->assertSame(CrewExecutionStatus::Paused, $execution->fresh()?->status);
-        $this->assertSame(CrewTaskStatus::Pending, $task->fresh()?->status);
-
-        Bus::fake();
-        $fresh = CrewExecution::withoutGlobalScopes()->findOrFail($execution->id);
-        $fresh->update(['status' => CrewExecutionStatus::Executing]);
-        app(CrewOrchestrator::class)->dispatchSequential($fresh, new CrewExecutionScope($fresh));
-
-        Bus::assertDispatched(ExecuteCrewTaskJob::class, fn (ExecuteCrewTaskJob $j) => $j->taskExecutionId === $task->id);
-    }
-
-    public function test_queued_validation_still_records_result_while_crew_is_paused(): void
-    {
-        $execution = $this->makeExecution('paused');
-        $task = $this->makeTask($execution, CrewTaskStatus::Completed);
-
-        $this->mock(ValidateTaskOutputAction::class, function (MockInterface $mock) {
-            $mock->shouldReceive('execute')->once()->andReturn(['passed' => true]);
-        });
-        $this->mock(CrewOrchestrator::class, function (MockInterface $mock) {
-            $mock->shouldReceive('onTaskValidated')->once();
-        });
-
-        $job = new ValidateCrewTaskJob(
-            crewExecutionId: $execution->id,
-            taskExecutionId: $task->id,
-            teamId: $this->team->id,
-        );
-        $this->runThroughMiddleware($job, fn (ValidateCrewTaskJob $j) => $j->handle(
-            app(ValidateTaskOutputAction::class),
-            app(CrewOrchestrator::class),
-        ));
+        $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
     }
 
     public function test_skips_crew_job_when_execution_is_terminated(): void

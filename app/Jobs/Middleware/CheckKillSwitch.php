@@ -86,9 +86,11 @@ class CheckKillSwitch
             return false;
         }
 
-        // A paused crew execution is not stopped here: each crew job handles it
-        // itself (ExecuteCrewTaskJob puts its task back to Pending so resume
-        // dispatches it again; a queued validation still records its result).
+        // Paused cases are left unchanged (pending an owner decision): a paused crew
+        // execution is handled by each crew job itself (ExecuteCrewTaskJob puts its
+        // task back to Pending so resume dispatches it again), and releasing on a
+        // paused experiment would use up the crew jobs' 1-2 attempts and fail or
+        // stall the crew.
 
         $experiment = $execution->experiment_id
             ? Experiment::withoutGlobalScopes()->find($execution->experiment_id)
@@ -98,21 +100,6 @@ class CheckKillSwitch
             Log::info('CheckKillSwitch: Experiment killed, skipping crew job', $context);
 
             return false;
-        }
-
-        if ($experiment?->status === ExperimentStatus::Paused) {
-            // Releasing would use up the crew jobs' few attempts (1-2) and fail or
-            // stall the crew. Instead pause the crew execution itself, as
-            // crew_execution_pause does, and let the job run its own paused
-            // handling; crew_execution_resume continues it.
-            $paused = CrewExecution::withoutGlobalScopes()
-                ->whereKey($execution->id)
-                ->whereIn('status', [CrewExecutionStatus::Planning->value, CrewExecutionStatus::Executing->value])
-                ->update(['status' => CrewExecutionStatus::Paused->value]);
-
-            if ($paused > 0) {
-                Log::info('CheckKillSwitch: Experiment paused, pausing crew execution', $context);
-            }
         }
 
         return true;
