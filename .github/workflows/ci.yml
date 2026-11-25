@@ -24,7 +24,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Code Quality
     runs-on: [self-hosted, ci]
-    container: shivammathur/node:2404@sha256:e701c38cc9f7168fa46c70c7dcce292249cbf6fd5a15b742b418918fd4306838
+    container: localhost:5000/ci-php84-node:2404
 
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Tests
     runs-on: [self-hosted, ci]
-    container: shivammathur/node:2404@sha256:e701c38cc9f7168fa46c70c7dcce292249cbf6fd5a15b742b418918fd4306838
+    container: localhost:5000/ci-php84-node:2404
     needs: quality
 
     # Redis for the tests lives on the job network (host `redis`); nothing is published on the host.
