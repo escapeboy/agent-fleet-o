@@ -41,6 +41,7 @@ class CrewTaskExecution extends Model
         'completed_at',
         'claimed_at',
         'belief_state',
+        'recovery_attempts',
     ];
 
     /**
@@ -68,6 +69,7 @@ class CrewTaskExecution extends Model
             'cost_credits' => 'integer',
             'duration_ms' => 'integer',
             'sort_order' => 'integer',
+            'recovery_attempts' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'claimed_at' => 'datetime',
