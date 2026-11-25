@@ -892,12 +892,14 @@ class CrewOrchestrator
                     : null,
             ];
 
+            $existingMetadata = is_array($execution->error_metadata) ? $execution->error_metadata : [];
+
             if ($qaError !== null) {
-                $existingMetadata = data_get($execution, 'error_metadata');
-                $completion['error_metadata'] = array_replace(
-                    is_array($existingMetadata) ? $existingMetadata : [],
-                    ['qa_error' => $qaError],
-                );
+                $completion['error_metadata'] = array_replace($existingMetadata, ['qa_error' => $qaError]);
+            } elseif (array_key_exists('qa_error', $existingMetadata)) {
+                // A previous synthesis attempt recorded a QA failure; this one scored, so clear it.
+                unset($existingMetadata['qa_error']);
+                $completion['error_metadata'] = $existingMetadata ?: null;
             }
 
             $execution->update($completion);

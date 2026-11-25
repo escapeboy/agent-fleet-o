@@ -238,7 +238,7 @@
                                     {{ $execution->status->label() }}
                                 </span>
                                 <span class="text-sm text-gray-500">{{ $execution->created_at->diffForHumans() }}</span>
-                                @if($execution->quality_score)
+                                @if($execution->quality_score !== null)
                                     <span class="text-sm font-medium {{ $execution->quality_score >= 0.7 ? 'text-green-600' : 'text-yellow-600' }}">
                                         QA: {{ number_format($execution->quality_score * 100) }}%
                                     </span>

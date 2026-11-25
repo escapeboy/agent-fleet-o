@@ -38,12 +38,7 @@ class CrewFinalQaRetryTest extends TestCase
         parent::setUp();
 
         $user = User::factory()->create();
-        $this->team = Team::create([
-            'name' => 'Final QA Team',
-            'slug' => 'final-qa-team',
-            'owner_id' => $user->id,
-            'settings' => [],
-        ]);
+        $this->team = Team::factory()->create(['owner_id' => $user->id]);
         $user->update(['current_team_id' => $this->team->id]);
         $this->team->users()->attach($user, ['role' => 'owner']);
         $this->actingAs($user);
@@ -175,6 +170,20 @@ class CrewFinalQaRetryTest extends TestCase
 
         $this->assertSame('x', data_get($execution->error_metadata, 'sentry_event_id'));
         $this->assertNotNull(data_get($execution->error_metadata, 'qa_error'));
+    }
+
+    public function test_successful_qa_clears_stale_qa_error_and_keeps_other_metadata(): void
+    {
+        $this->bindQa(fn (): array => self::qaResult(true, 0.9));
+
+        $execution = $this->runSynthesis($this->makeExecution([
+            'sentry_event_id' => 'x',
+            'qa_error' => ['message' => 'old failure', 'exception' => \RuntimeException::class, 'attempts' => 2, 'failed_at' => now()->toIso8601String()],
+        ]));
+
+        $this->assertEqualsWithDelta(0.9, (float) $execution->quality_score, 0.0001);
+        $this->assertNull(data_get($execution->error_metadata, 'qa_error'));
+        $this->assertSame('x', data_get($execution->error_metadata, 'sentry_event_id'));
     }
 
     public function test_api_resource_exposes_qa_error(): void
