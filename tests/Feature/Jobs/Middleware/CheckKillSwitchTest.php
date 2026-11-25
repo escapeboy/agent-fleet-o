@@ -166,15 +166,15 @@ class CheckKillSwitchTest extends TestCase
         $this->assertNull($job->releasedWith);
     }
 
-    public function test_paused_linked_experiment_does_not_change_crew_execution_status(): void
+    public function test_paused_linked_experiment_keeps_pre_change_behaviour(): void
     {
-        // Pending an owner decision, a paused experiment neither releases crew jobs
-        // (their 1-2 attempts would run out) nor pauses the crew execution.
+        // Undecided (owner): a paused experiment's crew job still runs, as before this
+        // change. It is not released (its 1-2 attempts would run out), and the crew
+        // execution's status is not changed.
         $execution = $this->makeExecution('executing', $this->makeExperiment('paused'));
         $job = $this->makeCrewJob($execution->id);
 
-        $this->runMiddleware($job);
-
+        $this->assertTrue($this->runMiddleware($job));
         $this->assertNull($job->releasedWith);
         $this->assertSame(CrewExecutionStatus::Executing, $execution->fresh()?->status);
     }

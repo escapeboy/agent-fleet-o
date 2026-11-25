@@ -52,6 +52,7 @@ class CheckBudgetAvailable
             && $experiment->budget_spent_credits >= $experiment->budget_cap_credits) {
             Log::warning('CheckBudgetAvailable: Experiment budget exceeded, skipping job', [
                 'experiment_id' => $experiment->id,
+                'team_id' => $teamId,
                 'spent' => $experiment->budget_spent_credits,
                 'cap' => $experiment->budget_cap_credits,
                 'job' => class_basename($job),
