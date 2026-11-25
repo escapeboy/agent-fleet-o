@@ -242,6 +242,11 @@
                                     <span class="text-sm font-medium {{ $execution->quality_score >= 0.7 ? 'text-green-600' : 'text-yellow-600' }}">
                                         QA: {{ number_format($execution->quality_score * 100) }}%
                                     </span>
+                                @elseif(data_get($execution->error_metadata, 'qa_error'))
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+                                          title="{{ data_get($execution->error_metadata, 'qa_error.message') }}">
+                                        QA unavailable
+                                    </span>
                                 @endif
                             </div>
                             <p class="mt-1 text-sm text-gray-700">{{ Str::limit($execution->goal, 120) }}</p>

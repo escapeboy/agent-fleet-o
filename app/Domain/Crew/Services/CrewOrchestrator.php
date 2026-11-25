@@ -31,6 +31,10 @@ use Illuminate\Support\Facades\Log;
 
 class CrewOrchestrator
 {
+    private const FINAL_QA_ATTEMPTS = 2;
+
+    private const FINAL_QA_BACKOFF_MS = 1000;
+
     private \WeakMap $taskCache;
 
     public function __construct(
@@ -876,7 +880,9 @@ class CrewOrchestrator
             // Run final QA on the assembled result
             $finalQa = $this->runFinalQa($execution);
 
-            $execution->update([
+            $qaError = $finalQa['qa_error'] ?? null;
+
+            $completion = [
                 'quality_score' => $finalQa['score'],
                 'status' => CrewExecutionStatus::Completed,
                 'trust_mode' => $this->resolveTrustMode($execution),
@@ -884,7 +890,17 @@ class CrewOrchestrator
                 'duration_ms' => $execution->started_at
                     ? (int) $execution->started_at->diffInMilliseconds(now())
                     : null,
-            ]);
+            ];
+
+            if ($qaError !== null) {
+                $existingMetadata = data_get($execution, 'error_metadata');
+                $completion['error_metadata'] = array_replace(
+                    is_array($existingMetadata) ? $existingMetadata : [],
+                    ['qa_error' => $qaError],
+                );
+            }
+
+            $execution->update($completion);
 
             app(ComputeCrewQualityAction::class)->execute($execution);
 
@@ -898,6 +914,7 @@ class CrewOrchestrator
                 ->performedOn($execution)
                 ->withProperties([
                     'quality_score' => $finalQa['score'],
+                    'qa_error' => $qaError !== null,
                     'total_cost_credits' => $execution->total_cost_credits,
                     'duration_ms' => $execution->duration_ms,
                 ])
@@ -909,9 +926,11 @@ class CrewOrchestrator
                     type: 'crew.execution.completed',
                     title: 'Crew Execution Complete',
                     body: sprintf(
-                        'Crew "%s" finished successfully (quality score: %s%%).',
+                        'Crew "%s" finished successfully (%s).',
                         $execution->crew->name ?? 'Crew',
-                        round($finalQa['score'] * 100),
+                        $finalQa['score'] === null
+                            ? 'quality check unavailable'
+                            : 'quality score: '.round($finalQa['score'] * 100).'%',
                     ),
                     actionUrl: '/crews/'.$execution->crew_id.'/execute',
                     data: ['crew_execution_id' => $execution->id, 'url' => '/crews/'.$execution->crew_id.'/execute'],
@@ -926,7 +945,7 @@ class CrewOrchestrator
     }
 
     /**
-     * @return array{passed: bool, score: float, feedback: string}
+     * @return array{passed: bool, score: ?float, feedback: string, issues: array, qa_error?: array{message: string, exception: string, attempts: int, failed_at: string}}
      */
     private function runFinalQa(CrewExecution $execution): array
     {
@@ -940,14 +959,31 @@ class CrewOrchestrator
 
         // We don't persist the virtual task — just use it for validation
         try {
-            return $this->validateTaskOutput->execute($virtualTask, $execution);
+            return retry(
+                self::FINAL_QA_ATTEMPTS,
+                fn () => $this->validateTaskOutput->execute($virtualTask, $execution),
+                self::FINAL_QA_BACKOFF_MS,
+            );
         } catch (\Throwable $e) {
-            // If final QA fails, still complete but with 0 score
+            // QA could not run: complete without a score instead of a fake 0
+            Log::warning('Crew final QA failed after retries', [
+                'crew_execution_id' => $execution->id,
+                'attempts' => self::FINAL_QA_ATTEMPTS,
+                'exception' => $e::class,
+                'error' => $e->getMessage(),
+            ]);
+
             return [
                 'passed' => false,
-                'score' => 0.0,
+                'score' => null,
                 'feedback' => 'Final QA validation failed: '.$e->getMessage(),
                 'issues' => [],
+                'qa_error' => [
+                    'message' => mb_substr($e->getMessage(), 0, 1000),
+                    'exception' => $e::class,
+                    'attempts' => self::FINAL_QA_ATTEMPTS,
+                    'failed_at' => now()->toIso8601String(),
+                ],
             ];
         }
     }
