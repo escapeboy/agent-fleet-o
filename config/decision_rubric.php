@@ -55,4 +55,23 @@ return [
     ],
     'cost_default' => 3,
 
+    /*
+    | Injection check: before a proposal is routed, its summary, payload and
+    | conversation lineage are checked for prompt injection — first with the
+    | pattern scanners, then (when model_enabled) with one model call. A
+    | suspicious proposal is raised to risk_level `critical`, so it always
+    | waits for a human. It never auto-rejects; a failed check lets the
+    | proposal through unchanged. Ships OFF.
+    |
+    | `risk_levels` lists the levels that get checked (`critical` already
+    | needs a human).
+    */
+    'injection_check' => [
+        'enabled' => env('DECISION_RUBRIC_INJECTION_CHECK', false),
+        'model_enabled' => env('DECISION_RUBRIC_INJECTION_CHECK_MODEL', true),
+        'confidence_threshold' => 0.6,
+        'max_chars' => 8000,
+        'risk_levels' => ['low', 'medium', 'high'],
+    ],
+
 ];

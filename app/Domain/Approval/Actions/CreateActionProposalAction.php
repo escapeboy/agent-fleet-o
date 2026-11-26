@@ -8,6 +8,7 @@ use App\Domain\Approval\Events\ActionProposalApproved;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Approval\Services\AgentPolicyResolver;
 use App\Domain\Approval\Services\DecisionRubric;
+use App\Domain\Approval\Services\InjectionRiskAssessor;
 use App\Domain\Approval\Services\PolicyEvaluator;
 use App\Domain\Assistant\Models\AssistantConversation;
 use Carbon\CarbonInterface;
@@ -54,7 +55,44 @@ class CreateActionProposalAction
             'expires_at' => $expiresAt,
         ]);
 
-        return $this->applyDecisionRubric($proposal);
+        $injectionCheck = $this->runInjectionCheck($proposal);
+
+        return $this->applyDecisionRubric($proposal, $injectionCheck);
+    }
+
+    /**
+     * Check the proposal for prompt injection before it is routed. A
+     * suspicious proposal is raised to `critical` so the rubric and agent
+     * policy always hold it for a human. Never rejects; fail-open.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function runInjectionCheck(ActionProposal $proposal): ?array
+    {
+        if (! (bool) config('decision_rubric.injection_check.enabled', false)) {
+            return null;
+        }
+
+        $originalRisk = strtolower((string) $proposal->risk_level);
+        $levels = array_map(
+            static fn ($level): string => strtolower((string) $level),
+            (array) config('decision_rubric.injection_check.risk_levels', ['low', 'medium', 'high']),
+        );
+
+        if (! in_array($originalRisk, $levels, true)) {
+            return null;
+        }
+
+        $assessment = app(InjectionRiskAssessor::class)->assess($proposal);
+        if ($assessment === null) {
+            return null;
+        }
+
+        if ($assessment['suspicious']) {
+            $proposal->update(['risk_level' => 'critical']);
+        }
+
+        return $assessment + ['original_risk_level' => $originalRisk];
     }
 
     /**
@@ -63,7 +101,10 @@ class CreateActionProposalAction
      * enabled in config (both ship off). Anything not auto-routed stays
      * pending for human review.
      */
-    private function applyDecisionRubric(ActionProposal $proposal): ActionProposal
+    /**
+     * @param  array<string, mixed>|null  $injectionCheck
+     */
+    private function applyDecisionRubric(ActionProposal $proposal, ?array $injectionCheck = null): ActionProposal
     {
         if (! config('decision_rubric.enabled', true)) {
             return $proposal;
@@ -73,6 +114,9 @@ class CreateActionProposalAction
         $score = $rubric->evaluate($proposal);
 
         $breakdown = $score->toArray();
+        if ($injectionCheck !== null) {
+            $breakdown['injection_check'] = $injectionCheck;
+        }
 
         // Policy-governed autonomy (idea B/A): when a versioned AgentPolicy
         // governs this scope it is authoritative for routing — it can only
