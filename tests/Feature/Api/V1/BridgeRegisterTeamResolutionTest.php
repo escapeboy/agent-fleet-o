@@ -6,7 +6,6 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Models\User;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Str;
 use Mockery;
 
 class BridgeRegisterTeamResolutionTest extends ApiTestCase
@@ -35,14 +34,7 @@ class BridgeRegisterTeamResolutionTest extends ApiTestCase
 
     private function foreignTeam(): Team
     {
-        $owner = User::factory()->create();
-
-        return Team::create([
-            'name' => 'Foreign',
-            'slug' => 'foreign-'.Str::random(6),
-            'owner_id' => $owner->id,
-            'settings' => [],
-        ]);
+        return Team::factory()->create();
     }
 
     public function test_team_none_token_for_user_without_team_returns_clear_403(): void
@@ -80,6 +72,19 @@ class BridgeRegisterTeamResolutionTest extends ApiTestCase
         $foreign = $this->foreignTeam();
 
         $response = $this->withBridgeToken($this->user, ['team:'.$foreign->id])
+            ->postJson('/api/v1/bridge/register', ['session_id' => 'test-session']);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('bridge_connections', ['team_id' => $foreign->id]);
+    }
+
+    public function test_fallback_to_current_team_user_was_removed_from_returns_403(): void
+    {
+        $this->stubBridgeRedis();
+        $foreign = $this->foreignTeam();
+        $user = User::factory()->create(['current_team_id' => $foreign->id]);
+
+        $response = $this->withBridgeToken($user, ['team:none'])
             ->postJson('/api/v1/bridge/register', ['session_id' => 'test-session']);
 
         $response->assertStatus(403);

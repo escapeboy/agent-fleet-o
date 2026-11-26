@@ -35,46 +35,49 @@ class BridgeController extends Controller
      * Only UUID team abilities count. Tokens issued to users without a team
      * carry 'team:none'; that and any other non-UUID value is skipped so the
      * request falls back to current_team_id instead of using an invalid id.
-     * A UUID team the user is not a member of is rejected with 403, and a
-     * user with no team at all gets a 403 asking them to create one first.
+     * A team (from the token or current_team_id) the user is not a member of
+     * is rejected with 403, and a user with no team at all gets a 403 asking
+     * them to create one first.
      */
     protected function resolveTeamId(Request $request): string
     {
         $user = $request->user();
         $token = $user->currentAccessToken();
 
-        // Sanctum's PersonalAccessToken exposes abilities as an attribute,
-        // other token types (e.g. Passport) through getAbilities().
-        $abilities = match (true) {
-            $token instanceof PersonalAccessToken => $token->abilities ?? [],
-            $token !== null && method_exists($token, 'getAbilities') => $token->getAbilities(),
-            default => [],
-        };
+        // Bridge routes sit behind auth:sanctum, so only a persisted Sanctum
+        // token carries abilities; transient (session) tokens fall through.
+        $abilities = $token instanceof PersonalAccessToken ? ($token->abilities ?? []) : [];
 
-        if ($abilities !== []) {
-            foreach ($abilities as $ability) {
-                if (! is_string($ability) || ! str_starts_with($ability, 'team:')) {
-                    continue;
-                }
-
-                $teamId = substr($ability, 5);
-
-                if (! Str::isUuid($teamId)) {
-                    continue;
-                }
-
-                abort_unless(
-                    $user->teams()->where('teams.id', $teamId)->exists(),
-                    403,
-                    'API token team is not accessible to this user.',
-                );
-
-                return $teamId;
+        foreach ($abilities as $ability) {
+            if (! is_string($ability) || ! str_starts_with($ability, 'team:')) {
+                continue;
             }
+
+            $teamId = substr($ability, 5);
+
+            if (! Str::isUuid($teamId)) {
+                continue;
+            }
+
+            abort_unless(
+                $user->teams()->where('teams.id', $teamId)->exists(),
+                403,
+                'API token team is not accessible to this user.',
+            );
+
+            return $teamId;
         }
 
         $teamId = $user->current_team_id;
         abort_if($teamId === null, 403, 'No team selected. Create or select a team in FleetQ first, then reconnect the bridge.');
+
+        // current_team_id is not cleared when a member is removed from a team,
+        // so check membership here too.
+        abort_unless(
+            $user->teams()->where('teams.id', $teamId)->exists(),
+            403,
+            'Current team is not accessible to this user. Select another team in FleetQ, then reconnect the bridge.',
+        );
 
         return (string) $teamId;
     }
