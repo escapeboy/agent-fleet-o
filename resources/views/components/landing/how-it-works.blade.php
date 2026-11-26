@@ -58,7 +58,7 @@
              x-intersect.once="shown = true"
              :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
              class="transition duration-500 ease-out">
-            <a href="{{ auth()->check() ? route('dashboard') : route('register') }}"
+            <a href="{{ auth()->check() ? route('dashboard') : (Route::has('register') ? route('register') : url('/')) }}"
                class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                 {{ auth()->check() ? 'Go to Dashboard' : 'Try It in 5 Minutes' }}
                 <i class="fa-solid fa-arrow-right text-base"></i>

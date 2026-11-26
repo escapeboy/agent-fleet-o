@@ -16,7 +16,7 @@
             {{ $subtext }}
         </p>
         <div class="mt-10 flex items-center justify-center gap-x-6">
-            <a href="{{ $ctaHref ?? route('register') }}"
+            <a href="{{ $ctaHref ?? (Route::has('register') ? route('register') : url('/')) }}"
                class="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-primary-600 shadow-sm transition hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                 {{ $ctaLabel }}
             </a>
