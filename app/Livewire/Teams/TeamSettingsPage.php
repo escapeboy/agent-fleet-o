@@ -129,6 +129,8 @@ class TeamSettingsPage extends Component
 
     public string $teamSpendCapMonthly = '';
 
+    public bool $teamSpendCapAllowUnpriced = false;
+
     // MCP tool preferences
     public string $mcpToolProfile = 'full';
 
@@ -215,6 +217,7 @@ class TeamSettingsPage extends Component
         $this->maxSessionDurationMinutes = (int) ($settings['max_session_duration_minutes'] ?? 0);
         $this->teamSpendCapDaily = isset($settings['spend_cap_daily_credits']) ? (string) $settings['spend_cap_daily_credits'] : '';
         $this->teamSpendCapMonthly = isset($settings['spend_cap_monthly_credits']) ? (string) $settings['spend_cap_monthly_credits'] : '';
+        $this->teamSpendCapAllowUnpriced = ($settings['spend_cap_allow_unpriced_models'] ?? false) === true;
 
         // Bridge routing preferences
         $bridgeSettings = $settings['bridge'] ?? [];
@@ -610,6 +613,7 @@ class TeamSettingsPage extends Component
         $settings = $team->settings ?? [];
         $settings['spend_cap_daily_credits'] = $values['teamSpendCapDaily'];
         $settings['spend_cap_monthly_credits'] = $values['teamSpendCapMonthly'];
+        $settings['spend_cap_allow_unpriced_models'] = (bool) $this->teamSpendCapAllowUnpriced;
         $team->update(['settings' => $settings]);
 
         session()->flash('message', 'Team spend limit saved.');

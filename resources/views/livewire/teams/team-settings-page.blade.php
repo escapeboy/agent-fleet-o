@@ -1203,7 +1203,7 @@
     {{-- Team spend limit --}}
     <div class="rounded-lg border border-gray-200 bg-white p-6">
         <h2 class="mb-1 text-lg font-semibold text-gray-900">Team spend limit</h2>
-        <p class="mb-4 text-sm text-gray-500">Credits per day / per calendar month across all agents, crews and the assistant. Empty = no limit. Owners are warned at 80%; AI calls stop at 100%.</p>
+        <p class="mb-4 text-sm text-gray-500">Credits per day / per calendar month across all agents, crews and the assistant. Empty = no limit. Owners are warned at 80%; AI calls stop at 100%. While a limit is set, calls to models without a known price are blocked unless you allow them below.</p>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <x-form-input
@@ -1223,6 +1223,11 @@
                 max="10000000"
                 hint="Empty = no monthly limit."
             />
+        </div>
+
+        <div class="mt-4">
+            <x-form-checkbox wire:model="teamSpendCapAllowUnpriced" label="Allow models without a known price" />
+            <p class="mt-1 text-xs text-gray-500">Calls to models with no price (for example local or newly added models) count as 0 credits. While a limit is set they are blocked unless this is ticked.</p>
         </div>
 
         <button wire:click="saveTeamSpendCap" class="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
