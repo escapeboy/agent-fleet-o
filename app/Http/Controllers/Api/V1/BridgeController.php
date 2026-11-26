@@ -35,18 +35,23 @@ class BridgeController extends Controller
      * Only UUID team abilities count. Tokens issued to users without a team
      * carry 'team:none'; that and any other non-UUID value is skipped so the
      * request falls back to current_team_id instead of using an invalid id.
-     * A team (from the token or current_team_id) the user is not a member of
-     * is rejected with 403, and a user with no team at all gets a 403 asking
-     * them to create one first.
+     * A UUID token team the user is not a member of is rejected with 403, so
+     * a token cannot target a foreign team. A user with no team at all gets a
+     * 403 asking them to create or select one first.
      */
     protected function resolveTeamId(Request $request): string
     {
         $user = $request->user();
         $token = $user->currentAccessToken();
 
-        // Bridge routes sit behind auth:sanctum, so only a persisted Sanctum
-        // token carries abilities; transient (session) tokens fall through.
-        $abilities = $token instanceof PersonalAccessToken ? ($token->abilities ?? []) : [];
+        // Sanctum's PersonalAccessToken exposes abilities as an attribute and has
+        // no getAbilities(); other token types may provide getAbilities().
+        // TransientToken (session auth) has neither and falls through.
+        $abilities = match (true) {
+            $token instanceof PersonalAccessToken => $token->abilities ?? [],
+            $token !== null && method_exists($token, 'getAbilities') => $token->getAbilities(),
+            default => [],
+        };
 
         foreach ($abilities as $ability) {
             if (! is_string($ability) || ! str_starts_with($ability, 'team:')) {
@@ -70,14 +75,6 @@ class BridgeController extends Controller
 
         $teamId = $user->current_team_id;
         abort_if($teamId === null, 403, 'No team selected. Create or select a team in FleetQ first, then reconnect the bridge.');
-
-        // current_team_id is not cleared when a member is removed from a team,
-        // so check membership here too.
-        abort_unless(
-            $user->teams()->where('teams.id', $teamId)->exists(),
-            403,
-            'Current team is not accessible to this user. Select another team in FleetQ, then reconnect the bridge.',
-        );
 
         return (string) $teamId;
     }

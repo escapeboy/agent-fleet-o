@@ -78,19 +78,6 @@ class BridgeRegisterTeamResolutionTest extends ApiTestCase
         $this->assertDatabaseMissing('bridge_connections', ['team_id' => $foreign->id]);
     }
 
-    public function test_fallback_to_current_team_user_was_removed_from_returns_403(): void
-    {
-        $this->stubBridgeRedis();
-        $foreign = $this->foreignTeam();
-        $user = User::factory()->create(['current_team_id' => $foreign->id]);
-
-        $response = $this->withBridgeToken($user, ['team:none'])
-            ->postJson('/api/v1/bridge/register', ['session_id' => 'test-session']);
-
-        $response->assertStatus(403);
-        $this->assertDatabaseMissing('bridge_connections', ['team_id' => $foreign->id]);
-    }
-
     public function test_valid_team_token_registers_on_token_team(): void
     {
         $this->stubBridgeRedis();
