@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -30,21 +31,52 @@ class BridgeController extends Controller
      *
      * Prevents wrong-team registration when the user switches teams in the
      * web UI but the API token is scoped to a specific team.
+     *
+     * Only UUID team abilities count. Tokens issued to users without a team
+     * carry 'team:none'; that and any other non-UUID value is skipped so the
+     * request falls back to current_team_id instead of using an invalid id.
+     * A UUID team the user is not a member of is rejected with 403, and a
+     * user with no team at all gets a 403 asking them to create one first.
      */
     protected function resolveTeamId(Request $request): string
     {
         $user = $request->user();
         $token = $user->currentAccessToken();
 
-        if ($token && method_exists($token, 'getAbilities')) {
-            foreach ($token->getAbilities() as $ability) {
-                if (str_starts_with($ability, 'team:') && strlen($ability) > 5) {
-                    return substr($ability, 5);
+        // Sanctum's PersonalAccessToken exposes abilities as an attribute,
+        // other token types (e.g. Passport) through getAbilities().
+        $abilities = match (true) {
+            $token instanceof PersonalAccessToken => $token->abilities ?? [],
+            $token !== null && method_exists($token, 'getAbilities') => $token->getAbilities(),
+            default => [],
+        };
+
+        if ($abilities !== []) {
+            foreach ($abilities as $ability) {
+                if (! is_string($ability) || ! str_starts_with($ability, 'team:')) {
+                    continue;
                 }
+
+                $teamId = substr($ability, 5);
+
+                if (! Str::isUuid($teamId)) {
+                    continue;
+                }
+
+                abort_unless(
+                    $user->teams()->where('teams.id', $teamId)->exists(),
+                    403,
+                    'API token team is not accessible to this user.',
+                );
+
+                return $teamId;
             }
         }
 
-        return $user->current_team_id;
+        $teamId = $user->current_team_id;
+        abort_if($teamId === null, 403, 'No team selected. Create or select a team in FleetQ first, then reconnect the bridge.');
+
+        return (string) $teamId;
     }
 
     /**
