@@ -4,6 +4,7 @@ namespace App\Domain\Budget\Actions;
 
 use App\Domain\Agent\Models\AiRun;
 use App\Domain\Budget\Exceptions\InsufficientBudgetException;
+use App\Domain\Budget\Services\CostCalculator;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Shared\Services\NotificationService;
 use Carbon\CarbonInterface;
@@ -25,9 +26,15 @@ class EnforceTeamSpendCapAction
 
     public function __construct(
         private readonly NotificationService $notifications,
+        private readonly CostCalculator $costCalculator,
     ) {}
 
-    public function execute(string $teamId, int $estimatedCost): void
+    /**
+     * When a limit is set and $provider/$model are given, a model with no
+     * pricing row is blocked (it would cost 0 credits and bypass the limit),
+     * unless the team set spend_cap_allow_unpriced_models.
+     */
+    public function execute(string $teamId, int $estimatedCost, ?string $provider = null, ?string $model = null): void
     {
         if ($teamId === '') {
             return;
@@ -44,6 +51,26 @@ class EnforceTeamSpendCapAction
             'daily' => [$this->capFrom($settings['spend_cap_daily_credits'] ?? null), now()->startOfDay(), now()->endOfDay(), now()->format('Y-m-d')],
             'monthly' => [$this->capFrom($settings['spend_cap_monthly_credits'] ?? null), now()->startOfMonth(), now()->endOfMonth(), now()->format('Y-m')],
         ];
+
+        $hasCap = $periods['daily'][0] !== null || $periods['monthly'][0] !== null;
+
+        if ($hasCap
+            && $provider !== null && $provider !== ''
+            && $model !== null && $model !== ''
+            && $this->costCalculator->pricing($provider, $model) === null
+            && ($settings['spend_cap_allow_unpriced_models'] ?? false) !== true
+        ) {
+            Log::warning('team_spend_cap.unpriced_model_blocked', [
+                'team_id' => $teamId,
+                'provider' => $provider,
+                'model' => $model,
+            ]);
+
+            throw new InsufficientBudgetException(
+                "Model {$provider}/{$model} has no known price, so it cannot be counted against the team spend limit. ".
+                'Allow models without a known price in Team settings, or use a priced model.',
+            );
+        }
 
         foreach ($periods as $period => [$cap, $start, $end, $periodKey]) {
             if ($cap === null) {
