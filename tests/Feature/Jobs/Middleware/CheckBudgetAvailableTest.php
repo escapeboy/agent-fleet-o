@@ -2,12 +2,16 @@
 
 namespace Tests\Feature\Jobs\Middleware;
 
+use App\Domain\Agent\Models\Agent;
 use App\Domain\Budget\Models\CreditLedger;
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
 use App\Domain\Experiment\Models\Experiment;
 use App\Domain\Shared\Models\Team;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CheckBudgetAvailableTest extends TestCase
@@ -151,6 +155,88 @@ class CheckBudgetAvailableTest extends TestCase
         $called = $this->runMiddleware($job);
 
         $this->assertTrue($called, 'Job without experimentId property should always proceed');
+    }
+
+    private function makeCrewExecution(?Experiment $experiment): CrewExecution
+    {
+        $coordinator = Agent::factory()->create(['team_id' => $this->team->id]);
+        $qa = Agent::factory()->create(['team_id' => $this->team->id]);
+        $crew = Crew::factory()->create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->experiment->user_id,
+            'coordinator_agent_id' => $coordinator->id,
+            'qa_agent_id' => $qa->id,
+        ]);
+
+        return CrewExecution::create([
+            'team_id' => $this->team->id,
+            'crew_id' => $crew->id,
+            'experiment_id' => $experiment?->id,
+            'goal' => 'Do the thing',
+            'status' => 'executing',
+            'config_snapshot' => [],
+        ]);
+    }
+
+    private function makeCrewJob(string $crewExecutionId): object
+    {
+        return new class($crewExecutionId)
+        {
+            public function __construct(public readonly string $crewExecutionId) {}
+        };
+    }
+
+    public function test_blocks_crew_job_when_linked_experiment_budget_cap_exceeded(): void
+    {
+        $this->experiment->update([
+            'budget_cap_credits' => 50,
+            'budget_spent_credits' => 50,
+        ]);
+        $execution = $this->makeCrewExecution($this->experiment);
+
+        $this->assertFalse($this->runMiddleware($this->makeCrewJob($execution->id)));
+    }
+
+    public function test_blocks_crew_job_without_experiment_when_team_balance_is_zero(): void
+    {
+        CreditLedger::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->experiment->user_id,
+            'type' => 'purchase',
+            'amount' => 10,
+            'balance_after' => 10,
+            'description' => 'Initial top-up',
+        ]);
+        CreditLedger::create([
+            'team_id' => $this->team->id,
+            'user_id' => $this->experiment->user_id,
+            'type' => 'deduction',
+            'amount' => 10,
+            'balance_after' => 0,
+            'description' => 'Zero balance',
+        ]);
+        $execution = $this->makeCrewExecution(null);
+
+        $this->assertFalse($this->runMiddleware($this->makeCrewJob($execution->id)));
+    }
+
+    public function test_allows_crew_job_with_uncapped_experiment(): void
+    {
+        $execution = $this->makeCrewExecution($this->experiment);
+
+        $this->assertTrue($this->runMiddleware($this->makeCrewJob($execution->id)));
+    }
+
+    public function test_allows_crew_job_without_experiment_on_self_hosted(): void
+    {
+        $execution = $this->makeCrewExecution(null);
+
+        $this->assertTrue($this->runMiddleware($this->makeCrewJob($execution->id)));
+    }
+
+    public function test_allows_crew_job_with_unknown_execution(): void
+    {
+        $this->assertTrue($this->runMiddleware($this->makeCrewJob((string) Str::uuid7())));
     }
 
     public function test_blocks_job_when_experiment_budget_cap_exceeded(): void

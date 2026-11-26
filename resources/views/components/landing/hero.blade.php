@@ -47,7 +47,7 @@
                      style="transition-delay: 450ms">
                     <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
                         <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">For humans</span>
-                        <a href="{{ $ctaHref ?? route('register') }}"
+                        <a href="{{ $ctaHref ?? (Route::has('register') ? route('register') : url('/')) }}"
                            class="rounded-lg bg-primary-600 px-6 py-3 text-center text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                             {{ $ctaLabel }}
                         </a>
@@ -76,7 +76,7 @@
                 <div :class="shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
                      class="mt-10 flex items-center gap-x-6 transition duration-600 ease-out"
                      style="transition-delay: 450ms">
-                    <a href="{{ $ctaHref ?? route('register') }}"
+                    <a href="{{ $ctaHref ?? (Route::has('register') ? route('register') : url('/')) }}"
                        class="rounded-lg bg-primary-600 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-primary-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">
                         {{ $ctaLabel }}
                     </a>

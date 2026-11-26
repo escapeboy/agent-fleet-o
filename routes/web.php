@@ -398,7 +398,7 @@ Route::get('/templates/{slug}', [AgentTemplatesPageController::class, 'show'])
 // Comparison pages (public, SEO)
 Route::view('/compare', 'compare.index')->name('compare.index');
 Route::get('/compare/{slug}', ComparisonsController::class)
-    ->whereIn('slug', ['langgraph', 'crewai', 'n8n', 'dify', 'flowise'])
+    ->whereIn('slug', ['langgraph', 'crewai', 'n8n', 'dify', 'flowise', 'ai-agent-control-planes'])
     ->name('compare.show');
 
 // Public MCP tool catalog (SEO)
