@@ -4,8 +4,8 @@
 @endphp
 <x-layouts.public
     title="FleetQ Compared: LangGraph, CrewAI, n8n, Dify, Flowise"
-    description="How FleetQ, a self-hosted AI agent control plane, compares to LangGraph, CrewAI, n8n, Dify and Flowise. Honest notes on where each tool fits."
-    keywords="langgraph alternative, crewai alternative, n8n alternative, dify alternative, flowise alternative, ai agent platform comparison, fleetq comparison"
+    description="How FleetQ, a self-hosted AI agent control plane, compares to LangGraph, CrewAI, n8n, Dify, Flowise and other agent control planes."
+    keywords="langgraph alternative, crewai alternative, n8n alternative, dify alternative, flowise alternative, ai agent control plane, ai agent control plane comparison, ai agent platform comparison, fleetq comparison"
 >
     <x-slot:head>
         @php

@@ -60,7 +60,7 @@
             <h2 class="text-xl font-bold text-gray-900 mb-6">The short answer</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 p-6">
-                    <h3 class="text-base font-semibold text-gray-900 mb-2">When {{ $c['tool_name'] }} is the better fit</h3>
+                    <h3 class="text-base font-semibold text-gray-900 mb-2">{{ $c['short_answer']['tool_heading'] ?? 'When '.$c['tool_name'].' is the better fit' }}</h3>
                     <p class="text-sm text-gray-700 leading-relaxed">{{ $c['short_answer']['pick_tool'] }}</p>
                 </div>
                 <div class="rounded-2xl border border-primary-200 bg-primary-50 p-6">
@@ -72,16 +72,27 @@
     </section>
 
     {{-- Comparison table --}}
+    @php($multiTools = ! empty($c['tools'] ?? null) ? $c['tools'] : null)
     <section class="py-12 bg-gray-50">
         <div class="mx-auto max-w-5xl px-6 lg:px-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-6">FleetQ and {{ $c['tool_name'] }} side by side</h2>
+            @if ($multiTools)
+                <h2 class="text-xl font-bold text-gray-900 mb-6">FleetQ and other agent control planes side by side</h2>
+            @else
+                <h2 class="text-xl font-bold text-gray-900 mb-6">FleetQ and {{ $c['tool_name'] }} side by side</h2>
+            @endif
             <div class="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left font-semibold text-gray-500"><span class="sr-only">Feature</span></th>
                             <th scope="col" class="px-4 py-3 text-left font-semibold text-gray-900">FleetQ</th>
-                            <th scope="col" class="px-4 py-3 text-left font-semibold text-gray-900">{{ $c['tool_name'] }}</th>
+                            @if ($multiTools)
+                                @foreach ($multiTools as $toolName)
+                                    <th scope="col" class="px-4 py-3 text-left font-semibold text-gray-900">{{ $toolName }}</th>
+                                @endforeach
+                            @else
+                                <th scope="col" class="px-4 py-3 text-left font-semibold text-gray-900">{{ $c['tool_name'] }}</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -89,13 +100,23 @@
                             <tr>
                                 <th scope="row" class="px-4 py-3 text-left font-semibold text-gray-900">{{ $row['label'] }}</th>
                                 <td class="px-4 py-3 text-gray-700">{{ $row['fleetq'] }}</td>
-                                <td class="px-4 py-3 text-gray-700">{{ $row['tool'] }}</td>
+                                @if ($multiTools)
+                                    @foreach ($multiTools as $toolName)
+                                        <td class="px-4 py-3 text-gray-700">{{ $row['tools'][$toolName] ?? 'See their docs' }}</td>
+                                    @endforeach
+                                @else
+                                    <td class="px-4 py-3 text-gray-700">{{ $row['tool'] }}</td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-            <p class="mt-3 text-xs text-gray-500">Checked on {{ $checkedOn }}. {{ $c['tool_name'] }} changes over time, so its own docs are the source of truth.</p>
+            @if ($multiTools)
+                <p class="mt-3 text-xs text-gray-500">Checked on {{ $checkedOn }}. These tools change over time, so their own docs are the source of truth.</p>
+            @else
+                <p class="mt-3 text-xs text-gray-500">Checked on {{ $checkedOn }}. {{ $c['tool_name'] }} changes over time, so its own docs are the source of truth.</p>
+            @endif
         </div>
     </section>
 
