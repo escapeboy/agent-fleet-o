@@ -33,6 +33,13 @@ $table = static fn (): array => array_map(
     array_values($fleetq),
 );
 
+$multiTable = static fn (array $tools): array => array_map(
+    static fn (array $row): array => $row + [
+        'tools' => array_fill_keys($tools, 'See their docs'),
+    ],
+    $table(),
+);
+
 return [
 
     'checked_on' => '2026-11-08',
@@ -309,6 +316,63 @@ return [
             [
                 'question' => 'Can I import my Flowise flows into FleetQ?',
                 'answer' => 'Yes. Export the chatflow or agentflow as JSON in Flowise and import it through the REST API, the workflow:import Artisan command or the workflow_import_yaml MCP tool. You get a draft workflow plus conversion_warnings for the parts that need manual follow-up.',
+            ],
+            [
+                'question' => 'Can I self-host FleetQ?',
+                'answer' => 'Yes. The FleetQ Community Edition is AGPL-3.0 licensed and runs on your own servers with Docker Compose, free of charge.',
+            ],
+            [
+                'question' => 'Does FleetQ have an MCP server?',
+                'answer' => 'Yes. FleetQ ships a built-in MCP server over HTTP/SSE and stdio, so MCP clients can create, run and monitor agents and workflows.',
+            ],
+        ],
+    ],
+
+    'ai-agent-control-planes' => [
+        'tool_name' => 'Paperclip, Boomi and Speakeasy',
+        'tools' => ['Paperclip', 'Boomi', 'Speakeasy'],
+        'meta_title' => 'AI agent control planes: FleetQ, Paperclip, Boomi',
+        'meta_description' => 'AI agent control planes compared: how FleetQ, with approvals, budget limits, audit trail and an MCP server, sits next to Paperclip, Boomi and Speakeasy.',
+        'keywords' => 'ai agent control plane, agent control plane comparison, paperclip alternative, boomi agent control plane alternative, speakeasy alternative, self-hosted ai agents',
+        'h1' => 'AI agent control planes compared: FleetQ, Paperclip, Boomi and Speakeasy',
+        'intro' => [
+            'More and more tools describe themselves as a control plane for AI agents. The term is useful, but it covers different jobs depending on who uses it. FleetQ is a self-hosted control plane for running AI agents in production: every run gets an approval inbox, a budget, an audit trail and access through an MCP server.',
+            'Paperclip, Boomi and Speakeasy each come at agents from their own starting point. This page explains what FleetQ covers, lists the questions worth asking of any control plane, and points you to each vendor\'s own docs for the details of their products.',
+        ],
+        'short_answer' => [
+            'tool_heading' => 'When one of the others is the better fit',
+            'pick_tool' => 'Pick Paperclip, Boomi or Speakeasy if its own focus matches the work you need done and it fits the tools your team already uses. Their docs describe their current features best, so read them alongside this page.',
+            'pick_fleetq' => 'Pick FleetQ if you need the operational layer around agents: an approval inbox with SLAs, hard budget limits with auto-pause, a full activity log, bring-your-own keys and an MCP server, all self-hosted under AGPL-3.0.',
+        ],
+        'table' => $multiTable(['Paperclip', 'Boomi', 'Speakeasy']),
+        'together' => null,
+        'sections' => [
+            [
+                'heading' => 'What an agent control plane does',
+                'paragraphs' => [
+                    'An agent control plane sits between the people who are responsible for agents and the agents themselves. It decides who may start an agent, which tools and data an agent may reach, how much it may spend, which of its actions need a person to sign off, and how you can audit what happened later.',
+                    'Products that use the label start from different places. Some grew out of integration and API work, some out of developer tooling, and some were built for agents from day one. That is why two tools called a control plane can solve quite different problems, and why a feature table only tells part of the story.',
+                ],
+            ],
+            [
+                'heading' => 'What FleetQ covers',
+                'paragraphs' => [
+                    'Risky actions wait in an approval inbox with SLA enforcement and escalation when nobody answers in time. Spend is reserved and settled against a credit ledger with pessimistic locks, so a runaway loop pauses itself instead of draining your provider account, and projects can carry their own budget caps. Every change is written to an activity log that you can search and filter.',
+                    'FleetQ also ships its own agents, crews and a visual workflow builder with branching, loops and human tasks. You bring your own keys for Anthropic, OpenAI and Google, or point agents at local models through Ollama, LM Studio or vLLM. The REST API and the built-in MCP server let scripts, IDE assistants and other agents start runs and read results, while the same approval, budget and audit rules apply to every call.',
+                ],
+            ],
+            [
+                'heading' => 'How to choose',
+                'paragraphs' => [
+                    'Start from the problem you have today. Write down which agents you run, who must approve their actions, what they may spend and who needs to read the audit trail. Then ask each vendor how their product handles those points, and where you can run it.',
+                    'This table only lists what we could confirm for FleetQ. Paperclip, Boomi and Speakeasy change over time, so check their own docs for current features, licensing and pricing before you decide.',
+                ],
+            ],
+        ],
+        'faqs' => [
+            [
+                'question' => 'What is an AI agent control plane?',
+                'answer' => 'It is the layer that governs agents in production: who may run them, what they may spend, which actions need human approval and how every action is logged for audit.',
             ],
             [
                 'question' => 'Can I self-host FleetQ?',

@@ -13,7 +13,7 @@ class ComparePagesTest extends TestCase
 {
     // No RefreshDatabase — every page under test is a pure render.
 
-    private const SLUGS = ['langgraph', 'crewai', 'n8n', 'dify', 'flowise'];
+    private const SLUGS = ['langgraph', 'crewai', 'n8n', 'dify', 'flowise', 'ai-agent-control-planes'];
 
     /**
      * @return array<string, array{string}>
@@ -26,7 +26,55 @@ class ComparePagesTest extends TestCase
             'n8n' => ['n8n'],
             'dify' => ['dify'],
             'flowise' => ['flowise'],
+            'ai-agent-control-planes' => ['ai-agent-control-planes'],
         ];
+    }
+
+    public function test_control_planes_page_has_one_column_per_tool(): void
+    {
+        $html = $this->get('/compare/ai-agent-control-planes')->assertOk()->getContent();
+
+        preg_match_all('#<th scope="col"[^>]*>(.*?)</th>#s', $html, $headers);
+        $names = array_map(static fn (string $h): string => trim(strip_tags($h)), $headers[1]);
+        $this->assertSame(['Feature', 'FleetQ', 'Paperclip', 'Boomi', 'Speakeasy'], $names);
+
+        $tools = ['Paperclip', 'Boomi', 'Speakeasy'];
+        $this->assertSame($tools, config('comparisons.ai-agent-control-planes.tools'));
+
+        $table = config('comparisons.ai-agent-control-planes.table');
+        $this->assertIsArray($table);
+        $this->assertCount(8, $table);
+        foreach ($table as $row) {
+            $this->assertSame(array_fill_keys($tools, 'See their docs'), $row['tools']);
+        }
+
+        preg_match_all('#<tr>\s*<th scope="row"[^>]*>.*?</th>(.*?)</tr>#s', $html, $rows);
+        $this->assertCount(8, $rows[1]);
+        foreach ($rows[1] as $cells) {
+            preg_match_all('#<td[^>]*>(.*?)</td>#s', $cells, $tds);
+            $this->assertCount(4, $tds[1]);
+            foreach (array_slice($tds[1], 1) as $cell) {
+                $this->assertSame('See their docs', trim($cell));
+            }
+        }
+    }
+
+    public function test_control_planes_page_states_no_competitor_prices(): void
+    {
+        $html = $this->get('/compare/ai-agent-control-planes')->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match('#<main[^>]*>(.*)</main>#s', $html, $m));
+        $text = html_entity_decode(strip_tags($m[1]), ENT_QUOTES | ENT_HTML5);
+
+        $this->assertDoesNotMatchRegularExpression('/[$€£]\s?\d/u', $text);
+    }
+
+    public function test_single_tool_pages_keep_two_column_table(): void
+    {
+        $html = $this->get('/compare/langgraph')->assertOk()->getContent();
+
+        $this->assertSame(3, substr_count($html, '<th scope="col"'));
+        $this->assertStringContainsString('When LangGraph is the better fit', $html);
     }
 
     public function test_flowise_page_links_to_flowise_migration_steps(): void
