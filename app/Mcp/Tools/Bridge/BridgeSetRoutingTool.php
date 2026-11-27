@@ -37,9 +37,9 @@ class BridgeSetRoutingTool extends Tool
     public function handle(Request $request): Response
     {
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
-        $mode = $request->input('routing_mode');
-        $preferredId = $request->input('preferred_bridge_id');
-        $agentRouting = $request->input('agent_routing', []);
+        $mode = $request->get('routing_mode');
+        $preferredId = $request->get('preferred_bridge_id');
+        $agentRouting = $request->get('agent_routing', []);
 
         if (! in_array($mode, ['auto', 'prefer', 'per_agent'])) {
             return Response::text(json_encode([

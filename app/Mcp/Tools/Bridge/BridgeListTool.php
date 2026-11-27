@@ -33,7 +33,7 @@ class BridgeListTool extends Tool
     public function handle(Request $request): Response
     {
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
-        $status = $request->input('status', 'all');
+        $status = $request->get('status', 'all');
 
         $query = BridgeConnection::where('team_id', $teamId)
             ->orderByDesc('priority')

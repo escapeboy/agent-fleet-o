@@ -39,8 +39,8 @@ class MetricsModelComparisonTool extends Tool
             return $this->permissionDeniedError('Authentication required.');
         }
 
-        $from = $request->input('from');
-        $to = $request->input('to');
+        $from = $request->get('from');
+        $to = $request->get('to');
 
         if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
             return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');

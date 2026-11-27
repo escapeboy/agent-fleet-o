@@ -12823,24 +12823,6 @@ parameters:
 			path: app/Mcp/Tools/Bridge/BridgeConnectTool.php
 
 		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/Bridge/BridgeDisconnectTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/Bridge/BridgeEndpointListTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Mcp/Tools/Bridge/BridgeEndpointToggleTool.php
-
-		-
 			message: '#^Offset ''agents''\|''llm_endpoints''\|''mcp_servers'' on array\{\}\|string in isset\(\) does not exist\.$#'
 			identifier: isset.offset
 			count: 1
@@ -12857,12 +12839,6 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Mcp/Tools/Bridge/BridgeEndpointToggleTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Mcp/Tools/Bridge/BridgeListTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -12905,18 +12881,6 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Mcp/Tools/Bridge/BridgePingTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Mcp/Tools/Bridge/BridgeRenameTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Mcp/Tools/Bridge/BridgeSetRoutingTool.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -15173,24 +15137,6 @@ parameters:
 			identifier: attribute.target
 			count: 1
 			path: app/Mcp/Tools/System/LangfuseConfigTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 8
-			path: app/Mcp/Tools/System/LangfuseConfigTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 6
-			path: app/Mcp/Tools/System/MetricsAggregationsTool.php
-
-		-
-			message: '#^Call to an undefined method Laravel\\Mcp\\Request\:\:input\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Mcp/Tools/System/MetricsModelComparisonTool.php
 
 		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
