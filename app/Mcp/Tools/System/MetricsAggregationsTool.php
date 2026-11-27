@@ -6,7 +6,6 @@ use App\Domain\Metrics\Models\MetricAggregation;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -49,13 +48,13 @@ class MetricsAggregationsTool extends Tool
         $experimentId = $request->get('experiment_id');
         $from = $request->get('from');
         $to = $request->get('to');
-        $limit = max(1, min((int) ($request->get('limit') ?? 100), 500));
+        $limit = min((int) ($request->get('limit') ?? 100), 500);
 
-        if ($from !== null && ! $this->isIsoDate($from)) {
+        if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
             return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
         }
 
-        if ($to !== null && ! $this->isIsoDate($to)) {
+        if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
             return $this->invalidArgumentError('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
         }
 
@@ -65,21 +64,11 @@ class MetricsAggregationsTool extends Tool
             ->when($metricType !== null, fn ($q) => $q->where('metric_type', $metricType))
             ->when($experimentId !== null, fn ($q) => $q->where('experiment_id', $experimentId))
             ->when($from !== null, fn ($q) => $q->where('period_start', '>=', $from))
-            ->when($to !== null, fn ($q) => strlen($to) === 10
-                // Date-only upper bound is inclusive of the whole day.
-                ? $q->where('period_start', '<', Carbon::parse($to)->addDay()->toDateString())
-                : $q->where('period_start', '<=', $to))
+            ->when($to !== null, fn ($q) => $q->where('period_start', '<=', $to))
             ->orderByDesc('period_start')
             ->limit($limit)
             ->get(['id', 'experiment_id', 'metric_type', 'period', 'period_start', 'sum_value', 'count', 'avg_value', 'breakdown']);
 
         return Response::text(json_encode(['data' => $aggregations->toArray()]));
-    }
-
-    private function isIsoDate(mixed $value): bool
-    {
-        return is_string($value)
-            && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1
-            && strtotime($value) !== false;
     }
 }

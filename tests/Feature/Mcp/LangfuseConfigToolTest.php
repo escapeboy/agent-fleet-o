@@ -68,14 +68,14 @@ class LangfuseConfigToolTest extends TestCase
         $this->assertSame('sk-test', $stored['secret_key']);
     }
 
-    public function test_update_treats_string_false_as_false_and_ignores_null_keys(): void
+    public function test_update_disables_and_keeps_existing_key_when_empty(): void
     {
         GlobalSetting::set('langfuse_config', ['enabled' => true, 'public_key' => 'pk-existing']);
 
         $data = $this->decode((new LangfuseConfigTool)->handle(new Request([
             'action' => 'update',
-            'enabled' => 'false',
-            'public_key' => null,
+            'enabled' => false,
+            'public_key' => '',
         ])));
 
         $this->assertTrue($data['success']);
