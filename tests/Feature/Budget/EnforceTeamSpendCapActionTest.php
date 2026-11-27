@@ -177,6 +177,48 @@ class EnforceTeamSpendCapActionTest extends TestCase
         $this->assertSame([], $this->sent);
     }
 
+    public function test_unpriced_model_is_blocked_when_a_cap_is_set(): void
+    {
+        $team = $this->teamWith(['spend_cap_daily_credits' => 1000]);
+
+        try {
+            $this->action()->execute($team->id, 0, 'ollama', 'llama3');
+            $this->fail('Expected InsufficientBudgetException');
+        } catch (InsufficientBudgetException $e) {
+            $this->assertStringContainsString('ollama/llama3', $e->getMessage());
+        }
+    }
+
+    public function test_unpriced_model_passes_when_team_allows_unpriced(): void
+    {
+        $team = $this->teamWith([
+            'spend_cap_daily_credits' => 1000,
+            'spend_cap_allow_unpriced_models' => true,
+        ]);
+
+        $this->action()->execute($team->id, 0, 'ollama', 'llama3');
+
+        $this->assertSame([], $this->sent);
+    }
+
+    public function test_unpriced_model_passes_when_team_has_no_cap(): void
+    {
+        $team = $this->teamWith([]);
+
+        $this->action()->execute($team->id, 0, 'ollama', 'llama3');
+
+        $this->assertSame([], $this->sent);
+    }
+
+    public function test_explicit_zero_priced_model_is_not_treated_as_unpriced(): void
+    {
+        $team = $this->teamWith(['spend_cap_daily_credits' => 1000]);
+
+        $this->action()->execute($team->id, 0, 'claude-code', 'claude-sonnet-4-5');
+
+        $this->assertSame([], $this->sent);
+    }
+
     public function test_failing_notification_does_not_block_call(): void
     {
         $mock = Mockery::mock(NotificationService::class);

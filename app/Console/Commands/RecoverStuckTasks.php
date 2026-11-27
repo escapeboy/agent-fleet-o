@@ -2,6 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Crew\Enums\CrewExecutionStatus;
+use App\Domain\Crew\Enums\CrewTaskStatus;
+use App\Domain\Crew\Jobs\ExecuteCrewTaskJob;
+use App\Domain\Crew\Models\Crew;
+use App\Domain\Crew\Models\CrewExecution;
+use App\Domain\Crew\Models\CrewTaskExecution;
+use App\Domain\Crew\Notifications\StuckCrewExecutionNotification;
 use App\Domain\Experiment\Actions\PauseExperimentAction;
 use App\Domain\Experiment\Actions\TransitionExperimentAction;
 use App\Domain\Experiment\Enums\ExperimentStatus;
@@ -28,6 +35,7 @@ use App\Domain\Shared\Enums\TeamRole;
 use App\Domain\Shared\Models\Team;
 use App\Models\GlobalSetting;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -60,10 +68,144 @@ class RecoverStuckTasks extends Command
         $experiments = $this->recoverStuckExperiments();
         $patterns = $this->detectStuckPatterns();
         $runs = $this->syncStaleProjectRuns();
+        $crewTasks = $this->recoverStuckCrewExecutions();
 
-        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s), {$patterns} stuck pattern(s), {$runs} stale project run(s).");
+        $this->info("Recovered {$recovered} stuck task(s), resolved {$resolved} stuck stage(s), {$steps} stuck step(s), {$experiments} stuck experiment(s), {$patterns} stuck pattern(s), {$runs} stale project run(s), {$crewTasks} stuck crew task(s).");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Find crew tasks left in "running" by a dead worker while their execution is
+     * still "executing". Re-dispatch only that task's job up to a limit, then put
+     * the task back to pending, pause the execution and notify. Never re-runs the
+     * whole crew or decomposes the goal again.
+     */
+    private function recoverStuckCrewExecutions(): int
+    {
+        if (! config('crew.recovery.enabled', true)) {
+            return 0;
+        }
+
+        $stuckAfter = (int) config('crew.recovery.stuck_after_minutes', 15);
+        $maxRetries = (int) config('crew.recovery.max_retry_attempts', 2);
+
+        $stuckTasks = CrewTaskExecution::withoutGlobalScopes()
+            ->where('status', CrewTaskStatus::Running)
+            ->whereNull('external_agent_id')
+            ->where('updated_at', '<', now()->subMinutes($stuckAfter))
+            ->whereHas('crewExecution', function ($q) {
+                $q->withoutGlobalScopes()->where('status', CrewExecutionStatus::Executing);
+            })
+            ->get();
+
+        $recovered = 0;
+
+        foreach ($stuckTasks as $stuckTask) {
+            /** @var array{action: string, task: CrewTaskExecution, execution: CrewExecution, attempts: int, duration: string}|null $outcome */
+            $outcome = DB::transaction(function () use ($stuckTask, $maxRetries) {
+                $task = CrewTaskExecution::withoutGlobalScopes()->lockForUpdate()->find($stuckTask->id);
+                if (! $task || $task->getAttribute('status') !== CrewTaskStatus::Running) {
+                    return null;
+                }
+
+                $execution = CrewExecution::withoutGlobalScopes()->lockForUpdate()->find($task->crew_execution_id);
+                if (! $execution || $execution->getAttribute('status') !== CrewExecutionStatus::Executing) {
+                    return null;
+                }
+
+                $stuckDuration = $task->updated_at?->diffForHumans(now(), CarbonInterface::DIFF_ABSOLUTE) ?? 'unknown';
+                $attempts = (int) $task->recovery_attempts;
+
+                if ($attempts < $maxRetries) {
+                    $attempts++;
+                    // Assigned also refreshes updated_at, which restarts the stuck clock.
+                    $task->update([
+                        'recovery_attempts' => $attempts,
+                        'status' => CrewTaskStatus::Assigned,
+                    ]);
+
+                    return ['action' => 'retry', 'task' => $task, 'execution' => $execution, 'attempts' => $attempts, 'duration' => $stuckDuration];
+                }
+
+                // Pending: resume() only dispatches ready pending tasks.
+                $task->update([
+                    'status' => CrewTaskStatus::Pending,
+                    'error_message' => "Recovered by tasks:recover-stuck — worker stopped responding; execution paused after {$attempts} recovery attempts",
+                ]);
+                $execution->update(['status' => CrewExecutionStatus::Paused]);
+
+                return ['action' => 'pause', 'task' => $task, 'execution' => $execution, 'attempts' => $attempts, 'duration' => $stuckDuration];
+            });
+
+            if ($outcome === null) {
+                continue;
+            }
+
+            $task = $outcome['task'];
+            $execution = $outcome['execution'];
+
+            if ($outcome['action'] === 'retry') {
+                ExecuteCrewTaskJob::dispatch(
+                    crewExecutionId: $execution->id,
+                    taskExecutionId: $task->id,
+                    teamId: $execution->team_id,
+                );
+
+                Log::warning('RecoverStuckTasks: Re-dispatched stuck crew task', [
+                    'crew_execution_id' => $execution->id,
+                    'task_id' => $task->id,
+                    'recovery_attempt' => $outcome['attempts'],
+                    'stuck_duration' => $outcome['duration'],
+                ]);
+            } else {
+                Log::warning('RecoverStuckTasks: Paused crew execution with stuck task', [
+                    'crew_execution_id' => $execution->id,
+                    'task_id' => $task->id,
+                    'recovery_attempts' => $outcome['attempts'],
+                    'stuck_duration' => $outcome['duration'],
+                ]);
+
+                try {
+                    $this->notifyStuckCrewExecution($execution, $task, $outcome['attempts'], $outcome['duration']);
+                } catch (\Throwable $e) {
+                    Log::error('RecoverStuckTasks: Failed to notify about stuck crew execution', [
+                        'crew_execution_id' => $execution->id,
+                        'error' => $e->getMessage(),
+                        'exception' => $e,
+                    ]);
+                }
+            }
+
+            $recovered++;
+        }
+
+        return $recovered;
+    }
+
+    private function notifyStuckCrewExecution(CrewExecution $execution, CrewTaskExecution $task, int $attempts, string $stuckDuration): void
+    {
+        $notification = new StuckCrewExecutionNotification($execution, $task, $attempts, $stuckDuration);
+
+        $creatorId = Crew::withoutGlobalScopes()->whereKey($execution->crew_id)->value('user_id');
+
+        if ($creatorId) {
+            User::find($creatorId)?->notify($notification);
+        }
+
+        $team = Team::find($execution->team_id);
+        if ($team) {
+            $admins = $team->users()
+                ->wherePivotIn('role', [TeamRole::Owner->value, TeamRole::Admin->value])
+                ->when($creatorId, fn ($q) => $q->where('users.id', '!=', $creatorId))
+                ->get();
+
+            foreach ($admins as $admin) {
+                if ($admin instanceof User) {
+                    $admin->notify($notification);
+                }
+            }
+        }
     }
 
     /**
