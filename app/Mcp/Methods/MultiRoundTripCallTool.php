@@ -4,11 +4,13 @@ namespace App\Mcp\Methods;
 
 use App\Mcp\Exceptions\InputRequiredException;
 use App\Mcp\Protocol\ProtocolContext;
+use App\Mcp\Services\McpToolCallAuditor;
 use Generator;
 use Illuminate\Container\Container;
 use Laravel\Mcp\Exceptions\JsonRpcException;
 use Laravel\Mcp\Server\Methods\CallTool;
 use Laravel\Mcp\Server\ServerContext;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Transport\JsonRpcRequest;
 use Laravel\Mcp\Transport\JsonRpcResponse;
 
@@ -50,6 +52,8 @@ class MultiRoundTripCallTool extends CallTool
         $container->instance(self::BINDING_INPUT_RESPONSES, is_array($inputResponses) ? $inputResponses : []);
         $container->instance(self::BINDING_REQUEST_STATE, is_string($requestState) ? $requestState : null);
 
+        $tool = null;
+
         try {
             if (is_null($request->get('name'))) {
                 throw new JsonRpcException('Missing [name] parameter.', -32602, $request->id);
@@ -62,8 +66,22 @@ class MultiRoundTripCallTool extends CallTool
 
             // Same as CallTool::handle(), but through an invoker that lets
             // InputRequiredException reach the catch below.
-            return (new MrtrToolInvoker)->invoke($tool, $request);
+            $result = (new MrtrToolInvoker)->invoke($tool, $request);
+
+            $auditor = app(McpToolCallAuditor::class);
+
+            if ($result instanceof JsonRpcResponse) {
+                $auditor->record($tool, $request, ...McpToolCallAuditor::outcomeFrom($result));
+            } else {
+                $auditor->record($tool, $request, 'streamed', null);
+            }
+
+            return $result;
         } catch (InputRequiredException $e) {
+            if ($tool instanceof Tool) {
+                app(McpToolCallAuditor::class)->record($tool, $request, 'input_required', null);
+            }
+
             return $this->inputRequiredResponse($request, $context, $e);
         } finally {
             $container->forgetInstance(self::BINDING_INPUT_RESPONSES);

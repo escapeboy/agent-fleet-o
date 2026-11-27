@@ -35,6 +35,20 @@ abstract class CompactTool extends Tool
     abstract protected function toolMap(): array;
 
     /**
+     * The child tool class an action delegates to, or null for an unknown action.
+     *
+     * @return class-string<Tool>|null
+     */
+    public function actionToolClass(?string $action): ?string
+    {
+        if ($action === null) {
+            return null;
+        }
+
+        return $this->toolMap()[$action] ?? null;
+    }
+
+    /**
      * Filter tool visibility based on team MCP preferences.
      *
      * Called on every tools/list and tools/call request by the MCP framework.
