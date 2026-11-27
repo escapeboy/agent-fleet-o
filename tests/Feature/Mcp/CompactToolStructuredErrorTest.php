@@ -144,7 +144,7 @@ class CompactToolStructuredErrorTest extends TestCase
         $reflection = new \ReflectionObject($content);
 
         if ($reflection->hasMethod('text')) {
-            $text = $reflection->getMethod('text')->invoke($content);
+            $text = $content->text();
         } else {
             $prop = $reflection->getProperty('text');
             $prop->setAccessible(true);

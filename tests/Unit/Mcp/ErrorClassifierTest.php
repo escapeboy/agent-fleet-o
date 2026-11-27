@@ -15,14 +15,12 @@ use App\Infrastructure\Git\Exceptions\GitFileNotFoundException;
 use App\Mcp\ErrorClassifier;
 use App\Mcp\ErrorCode;
 use App\Mcp\Exceptions\DeadlineExceededException;
-use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 use PDOException;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -145,7 +143,7 @@ class ErrorClassifierTest extends TestCase
         // SSRF guards and other validators throw plain \InvalidArgumentException.
         // Must classify as INVALID_ARGUMENT, not fall back to retryable INTERNAL,
         // otherwise agents retry with malicious URLs. Fix from Phase 2 security review.
-        $result = $this->classifier->classify(new InvalidArgumentException('URL resolves to a private address.'));
+        $result = $this->classifier->classify(new \InvalidArgumentException('URL resolves to a private address.'));
 
         $this->assertSame('INVALID_ARGUMENT', $result['code']);
         $this->assertFalse($result['retryable']);
@@ -188,13 +186,13 @@ class ErrorClassifierTest extends TestCase
     public function test_model_not_found_message_is_scrubbed(): void
     {
         $exception = new ModelNotFoundException;
-        $exception->setModel(User::class, ['abc-123']);
+        $exception->setModel(\stdClass::class, ['abc-123']);
 
         $result = $this->classifier->classify($exception);
 
         $this->assertSame('NOT_FOUND', $result['code']);
         $this->assertSame('The requested resource was not found.', $result['message']);
-        $this->assertStringNotContainsString('App\\Models', $result['message']);
+        $this->assertStringNotContainsString('stdClass', $result['message']);
         $this->assertStringNotContainsString('abc-123', $result['message']);
     }
 
@@ -209,6 +207,14 @@ class ErrorClassifierTest extends TestCase
 
     public function test_class_name_hint_catches_plan_limit_exceeded(): void
     {
+        $exception = new class('plan limit') extends RuntimeException
+        {
+            public function getName(): string
+            {
+                return 'PlanLimitExceededException';
+            }
+        };
+
         // Anonymous classes have basename pattern class@anonymous\0... so we simulate a
         // real cloud exception shape by extending a named class instead.
         $namedException = new PlanLimitExceededFakeException('plan');
@@ -293,5 +299,4 @@ class ErrorClassifierTest extends TestCase
 }
 
 class PlanLimitExceededFakeException extends RuntimeException {}
-
 class TimeoutFakeException extends RuntimeException {}
