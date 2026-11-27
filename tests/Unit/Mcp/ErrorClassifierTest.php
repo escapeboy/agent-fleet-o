@@ -271,6 +271,22 @@ class ErrorClassifierTest extends TestCase
         $this->assertStringNotContainsString('agents', $result['message']);
     }
 
+    public function test_non_uuid_invalid_text_representation_does_not_blame_uuid(): void
+    {
+        $result = $this->classifier->classify($this->queryException('22P02', 'Invalid text representation: 7 ERROR:  invalid input syntax for type integer: "abc"'));
+
+        $this->assertSame('INVALID_ARGUMENT', $result['code']);
+        $this->assertSame('An argument value has an invalid format for its field.', $result['message']);
+    }
+
+    public function test_sqlstate_in_bindings_is_not_trusted(): void
+    {
+        $e = new QueryException('pgsql', 'select * from agents where name = ?', ['SQLSTATE[22P02]'], new RuntimeException('connection lost'));
+
+        $this->assertFalse($this->classifier->isClientInputError($e));
+        $this->assertSame('INTERNAL', $this->classifier->classify($e)['code']);
+    }
+
     public function test_other_query_exceptions_stay_internal(): void
     {
         $unique = $this->classifier->classify($this->queryException('23505', 'Unique violation: 7 ERROR:  duplicate key value'));

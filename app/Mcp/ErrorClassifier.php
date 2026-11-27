@@ -146,7 +146,8 @@ class ErrorClassifier
             return $code;
         }
 
-        if (preg_match('/SQLSTATE\[([0-9A-Z]{5})\]/', $e->getMessage(), $matches) === 1) {
+        // Anchored: the QueryException message embeds the SQL bindings, which are client-controlled.
+        if (preg_match('/^SQLSTATE\[([0-9A-Z]{5})\]/', $e->getMessage(), $matches) === 1) {
             return $matches[1];
         }
 
@@ -228,9 +229,12 @@ class ErrorClassifier
             return 'The requested resource was not found.';
         }
 
-        if ($this->isClientInputError($e)) {
+        if ($e instanceof QueryException) {
             // Never surface the raw QueryException message: it contains SQL and bindings.
-            return 'An id argument is empty or not a valid UUID. Pass the UUID returned by the matching list tool.';
+            // 22P02 also covers integer/enum/json/boolean casts, so only blame a UUID when Postgres did.
+            return preg_match('/invalid input syntax for type uuid/i', $e->getMessage()) === 1
+                ? 'An id argument is empty or not a valid UUID. Pass the UUID returned by the matching list tool.'
+                : 'An argument value has an invalid format for its field.';
         }
 
         $message = $e->getMessage();
