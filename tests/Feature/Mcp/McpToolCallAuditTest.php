@@ -5,6 +5,8 @@ namespace Tests\Feature\Mcp;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Models\Team;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
+use App\Infrastructure\Auth\ScopedPersonalAccessToken;
+use App\Infrastructure\Auth\ScopedTransientToken;
 use App\Mcp\Methods\MultiRoundTripCallTool;
 use App\Mcp\Protocol\ProtocolContext;
 use App\Mcp\Protocol\ProtocolVersions;
@@ -129,7 +131,10 @@ class McpToolCallAuditTest extends TestCase
     public function test_write_tool_call_with_sanctum_token_is_audited(): void
     {
         $issued = SanctumTokenIssuer::create($this->user, 'my-pat');
-        request()->headers->set('Authorization', 'Bearer '.$issued->plainTextToken);
+
+        // Mirror CompatibleSanctumGuard: it attaches the resolved token model to the user.
+        $token = ScopedPersonalAccessToken::findOrFail($issued->accessToken->getKey());
+        $this->actingAs($this->user->withAccessToken($token));
 
         $result = $this->callTool('audit_fixture_write', ['title' => 'x']);
 
@@ -149,6 +154,18 @@ class McpToolCallAuditTest extends TestCase
         $this->assertSame('success', $props['outcome']);
         $this->assertNull($props['error_code']);
         $this->assertSame(['title'], $props['argument_keys']);
+    }
+
+    public function test_session_transient_token_is_not_recorded_as_a_token(): void
+    {
+        $this->actingAs($this->user->withAccessToken(new ScopedTransientToken));
+
+        $this->callTool('audit_fixture_write');
+
+        $props = $this->onlyEntryProperties();
+        $this->assertNull($props['token_type']);
+        $this->assertNull($props['token_id']);
+        $this->assertNull($props['token_name']);
     }
 
     public function test_read_only_tool_call_is_not_audited(): void

@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Laravel\Mcp\Transport\JsonRpcRequest;
 use Laravel\Mcp\Transport\JsonRpcResponse;
 use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\TransientToken;
 use ReflectionClass;
 use Throwable;
 
@@ -130,31 +131,21 @@ final class McpToolCallAuditor
     }
 
     /**
-     * The token the caller authenticated with. The User model carries
-     * Passport's HasApiTokens, so a Sanctum personal access token is not
-     * attached to the user; it is looked up from the bearer header instead.
+     * The token the caller authenticated with, as attached by the guard.
+     * A session login carries a transient token, which is not a real token.
      */
     private function resolveToken(mixed $user): ?object
     {
-        if (is_object($user) && method_exists($user, 'currentAccessToken')) {
-            $token = $user->currentAccessToken();
-
-            if (is_object($token)) {
-                return $token;
-            }
+        if (! is_object($user) || ! method_exists($user, 'currentAccessToken')) {
+            return null;
         }
 
-        $bearer = request()->bearerToken();
+        $token = $user->currentAccessToken();
 
-        if (is_string($bearer) && $bearer !== '' && str_contains($bearer, '|')) {
-            $pat = PersonalAccessToken::findToken($bearer);
-
-            if ($pat !== null && is_object($user) && method_exists($user, 'getAuthIdentifier')
-                && (string) $pat->tokenable_id === (string) $user->getAuthIdentifier()) {
-                return $pat;
-            }
+        if (! is_object($token) || $token instanceof TransientToken) {
+            return null;
         }
 
-        return null;
+        return $token;
     }
 }
