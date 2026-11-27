@@ -15,6 +15,7 @@ use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class LocalAgentGatewayVpsTest extends TestCase
@@ -97,9 +98,9 @@ SH);
             ->where('event', 'claude_code_vps.invoke')
             ->first();
         $this->assertNotNull($audit);
-        $this->assertSame($team->id, $audit->team_id);
+        $this->assertSame($team->id, $audit->getAttribute('team_id'));
         $this->assertSame($user->id, $audit->user_id);
-        $this->assertSame(0, $audit->properties['exit_code']);
+        $this->assertSame(0, $this->props($audit)['exit_code']);
     }
 
     private function runAndGetAudit(string $shim, ?string $purpose = null): AuditEntry
@@ -129,9 +130,9 @@ echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash"
 echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{}}]}}'
 SH);
 
-        $this->assertSame(['Bash', 'Read'], $audit->properties['builtin_tool_calls']);
-        $this->assertArrayNotHasKey('builtin_tool_calls_truncated', $audit->properties);
-        $this->assertStringNotContainsString('SECRET', json_encode($audit->properties));
+        $this->assertSame(['Bash', 'Read'], $this->props($audit)['builtin_tool_calls']);
+        $this->assertArrayNotHasKey('builtin_tool_calls_truncated', $this->props($audit));
+        $this->assertStringNotContainsString('SECRET', json_encode($this->props($audit)));
     }
 
     public function test_audit_records_bash_programs_without_arguments(): void
@@ -141,24 +142,24 @@ SH);
 echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"TOK=FAKE_SECRET /usr/bin/curl -H FAKE_SECRET http://x"}},{"type":"tool_use","name":"Bash","input":{"command":""}},{"type":"tool_use","name":"Read","input":{}}]}}'
 SH);
 
-        $this->assertSame(['curl', '?'], $audit->properties['bash_programs']);
-        $this->assertArrayNotHasKey('bash_programs_truncated', $audit->properties);
-        $this->assertStringNotContainsString('FAKE_SECRET', json_encode($audit->properties));
+        $this->assertSame(['curl', '?'], $this->props($audit)['bash_programs']);
+        $this->assertArrayNotHasKey('bash_programs_truncated', $this->props($audit));
+        $this->assertStringNotContainsString('FAKE_SECRET', json_encode($this->props($audit)));
     }
 
     public function test_audit_has_empty_bash_programs_when_no_bash_calls(): void
     {
         $audit = $this->runAndGetAudit("#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}}'");
 
-        $this->assertSame([], $audit->properties['bash_programs']);
+        $this->assertSame([], $this->props($audit)['bash_programs']);
     }
 
     public function test_audit_has_empty_builtin_list_when_parsed_without_builtins(): void
     {
         $audit = $this->runAndGetAudit("#!/bin/sh\necho '{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}}'");
 
-        $this->assertArrayHasKey('builtin_tool_calls', $audit->properties);
-        $this->assertSame([], $audit->properties['builtin_tool_calls']);
+        $this->assertArrayHasKey('builtin_tool_calls', $this->props($audit));
+        $this->assertSame([], $this->props($audit)['builtin_tool_calls']);
     }
 
     public function test_audit_omits_builtin_key_for_assistant_runs(): void
@@ -168,8 +169,8 @@ SH);
             'platform_assistant',
         );
 
-        $this->assertArrayNotHasKey('builtin_tool_calls', $audit->properties);
-        $this->assertArrayNotHasKey('bash_programs', $audit->properties);
+        $this->assertArrayNotHasKey('builtin_tool_calls', $this->props($audit));
+        $this->assertArrayNotHasKey('bash_programs', $this->props($audit));
     }
 
     public function test_audit_omits_builtin_key_when_stdout_empty(): void
@@ -192,7 +193,7 @@ SH);
         }
 
         $audit = AuditEntry::withoutGlobalScopes()->where('event', 'claude_code_vps.invoke')->firstOrFail();
-        $this->assertArrayNotHasKey('builtin_tool_calls', $audit->properties);
+        $this->assertArrayNotHasKey('builtin_tool_calls', $this->props($audit));
     }
 
     public function test_denied_user_cannot_invoke_vps_path(): void
@@ -286,6 +287,126 @@ SH);
             app(ClaudeCodeVpsConcurrencyCap::class)->activeCount($team->id),
             'cap must be released after each successful call',
         );
+    }
+
+    public function test_repo_build_audit_records_shell_changed_files_and_new_commits(): void
+    {
+        $repo = $this->makeTempDir('vps-git-repo-');
+        try {
+            $this->gitIn($repo, ['init', '-q', '-b', 'main']);
+            $this->gitIn($repo, ['config', 'user.email', 'test@example.com']);
+            $this->gitIn($repo, ['config', 'user.name', 'Test']);
+            $this->gitIn($repo, ['config', 'commit.gpgsign', 'false']);
+            file_put_contents($repo.'/README.md', "init\n");
+            $this->gitIn($repo, ['add', '-A']);
+            $this->gitIn($repo, ['commit', '-q', '-m', 'init']);
+
+            $audit = $this->runRepoBuild($repo, <<<'SH'
+#!/bin/sh
+echo "edited" > worktree.txt
+echo "committed" > committed.txt
+git add committed.txt
+git -c user.email=agent@example.com -c user.name=Agent -c commit.gpgsign=false commit -q -m agent
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"done"}]}}'
+SH);
+
+            $head = trim($this->gitIn($repo, ['rev-parse', 'HEAD']));
+            $this->assertSame([$head], $this->props($audit)['new_commits'] ?? null);
+            $this->assertEqualsCanonicalizing([
+                ['path' => 'committed.txt', 'source' => 'commit'],
+                ['path' => 'worktree.txt', 'source' => 'worktree'],
+            ], $this->props($audit)['changed_files'] ?? null);
+            $this->assertArrayNotHasKey('changed_files_truncated', $this->props($audit));
+            $this->assertStringNotContainsString('edited', json_encode($this->props($audit)));
+        } finally {
+            $this->removeDir($repo);
+        }
+    }
+
+    public function test_repo_build_in_non_git_directory_omits_git_keys(): void
+    {
+        $dir = $this->makeTempDir('vps-plain-dir-');
+        try {
+            $audit = $this->runRepoBuild($dir, <<<'SH'
+#!/bin/sh
+echo "x" > file.txt
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"done"}]}}'
+SH);
+
+            $this->assertFileExists($dir.'/file.txt');
+            $this->assertSame(0, $this->props($audit)['exit_code']);
+            $this->assertArrayNotHasKey('changed_files', $this->props($audit));
+            $this->assertArrayNotHasKey('new_commits', $this->props($audit));
+        } finally {
+            $this->removeDir($dir);
+        }
+    }
+
+    public function test_non_repo_build_audit_has_no_git_keys(): void
+    {
+        $audit = $this->runAndGetAudit(<<<'SH'
+#!/bin/sh
+git init -q . >/dev/null
+echo "x" > file.txt
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"ok"}]}}'
+SH);
+
+        $this->assertArrayHasKey('builtin_tool_calls', $this->props($audit));
+        $this->assertArrayNotHasKey('changed_files', $this->props($audit));
+        $this->assertArrayNotHasKey('new_commits', $this->props($audit));
+    }
+
+    private function runRepoBuild(string $workingDirectory, string $shim): AuditEntry
+    {
+        $this->writeShim($shim);
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $team = $this->createTeam(false, $user);
+
+        app(LocalAgentGateway::class)->complete(new AiRequestDTO(
+            provider: 'claude-code-vps',
+            model: 'claude-sonnet-4-5',
+            systemPrompt: 'sys',
+            userPrompt: 'usr',
+            userId: $user->id,
+            teamId: $team->id,
+            workingDirectory: $workingDirectory,
+        ));
+
+        return AuditEntry::withoutGlobalScopes()->where('event', 'claude_code_vps.invoke')->firstOrFail();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function props(AuditEntry $audit): array
+    {
+        $properties = $audit->getAttribute('properties');
+
+        return is_array($properties) ? $properties : [];
+    }
+
+    private function makeTempDir(string $prefix): string
+    {
+        $dir = sys_get_temp_dir().'/'.$prefix.bin2hex(random_bytes(6));
+        mkdir($dir, 0700, true);
+
+        return $dir;
+    }
+
+    private function removeDir(string $dir): void
+    {
+        (new Process(['rm', '-rf', $dir]))->run();
+    }
+
+    /**
+     * @param  list<string>  $args
+     */
+    private function gitIn(string $dir, array $args): string
+    {
+        $process = new Process(array_merge(['git'], $args), $dir);
+        $process->mustRun();
+
+        return $process->getOutput();
     }
 
     private function writeShim(string $script): void
