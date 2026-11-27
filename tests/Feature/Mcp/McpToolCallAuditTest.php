@@ -7,12 +7,14 @@ use App\Domain\Shared\Models\Team;
 use App\Infrastructure\Auth\SanctumTokenIssuer;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
 use App\Infrastructure\Auth\ScopedTransientToken;
+use App\Mcp\Exceptions\InputRequiredException;
 use App\Mcp\Methods\MultiRoundTripCallTool;
 use App\Mcp\Protocol\ProtocolContext;
 use App\Mcp\Protocol\ProtocolVersions;
 use App\Mcp\Services\McpToolCallAuditor;
 use App\Mcp\Tools\Compact\CompactTool;
 use App\Models\User;
+use Generator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -72,6 +74,8 @@ class McpToolCallAuditTest extends TestCase
                 AuditFixtureStructuredErrorTool::class,
                 AuditFixturePlainErrorTool::class,
                 AuditFixtureCompactTool::class,
+                AuditFixtureGatedTool::class,
+                AuditFixtureStreamTool::class,
             ],
             resources: [],
             prompts: [],
@@ -245,6 +249,64 @@ class McpToolCallAuditTest extends TestCase
         $this->assertStringNotContainsString('super-secret-value-123', (string) $entry->getRawOriginal('properties'));
     }
 
+    public function test_input_required_for_mrtr_client_is_audited_as_input_required(): void
+    {
+        app()->instance(ProtocolContext::BINDING, new ProtocolContext(
+            version: ProtocolVersions::V2026_07_28,
+            stateless: true,
+        ));
+
+        $result = $this->callTool('audit_fixture_gated');
+
+        $this->assertSame('input_required', $result['resultType'] ?? null);
+
+        $props = $this->onlyEntryProperties();
+        $this->assertSame('input_required', $props['outcome']);
+        $this->assertNull($props['error_code']);
+    }
+
+    public function test_input_required_for_pre_mrtr_client_is_audited_as_the_terminal_fallback(): void
+    {
+        app()->instance(ProtocolContext::BINDING, new ProtocolContext(
+            version: ProtocolVersions::V2025_06_18,
+            stateless: true,
+        ));
+
+        $result = $this->callTool('audit_fixture_gated');
+
+        $this->assertTrue($result['isError'] ?? null);
+
+        $props = $this->onlyEntryProperties();
+        $this->assertSame('error', $props['outcome']);
+        $this->assertSame('APPROVAL_PENDING', $props['error_code']);
+    }
+
+    public function test_streamed_tool_is_audited_after_the_stream_is_drained(): void
+    {
+        $request = new JsonRpcRequest(
+            id: 1,
+            method: 'tools/call',
+            params: ['name' => 'audit_fixture_stream', 'arguments' => ['title' => 'x']],
+        );
+
+        app()->instance('mcp.request', $request->toRequest());
+
+        try {
+            $stream = app(MultiRoundTripCallTool::class)->handle($request, $this->context());
+            $this->assertInstanceOf(Generator::class, $stream);
+            $this->assertSame(0, $this->auditCount());
+
+            iterator_to_array($stream, false);
+        } finally {
+            app()->forgetInstance('mcp.request');
+        }
+
+        $props = $this->onlyEntryProperties();
+        $this->assertSame('audit_fixture_stream', $props['tool']);
+        $this->assertSame('success', $props['outcome']);
+        $this->assertSame(['title'], $props['argument_keys']);
+    }
+
     public function test_no_team_bound_writes_nothing_and_returns_the_result(): void
     {
         app()->forgetInstance('mcp.team_id');
@@ -302,6 +364,38 @@ class AuditFixturePlainErrorTool extends Tool
     public function handle(Request $request): Response
     {
         return Response::error('something went wrong');
+    }
+}
+
+class AuditFixtureGatedTool extends Tool
+{
+    protected string $name = 'audit_fixture_gated';
+
+    protected string $description = 'Gated fixture.';
+
+    public function handle(Request $request): Response
+    {
+        throw new InputRequiredException(
+            inputRequests: [],
+            requestState: null,
+            fallback: Response::error('{"error":{"code":"APPROVAL_PENDING","message":"awaiting approval","retryable":true}}'),
+        );
+    }
+}
+
+class AuditFixtureStreamTool extends Tool
+{
+    protected string $name = 'audit_fixture_stream';
+
+    protected string $description = 'Stream fixture.';
+
+    /**
+     * @return Generator<Response>
+     */
+    public function handle(Request $request): Generator
+    {
+        yield Response::notification('notifications/tools/list_changed');
+        yield Response::text('ok');
     }
 }
 

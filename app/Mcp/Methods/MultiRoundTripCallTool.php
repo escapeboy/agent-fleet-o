@@ -68,24 +68,53 @@ class MultiRoundTripCallTool extends CallTool
             // InputRequiredException reach the catch below.
             $result = (new MrtrToolInvoker)->invoke($tool, $request);
 
-            $auditor = app(McpToolCallAuditor::class);
-
-            if ($result instanceof JsonRpcResponse) {
-                $auditor->record($tool, $request, ...McpToolCallAuditor::outcomeFrom($result));
-            } else {
-                $auditor->record($tool, $request, 'streamed', null);
+            if ($result instanceof Generator) {
+                // A streamed tool has not run yet: audit once the stream is drained.
+                return $this->auditStream($tool, $request, $result);
             }
+
+            $this->audit($tool, $request, $result);
 
             return $result;
         } catch (InputRequiredException $e) {
+            $response = $this->inputRequiredResponse($request, $context, $e);
+
+            // A pre-MRTR client got the terminal fallback, so audit what it actually received.
             if ($tool instanceof Tool) {
-                app(McpToolCallAuditor::class)->record($tool, $request, 'input_required', null);
+                $this->audit($tool, $request, $response);
             }
 
-            return $this->inputRequiredResponse($request, $context, $e);
+            return $response;
         } finally {
             $container->forgetInstance(self::BINDING_INPUT_RESPONSES);
             $container->forgetInstance(self::BINDING_REQUEST_STATE);
+        }
+    }
+
+    private function audit(Tool $tool, JsonRpcRequest $request, JsonRpcResponse $response): void
+    {
+        app(McpToolCallAuditor::class)->record($tool, $request, ...McpToolCallAuditor::outcomeFrom($response));
+    }
+
+    /**
+     * Pass a streamed result through untouched and audit its final response.
+     */
+    private function auditStream(Tool $tool, JsonRpcRequest $request, Generator $stream): Generator
+    {
+        $final = null;
+
+        foreach ($stream as $message) {
+            if ($message instanceof JsonRpcResponse) {
+                $final = $message;
+            }
+
+            yield $message;
+        }
+
+        if ($final !== null) {
+            $this->audit($tool, $request, $final);
+        } else {
+            app(McpToolCallAuditor::class)->record($tool, $request, 'streamed', null);
         }
     }
 
