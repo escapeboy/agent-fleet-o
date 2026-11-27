@@ -94,7 +94,7 @@ class LangfuseConfigTool extends Tool
         $current = (array) (GlobalSetting::get('langfuse_config') ?? []);
 
         if ($request->has('enabled')) {
-            $current['enabled'] = (bool) $request->get('enabled');
+            $current['enabled'] = $request->boolean('enabled');
         }
 
         if ($request->has('host')) {
@@ -105,16 +105,18 @@ class LangfuseConfigTool extends Tool
             $current['host'] = $host;
         }
 
-        if ($request->has('public_key') && $request->get('public_key') !== '') {
-            $current['public_key'] = (string) $request->get('public_key');
+        $publicKey = $request->get('public_key');
+        if (is_string($publicKey) && $publicKey !== '') {
+            $current['public_key'] = $publicKey;
         }
 
-        if ($request->has('secret_key') && $request->get('secret_key') !== '') {
-            $current['secret_key'] = (string) $request->get('secret_key');
+        $secretKey = $request->get('secret_key');
+        if (is_string($secretKey) && $secretKey !== '') {
+            $current['secret_key'] = $secretKey;
         }
 
         if ($request->has('mask_content')) {
-            $current['mask_content'] = (bool) $request->get('mask_content');
+            $current['mask_content'] = $request->boolean('mask_content');
         }
 
         GlobalSetting::set('langfuse_config', $current);

@@ -39,7 +39,7 @@ class BridgeEndpointToggleTool extends Tool
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
         $endpointId = $request->get('endpoint_id');
         $type = $request->get('type');
-        $enabled = (bool) $request->get('enabled', true);
+        $enabled = $request->boolean('enabled', true);
 
         if (! $endpointId || ! $type) {
             return Response::text(json_encode([
@@ -48,21 +48,23 @@ class BridgeEndpointToggleTool extends Tool
             ]));
         }
 
-        $connection = $teamId
+        // bridge_endpoint_list aggregates endpoints across every active bridge,
+        // so search all of them (same order) rather than only the newest one.
+        $connections = $teamId
             ? BridgeConnection::where('team_id', $teamId)
                 ->active()
+                ->orderByDesc('priority')
                 ->orderByDesc('connected_at')
-                ->first()
-            : null;
+                ->get()
+            : collect();
 
-        if (! $connection) {
+        if ($connections->isEmpty()) {
             return Response::text(json_encode([
                 'success' => false,
                 'message' => 'No active FleetQ Bridge connection found.',
             ]));
         }
 
-        $endpoints = $connection->endpoints ?? [];
         $typeKey = match ($type) {
             'llm' => 'llm_endpoints',
             'agent' => 'agents',
@@ -70,23 +72,32 @@ class BridgeEndpointToggleTool extends Tool
             default => null,
         };
 
-        if (! $typeKey || ! isset($endpoints[$typeKey])) {
+        if (! $typeKey) {
             return Response::text(json_encode([
                 'success' => false,
                 'message' => "No endpoints of type '{$type}' found.",
             ]));
         }
 
-        $found = false;
-        foreach ($endpoints[$typeKey] as &$endpoint) {
-            if (($endpoint['id'] ?? null) === $endpointId) {
-                $endpoint['enabled'] = $enabled;
-                $found = true;
-                break;
+        $connection = null;
+        $endpoints = [];
+        foreach ($connections as $candidate) {
+            $candidateEndpoints = $candidate->endpoints ?? [];
+            if (! isset($candidateEndpoints[$typeKey]) || ! is_array($candidateEndpoints[$typeKey])) {
+                continue;
+            }
+
+            foreach ($candidateEndpoints[$typeKey] as $index => $endpoint) {
+                if (is_array($endpoint) && ($endpoint['id'] ?? null) === $endpointId) {
+                    $candidateEndpoints[$typeKey][$index]['enabled'] = $enabled;
+                    $connection = $candidate;
+                    $endpoints = $candidateEndpoints;
+                    break 2;
+                }
             }
         }
 
-        if (! $found) {
+        if (! $connection) {
             return Response::text(json_encode([
                 'success' => false,
                 'message' => "Endpoint '{$endpointId}' not found.",
@@ -98,6 +109,7 @@ class BridgeEndpointToggleTool extends Tool
         return Response::text(json_encode([
             'success' => true,
             'endpoint_id' => $endpointId,
+            'bridge_id' => $connection->id,
             'enabled' => $enabled,
             'message' => "Endpoint '{$endpointId}' ".($enabled ? 'enabled' : 'disabled').'.',
         ]));

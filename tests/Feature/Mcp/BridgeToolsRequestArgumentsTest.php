@@ -34,12 +34,7 @@ class BridgeToolsRequestArgumentsTest extends TestCase
         parent::setUp();
 
         $user = User::factory()->create();
-        $this->team = Team::create([
-            'name' => 'Bridge Args Team',
-            'slug' => 'bridge-args-team',
-            'owner_id' => $user->id,
-            'settings' => [],
-        ]);
+        $this->team = Team::factory()->create(['owner_id' => $user->id]);
         $user->update(['current_team_id' => $this->team->id]);
         $this->actingAs($user);
         app()->instance('mcp.team_id', $this->team->id);
@@ -113,6 +108,50 @@ class BridgeToolsRequestArgumentsTest extends TestCase
         $this->assertTrue($data['success']);
         $this->assertFalse($data['enabled']);
         $this->assertFalse($this->connected->fresh()?->llmEndpoints()[0]['enabled']);
+    }
+
+    public function test_bridge_endpoint_toggle_treats_string_false_as_disable(): void
+    {
+        $data = $this->decode((new BridgeEndpointToggleTool)->handle(new Request([
+            'endpoint_id' => 'llm-1',
+            'type' => 'llm',
+            'enabled' => 'false',
+        ])));
+
+        $this->assertTrue($data['success']);
+        $this->assertFalse($data['enabled']);
+        $this->assertFalse($this->connected->fresh()?->llmEndpoints()[0]['enabled']);
+    }
+
+    public function test_bridge_endpoint_toggle_finds_endpoint_on_non_newest_bridge(): void
+    {
+        $secondary = BridgeConnection::create([
+            'team_id' => $this->team->id,
+            'session_id' => 'session-secondary',
+            'label' => 'Secondary',
+            'priority' => 5,
+            'status' => BridgeConnectionStatus::Connected,
+            'endpoints' => [
+                'llm_endpoints' => [
+                    ['id' => 'llm-2', 'name' => 'GPU LLM', 'online' => true, 'enabled' => true],
+                ],
+                'agents' => [],
+                'mcp_servers' => [],
+            ],
+            'connected_at' => now()->subHour(),
+            'last_seen_at' => now()->subHour(),
+        ]);
+
+        $data = $this->decode((new BridgeEndpointToggleTool)->handle(new Request([
+            'endpoint_id' => 'llm-2',
+            'type' => 'llm',
+            'enabled' => false,
+        ])));
+
+        $this->assertTrue($data['success']);
+        $this->assertSame($secondary->id, $data['bridge_id']);
+        $this->assertFalse($secondary->fresh()?->llmEndpoints()[0]['enabled']);
+        $this->assertTrue($this->connected->fresh()?->llmEndpoints()[0]['enabled']);
     }
 
     public function test_bridge_set_routing_saves_prefer_mode(): void

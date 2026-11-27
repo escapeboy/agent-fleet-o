@@ -6,6 +6,7 @@ use App\Infrastructure\AI\Models\LlmRequestLog;
 use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Carbon;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -42,18 +43,21 @@ class MetricsModelComparisonTool extends Tool
         $from = $request->get('from');
         $to = $request->get('to');
 
-        if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
+        if ($from !== null && ! $this->isIsoDate($from)) {
             return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');
         }
 
-        if ($to !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $to)) {
+        if ($to !== null && ! $this->isIsoDate($to)) {
             return $this->invalidArgumentError('Invalid date format for "to". Use ISO 8601 (YYYY-MM-DD).');
         }
 
         $query = LlmRequestLog::withoutGlobalScopes()
             ->where('team_id', $teamId)
             ->when($from !== null, fn ($q) => $q->where('created_at', '>=', $from))
-            ->when($to !== null, fn ($q) => $q->where('created_at', '<=', $to));
+            ->when($to !== null, fn ($q) => strlen($to) === 10
+                // Date-only upper bound is inclusive of the whole day.
+                ? $q->where('created_at', '<', Carbon::parse($to)->addDay()->toDateString())
+                : $q->where('created_at', '<=', $to));
 
         $byModel = (clone $query)
             ->selectRaw('provider, model, count(*) as requests, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cost_credits) as cost_credits, avg(latency_ms) as avg_latency_ms')
@@ -70,5 +74,12 @@ class MetricsModelComparisonTool extends Tool
             'totals' => $totals,
             'by_model' => $byModel,
         ]));
+    }
+
+    private function isIsoDate(mixed $value): bool
+    {
+        return is_string($value)
+            && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1
+            && strtotime($value) !== false;
     }
 }

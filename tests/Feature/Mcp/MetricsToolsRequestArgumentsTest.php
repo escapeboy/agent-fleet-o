@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mcp;
 
+use App\Domain\Experiment\Models\Experiment;
+use App\Domain\Metrics\Models\MetricAggregation;
 use App\Domain\Shared\Models\Team;
 use App\Mcp\Tools\System\MetricsAggregationsTool;
 use App\Mcp\Tools\System\MetricsModelComparisonTool;
@@ -24,12 +26,7 @@ class MetricsToolsRequestArgumentsTest extends TestCase
         parent::setUp();
 
         $user = User::factory()->create();
-        $this->team = Team::create([
-            'name' => 'Metrics Args Team',
-            'slug' => 'metrics-args-team',
-            'owner_id' => $user->id,
-            'settings' => [],
-        ]);
+        $this->team = Team::factory()->create(['owner_id' => $user->id]);
         $user->update(['current_team_id' => $this->team->id]);
         $this->actingAs($user);
         app()->instance('mcp.team_id', $this->team->id);
@@ -46,6 +43,43 @@ class MetricsToolsRequestArgumentsTest extends TestCase
 
         $this->assertArrayHasKey('data', $data);
         $this->assertSame([], $data['data']);
+    }
+
+    public function test_metrics_aggregations_to_date_is_inclusive_and_limit_is_clamped(): void
+    {
+        $experiment = Experiment::factory()->create(['team_id' => $this->team->id]);
+
+        foreach (['2026-12-30 08:00:00', '2026-12-31 15:00:00'] as $periodStart) {
+            MetricAggregation::withoutGlobalScopes()->create([
+                'team_id' => $this->team->id,
+                'experiment_id' => $experiment->id,
+                'metric_type' => 'clicks',
+                'period' => 'hourly',
+                'period_start' => $periodStart,
+                'sum_value' => 1,
+                'count' => 1,
+                'avg_value' => 1,
+            ]);
+        }
+
+        $inclusive = $this->decode((new MetricsAggregationsTool)->handle(new Request([
+            'to' => '2026-12-31',
+        ])));
+        $this->assertCount(2, $inclusive['data']);
+
+        $clamped = $this->decode((new MetricsAggregationsTool)->handle(new Request([
+            'limit' => -1,
+        ])));
+        $this->assertCount(1, $clamped['data']);
+    }
+
+    public function test_metrics_aggregations_rejects_non_string_date(): void
+    {
+        $data = $this->decode((new MetricsAggregationsTool)->handle(new Request([
+            'from' => ['2026-01-01'],
+        ])));
+
+        $this->assertArrayHasKey('error', $data);
     }
 
     public function test_metrics_aggregations_rejects_bad_from_date(): void

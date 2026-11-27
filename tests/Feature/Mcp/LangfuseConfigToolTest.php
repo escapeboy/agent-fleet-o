@@ -22,12 +22,7 @@ class LangfuseConfigToolTest extends TestCase
         parent::setUp();
 
         $user = User::factory()->create();
-        $team = Team::create([
-            'name' => 'Langfuse Team',
-            'slug' => 'langfuse-team',
-            'owner_id' => $user->id,
-            'settings' => [],
-        ]);
+        $team = Team::factory()->create(['owner_id' => $user->id]);
         $user->update(['current_team_id' => $team->id]);
         $this->actingAs($user);
         app()->instance('mcp.team_id', $team->id);
@@ -71,6 +66,24 @@ class LangfuseConfigToolTest extends TestCase
         $stored = (array) GlobalSetting::get('langfuse_config');
         $this->assertSame('pk-test', $stored['public_key']);
         $this->assertSame('sk-test', $stored['secret_key']);
+    }
+
+    public function test_update_treats_string_false_as_false_and_ignores_null_keys(): void
+    {
+        GlobalSetting::set('langfuse_config', ['enabled' => true, 'public_key' => 'pk-existing']);
+
+        $data = $this->decode((new LangfuseConfigTool)->handle(new Request([
+            'action' => 'update',
+            'enabled' => 'false',
+            'public_key' => null,
+        ])));
+
+        $this->assertTrue($data['success']);
+        $this->assertFalse($data['enabled']);
+
+        $stored = (array) GlobalSetting::get('langfuse_config');
+        $this->assertFalse($stored['enabled']);
+        $this->assertSame('pk-existing', $stored['public_key']);
     }
 
     public function test_update_rejects_non_https_host(): void
