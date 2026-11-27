@@ -722,6 +722,15 @@ class ExecuteAgentAction
             if (! empty($input['context'])) {
                 $userPromptParts[] = "## Context from Previous Steps\n".json_encode($input['context'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
             }
+            // Retry feedback goes into the turn message, never the system prompt,
+            // so the system prompt (and a resumed Claude Code session) stays stable.
+            if (! empty($input['previous_feedback'])) {
+                $feedbackPart = "## Feedback from previous attempt\n".json_encode($input['previous_feedback'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                if (! empty($input['retry_instructions']) && is_string($input['retry_instructions'])) {
+                    $feedbackPart .= "\n\n".$input['retry_instructions'];
+                }
+                $userPromptParts[] = $feedbackPart;
+            }
 
             $team = Team::find($teamId);
             $resolved = $this->providerResolver->resolve(agent: $agent, team: $team);

@@ -165,6 +165,7 @@ use App\Infrastructure\AI\Middleware\SchemaValidation;
 use App\Infrastructure\AI\Middleware\SemanticCache;
 use App\Infrastructure\AI\Middleware\UsageTracking;
 use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
+use App\Infrastructure\AI\Services\ClaudeSessionContext;
 use App\Infrastructure\AI\Services\EmbeddingService;
 use App\Infrastructure\Auth\CompatibleSanctumGuard;
 use App\Infrastructure\Auth\ScopedPersonalAccessToken;
@@ -314,6 +315,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Crew member tool allowlist for local agents — scoped so it is flushed between queue jobs/requests
         $this->app->scoped(AgentToolAllowlistContext::class);
+
+        // Crew task Claude Code session (resume on retry) — scoped so it is flushed between queue jobs/requests
+        $this->app->scoped(ClaudeSessionContext::class);
 
         // OpenTelemetry tracer provider — no-op tracer when OTEL_ENABLED=false (zero overhead)
         $this->app->singleton(FleetTracerProvider::class);
