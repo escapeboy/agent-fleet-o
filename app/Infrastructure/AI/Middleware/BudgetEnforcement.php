@@ -33,7 +33,7 @@ class BudgetEnforcement implements AiMiddlewareInterface
 
         // Team-wide daily/monthly spend limit applies to every call, with or without a user.
         if (($request->teamId ?? '') !== '') {
-            $this->enforceTeamCap->execute($request->teamId, $estimatedCost);
+            $this->enforceTeamCap->execute($request->teamId, $estimatedCost, $request->provider, $request->model);
         }
 
         if (! $request->userId) {

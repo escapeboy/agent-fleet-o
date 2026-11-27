@@ -75,6 +75,23 @@ class TeamSpendCapSettingsTest extends TestCase
         $this->assertNull($settings['spend_cap_monthly_credits']);
     }
 
+    public function test_owner_can_allow_unpriced_models(): void
+    {
+        $user = $this->loggedInOwner();
+
+        Livewire::test($this->pageClass())
+            ->assertSet('teamSpendCapAllowUnpriced', false)
+            ->set('teamSpendCapAllowUnpriced', true)
+            ->call('saveTeamSpendCap')
+            ->assertHasNoErrors();
+
+        $settings = $user->currentTeam->fresh()->settings;
+        $this->assertTrue($settings['spend_cap_allow_unpriced_models']);
+
+        Livewire::test($this->pageClass())
+            ->assertSet('teamSpendCapAllowUnpriced', true);
+    }
+
     public function test_invalid_values_are_rejected(): void
     {
         $user = $this->loggedInOwner();
