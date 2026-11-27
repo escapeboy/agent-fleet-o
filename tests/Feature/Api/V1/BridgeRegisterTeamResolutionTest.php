@@ -20,11 +20,16 @@ class BridgeRegisterTeamResolutionTest extends ApiTestCase
 
     private function stubBridgeRedis(): void
     {
+        $redis = app('redis');
         $connection = Mockery::mock();
         $connection->shouldReceive('get')->andReturn(null);
         $connection->shouldReceive('del')->andReturn(0);
 
-        Redis::shouldReceive('connection')->with('bridge')->andReturn($connection);
+        // Stub only the bridge connection. Other connections stay real: the cloud
+        // edition reads the 'cache' connection on the same request.
+        Redis::shouldReceive('connection')->andReturnUsing(
+            fn (?string $name = null) => $name === 'bridge' ? $connection : $redis->connection($name),
+        );
     }
 
     private function userWithoutTeam(): User
