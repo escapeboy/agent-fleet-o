@@ -15,11 +15,15 @@ use App\Infrastructure\Git\Exceptions\GitFileNotFoundException;
 use App\Mcp\ErrorClassifier;
 use App\Mcp\ErrorCode;
 use App\Mcp\Exceptions\DeadlineExceededException;
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
+use PDOException;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -141,7 +145,7 @@ class ErrorClassifierTest extends TestCase
         // SSRF guards and other validators throw plain \InvalidArgumentException.
         // Must classify as INVALID_ARGUMENT, not fall back to retryable INTERNAL,
         // otherwise agents retry with malicious URLs. Fix from Phase 2 security review.
-        $result = $this->classifier->classify(new \InvalidArgumentException('URL resolves to a private address.'));
+        $result = $this->classifier->classify(new InvalidArgumentException('URL resolves to a private address.'));
 
         $this->assertSame('INVALID_ARGUMENT', $result['code']);
         $this->assertFalse($result['retryable']);
@@ -184,13 +188,13 @@ class ErrorClassifierTest extends TestCase
     public function test_model_not_found_message_is_scrubbed(): void
     {
         $exception = new ModelNotFoundException;
-        $exception->setModel(\stdClass::class, ['abc-123']);
+        $exception->setModel(User::class, ['abc-123']);
 
         $result = $this->classifier->classify($exception);
 
         $this->assertSame('NOT_FOUND', $result['code']);
         $this->assertSame('The requested resource was not found.', $result['message']);
-        $this->assertStringNotContainsString('stdClass', $result['message']);
+        $this->assertStringNotContainsString('App\\Models', $result['message']);
         $this->assertStringNotContainsString('abc-123', $result['message']);
     }
 
@@ -205,14 +209,6 @@ class ErrorClassifierTest extends TestCase
 
     public function test_class_name_hint_catches_plan_limit_exceeded(): void
     {
-        $exception = new class('plan limit') extends RuntimeException
-        {
-            public function getName(): string
-            {
-                return 'PlanLimitExceededException';
-            }
-        };
-
         // Anonymous classes have basename pattern class@anonymous\0... so we simulate a
         // real cloud exception shape by extending a named class instead.
         $namedException = new PlanLimitExceededFakeException('plan');
@@ -257,7 +253,45 @@ class ErrorClassifierTest extends TestCase
         $this->assertSame('An internal error occurred. Check server logs for details.', $result['message']);
         $this->assertStringNotContainsString('secret internal detail', $result['message']);
     }
+
+    public function test_classifies_invalid_uuid_query_exception_as_invalid_argument(): void
+    {
+        $result = $this->classifier->classify($this->queryException('22P02', 'Invalid text representation: 7 ERROR:  invalid input syntax for type uuid: "x"'));
+
+        $this->assertSame('INVALID_ARGUMENT', $result['code']);
+        $this->assertFalse($result['retryable']);
+        $this->assertSame('An id argument is empty or not a valid UUID. Pass the UUID returned by the matching list tool.', $result['message']);
+        $this->assertStringNotContainsString('select', $result['message']);
+        $this->assertStringNotContainsString('agents', $result['message']);
+    }
+
+    public function test_other_query_exceptions_stay_internal(): void
+    {
+        $unique = $this->classifier->classify($this->queryException('23505', 'Unique violation: 7 ERROR:  duplicate key value'));
+        $this->assertSame('INTERNAL', $unique['code']);
+        $this->assertSame('An internal error occurred. Check server logs for details.', $unique['message']);
+
+        $bare = $this->classifier->classify(new QueryException('pgsql', 'select 1', [], new PDOException('connection lost')));
+        $this->assertSame('INTERNAL', $bare['code']);
+        $this->assertSame('An internal error occurred. Check server logs for details.', $bare['message']);
+    }
+
+    public function test_is_client_input_error(): void
+    {
+        $this->assertTrue($this->classifier->isClientInputError($this->queryException('22P02', 'Invalid text representation')));
+        $this->assertFalse($this->classifier->isClientInputError(new RuntimeException('SQLSTATE[22P02]')));
+        $this->assertFalse($this->classifier->isClientInputError($this->queryException('23505', 'Unique violation')));
+    }
+
+    private function queryException(string $sqlState, string $detail): QueryException
+    {
+        $pdo = new PDOException("SQLSTATE[{$sqlState}]: {$detail}");
+        $pdo->errorInfo = [$sqlState, 7, $detail];
+
+        return new QueryException('pgsql', 'select * from agents where id = ?', ['x'], $pdo);
+    }
 }
 
 class PlanLimitExceededFakeException extends RuntimeException {}
+
 class TimeoutFakeException extends RuntimeException {}

@@ -182,9 +182,14 @@ abstract class CompactTool extends Tool
 
             return $response;
         } catch (Throwable $e) {
-            report($e);
+            $classifier = app(ErrorClassifier::class);
 
-            $payload = app(ErrorClassifier::class)->classify($e);
+            // Client-input errors (e.g. malformed UUID → SQLSTATE 22P02) are not server faults.
+            if (! $classifier->isClientInputError($e)) {
+                report($e);
+            }
+
+            $payload = $classifier->classify($e);
 
             $span->recordException($e);
             $span->setAttribute('mcp.error.code', $payload['code']);
