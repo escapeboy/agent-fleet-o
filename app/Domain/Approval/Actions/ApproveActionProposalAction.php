@@ -26,6 +26,11 @@ class ApproveActionProposalAction
             throw new RuntimeException('Only a team owner or admin can approve a change to MCP tool definitions.');
         }
 
+        // A grant widens what the agent may run, so it needs the same role.
+        if ($proposal->target_type === CreatePermissionDenialProposalsAction::TARGET_TYPE && ! ToolDefinitionPinner::canApprove($approver, (string) $proposal->team_id)) {
+            throw new RuntimeException('Only a team owner or admin can grant an agent a new Claude Code permission.');
+        }
+
         if ($editedArguments !== null) {
             if ($proposal->target_type !== ToolApprovalGate::TARGET_TYPE) {
                 throw new RuntimeException('Arguments can only be edited when approving an agent tool call.');
