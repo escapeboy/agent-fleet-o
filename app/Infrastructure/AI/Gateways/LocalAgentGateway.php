@@ -67,12 +67,26 @@ class LocalAgentGateway implements AiGatewayInterface
         // instead of running with the empty default config.
         $mcpConfig = $agentKey === 'claude-code' ? $this->buildAgentMcpConfig($request) : null;
 
+        // Claude Code runs in dontAsk mode: only the tools in this allow list
+        // (scoped to the agent and its working directory) may be used.
+        $permissionSettings = null;
+        if ($agentKey === 'claude-code') {
+            $permissionAgent = $request->agentId
+                ? rescue(fn () => Agent::withoutGlobalScopes()->find($request->agentId), null, false)
+                : null;
+            $permissionSettings = app(ClaudeCodeSettingsBuilder::class)->forAgent(
+                $permissionAgent instanceof Agent ? $permissionAgent : null,
+                $workdir,
+                $mcpConfig,
+            );
+        }
+
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
         if ($agentKey === 'claude-code' && $isAssistant) {
             $systemPromptFile = $workdir.'/system-prompt.txt';
             file_put_contents($systemPromptFile, $request->systemPrompt);
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig);
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig, $permissionSettings);
             $prompt = $request->userPrompt;
             $env = getenv();
             unset($env['CLAUDECODE']);
@@ -95,6 +109,7 @@ class LocalAgentGateway implements AiGatewayInterface
                 $agentKey, $binaryPath, $request->model, $request->purpose,
                 $usesStdin ? null : $prompt,
                 $mcpConfig,
+                $permissionSettings,
             );
 
             Log::debug("LocalAgentGateway: executing {$agentKey}", [
@@ -328,6 +343,8 @@ class LocalAgentGateway implements AiGatewayInterface
             $prompt = $request->userPrompt;
         } else {
             $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+            // claude-code-vps still uses --dangerously-skip-permissions; moving this
+            // path to --permission-mode dontAsk is a follow-up.
             $args = array_merge(
                 [$binaryPath],
                 $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],

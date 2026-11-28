@@ -39,8 +39,11 @@ final class LocalAgentPromptBuilder
      * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
      *                                                ['mcpServers' => [...]]. When null/empty,
      *                                                falls back to the empty default.
+     * @param  array<string, mixed>|null  $permissionSettings  Claude Code `--settings` payload
+     *                                                         (see ClaudeCodeSettingsBuilder). When null,
+     *                                                         read-only tools plus the MCP servers are allowed.
      */
-    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null, ?array $mcpConfig = null): string
+    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null, ?array $mcpConfig = null, ?array $permissionSettings = null): string
     {
         $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
@@ -65,14 +68,16 @@ final class LocalAgentPromptBuilder
 
         return match ($agentKey) {
             'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
-            'claude-code' => $preamble."{$binaryPath} --print --output-format json --dangerously-skip-permissions --no-session-persistence --strict-mcp-config --mcp-config ".escapeshellarg($mcpConfigJson).$modelFlag,
+            'claude-code' => $preamble."{$binaryPath} --print --output-format json --permission-mode dontAsk --settings "
+                .escapeshellarg(ClaudeCodeSettingsBuilder::encode($permissionSettings ?? self::defaultPermissionSettings($mcpConfig)))
+                .' --no-session-persistence --strict-mcp-config --mcp-config '.escapeshellarg($mcpConfigJson).$modelFlag,
             'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
             'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
             'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),
             'amp' => "{$binaryPath} -x --stream-json{$escapedPrompt}",
             'opencode' => "{$binaryPath} run --format json".($model ? ' -m '.escapeshellarg($model) : '').$escapedPrompt,
             // -p is a boolean flag (print/headless mode); prompt is a positional argument appended at the end.
-            // --force skips file-write confirmations (equivalent to --dangerously-skip-permissions in Claude Code).
+            // --force skips file-write confirmations (Cursor has no per-tool allow list like Claude Code's --settings).
             // --trust grants workspace access without interactive confirmation.
             // --approve-mcps prevents hanging on MCP approval prompts.
             // Skip --model when 'auto' (Cursor's default behavior routes to best available model).
@@ -93,9 +98,11 @@ final class LocalAgentPromptBuilder
      * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
      *                                                ['mcpServers' => [...]]. When null/empty,
      *                                                falls back to the empty default.
+     * @param  array<string, mixed>|null  $permissionSettings  Claude Code `--settings` payload; null
+     *                                                         allows read-only tools plus the MCP servers.
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null): array
+    public static function buildClaudeCodeAssistantArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null, ?array $permissionSettings = null): array
     {
         $systemPromptArgs = $systemPromptFile
             ? ['--system-prompt-file', $systemPromptFile]
@@ -104,7 +111,9 @@ final class LocalAgentPromptBuilder
         $args = array_merge(
             [$binaryPath, '--print', '--output-format', 'json'],
             $systemPromptArgs,
-            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
+            ['--tools', ''],
+            ClaudeCodeSettingsBuilder::cliArgs($permissionSettings ?? self::defaultPermissionSettings($mcpConfig)),
+            ['--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
         );
 
         if ($model) {
@@ -124,9 +133,11 @@ final class LocalAgentPromptBuilder
      * @param  array<string, mixed>|null  $mcpConfig  Claude Code MCP config of shape
      *                                                ['mcpServers' => [...]]. When null/empty,
      *                                                falls back to the empty default.
+     * @param  array<string, mixed>|null  $permissionSettings  Claude Code `--settings` payload; null
+     *                                                         allows read-only tools plus the MCP servers.
      * @return array<string>
      */
-    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null): array
+    public static function buildClaudeCodeAssistantStreamArgs(string $binaryPath, string $systemPrompt, ?string $model = null, ?string $systemPromptFile = null, ?array $mcpConfig = null, ?array $permissionSettings = null): array
     {
         $systemPromptArgs = $systemPromptFile
             ? ['--system-prompt-file', $systemPromptFile]
@@ -135,7 +146,9 @@ final class LocalAgentPromptBuilder
         $args = array_merge(
             [$binaryPath, '--print', '--output-format', 'stream-json', '--verbose'],
             $systemPromptArgs,
-            ['--tools', '', '--dangerously-skip-permissions', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
+            ['--tools', ''],
+            ClaudeCodeSettingsBuilder::cliArgs($permissionSettings ?? self::defaultPermissionSettings($mcpConfig)),
+            ['--no-session-persistence', '--strict-mcp-config', '--mcp-config', self::encodeMcpConfig($mcpConfig)],
         );
 
         if ($model) {
@@ -144,6 +157,18 @@ final class LocalAgentPromptBuilder
         }
 
         return $args;
+    }
+
+    /**
+     * Fallback when the caller passes no permission settings: read-only
+     * built-in tools plus the MCP servers in the run's --mcp-config.
+     *
+     * @param  array<string, mixed>|null  $mcpConfig
+     * @return array<string, mixed>
+     */
+    private static function defaultPermissionSettings(?array $mcpConfig): array
+    {
+        return ClaudeCodeSettingsBuilder::build(null, $mcpConfig, false);
     }
 
     /**
