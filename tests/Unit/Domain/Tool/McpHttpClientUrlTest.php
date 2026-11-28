@@ -72,7 +72,7 @@ class McpHttpClientUrlTest extends TestCase
     {
         Http::fake([
             '*/sse*' => Http::response("event: endpoint\ndata: /messages?sessionId=1\n\n"),
-            '*/mcp*' => Http::response('', 500),
+            '*/mcp*' => Http::response('', 404),
             'http://h/messages*' => Http::response(['jsonrpc' => '2.0', 'id' => 1, 'result' => ['tools' => []]]),
         ]);
 
@@ -104,7 +104,7 @@ class McpHttpClientUrlTest extends TestCase
     {
         Http::fake([
             '*/sse*' => Http::response("event: endpoint\ndata: {$endpoint}\n\n"),
-            '*/mcp*' => Http::response('', 500),
+            '*/mcp*' => Http::response('', 404),
             '*' => Http::response(['jsonrpc' => '2.0', 'id' => 1, 'result' => ['tools' => []]]),
         ]);
 
