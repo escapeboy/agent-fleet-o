@@ -4,6 +4,7 @@ namespace App\Mcp\Tools\Agent;
 
 use App\Domain\Agent\Actions\EvaluateAgentConfigGateAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
+use App\Domain\Agent\DTOs\CommandRule;
 use App\Domain\Agent\Enums\ExecutionTier;
 use App\Domain\Agent\Models\Agent;
 use App\Domain\Evaluation\Models\EvaluationDataset;
@@ -12,6 +13,7 @@ use App\Mcp\Attributes\AssistantTool;
 use App\Mcp\Concerns\HasStructuredErrors;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -85,6 +87,12 @@ class AgentUpdateTool extends Tool
                 ->description('Charter-as-contract — the agent authority boundary: {owns: string[], refuses: string[], escalate_to: string, escalate_when: string[]}. Rendered into the system prompt when agent.charter.enabled is on. Pass null to clear.'),
             'eval_gate_dataset_id' => $schema->string()
                 ->description('UUID of an EvaluationDataset to gate config changes against (eve eval-gate). When set and agent.eval_gate.enabled is on, a config change is replayed against this dataset and held if it scores below threshold. Pass empty string to clear.'),
+            'command_rules' => $schema->array()
+                ->items($schema->object([
+                    'prefix' => $schema->string()->description('Command word prefix, e.g. "git push"')->required(),
+                    'action' => $schema->string()->enum(['allow', 'ask', 'block'])->required(),
+                ]))
+                ->description('Shell command rules for coding agents (max 100). The longest matching word prefix wins; chained commands are checked part by part; Block beats Ask beats Allow. Pass null to reset to the defaults (git push=ask, rm -rf=ask, sudo=block); [] means no rules. Not yet enforced in Claude Code runs.'),
         ];
     }
 
@@ -116,6 +124,9 @@ class AgentUpdateTool extends Tool
             'heartbeat_definition' => 'nullable|array',
             'charter' => 'nullable|array',
             'eval_gate_dataset_id' => 'nullable|string',
+            'command_rules' => 'nullable|array|max:100',
+            'command_rules.*.prefix' => 'required|string|max:200',
+            'command_rules.*.action' => 'required|string|in:allow,ask,block',
         ]);
 
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null) ?? auth()->user()?->current_team_id;
@@ -275,8 +286,27 @@ class AgentUpdateTool extends Tool
             $data['config'] = $currentConfig;
         }
 
+        // command_rules: stored in agent.config JSONB; null resets to the defaults, [] means no rules
+        if (array_key_exists('command_rules', $validated)) {
+            $currentConfig = $data['config'] ?? $agent->config ?? [];
+            if ($validated['command_rules'] === null) {
+                unset($currentConfig['command_rules']);
+            } else {
+                $rules = [];
+                foreach (array_values($validated['command_rules']) as $index => $entry) {
+                    try {
+                        $rules[] = CommandRule::fromArray($entry)->toArray();
+                    } catch (InvalidArgumentException $e) {
+                        return $this->invalidArgumentError("command_rules.{$index}: ".$e->getMessage());
+                    }
+                }
+                $currentConfig['command_rules'] = $rules;
+            }
+            $data['config'] = $currentConfig;
+        }
+
         if (empty($data)) {
-            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, execution_tier, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition.');
+            return $this->invalidArgumentError('No fields to update. Provide at least one of: name, role, goal, backstory, personality, provider, model, budget_cap_credits, tool_profile, environment, execution_tier, reasoning_effort, use_tool_search, tool_search_top_k, sandbox_profile, thinking_budget, knowledge_base_id, evaluation_enabled, evaluation_sample_rate, heartbeat_definition, command_rules.');
         }
 
         // Eval-gate (eve borrow): when enabled and an eval dataset is configured,

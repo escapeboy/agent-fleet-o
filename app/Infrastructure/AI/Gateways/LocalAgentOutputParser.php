@@ -409,10 +409,11 @@ final class LocalAgentOutputParser
      * [raw, unquoted] or null on an unterminated quote. A word ends at
      * whitespace or ; | & < > ( ) outside quotes; an empty raw word means the
      * command starts with such an operator or is exhausted.
+     * CommandRule and CommandRuleMatcher reuse it to split shell commands.
      *
      * @return array{0: string, 1: string}|null
      */
-    private static function nextShellWord(string $s, int &$pos, int $len): ?array
+    public static function nextShellWord(string $s, int &$pos, int $len): ?array
     {
         while ($pos < $len && ctype_space($s[$pos])) {
             $pos++;

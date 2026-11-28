@@ -7,6 +7,7 @@ use App\Domain\Agent\Actions\DryRunAgentAction;
 use App\Domain\Agent\Actions\ExportAgentWorkspaceAction;
 use App\Domain\Agent\Actions\RecordAgentConfigRevisionAction;
 use App\Domain\Agent\DTOs\AgentHeartbeatTask;
+use App\Domain\Agent\DTOs\CommandRule;
 use App\Domain\Agent\Enums\AgentEnvironment;
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Enums\FeedbackRating;
@@ -112,6 +113,9 @@ class AgentDetailPage extends Component
     public bool $editUseToolSearch = false;
 
     public int $editToolSearchTopK = 5;
+
+    /** Shell command rules, one "allow|ask|block: prefix" per line. */
+    public string $editCommandRules = '';
 
     /** @var array<string> */
     public array $editKnowledgeBaseIds = [];
@@ -294,6 +298,10 @@ class AgentDetailPage extends Component
         $this->editReasoningEffort = $this->agent->config['reasoning_effort'] ?? 'none';
         $this->editUseToolSearch = (bool) ($this->agent->config['use_tool_search'] ?? false);
         $this->editToolSearchTopK = (int) ($this->agent->config['tool_search_top_k'] ?? 5);
+        $this->editCommandRules = implode("\n", array_map(
+            fn (CommandRule $rule): string => $rule->toLine(),
+            CommandRule::listFromConfig($this->agent->config),
+        ));
         $this->editKnowledgeBaseIds = $this->agent->knowledgeBases()->pluck('knowledge_bases.id')->map(fn ($id) => (string) $id)->toArray();
         $this->editEvaluationEnabled = (bool) $this->agent->evaluation_enabled;
         $this->editEvaluationSampleRate = $this->agent->evaluation_sample_rate;
@@ -361,7 +369,38 @@ class AgentDetailPage extends Component
             'editToolSearchTopK' => ['nullable', 'integer', 'min:1', 'max:20'],
         ]);
 
+        $commandRules = [];
+        $lineNumber = 0;
+        foreach (preg_split('/\r\n|\r|\n/', $this->editCommandRules) ?: [] as $line) {
+            $lineNumber++;
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            try {
+                $commandRules[] = CommandRule::fromLine($line);
+            } catch (\InvalidArgumentException $e) {
+                $this->addError('editCommandRules', "Line {$lineNumber}: ".$e->getMessage());
+
+                return;
+            }
+        }
+        if (count($commandRules) > 100) {
+            $this->addError('editCommandRules', 'At most 100 command rules are allowed.');
+
+            return;
+        }
+
         $config = $this->agent->config ?? [];
+
+        $ruleArrays = array_map(fn (CommandRule $rule): array => $rule->toArray(), $commandRules);
+        $defaultArrays = array_map(fn (CommandRule $rule): array => $rule->toArray(), CommandRule::defaults());
+        if ($ruleArrays === $defaultArrays) {
+            unset($config['command_rules']);
+        } else {
+            $config['command_rules'] = $ruleArrays;
+        }
+
         $filteredChain = array_filter(
             $this->editFallbackChain,
             fn ($entry) => ! empty($entry['provider']) && ! empty($entry['model']),
