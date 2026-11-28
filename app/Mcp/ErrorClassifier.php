@@ -18,10 +18,12 @@ use App\Infrastructure\Git\Exceptions\GitFileNotFoundException;
 use App\Mcp\Exceptions\DeadlineExceededException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use PDOException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -29,6 +31,9 @@ use Throwable;
 
 class ErrorClassifier
 {
+    /** Postgres SQLSTATE for "invalid text representation" (e.g. malformed UUID). */
+    private const INVALID_TEXT_SQLSTATE = '22P02';
+
     /**
      * Map of exception class (FQN) to ErrorCode.
      * Order matters — more specific classes should come first.
@@ -106,8 +111,55 @@ class ErrorClassifier
         return $payload;
     }
 
+    /**
+     * True for errors caused by bad client input that should not be reported
+     * as server faults, e.g. Postgres SQLSTATE 22P02 (invalid text
+     * representation) when an empty or malformed UUID reaches a query.
+     */
+    public function isClientInputError(Throwable $e): bool
+    {
+        if (! $e instanceof QueryException) {
+            return false;
+        }
+
+        return $this->sqlState($e) === self::INVALID_TEXT_SQLSTATE;
+    }
+
+    private function sqlState(QueryException $e): ?string
+    {
+        $errorInfo = $e->errorInfo;
+
+        if (is_array($errorInfo) && isset($errorInfo[0]) && is_string($errorInfo[0]) && $errorInfo[0] !== '') {
+            return $errorInfo[0];
+        }
+
+        $previous = $e->getPrevious();
+
+        if ($previous instanceof PDOException && is_array($previous->errorInfo)
+            && isset($previous->errorInfo[0]) && is_string($previous->errorInfo[0]) && $previous->errorInfo[0] !== '') {
+            return $previous->errorInfo[0];
+        }
+
+        $code = (string) $e->getCode();
+
+        if ($code !== '' && $code !== '0') {
+            return $code;
+        }
+
+        // Anchored: the QueryException message embeds the SQL bindings, which are client-controlled.
+        if (preg_match('/^SQLSTATE\[([0-9A-Z]{5})\]/', $e->getMessage(), $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
     private function codeFor(Throwable $e): ErrorCode
     {
+        if ($this->isClientInputError($e)) {
+            return ErrorCode::InvalidArgument;
+        }
+
         foreach ($this->dynamicMap as $class => $code) {
             if ($e instanceof $class) {
                 return $code;
@@ -175,6 +227,14 @@ class ErrorClassifier
 
         if ($e instanceof ModelNotFoundException) {
             return 'The requested resource was not found.';
+        }
+
+        if ($e instanceof QueryException) {
+            // Never surface the raw QueryException message: it contains SQL and bindings.
+            // 22P02 also covers integer/enum/json/boolean casts, so only blame a UUID when Postgres did.
+            return preg_match('/invalid input syntax for type uuid/i', $e->getMessage()) === 1
+                ? 'An id argument is empty or not a valid UUID. Pass the UUID returned by the matching list tool.'
+                : 'An argument value has an invalid format for its field.';
         }
 
         $message = $e->getMessage();
