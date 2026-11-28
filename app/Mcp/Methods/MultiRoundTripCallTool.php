@@ -4,11 +4,13 @@ namespace App\Mcp\Methods;
 
 use App\Mcp\Exceptions\InputRequiredException;
 use App\Mcp\Protocol\ProtocolContext;
+use App\Mcp\Services\McpToolCallAuditor;
 use Generator;
 use Illuminate\Container\Container;
 use Laravel\Mcp\Exceptions\JsonRpcException;
 use Laravel\Mcp\Server\Methods\CallTool;
 use Laravel\Mcp\Server\ServerContext;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Transport\JsonRpcRequest;
 use Laravel\Mcp\Transport\JsonRpcResponse;
 
@@ -50,6 +52,8 @@ class MultiRoundTripCallTool extends CallTool
         $container->instance(self::BINDING_INPUT_RESPONSES, is_array($inputResponses) ? $inputResponses : []);
         $container->instance(self::BINDING_REQUEST_STATE, is_string($requestState) ? $requestState : null);
 
+        $tool = null;
+
         try {
             if (is_null($request->get('name'))) {
                 throw new JsonRpcException('Missing [name] parameter.', -32602, $request->id);
@@ -62,12 +66,55 @@ class MultiRoundTripCallTool extends CallTool
 
             // Same as CallTool::handle(), but through an invoker that lets
             // InputRequiredException reach the catch below.
-            return (new MrtrToolInvoker)->invoke($tool, $request);
+            $result = (new MrtrToolInvoker)->invoke($tool, $request);
+
+            if ($result instanceof Generator) {
+                // A streamed tool has not run yet: audit once the stream is drained.
+                return $this->auditStream($tool, $request, $result);
+            }
+
+            $this->audit($tool, $request, $result);
+
+            return $result;
         } catch (InputRequiredException $e) {
-            return $this->inputRequiredResponse($request, $context, $e);
+            $response = $this->inputRequiredResponse($request, $context, $e);
+
+            // A pre-MRTR client got the terminal fallback, so audit what it actually received.
+            if ($tool instanceof Tool) {
+                $this->audit($tool, $request, $response);
+            }
+
+            return $response;
         } finally {
             $container->forgetInstance(self::BINDING_INPUT_RESPONSES);
             $container->forgetInstance(self::BINDING_REQUEST_STATE);
+        }
+    }
+
+    private function audit(Tool $tool, JsonRpcRequest $request, JsonRpcResponse $response): void
+    {
+        app(McpToolCallAuditor::class)->record($tool, $request, ...McpToolCallAuditor::outcomeFrom($response));
+    }
+
+    /**
+     * Pass a streamed result through untouched and audit its final response.
+     */
+    private function auditStream(Tool $tool, JsonRpcRequest $request, Generator $stream): Generator
+    {
+        $final = null;
+
+        foreach ($stream as $message) {
+            if ($message instanceof JsonRpcResponse) {
+                $final = $message;
+            }
+
+            yield $message;
+        }
+
+        if ($final !== null) {
+            $this->audit($tool, $request, $final);
+        } else {
+            app(McpToolCallAuditor::class)->record($tool, $request, 'streamed', null);
         }
     }
 

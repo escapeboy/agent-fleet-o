@@ -35,6 +35,20 @@ abstract class CompactTool extends Tool
     abstract protected function toolMap(): array;
 
     /**
+     * The child tool class an action delegates to, or null for an unknown action.
+     *
+     * @return class-string<Tool>|null
+     */
+    public function actionToolClass(?string $action): ?string
+    {
+        if ($action === null) {
+            return null;
+        }
+
+        return $this->toolMap()[$action] ?? null;
+    }
+
+    /**
      * Filter tool visibility based on team MCP preferences.
      *
      * Called on every tools/list and tools/call request by the MCP framework.
@@ -182,9 +196,14 @@ abstract class CompactTool extends Tool
 
             return $response;
         } catch (Throwable $e) {
-            report($e);
+            $classifier = app(ErrorClassifier::class);
 
-            $payload = app(ErrorClassifier::class)->classify($e);
+            // Client-input errors (e.g. malformed UUID → SQLSTATE 22P02) are not server faults.
+            if (! $classifier->isClientInputError($e)) {
+                report($e);
+            }
+
+            $payload = $classifier->classify($e);
 
             $span->recordException($e);
             $span->setAttribute('mcp.error.code', $payload['code']);
