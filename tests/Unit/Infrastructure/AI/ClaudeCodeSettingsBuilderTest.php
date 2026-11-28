@@ -138,6 +138,88 @@ class ClaudeCodeSettingsBuilderTest extends TestCase
         $this->assertSame(['Bash(sudo:*)'], $settings['permissions']['deny']);
     }
 
+    public function test_agent_grants_are_merged_into_allow_and_deny(): void
+    {
+        $agent = Agent::factory()->create(['team_id' => $this->team->id, 'config' => [
+            ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY => [
+                'allow' => ['WebFetch', 'Bash(git:*)'],
+                'deny' => ['WebSearch'],
+            ],
+        ]]);
+
+        $settings = $this->settingsBuilder()->forAgent($agent, $this->workdir, null);
+
+        $this->assertContains('WebFetch', $settings['permissions']['allow']);
+        $this->assertContains('Bash(git:*)', $settings['permissions']['allow']);
+        $this->assertContains('WebSearch', $settings['permissions']['deny']);
+        $this->assertContains('Bash(sudo:*)', $settings['permissions']['deny']);
+    }
+
+    public function test_allow_grants_never_lift_sudo_or_deny_rules(): void
+    {
+        $agent = Agent::factory()->create(['team_id' => $this->team->id, 'config' => [
+            ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY => [
+                'allow' => ['Bash(sudo:*)', 'Bash(sudo rm -rf /)', 'WebSearch', "Web\nFetch", 'not a rule', 42],
+                'deny' => ['WebSearch'],
+            ],
+        ]]);
+
+        $settings = $this->settingsBuilder()->forAgent($agent, $this->workdir, null);
+        $allow = $settings['permissions']['allow'];
+
+        foreach ($allow as $rule) {
+            $this->assertStringStartsNotWith('Bash(sudo', $rule);
+        }
+        $this->assertNotContains('WebSearch', $allow);
+        $this->assertNotContains("Web\nFetch", $allow);
+        $this->assertNotContains('not a rule', $allow);
+        $this->assertContains('Bash(sudo:*)', $settings['permissions']['deny']);
+    }
+
+    public function test_bash_grant_ignored_when_shell_is_off(): void
+    {
+        $agent = Agent::factory()->create(['team_id' => $this->team->id, 'config' => [
+            'allow_shell' => false,
+            ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY => ['allow' => ['Bash(git:*)', 'Bash', 'WebFetch']],
+        ]]);
+
+        $allow = $this->settingsBuilder()->forAgent($agent, $this->workdir, null)['permissions']['allow'];
+
+        $this->assertNotContains('Bash(git:*)', $allow);
+        $this->assertNotContains('Bash', $allow);
+        $this->assertContains('WebFetch', $allow);
+    }
+
+    public function test_grant_cannot_reallow_a_denied_mcp_server(): void
+    {
+        $settings = ClaudeCodeSettingsBuilder::build(
+            $this->workdir,
+            null,
+            true,
+            ['tool_secret'],
+            ['mcp__tool_secret', 'mcp__tool_secret__read', 'mcp__tool_secret__*', 'mcp__tool_other'],
+        );
+
+        $allow = $settings['permissions']['allow'];
+        $this->assertNotContains('mcp__tool_secret', $allow);
+        $this->assertNotContains('mcp__tool_secret__read', $allow);
+        $this->assertNotContains('mcp__tool_secret__*', $allow);
+        $this->assertContains('mcp__tool_other', $allow);
+    }
+
+    public function test_is_grantable_allow_rule(): void
+    {
+        $this->assertTrue(ClaudeCodeSettingsBuilder::isGrantableAllowRule('WebFetch'));
+        $this->assertTrue(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Bash(git:*)'));
+        $this->assertTrue(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Edit(//srv/app/file.txt)'));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Bash(sudo:*)'));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Bash(sudo apt install x)'));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule("Bash(git:*)\nBash"));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Bash()'));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule('1Bash'));
+        $this->assertFalse(ClaudeCodeSettingsBuilder::isGrantableAllowRule('Bash('.str_repeat('a', 301).')'));
+    }
+
     public function test_cli_args_use_dont_ask_and_json_settings(): void
     {
         $settings = ClaudeCodeSettingsBuilder::build('/tmp', null);

@@ -128,6 +128,44 @@ final class LocalAgentOutputParser
         return preg_match('/^[A-Za-z0-9._-]+$/', $sessionId) === 1 ? $sessionId : null;
     }
 
+    public const MAX_PERMISSION_DENIALS = 20;
+
+    /**
+     * The tool calls Claude Code denied in dontAsk mode, read from
+     * `permission_denials` of a parsed result (the JSON result object or the
+     * stream-json result event). Entries without a string tool_name are
+     * skipped; a missing or non-array tool_input becomes []. At most
+     * MAX_PERMISSION_DENIALS entries are returned.
+     *
+     * @param  array<mixed>|null  $structured
+     * @return list<array{tool_name: string, tool_input: array<mixed>}>
+     */
+    public static function permissionDenials(?array $structured): array
+    {
+        $raw = $structured['permission_denials'] ?? null;
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $denials = [];
+        foreach ($raw as $entry) {
+            if (count($denials) >= self::MAX_PERMISSION_DENIALS) {
+                break;
+            }
+            if (! is_array($entry)) {
+                continue;
+            }
+            $name = $entry['tool_name'] ?? null;
+            if (! is_string($name) || $name === '') {
+                continue;
+            }
+            $input = $entry['tool_input'] ?? null;
+            $denials[] = ['tool_name' => $name, 'tool_input' => is_array($input) ? $input : []];
+        }
+
+        return $denials;
+    }
+
     /**
      * Extract content from a parsed JSON result.
      *

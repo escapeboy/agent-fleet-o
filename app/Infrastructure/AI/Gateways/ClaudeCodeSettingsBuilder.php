@@ -18,9 +18,16 @@ use Illuminate\Support\Facades\Log;
  *  - Bash(sudo:*) is always denied.
  *  - Every MCP server in the run's --mcp-config is allowed as mcp__<server>.
  *  - Tools in Agent.tool_deny_list are denied as mcp__<server>.
+ *  - Lasting per-agent grants in agent.config.claude_code_permissions
+ *    (`allow`/`deny` rule lists, written when a person approves a
+ *    claude_code_permission proposal) are merged in. A deny grant is always
+ *    added; an allow grant never lifts Bash(sudo...), a deny rule, a denied
+ *    MCP server or allow_shell=false.
  */
 final class ClaudeCodeSettingsBuilder
 {
+    public const GRANTS_CONFIG_KEY = 'claude_code_permissions';
+
     /** @var list<string> */
     private const ALWAYS_ALLOWED = ['Read', 'Glob', 'Grep'];
 
@@ -30,11 +37,33 @@ final class ClaudeCodeSettingsBuilder
     public function __construct(private readonly ClaudeCodeMcpConfigBuilder $mcpConfigBuilder) {}
 
     /**
+     * Whether a rule may be stored and applied as a lasting allow grant:
+     * a plain `Tool` or `Tool(specifier)` rule on one line, never a sudo
+     * Bash rule and never an always-denied rule.
+     */
+    public static function isGrantableAllowRule(string $rule): bool
+    {
+        if (str_contains($rule, "\n") || str_contains($rule, "\r")) {
+            return false;
+        }
+        if (preg_match('/^[A-Za-z][A-Za-z0-9_]*(\(.{1,300}\))?$/', $rule) !== 1) {
+            return false;
+        }
+        if (preg_match('/^Bash\(\s*sudo\b/i', $rule) === 1) {
+            return false;
+        }
+
+        return ! in_array($rule, self::ALWAYS_DENIED, true);
+    }
+
+    /**
      * @param  array<string, mixed>|null  $mcpConfig  `['mcpServers' => [...]]` or the bare server map
      * @param  array<int, string>  $deniedServerNames
+     * @param  array<int, mixed>  $extraAllow  lasting allow grants of the agent
+     * @param  array<int, mixed>  $extraDeny  lasting deny grants of the agent
      * @return array{permissions: array{allow: list<string>, deny: list<string>}}
      */
-    public static function build(?string $workingDirectory, ?array $mcpConfig, bool $allowShell = true, array $deniedServerNames = []): array
+    public static function build(?string $workingDirectory, ?array $mcpConfig, bool $allowShell = true, array $deniedServerNames = [], array $extraAllow = [], array $extraDeny = []): array
     {
         $allow = self::ALWAYS_ALLOWED;
         $deny = self::ALWAYS_DENIED;
@@ -74,12 +103,56 @@ final class ClaudeCodeSettingsBuilder
 
         $deny = array_merge($deny, $deniedRules);
 
+        foreach ($extraDeny as $rule) {
+            if (is_string($rule) && self::isWellFormedRule($rule)) {
+                $deny[] = $rule;
+            }
+        }
+
+        foreach ($extraAllow as $rule) {
+            if (! is_string($rule) || ! self::isGrantableAllowRule($rule) || in_array($rule, $deny, true)) {
+                continue;
+            }
+            if (! $allowShell && ($rule === 'Bash' || str_starts_with($rule, 'Bash('))) {
+                continue;
+            }
+            foreach ($deniedRules as $deniedRule) {
+                if ($rule === $deniedRule || str_starts_with($rule, $deniedRule.'__')) {
+                    continue 2;
+                }
+            }
+            $allow[] = $rule;
+        }
+
         return [
             'permissions' => [
                 'allow' => array_values(array_unique($allow)),
                 'deny' => array_values(array_unique($deny)),
             ],
         ];
+    }
+
+    private static function isWellFormedRule(string $rule): bool
+    {
+        return ! str_contains($rule, "\n") && ! str_contains($rule, "\r")
+            && preg_match('/^[A-Za-z][A-Za-z0-9_]*(\(.{1,300}\))?$/', $rule) === 1;
+    }
+
+    /**
+     * The agent's stored grant list ('allow' or 'deny'), strings only.
+     *
+     * @param  array<mixed>  $config
+     * @return list<string>
+     */
+    private static function grantList(array $config, string $kind): array
+    {
+        $grants = $config[self::GRANTS_CONFIG_KEY] ?? null;
+        $list = is_array($grants) ? ($grants[$kind] ?? null) : null;
+        if (! is_array($list)) {
+            return [];
+        }
+
+        return array_values(array_filter($list, fn ($rule) => is_string($rule) && $rule !== ''));
     }
 
     /**
@@ -98,6 +171,8 @@ final class ClaudeCodeSettingsBuilder
         // Only a strict false turns the shell off; a missing key keeps it on.
         $config = is_array($agent->config) ? $agent->config : [];
         $allowShell = ($config['allow_shell'] ?? true) !== false;
+        $extraAllow = self::grantList($config, 'allow');
+        $extraDeny = self::grantList($config, 'deny');
 
         try {
             $deniedIds = [];
@@ -119,14 +194,14 @@ final class ClaudeCodeSettingsBuilder
                 }
             }
 
-            return self::build($workingDirectory, $mcpConfig, $allowShell, $deniedServerNames);
+            return self::build($workingDirectory, $mcpConfig, $allowShell, $deniedServerNames, $extraAllow, $extraDeny);
         } catch (\Throwable $e) {
             Log::warning('ClaudeCodeSettingsBuilder: failed to build agent permission settings', [
                 'agent_id' => $agent->id,
                 'error' => $e->getMessage(),
             ]);
 
-            return self::build($workingDirectory, $mcpConfig, $allowShell);
+            return self::build($workingDirectory, $mcpConfig, $allowShell, [], $extraAllow, $extraDeny);
         }
     }
 

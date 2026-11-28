@@ -4,6 +4,7 @@ namespace App\Domain\Approval\Services;
 
 use App\Domain\Agent\Enums\AgentStatus;
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Approval\Actions\CreatePermissionDenialProposalsAction;
 use App\Domain\Approval\Models\ActionProposal;
 use App\Domain\Assistant\Services\AssistantToolRegistry;
 use App\Domain\GitRepository\Contracts\GitClientInterface;
@@ -16,6 +17,7 @@ use App\Domain\Tool\Actions\ResolveAgentToolsAction;
 use App\Domain\Tool\Models\Tool;
 use App\Domain\Tool\Services\ToolApprovalGate;
 use App\Domain\Tool\Services\ToolDefinitionPinner;
+use App\Infrastructure\AI\Gateways\ClaudeCodeSettingsBuilder;
 use App\Models\User;
 use Prism\Prism\Tool as PrismToolObject;
 use Prism\Prism\ValueObjects\ToolError;
@@ -47,6 +49,7 @@ class ActionProposalExecutor
             ToolDefinitionPinner::TARGET_TYPE => $this->executeMcpToolDefinitions($proposal, $actor),
             'integration_action' => $this->executeIntegrationAction($proposal, $actor),
             'git_push' => $this->executeGitPush($proposal, $actor),
+            CreatePermissionDenialProposalsAction::TARGET_TYPE => $this->executeClaudeCodePermission($proposal, $actor),
             default => throw new RuntimeException(
                 "ActionProposalExecutor: unsupported target_type '{$proposal->target_type}'.",
             ),
@@ -79,6 +82,65 @@ class ActionProposalExecutor
         app(ToolDefinitionPinner::class)->approvePending($tool, $hash);
 
         return ['tool_id' => $tool->id, 'applied_hash' => $hash];
+    }
+
+    /** Upper bound on lasting Claude Code allow grants stored per agent. */
+    private const MAX_CLAUDE_CODE_GRANTS = 100;
+
+    /**
+     * Stores an approved Claude Code permission as a lasting allow grant in
+     * agent.config.claude_code_permissions.allow (merged by
+     * ClaudeCodeSettingsBuilder on the agent's next run).
+     *
+     * @return array<string, mixed>
+     */
+    private function executeClaudeCodePermission(ActionProposal $proposal, User $actor): array
+    {
+        if (! ToolDefinitionPinner::canApprove($actor, (string) $proposal->team_id)) {
+            throw new RuntimeException('ActionProposalExecutor: only a team owner or admin can grant an agent a new Claude Code permission.');
+        }
+
+        $agentId = $proposal->payload['agent_id'] ?? $proposal->target_id;
+        $rule = $proposal->payload['rule'] ?? null;
+
+        if (! is_string($agentId) || $agentId === '') {
+            throw new RuntimeException('ActionProposalExecutor: claude_code_permission payload.agent_id is missing.');
+        }
+
+        $agent = Agent::withoutGlobalScopes()
+            ->where('team_id', $proposal->team_id)
+            ->find($agentId);
+
+        if (! $agent instanceof Agent) {
+            throw new RuntimeException("ActionProposalExecutor: agent {$agentId} not found in team {$proposal->team_id}.");
+        }
+
+        if (! is_string($rule) || ! ClaudeCodeSettingsBuilder::isGrantableAllowRule($rule)) {
+            throw new RuntimeException('ActionProposalExecutor: claude_code_permission payload.rule is not a grantable rule.');
+        }
+
+        $config = is_array($agent->config) ? $agent->config : [];
+
+        if (($config['allow_shell'] ?? true) === false && ($rule === 'Bash' || str_starts_with($rule, 'Bash('))) {
+            throw new RuntimeException('ActionProposalExecutor: the agent has the shell turned off; a Bash permission cannot be granted.');
+        }
+
+        $grants = is_array($config[ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY] ?? null) ? $config[ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY] : [];
+        $allow = is_array($grants['allow'] ?? null) ? array_values($grants['allow']) : [];
+
+        if (! in_array($rule, $allow, true)) {
+            if (count($allow) >= self::MAX_CLAUDE_CODE_GRANTS) {
+                throw new RuntimeException('ActionProposalExecutor: the agent already has the maximum number of Claude Code permission grants.');
+            }
+            $allow[] = $rule;
+        }
+
+        $grants['allow'] = $allow;
+        $config[ClaudeCodeSettingsBuilder::GRANTS_CONFIG_KEY] = $grants;
+        $agent->config = $config;
+        $agent->save();
+
+        return ['agent_id' => $agent->id, 'rule' => $rule, 'granted' => true];
     }
 
     /**

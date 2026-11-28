@@ -3,6 +3,7 @@
 namespace App\Infrastructure\AI\Gateways;
 
 use App\Domain\Agent\Models\Agent;
+use App\Domain\Approval\Actions\CreatePermissionDenialProposalsAction;
 use App\Domain\Audit\Models\AuditEntry;
 use App\Domain\Shared\Models\Team;
 use App\Domain\Tool\Enums\ToolStatus;
@@ -270,6 +271,10 @@ class LocalAgentGateway implements AiGatewayInterface
                 try {
                     $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
                     if ($parsed['content'] !== '') {
+                        if ($agentKey === 'claude-code') {
+                            $this->maybeProposePermissionGrants($parsed['structured'], $request);
+                        }
+
                         return new AiResponseDTO(
                             content: $parsed['content'],
                             parsedOutput: $parsed['structured'],
@@ -293,6 +298,10 @@ class LocalAgentGateway implements AiGatewayInterface
 
         $output = $process->getOutput();
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
+
+        if ($agentKey === 'claude-code') {
+            $this->maybeProposePermissionGrants($parsed['structured'], $request);
+        }
 
         return new AiResponseDTO(
             content: $parsed['content'],
@@ -400,6 +409,41 @@ class LocalAgentGateway implements AiGatewayInterface
         } catch (\Throwable $e) {
             Log::warning('LocalAgentGateway: transcript ingest failed, swallowing', [
                 'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Turn the tool calls Claude Code denied in dontAsk mode into approval
+     * proposals, so a person can grant them to the agent. Fire-and-forget: the
+     * agent's response never fails because of this.
+     *
+     * @param  array<mixed>|null  $structured
+     */
+    private function maybeProposePermissionGrants(?array $structured, AiRequestDTO $request): void
+    {
+        $agentId = $request->agentId;
+        $teamId = $request->teamId;
+        if ($agentId === null || $agentId === '' || $teamId === null || $teamId === '') {
+            return;
+        }
+
+        $denials = LocalAgentOutputParser::permissionDenials($structured);
+        if ($denials === []) {
+            return;
+        }
+
+        try {
+            app(CreatePermissionDenialProposalsAction::class)->execute(
+                $teamId,
+                $agentId,
+                $denials,
+                $request->experimentId,
+            );
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: creating permission grant proposals failed, swallowing', [
+                'agent_id' => $request->agentId,
                 'error' => $e->getMessage(),
             ]);
         }
