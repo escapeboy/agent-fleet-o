@@ -1,0 +1,3 @@
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed_warning","resetsAt":1767225600,"rateLimitType":"five_hour"},"session_id":"sess-warning"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"All done"}]},"session_id":"sess-warning"}
+{"type":"result","subtype":"success","is_error":false,"duration_ms":900,"num_turns":1,"result":"All done","session_id":"sess-warning"}

@@ -10,6 +10,8 @@ use App\Infrastructure\AI\Contracts\AiGatewayInterface;
 use App\Infrastructure\AI\DTOs\AiRequestDTO;
 use App\Infrastructure\AI\DTOs\AiResponseDTO;
 use App\Infrastructure\AI\DTOs\AiUsageDTO;
+use App\Infrastructure\AI\Exceptions\LocalAgentErrorResultException;
+use App\Infrastructure\AI\Exceptions\LocalAgentRateLimitException;
 use App\Infrastructure\AI\Exceptions\VpsLocalAgentException;
 use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
 use App\Infrastructure\AI\Services\ClaudeCodeMcpConfigBuilder;
@@ -22,6 +24,7 @@ use App\Infrastructure\AI\Services\SecretProxyInjector;
 use App\Infrastructure\AI\Services\TranscriptIngestor;
 use App\Infrastructure\Sandbox\WriteJail;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -267,6 +270,8 @@ class LocalAgentGateway implements AiGatewayInterface
                     'stdout_length' => strlen($stdout),
                 ]);
 
+                $this->assertNoAgentError($agentKey, $this->discovery->agentConfig($agentKey) ?? [], $stdout);
+
                 try {
                     $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
                     if ($parsed['content'] !== '') {
@@ -292,6 +297,7 @@ class LocalAgentGateway implements AiGatewayInterface
         }
 
         $output = $process->getOutput();
+        $this->assertNoAgentError($agentKey, $this->discovery->agentConfig($agentKey) ?? [], $output);
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
 
         return new AiResponseDTO(
@@ -306,6 +312,41 @@ class LocalAgentGateway implements AiGatewayInterface
             model: $request->model,
             latencyMs: $latencyMs,
         );
+    }
+
+    /**
+     * Throw when a Claude Code result reports an error (is_error, an error_*
+     * subtype or a reached usage limit), so the error text is never returned
+     * as the agent's answer. Other agents are not checked.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function assertNoAgentError(string $agentKey, array $config, string $output): void
+    {
+        if (! str_starts_with($agentKey, 'claude-code')) {
+            return;
+        }
+
+        $error = LocalAgentOutputParser::detectError($output);
+        if ($error === null) {
+            return;
+        }
+
+        $name = (string) ($config['name'] ?? $agentKey);
+
+        if ($error['rate_limited']) {
+            $resetsAt = $error['resets_at'] !== null ? CarbonImmutable::createFromTimestampUTC($error['resets_at']) : null;
+
+            Log::warning("LocalAgentGateway: {$agentKey} hit its usage limit", [
+                'agent_key' => $agentKey,
+                'limit_type' => $error['rate_limit_type'],
+                'resets_at' => $resetsAt?->toIso8601String(),
+            ]);
+
+            throw new LocalAgentRateLimitException($name, $error['subtype'], $error['message'], $resetsAt, $error['rate_limit_type']);
+        }
+
+        throw new LocalAgentErrorResultException($name, $error['subtype'], $error['message']);
     }
 
     /**
@@ -581,6 +622,8 @@ class LocalAgentGateway implements AiGatewayInterface
             if (! $isAssistant) {
                 $this->maybeIngestTranscript($stdout, $request, 'claude-code-vps');
             }
+
+            $this->assertNoAgentError($agentKey, $config, $stdout);
 
             return new AiResponseDTO(
                 content: $parsed['content'],
@@ -1031,6 +1074,8 @@ class LocalAgentGateway implements AiGatewayInterface
                     'stderr' => substr($stderr, 0, 500),
                 ]);
 
+                $this->assertNoAgentError($agentKey, $config, $stdout);
+
                 try {
                     $parsed = LocalAgentOutputParser::parseOutput($agentKey, $stdout);
                     if ($parsed['content'] !== '') {
@@ -1075,6 +1120,8 @@ class LocalAgentGateway implements AiGatewayInterface
         $output = $data['output'] ?? '';
 
         $this->maybeIngestTranscript($output, $request, 'bridge_agent');
+
+        $this->assertNoAgentError($agentKey, $config, $output);
 
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $output);
 
@@ -1234,6 +1281,7 @@ class LocalAgentGateway implements AiGatewayInterface
             ]);
 
             if ($fullOutput !== '') {
+                $this->assertNoAgentError($agentKey, $config, $fullOutput);
                 $parsed = LocalAgentOutputParser::parseOutput($agentKey, $fullOutput);
                 if ($parsed['content'] !== '') {
                     return new AiResponseDTO(
@@ -1277,6 +1325,8 @@ class LocalAgentGateway implements AiGatewayInterface
                     'output_length' => strlen($recoveryOutput),
                 ]);
 
+                $this->assertNoAgentError($agentKey, $config, $recoveryOutput);
+
                 try {
                     $parsed = LocalAgentOutputParser::parseOutput($agentKey, $recoveryOutput);
                     if ($parsed['content'] !== '') {
@@ -1319,6 +1369,8 @@ class LocalAgentGateway implements AiGatewayInterface
         $finalOutput = $stdout !== '' ? $stdout : trim($fullOutput);
 
         $this->maybeIngestTranscript($finalOutput, $request, 'bridge_agent');
+
+        $this->assertNoAgentError($agentKey, $config, $finalOutput);
 
         $parsed = LocalAgentOutputParser::parseOutput($agentKey, $finalOutput);
 
