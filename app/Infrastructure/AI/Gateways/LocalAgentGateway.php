@@ -406,6 +406,10 @@ class LocalAgentGateway implements AiGatewayInterface
             );
         }
 
+        // Read-only git snapshot of the checkout so the audit entry can list
+        // the files/commits the run changed. Null when not a git repo.
+        $gitBefore = ($isRepoBuild && ! $isAssistant) ? $this->takeGitSnapshot($cwd) : null;
+
         $startTime = hrtime(true);
         $exitCode = null;
         $stderr = '';
@@ -458,7 +462,41 @@ class LocalAgentGateway implements AiGatewayInterface
             }
             $cap->release($teamId, $slotToken);
             $this->removeEphemeralWorkdir($workdir);
-            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout);
+            $gitChanges = $gitBefore !== null ? $this->diffGitSnapshot($gitBefore, $cwd) : [];
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout, $gitChanges);
+        }
+    }
+
+    /**
+     * @return array{head: string, dirty: list<string>}|null
+     */
+    private function takeGitSnapshot(string $dir): ?array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->take($dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot before VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array{head: string, dirty: list<string>}  $before
+     * @return array<string, mixed>
+     */
+    private function diffGitSnapshot(array $before, string $dir): array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->diff($before, $dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot diff after VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 
@@ -686,6 +724,9 @@ class LocalAgentGateway implements AiGatewayInterface
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $gitChanges
+     */
     private function recordVpsAudit(
         AiRequestDTO $request,
         ?User $user,
@@ -694,6 +735,7 @@ class LocalAgentGateway implements AiGatewayInterface
         int $startTime,
         string $stderr,
         ?string $streamJson = null,
+        array $gitChanges = [],
     ): void {
         // audit_entries.team_id is NOT NULL (multi-tenancy invariant). When the
         // VPS invocation happened outside any team context (super-admin shell,
@@ -739,6 +781,13 @@ class LocalAgentGateway implements AiGatewayInterface
                     ]);
                 }
             }
+
+            // Repo builds only: changed_files [{path, source: worktree|commit}],
+            // new_commits [sha] and *_truncated flags from GitWorkdirSnapshot.
+            // Paths and shas only — never file contents or diffs. A file that
+            // was already dirty before the run and edited again without a
+            // commit is not reported.
+            $properties = array_merge($properties, $gitChanges);
 
             AuditEntry::create([
                 'team_id' => $team->id,
