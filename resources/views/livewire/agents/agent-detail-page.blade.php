@@ -131,6 +131,11 @@
                     @endif
                 </div>
 
+                <x-form-textarea wire:model="editCommandRules" label="Shell command rules" rows="4" mono
+                    placeholder="ask: git push"
+                    :error="$errors->first('editCommandRules') ?: null"
+                    hint="One rule per line as 'allow|ask|block: command prefix'. The longest matching prefix wins; chained commands are checked part by part; Block beats Ask beats Allow. Words match exactly, so 'rm -rf' does not cover 'rm -fr'. Enforcement in Claude Code runs is not yet applied." />
+
                 @if(!empty($providers[$editProvider]['local']))
                     <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                         Local agent — executes on the host machine using its own CLI process. No per-request API costs.
