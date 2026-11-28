@@ -111,6 +111,24 @@ final class LocalAgentOutputParser
     }
 
     /**
+     * The Claude Code session id from a parsed result (the JSON result object
+     * or the stream-json result event), or null when it is missing or does not
+     * look like a session id.
+     *
+     * @param  array<mixed>|null  $structured
+     */
+    public static function sessionId(?array $structured): ?string
+    {
+        $sessionId = $structured['session_id'] ?? null;
+
+        if (! is_string($sessionId) || $sessionId === '' || strlen($sessionId) > 100) {
+            return null;
+        }
+
+        return preg_match('/^[A-Za-z0-9._-]+$/', $sessionId) === 1 ? $sessionId : null;
+    }
+
+    /**
      * Extract content from a parsed JSON result.
      *
      * @return array{content: string, structured: array|null}

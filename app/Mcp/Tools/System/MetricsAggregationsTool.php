@@ -43,12 +43,12 @@ class MetricsAggregationsTool extends Tool
             return $this->permissionDeniedError('Authentication required.');
         }
 
-        $period = $request->input('period');
-        $metricType = $request->input('metric_type');
-        $experimentId = $request->input('experiment_id');
-        $from = $request->input('from');
-        $to = $request->input('to');
-        $limit = min((int) ($request->input('limit') ?? 100), 500);
+        $period = $request->get('period');
+        $metricType = $request->get('metric_type');
+        $experimentId = $request->get('experiment_id');
+        $from = $request->get('from');
+        $to = $request->get('to');
+        $limit = min((int) ($request->get('limit') ?? 100), 500);
 
         if ($from !== null && ! preg_match('/^\d{4}-\d{2}-\d{2}/', $from)) {
             return $this->invalidArgumentError('Invalid date format for "from". Use ISO 8601 (YYYY-MM-DD).');

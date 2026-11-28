@@ -15,6 +15,7 @@ use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
 use App\Infrastructure\AI\Services\ClaudeCodeMcpConfigBuilder;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsConcurrencyCap;
 use App\Infrastructure\AI\Services\ClaudeCodeVpsGate;
+use App\Infrastructure\AI\Services\ClaudeSessionContext;
 use App\Infrastructure\AI\Services\LocalAgentDiscovery;
 use App\Infrastructure\AI\Services\RunSecretVault;
 use App\Infrastructure\AI\Services\SecretProxyInjector;
@@ -81,58 +82,181 @@ class LocalAgentGateway implements AiGatewayInterface
             );
         }
 
+        // Everything except the Claude Code assistant runs as a shell command.
+        if ($agentKey !== 'claude-code' || ! $isAssistant) {
+            return $this->completeShellCommand($agentKey, $config, $request, $binaryPath, $workdir, $timeout, $mcpConfig, $permissionSettings);
+        }
+
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
-        if ($agentKey === 'claude-code' && $isAssistant) {
-            $systemPromptFile = $workdir.'/system-prompt.txt';
-            file_put_contents($systemPromptFile, $request->systemPrompt);
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig, $permissionSettings);
-            $prompt = $request->userPrompt;
-            $env = getenv();
-            unset($env['CLAUDECODE']);
+        $systemPromptFile = $workdir.'/system-prompt.txt';
+        file_put_contents($systemPromptFile, $request->systemPrompt);
+        $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig, $permissionSettings);
+        $prompt = $request->userPrompt;
+        $env = getenv();
+        unset($env['CLAUDECODE']);
 
-            Log::debug("LocalAgentGateway: executing {$agentKey} (assistant mode)", [
-                'model' => $request->model,
-                'prompt_length' => strlen($prompt),
-                'system_prompt_length' => strlen($request->systemPrompt),
-                'timeout' => $timeout,
-                'mcp_servers' => array_keys($mcpConfig['mcpServers'] ?? []),
-            ]);
+        Log::debug("LocalAgentGateway: executing {$agentKey} (assistant mode)", [
+            'model' => $request->model,
+            'prompt_length' => strlen($prompt),
+            'system_prompt_length' => strlen($request->systemPrompt),
+            'timeout' => $timeout,
+            'mcp_servers' => array_keys($mcpConfig['mcpServers'] ?? []),
+        ]);
 
-            $startTime = hrtime(true);
-            $process = new Process($args, $workdir, $env, $prompt, $timeout);
-            $process->run();
-        } else {
-            $prompt = LocalAgentPromptBuilder::buildPrompt($request);
-            $usesStdin = LocalAgentPromptBuilder::readsFromStdin($agentKey);
-            $command = LocalAgentPromptBuilder::buildCommand(
-                $agentKey, $binaryPath, $request->model, $request->purpose,
-                $usesStdin ? null : $prompt,
-                $mcpConfig,
-                $permissionSettings,
-            );
-
-            Log::debug("LocalAgentGateway: executing {$agentKey}", [
-                'command' => $command,
-                'model' => $request->model,
-                'prompt_length' => strlen($prompt),
-                'timeout' => $timeout,
-                'stdin' => $usesStdin,
-            ]);
-
-            $startTime = hrtime(true);
-            $process = Process::fromShellCommandline(
-                $command, $workdir, null,
-                $usesStdin ? $prompt : null,
-                $timeout,
-            );
-            $process->run();
-        }
+        $startTime = hrtime(true);
+        $process = new Process($args, $workdir, $env, $prompt, $timeout);
+        $process->run();
 
         $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
 
+        return $this->responseFromProcess($process, $agentKey, $request, $prompt, $latencyMs)
+            ?? $this->throwProcessFailure($process, $agentKey, $config);
+    }
+
+    /**
+     * Direct host execution of a non-assistant local agent via a shell command.
+     *
+     * For Claude Code crew-task runs (purpose agent.workflow_step with an active
+     * ClaudeSessionContext for the agent) the session is persisted, and a stored
+     * session is resumed when its hash (system prompt, working directory, model)
+     * is unchanged. A failed resume falls back to one fresh persisted run.
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>|null  $mcpConfig
+     * @param  array<string, mixed>|null  $permissionSettings
+     */
+    private function completeShellCommand(
+        string $agentKey,
+        array $config,
+        AiRequestDTO $request,
+        string $binaryPath,
+        string $workdir,
+        mixed $timeout,
+        ?array $mcpConfig,
+        ?array $permissionSettings,
+    ): AiResponseDTO {
+        $sessionContext = app(ClaudeSessionContext::class);
+        $sessionEligible = $agentKey === 'claude-code'
+            && $request->purpose === 'agent.workflow_step'
+            && $sessionContext->activeFor($request->agentId);
+
+        if (! $sessionEligible) {
+            [$response, $process] = $this->runShellCommand($agentKey, $binaryPath, $request, $workdir, $timeout, $mcpConfig, $permissionSettings);
+
+            return $response ?? $this->throwProcessFailure($process, $agentKey, $config);
+        }
+
+        $hash = ClaudeSessionContext::hash($request->systemPrompt, $workdir, $request->model);
+        $storedSessionId = $sessionContext->storedSessionId;
+        $response = null;
+
+        if ($storedSessionId !== null && $sessionContext->storedHash === $hash) {
+            Log::debug('LocalAgentGateway: resuming Claude Code session', [
+                'agent_id' => $request->agentId,
+                'session_id' => $storedSessionId,
+            ]);
+
+            [$response, $process] = $this->runShellCommand(
+                $agentKey, $binaryPath, $request, $workdir, $timeout, $mcpConfig, $permissionSettings,
+                resumeSessionId: $storedSessionId,
+            );
+
+            if ($response === null) {
+                Log::warning('LocalAgentGateway: resuming Claude Code session failed, starting a fresh session', [
+                    'agent_id' => $request->agentId,
+                    'session_id' => $storedSessionId,
+                    'exit_code' => $process->getExitCode(),
+                    'stderr' => substr($process->getErrorOutput(), 0, 500),
+                ]);
+            }
+        } else {
+            Log::debug('LocalAgentGateway: starting a fresh Claude Code session', [
+                'agent_id' => $request->agentId,
+                'reason' => $storedSessionId === null ? 'no_stored_session' : 'hash_mismatch',
+            ]);
+        }
+
+        if ($response === null) {
+            [$response, $process] = $this->runShellCommand(
+                $agentKey, $binaryPath, $request, $workdir, $timeout, $mcpConfig, $permissionSettings,
+                persistSession: true,
+            );
+            $response ??= $this->throwProcessFailure($process, $agentKey, $config);
+        }
+
+        $sessionId = LocalAgentOutputParser::sessionId($response->parsedOutput);
+        if ($sessionId !== null) {
+            $sessionContext->record($sessionId, $hash);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Build and run the shell command for a local agent. Returns the response,
+     * or null when the process failed without recoverable output, together
+     * with the process so the caller can report the failure.
+     *
+     * When resuming a Claude Code session only the user prompt is sent, since
+     * the system prompt is already part of the resumed session.
+     *
+     * @param  array<string, mixed>|null  $mcpConfig
+     * @param  array<string, mixed>|null  $permissionSettings
+     * @return array{0: AiResponseDTO|null, 1: Process}
+     */
+    private function runShellCommand(
+        string $agentKey,
+        string $binaryPath,
+        AiRequestDTO $request,
+        string $workdir,
+        mixed $timeout,
+        ?array $mcpConfig,
+        ?array $permissionSettings,
+        bool $persistSession = false,
+        ?string $resumeSessionId = null,
+    ): array {
+        $prompt = $resumeSessionId !== null
+            ? $request->userPrompt
+            : LocalAgentPromptBuilder::buildPrompt($request);
+        $usesStdin = LocalAgentPromptBuilder::readsFromStdin($agentKey);
+        $command = LocalAgentPromptBuilder::buildCommand(
+            $agentKey, $binaryPath, $request->model, $request->purpose,
+            $usesStdin ? null : $prompt,
+            $mcpConfig,
+            $permissionSettings,
+            $persistSession,
+            $resumeSessionId,
+        );
+
+        Log::debug("LocalAgentGateway: executing {$agentKey}", [
+            'command' => $command,
+            'model' => $request->model,
+            'prompt_length' => strlen($prompt),
+            'timeout' => $timeout,
+            'stdin' => $usesStdin,
+        ]);
+
+        $startTime = hrtime(true);
+        $process = Process::fromShellCommandline(
+            $command, $workdir, null,
+            $usesStdin ? $prompt : null,
+            $timeout,
+        );
+        $process->run();
+
+        $latencyMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
+
+        return [$this->responseFromProcess($process, $agentKey, $request, $prompt, $latencyMs), $process];
+    }
+
+    /**
+     * Turn a finished process into a response. Returns null when the process
+     * failed and its stdout holds no recoverable content.
+     */
+    private function responseFromProcess(Process $process, string $agentKey, AiRequestDTO $request, string $prompt, int $latencyMs): ?AiResponseDTO
+    {
         if (! $process->isSuccessful()) {
-            $stderr = $process->getErrorOutput();
             $stdout = $process->getOutput();
             $exitCode = $process->getExitCode();
 
@@ -164,21 +288,7 @@ class LocalAgentGateway implements AiGatewayInterface
                 }
             }
 
-            Log::error("LocalAgentGateway: {$agentKey} failed", [
-                'exit_code' => $exitCode,
-                'stderr' => substr($stderr, 0, 1000),
-                'stdout_preview' => substr($stdout, 0, 500),
-            ]);
-
-            $diagnosticMsg = $stderr ?: 'No error output';
-            if (empty($stderr) && $stdout !== '') {
-                $diagnosticMsg = 'stdout: '.substr($stdout, 0, 300);
-            }
-
-            throw new RuntimeException(
-                "Local agent '{$config['name']}' failed (exit code {$exitCode}): "
-                .substr($diagnosticMsg, 0, 500),
-            );
+            return null;
         }
 
         $output = $process->getOutput();
@@ -195,6 +305,34 @@ class LocalAgentGateway implements AiGatewayInterface
             provider: $request->provider,
             model: $request->model,
             latencyMs: $latencyMs,
+        );
+    }
+
+    /**
+     * Log a failed local agent process and throw.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function throwProcessFailure(Process $process, string $agentKey, array $config): never
+    {
+        $stderr = $process->getErrorOutput();
+        $stdout = $process->getOutput();
+        $exitCode = $process->getExitCode();
+
+        Log::error("LocalAgentGateway: {$agentKey} failed", [
+            'exit_code' => $exitCode,
+            'stderr' => substr($stderr, 0, 1000),
+            'stdout_preview' => substr($stdout, 0, 500),
+        ]);
+
+        $diagnosticMsg = $stderr ?: 'No error output';
+        if (empty($stderr) && $stdout !== '') {
+            $diagnosticMsg = 'stdout: '.substr($stdout, 0, 300);
+        }
+
+        throw new RuntimeException(
+            "Local agent '{$config['name']}' failed (exit code {$exitCode}): "
+            .substr($diagnosticMsg, 0, 500),
         );
     }
 
@@ -406,6 +544,10 @@ class LocalAgentGateway implements AiGatewayInterface
             );
         }
 
+        // Read-only git snapshot of the checkout so the audit entry can list
+        // the files/commits the run changed. Null when not a git repo.
+        $gitBefore = ($isRepoBuild && ! $isAssistant) ? $this->takeGitSnapshot($cwd) : null;
+
         $startTime = hrtime(true);
         $exitCode = null;
         $stderr = '';
@@ -458,7 +600,41 @@ class LocalAgentGateway implements AiGatewayInterface
             }
             $cap->release($teamId, $slotToken);
             $this->removeEphemeralWorkdir($workdir);
-            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout);
+            $gitChanges = $gitBefore !== null ? $this->diffGitSnapshot($gitBefore, $cwd) : [];
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout, $gitChanges);
+        }
+    }
+
+    /**
+     * @return array{head: string, dirty: list<string>}|null
+     */
+    private function takeGitSnapshot(string $dir): ?array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->take($dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot before VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array{head: string, dirty: list<string>}  $before
+     * @return array<string, mixed>
+     */
+    private function diffGitSnapshot(array $before, string $dir): array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->diff($before, $dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot diff after VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 
@@ -686,6 +862,9 @@ class LocalAgentGateway implements AiGatewayInterface
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $gitChanges
+     */
     private function recordVpsAudit(
         AiRequestDTO $request,
         ?User $user,
@@ -694,6 +873,7 @@ class LocalAgentGateway implements AiGatewayInterface
         int $startTime,
         string $stderr,
         ?string $streamJson = null,
+        array $gitChanges = [],
     ): void {
         // audit_entries.team_id is NOT NULL (multi-tenancy invariant). When the
         // VPS invocation happened outside any team context (super-admin shell,
@@ -739,6 +919,13 @@ class LocalAgentGateway implements AiGatewayInterface
                     ]);
                 }
             }
+
+            // Repo builds only: changed_files [{path, source: worktree|commit}],
+            // new_commits [sha] and *_truncated flags from GitWorkdirSnapshot.
+            // Paths and shas only — never file contents or diffs. A file that
+            // was already dirty before the run and edited again without a
+            // commit is not reported.
+            $properties = array_merge($properties, $gitChanges);
 
             AuditEntry::create([
                 'team_id' => $team->id,
