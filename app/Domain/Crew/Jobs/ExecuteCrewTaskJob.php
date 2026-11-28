@@ -11,6 +11,7 @@ use App\Domain\Crew\Models\CrewMember;
 use App\Domain\Crew\Models\CrewTaskExecution;
 use App\Domain\Crew\Services\CrewOrchestrator;
 use App\Infrastructure\AI\Services\AgentToolAllowlistContext;
+use App\Infrastructure\AI\Services\ClaudeSessionContext;
 use App\Jobs\Middleware\CheckBudgetAvailable;
 use App\Jobs\Middleware\CheckKillSwitch;
 use App\Jobs\Middleware\TenantRateLimit;
@@ -102,6 +103,9 @@ class ExecuteCrewTaskJob implements ShouldQueue
             'started_at' => now(),
         ]);
 
+        /** @var array{claude_session_id?: string, claude_session_hash?: string|null} $session */
+        $session = [];
+
         try {
             // Build input from task description + context
             $input = [
@@ -147,19 +151,39 @@ class ExecuteCrewTaskJob implements ShouldQueue
 
             $allowlist = ! empty($allowedToolIds) ? $allowedToolIds : null;
 
-            // The scoped context carries the allowlist to LocalAgentGateway so
-            // Claude Code members get only the allowlisted MCP tools too.
-            $result = app(AgentToolAllowlistContext::class)->with(
+            // The scoped contexts carry the allowlist and the task's stored Claude
+            // Code session to LocalAgentGateway: Claude Code members get only the
+            // allowlisted MCP tools, and a retry can resume the earlier session.
+            // The recorded session is read inside the closure because with()
+            // restores the previous values when it returns.
+            $sessionContext = app(ClaudeSessionContext::class);
+            $result = $sessionContext->with(
                 $agent->id,
-                $allowlist,
-                fn () => $executeAgent->execute(
-                    agent: $agent,
-                    input: $input,
-                    teamId: $execution->team_id,
-                    userId: $execution->crew->user_id ?? $execution->team_id,
-                    allowedToolIds: $allowlist,
-                    maxStepsOverride: $maxSteps,
-                ),
+                $taskExecution->claude_session_id,
+                $taskExecution->claude_session_hash,
+                function () use ($executeAgent, $agent, $input, $execution, $allowlist, $maxSteps, $sessionContext, &$session) {
+                    try {
+                        return app(AgentToolAllowlistContext::class)->with(
+                            $agent->id,
+                            $allowlist,
+                            fn () => $executeAgent->execute(
+                                agent: $agent,
+                                input: $input,
+                                teamId: $execution->team_id,
+                                userId: $execution->crew->user_id ?? $execution->team_id,
+                                allowedToolIds: $allowlist,
+                                maxStepsOverride: $maxSteps,
+                            ),
+                        );
+                    } finally {
+                        if ($sessionContext->resultSessionId !== null) {
+                            $session = [
+                                'claude_session_id' => $sessionContext->resultSessionId,
+                                'claude_session_hash' => $sessionContext->resultHash,
+                            ];
+                        }
+                    }
+                },
             );
 
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
@@ -168,18 +192,19 @@ class ExecuteCrewTaskJob implements ShouldQueue
                 $this->failTask($taskExecution, $execution,
                     $result['execution']->error_message ?? 'Agent execution returned no output.',
                     $durationMs, $result['execution']->cost_credits ?? 0,
+                    $session,
                 );
 
                 return;
             }
 
-            $taskExecution->update([
+            $taskExecution->update(array_merge([
                 'status' => CrewTaskStatus::Completed,
                 'output' => $result['output'],
                 'cost_credits' => $result['execution']->cost_credits ?? 0,
                 'duration_ms' => $durationMs,
                 'completed_at' => now(),
-            ]);
+            ], $session));
 
             // Track cost on crew execution
             $execution->increment('total_cost_credits', $result['execution']->cost_credits ?? 0);
@@ -192,24 +217,28 @@ class ExecuteCrewTaskJob implements ShouldQueue
             );
         } catch (\Throwable $e) {
             $durationMs = (int) ((hrtime(true) - $startTime) / 1_000_000);
-            $this->failTask($taskExecution, $execution, $e->getMessage(), $durationMs);
+            $this->failTask($taskExecution, $execution, $e->getMessage(), $durationMs, 0, $session);
         }
     }
 
+    /**
+     * @param  array{claude_session_id?: string, claude_session_hash?: string|null}  $session  claude_session_id/claude_session_hash recorded by the run, if any
+     */
     private function failTask(
         CrewTaskExecution $task,
         CrewExecution $execution,
         string $error,
         int $durationMs = 0,
         int $costCredits = 0,
+        array $session = [],
     ): void {
-        $task->update([
+        $task->update(array_merge([
             'status' => CrewTaskStatus::Failed,
             'error_message' => $error,
             'duration_ms' => $durationMs,
             'cost_credits' => $costCredits,
             'completed_at' => now(),
-        ]);
+        ], $session));
 
         $execution->increment('total_cost_credits', $costCredits);
 

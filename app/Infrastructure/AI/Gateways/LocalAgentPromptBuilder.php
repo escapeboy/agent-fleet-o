@@ -42,8 +42,13 @@ final class LocalAgentPromptBuilder
      * @param  array<string, mixed>|null  $permissionSettings  Claude Code `--settings` payload
      *                                                         (see ClaudeCodeSettingsBuilder). When null,
      *                                                         read-only tools plus the MCP servers are allowed.
+     * @param  bool  $persistSession  Claude Code only: keep the session on disk
+     *                                (drops --no-session-persistence) so a later
+     *                                run can resume it.
+     * @param  string|null  $resumeSessionId  Claude Code only: resume this session
+     *                                        (--resume) instead of starting a new one.
      */
-    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null, ?array $mcpConfig = null, ?array $permissionSettings = null): string
+    public static function buildCommand(string $agentKey, string $binaryPath, ?string $model = null, ?string $purpose = null, ?string $prompt = null, ?array $mcpConfig = null, ?array $permissionSettings = null, bool $persistSession = false, ?string $resumeSessionId = null): string
     {
         $modelFlag = $model ? ' --model '.escapeshellarg($model) : '';
 
@@ -66,11 +71,17 @@ final class LocalAgentPromptBuilder
         $escapedPrompt = $prompt ? ' '.escapeshellarg($prompt) : '';
         $mcpConfigJson = self::encodeMcpConfig($mcpConfig);
 
+        $claudeSessionFlag = match (true) {
+            $resumeSessionId !== null && $resumeSessionId !== '' => ' --resume '.escapeshellarg($resumeSessionId),
+            $persistSession => '',
+            default => ' --no-session-persistence',
+        };
+
         return match ($agentKey) {
             'codex' => $preamble."{$binaryPath} exec --json --full-auto{$codexMcpFlag}{$modelFlag}",
             'claude-code' => $preamble."{$binaryPath} --print --output-format json --permission-mode dontAsk --settings "
                 .escapeshellarg(ClaudeCodeSettingsBuilder::encode($permissionSettings ?? self::defaultPermissionSettings($mcpConfig)))
-                .' --no-session-persistence --strict-mcp-config --mcp-config '.escapeshellarg($mcpConfigJson).$modelFlag,
+                .$claudeSessionFlag.' --strict-mcp-config --mcp-config '.escapeshellarg($mcpConfigJson).$modelFlag,
             'gemini-cli' => "{$binaryPath} -p --output-format json".($model ? ' -m '.escapeshellarg($model) : ''),
             'kiro' => "{$binaryPath} chat --no-interactive{$escapedPrompt}",
             'aider' => "{$binaryPath} --yes --no-git --no-auto-commits".($model ? ' --model '.escapeshellarg($model) : '').' --message'.($prompt ? ' '.escapeshellarg($prompt) : ''),

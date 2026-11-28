@@ -42,6 +42,8 @@ class CrewTaskExecution extends Model
         'claimed_at',
         'belief_state',
         'recovery_attempts',
+        'claude_session_id',
+        'claude_session_hash',
     ];
 
     /**
