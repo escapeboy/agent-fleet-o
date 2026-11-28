@@ -168,6 +168,15 @@ class McpHttpClientTransportFallbackTest extends TestCase
         $this->assertSseAttempt();
     }
 
+    public function test_scalar_json_200_on_initialize_falls_back_to_sse(): void
+    {
+        $this->fakeSseOnlyServer(200, '"OK"');
+
+        $this->assertSame([['name' => 't1']], (new McpHttpClient)->listTools(self::URL));
+
+        $this->assertSseAttempt();
+    }
+
     public function test_both_transports_failing_names_both_and_the_first_cause(): void
     {
         Http::fake(fn () => Http::response('not here', 404));

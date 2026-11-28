@@ -156,6 +156,9 @@ class McpHttpClient
      * Required by MCP spec before any other method. Some servers (e.g. Playwright MCP)
      * silently drop requests that arrive before initialization.
      *
+     * A 2xx reply with a JSON-RPC 'error' still speaks MCP; a 2xx reply without any
+     * JSON-RPC keys does not, and is reported as an initialize failure (SSE fallback).
+     *
      * @param  array<string, string>  $headers
      */
     private function initializeStreamableHttp(string $url, array $headers, ?float $deadline = null): ?string
@@ -185,7 +188,6 @@ class McpHttpClient
             );
         }
 
-        // A JSON-RPC 'error' reply still speaks MCP; anything without JSON-RPC keys does not.
         $data = $this->parseMcpBody($response->body());
         if (! array_key_exists('jsonrpc', $data) && ! array_key_exists('result', $data) && ! array_key_exists('error', $data)) {
             $contentType = $response->header('Content-Type') ?: 'none';
@@ -294,7 +296,9 @@ class McpHttpClient
             return [];
         }
 
-        return json_decode($body, true) ?? [];
+        $decoded = json_decode($body, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     // -------------------------------------------------------------------------
