@@ -111,6 +111,80 @@ final class LocalAgentOutputParser
     }
 
     /**
+     * Detect a Claude Code result that reports an error: the last `result`
+     * event has is_error true or an error_* subtype. A reached usage limit is
+     * flagged as rate limited (a rejected rate_limit_event, or the result text
+     * says the limit was reached), with the reset epoch when it is known.
+     * Returns null when there is no result event or the result succeeded.
+     *
+     * @return array{subtype: string, message: string, rate_limited: bool, resets_at: ?int, rate_limit_type: ?string}|null
+     */
+    public static function detectError(string $rawOutput): ?array
+    {
+        $rawOutput = trim($rawOutput);
+        if ($rawOutput === '') {
+            return null;
+        }
+
+        $json = json_decode($rawOutput, true);
+        $events = is_array($json) ? [$json] : [];
+
+        if ($events === []) {
+            foreach (explode("\n", $rawOutput) as $line) {
+                $decoded = json_decode(trim($line), true);
+                if (is_array($decoded)) {
+                    $events[] = $decoded;
+                }
+            }
+        }
+
+        $result = null;
+        $rateLimitEvent = null;
+        foreach ($events as $event) {
+            $type = $event['type'] ?? null;
+            if ($type === 'result') {
+                $result = $event;
+            } elseif ($type === 'rate_limit_event') {
+                $rateLimitEvent = $event;
+            }
+        }
+
+        if ($result === null) {
+            return null;
+        }
+
+        $subtype = is_string($result['subtype'] ?? null) ? $result['subtype'] : '';
+        if (($result['is_error'] ?? null) !== true && ! str_starts_with($subtype, 'error')) {
+            return null;
+        }
+
+        $text = is_string($result['result'] ?? null) ? $result['result'] : '';
+        $info = is_array($rateLimitEvent['rate_limit_info'] ?? null) ? $rateLimitEvent['rate_limit_info'] : [];
+
+        $rateLimited = ($info['status'] ?? null) === 'rejected'
+            || preg_match('/usage limit reached|hit your limit/i', $text) === 1;
+
+        $resetsAt = null;
+        $limitType = null;
+        if ($rateLimited) {
+            if (is_int($info['resetsAt'] ?? null)) {
+                $resetsAt = $info['resetsAt'];
+            } elseif (preg_match('/\|(\d{10})\b/', $text, $m) === 1) {
+                $resetsAt = (int) $m[1];
+            }
+            $limitType = is_string($info['rateLimitType'] ?? null) ? $info['rateLimitType'] : null;
+        }
+
+        return [
+            'subtype' => $subtype !== '' ? $subtype : 'error',
+            'message' => $text !== '' ? $text : ($subtype !== '' ? $subtype : 'error'),
+            'rate_limited' => $rateLimited,
+            'resets_at' => $resetsAt,
+            'rate_limit_type' => $limitType,
+        ];
+    }
+
+    /**
      * The Claude Code session id from a parsed result (the JSON result object
      * or the stream-json result event), or null when it is missing or does not
      * look like a session id.
