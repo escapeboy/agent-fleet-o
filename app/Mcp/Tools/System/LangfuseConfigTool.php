@@ -46,7 +46,7 @@ class LangfuseConfigTool extends Tool
 
     public function handle(Request $request): Response
     {
-        $action = $request->input('action', 'get');
+        $action = $request->get('action', 'get');
 
         if ($action === 'get') {
             return $this->handleGet();
@@ -94,27 +94,27 @@ class LangfuseConfigTool extends Tool
         $current = (array) (GlobalSetting::get('langfuse_config') ?? []);
 
         if ($request->has('enabled')) {
-            $current['enabled'] = (bool) $request->input('enabled');
+            $current['enabled'] = (bool) $request->get('enabled');
         }
 
         if ($request->has('host')) {
-            $host = (string) $request->input('host');
+            $host = (string) $request->get('host');
             if (parse_url($host, PHP_URL_SCHEME) !== 'https') {
                 return $this->invalidArgumentError('host must use https.');
             }
             $current['host'] = $host;
         }
 
-        if ($request->has('public_key') && $request->input('public_key') !== '') {
-            $current['public_key'] = (string) $request->input('public_key');
+        if ($request->has('public_key') && $request->get('public_key') !== '') {
+            $current['public_key'] = (string) $request->get('public_key');
         }
 
-        if ($request->has('secret_key') && $request->input('secret_key') !== '') {
-            $current['secret_key'] = (string) $request->input('secret_key');
+        if ($request->has('secret_key') && $request->get('secret_key') !== '') {
+            $current['secret_key'] = (string) $request->get('secret_key');
         }
 
         if ($request->has('mask_content')) {
-            $current['mask_content'] = (bool) $request->input('mask_content');
+            $current['mask_content'] = (bool) $request->get('mask_content');
         }
 
         GlobalSetting::set('langfuse_config', $current);

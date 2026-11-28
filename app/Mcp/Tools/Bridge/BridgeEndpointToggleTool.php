@@ -37,9 +37,9 @@ class BridgeEndpointToggleTool extends Tool
     public function handle(Request $request): Response
     {
         $teamId = (app()->bound('mcp.team_id') ? app('mcp.team_id') : null);
-        $endpointId = $request->input('endpoint_id');
-        $type = $request->input('type');
-        $enabled = (bool) $request->input('enabled', true);
+        $endpointId = $request->get('endpoint_id');
+        $type = $request->get('type');
+        $enabled = (bool) $request->get('enabled', true);
 
         if (! $endpointId || ! $type) {
             return Response::text(json_encode([
