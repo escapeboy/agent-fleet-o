@@ -207,7 +207,11 @@ class ClaudeCodeMcpConfigBuilder
         return $env;
     }
 
-    private function serverName(Tool $tool): string
+    /**
+     * The key a tool's MCP server gets in `mcpServers`. Public so the
+     * permission settings builder can deny exactly the same server names.
+     */
+    public function serverName(Tool $tool): string
     {
         $slug = $tool->slug ?? '';
         if (is_string($slug) && $slug !== '') {

@@ -67,12 +67,26 @@ class LocalAgentGateway implements AiGatewayInterface
         // instead of running with the empty default config.
         $mcpConfig = $agentKey === 'claude-code' ? $this->buildAgentMcpConfig($request) : null;
 
+        // Claude Code runs in dontAsk mode: only the tools in this allow list
+        // (scoped to the agent and its working directory) may be used.
+        $permissionSettings = null;
+        if ($agentKey === 'claude-code') {
+            $permissionAgent = $request->agentId
+                ? rescue(fn () => Agent::withoutGlobalScopes()->find($request->agentId), null, false)
+                : null;
+            $permissionSettings = app(ClaudeCodeSettingsBuilder::class)->forAgent(
+                $permissionAgent instanceof Agent ? $permissionAgent : null,
+                $workdir,
+                $mcpConfig,
+            );
+        }
+
         // Claude Code assistant: use array-based Process for proper system prompt
         // separation via --system-prompt-file flag (avoids ARG_MAX when tool list is large).
         if ($agentKey === 'claude-code' && $isAssistant) {
             $systemPromptFile = $workdir.'/system-prompt.txt';
             file_put_contents($systemPromptFile, $request->systemPrompt);
-            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig);
+            $args = LocalAgentPromptBuilder::buildClaudeCodeAssistantArgs($binaryPath, $request->systemPrompt, $request->model, $systemPromptFile, $mcpConfig, $permissionSettings);
             $prompt = $request->userPrompt;
             $env = getenv();
             unset($env['CLAUDECODE']);
@@ -95,6 +109,7 @@ class LocalAgentGateway implements AiGatewayInterface
                 $agentKey, $binaryPath, $request->model, $request->purpose,
                 $usesStdin ? null : $prompt,
                 $mcpConfig,
+                $permissionSettings,
             );
 
             Log::debug("LocalAgentGateway: executing {$agentKey}", [
@@ -328,6 +343,8 @@ class LocalAgentGateway implements AiGatewayInterface
             $prompt = $request->userPrompt;
         } else {
             $prompt = LocalAgentPromptBuilder::buildPrompt($request);
+            // claude-code-vps still uses --dangerously-skip-permissions; moving this
+            // path to --permission-mode dontAsk is a follow-up.
             $args = array_merge(
                 [$binaryPath],
                 $config['execute_flags'] ?? ['-p', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'],
@@ -389,6 +406,10 @@ class LocalAgentGateway implements AiGatewayInterface
             );
         }
 
+        // Read-only git snapshot of the checkout so the audit entry can list
+        // the files/commits the run changed. Null when not a git repo.
+        $gitBefore = ($isRepoBuild && ! $isAssistant) ? $this->takeGitSnapshot($cwd) : null;
+
         $startTime = hrtime(true);
         $exitCode = null;
         $stderr = '';
@@ -441,7 +462,41 @@ class LocalAgentGateway implements AiGatewayInterface
             }
             $cap->release($teamId, $slotToken);
             $this->removeEphemeralWorkdir($workdir);
-            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout);
+            $gitChanges = $gitBefore !== null ? $this->diffGitSnapshot($gitBefore, $cwd) : [];
+            $this->recordVpsAudit($request, $user, $team, $exitCode, $startTime, $stderr, $isAssistant ? null : $stdout, $gitChanges);
+        }
+    }
+
+    /**
+     * @return array{head: string, dirty: list<string>}|null
+     */
+    private function takeGitSnapshot(string $dir): ?array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->take($dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot before VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array{head: string, dirty: list<string>}  $before
+     * @return array<string, mixed>
+     */
+    private function diffGitSnapshot(array $before, string $dir): array
+    {
+        try {
+            return app(GitWorkdirSnapshot::class)->diff($before, $dir);
+        } catch (\Throwable $e) {
+            Log::warning('LocalAgentGateway: git snapshot diff after VPS run failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 
@@ -669,6 +724,9 @@ class LocalAgentGateway implements AiGatewayInterface
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $gitChanges
+     */
     private function recordVpsAudit(
         AiRequestDTO $request,
         ?User $user,
@@ -677,6 +735,7 @@ class LocalAgentGateway implements AiGatewayInterface
         int $startTime,
         string $stderr,
         ?string $streamJson = null,
+        array $gitChanges = [],
     ): void {
         // audit_entries.team_id is NOT NULL (multi-tenancy invariant). When the
         // VPS invocation happened outside any team context (super-admin shell,
@@ -722,6 +781,13 @@ class LocalAgentGateway implements AiGatewayInterface
                     ]);
                 }
             }
+
+            // Repo builds only: changed_files [{path, source: worktree|commit}],
+            // new_commits [sha] and *_truncated flags from GitWorkdirSnapshot.
+            // Paths and shas only — never file contents or diffs. A file that
+            // was already dirty before the run and edited again without a
+            // commit is not reported.
+            $properties = array_merge($properties, $gitChanges);
 
             AuditEntry::create([
                 'team_id' => $team->id,

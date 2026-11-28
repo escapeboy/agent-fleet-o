@@ -9,9 +9,12 @@ use App\Mcp\Exceptions\DeadlineExceededException;
 use App\Mcp\Tools\Compact\CompactTool;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use PDOException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -87,6 +90,36 @@ class CompactToolStructuredErrorTest extends TestCase
 
         $this->assertSame(ErrorCode::Internal->value, $payload['error']['code']);
         $this->assertStringNotContainsString('sensitive internal detail', $payload['error']['message']);
+    }
+
+    public function test_tool_throwing_invalid_uuid_query_exception_returns_invalid_argument_and_is_not_reported(): void
+    {
+        Exceptions::fake();
+
+        $pdo = new PDOException('SQLSTATE[22P02]: Invalid text representation: 7 ERROR:  invalid input syntax for type uuid: "x"');
+        $pdo->errorInfo = ['22P02', 7, 'invalid input syntax for type uuid: "x"'];
+        FakeThrowingTool::$exception = new QueryException('pgsql', 'select * from agents where id = ?', ['x'], $pdo);
+        $tool = new FakeCompactTool;
+
+        $response = $tool->handle(new Request(['action' => 'throw']));
+
+        $payload = $this->decode($response);
+
+        $this->assertSame(ErrorCode::InvalidArgument->value, $payload['error']['code']);
+        $this->assertStringNotContainsString('select', $payload['error']['message']);
+        Exceptions::assertNotReported(QueryException::class);
+    }
+
+    public function test_unknown_exception_is_still_reported(): void
+    {
+        Exceptions::fake();
+
+        FakeThrowingTool::$exception = new RuntimeException('boom');
+        $tool = new FakeCompactTool;
+
+        $tool->handle(new Request(['action' => 'throw']));
+
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_success_passes_through_unmodified(): void
