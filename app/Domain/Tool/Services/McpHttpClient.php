@@ -21,6 +21,17 @@ class McpHttpClient
 
     private const SSE_CONNECT_TIMEOUT = 10;
 
+    /** HTTP statuses on initialize that mean the server does not speak Streamable HTTP. */
+    private const SSE_FALLBACK_STATUSES = [404, 405, 415];
+
+    /** Exception code for a 2xx initialize reply that is not JSON-RPC. */
+    private const NOT_MCP_CODE = 1;
+
+    private const ERROR_BODY_LIMIT = 300;
+
+    /** The last exception thrown by initializeStreamableHttp(); only these may trigger the SSE fallback. */
+    private ?\RuntimeException $initializeFailure = null;
+
     /**
      * Call a tool on a remote MCP server.
      *
@@ -35,14 +46,22 @@ class McpHttpClient
         try {
             return $this->callStreamableHttp($serverUrl, $toolName, $arguments, $headers);
         } catch (\Throwable $e) {
+            if (! $this->shouldFallBackToSse($e)) {
+                throw new \RuntimeException('MCP Streamable HTTP: '.$e->getMessage(), 0, $e);
+            }
             Log::debug('McpHttpClient: Streamable HTTP failed, trying SSE transport', [
                 'url' => $serverUrl,
                 'error' => $e->getMessage(),
             ]);
+            $streamableError = $e;
         }
 
         // Fall back to SSE transport (older MCP servers, Playwright MCP)
-        return $this->callSseTransport($serverUrl, $toolName, $arguments, $headers);
+        try {
+            return $this->callSseTransport($serverUrl, $toolName, $arguments, $headers);
+        } catch (\Throwable $sseError) {
+            throw $this->bothTransportsFailed($streamableError, $sseError);
+        }
     }
 
     /**
@@ -60,13 +79,55 @@ class McpHttpClient
         try {
             return $this->listToolsStreamableHttp($serverUrl, $headers, $deadline);
         } catch (\Throwable $e) {
+            if (! $this->shouldFallBackToSse($e)) {
+                throw new \RuntimeException('MCP Streamable HTTP: '.$e->getMessage(), 0, $e);
+            }
             Log::debug('McpHttpClient: listTools via Streamable HTTP failed, trying SSE', [
                 'url' => $serverUrl,
                 'error' => $e->getMessage(),
             ]);
+            $streamableError = $e;
         }
 
-        return $this->listToolsSseTransport($serverUrl, $headers, $deadline);
+        try {
+            return $this->listToolsSseTransport($serverUrl, $headers, $deadline);
+        } catch (\Throwable $sseError) {
+            throw $this->bothTransportsFailed($streamableError, $sseError);
+        }
+    }
+
+    /**
+     * Only fall back to SSE when initialize showed the server does not speak Streamable HTTP:
+     * a 404/405/415 status, or a 2xx reply that is not JSON-RPC. Anything else (auth errors,
+     * 5xx, timeouts, failures after a good initialize) is the real cause and is reported as is.
+     */
+    private function shouldFallBackToSse(\Throwable $e): bool
+    {
+        $isInitializeFailure = $this->initializeFailure !== null && $e === $this->initializeFailure;
+        $this->initializeFailure = null;
+
+        if (! $isInitializeFailure) {
+            return false;
+        }
+
+        return in_array($e->getCode(), self::SSE_FALLBACK_STATUSES, true) || $e->getCode() === self::NOT_MCP_CODE;
+    }
+
+    private function bothTransportsFailed(\Throwable $streamableError, \Throwable $sseError): \RuntimeException
+    {
+        return new \RuntimeException(
+            'MCP server failed on both transports. Streamable HTTP: '.$streamableError->getMessage()
+            .'; SSE fallback: '.$sseError->getMessage(),
+            0,
+            $sseError,
+        );
+    }
+
+    private function truncateBody(string $body): string
+    {
+        return mb_strlen($body) > self::ERROR_BODY_LIMIT
+            ? mb_substr($body, 0, self::ERROR_BODY_LIMIT).'…'
+            : $body;
     }
 
     /**
@@ -95,6 +156,9 @@ class McpHttpClient
      * Required by MCP spec before any other method. Some servers (e.g. Playwright MCP)
      * silently drop requests that arrive before initialization.
      *
+     * A 2xx reply with a JSON-RPC 'error' still speaks MCP; a 2xx reply without any
+     * JSON-RPC keys does not, and is reported as an initialize failure (SSE fallback).
+     *
      * @param  array<string, string>  $headers
      */
     private function initializeStreamableHttp(string $url, array $headers, ?float $deadline = null): ?string
@@ -118,11 +182,29 @@ class McpHttpClient
             ]);
 
         if (! $response->successful()) {
-            throw new \RuntimeException("MCP initialize HTTP {$response->status()}: {$response->body()}");
+            throw $this->initializeFailed(
+                "MCP initialize HTTP {$response->status()}: {$this->truncateBody($response->body())}",
+                $response->status(),
+            );
+        }
+
+        $data = $this->parseMcpBody($response->body());
+        if (! array_key_exists('jsonrpc', $data) && ! array_key_exists('result', $data) && ! array_key_exists('error', $data)) {
+            $contentType = $response->header('Content-Type') ?: 'none';
+
+            throw $this->initializeFailed(
+                "MCP initialize: reply is not JSON-RPC (Content-Type: {$contentType})",
+                self::NOT_MCP_CODE,
+            );
         }
 
         // Some servers issue a session token for subsequent requests
         return $response->header('Mcp-Session-Id') ?: null;
+    }
+
+    private function initializeFailed(string $message, int $code): \RuntimeException
+    {
+        return $this->initializeFailure = new \RuntimeException($message, $code);
     }
 
     private function callStreamableHttp(string $url, string $toolName, array $arguments, array $headers): string
@@ -150,7 +232,7 @@ class McpHttpClient
             ]);
 
         if (! $response->successful()) {
-            throw new \RuntimeException("MCP HTTP {$response->status()}: {$response->body()}");
+            throw new \RuntimeException("MCP HTTP {$response->status()}: {$this->truncateBody($response->body())}");
         }
 
         return $this->extractToolResult($this->parseMcpBody($response->body()));
@@ -214,7 +296,9 @@ class McpHttpClient
             return [];
         }
 
-        return json_decode($body, true) ?? [];
+        $decoded = json_decode($body, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     // -------------------------------------------------------------------------
